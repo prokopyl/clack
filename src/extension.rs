@@ -18,8 +18,7 @@ pub unsafe trait Extension<'a>: Sized + 'a {
 /// # Safety
 /// The IDENTIFIER must match the official identifier for the given extension, otherwise
 /// the extension data could be misinterpreted, and UB could occur
-pub unsafe trait ExtensionDescriptor<P> {
-    const IDENTIFIER: *const u8;
+pub unsafe trait ExtensionDescriptor<'a, P>: Extension<'a> {
     type ExtensionInterface: 'static;
 
     const INTERFACE: &'static Self::ExtensionInterface;
@@ -47,7 +46,7 @@ impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
             .unwrap_or(::core::ptr::null_mut())
     }
 
-    pub fn register<E: ExtensionDescriptor<P>>(&mut self) {
+    pub fn register<E: ExtensionDescriptor<'b, P>>(&mut self) {
         let uri = unsafe { CStr::from_ptr(E::IDENTIFIER as *const _) };
         if uri == self.requested {
             self.found = NonNull::new(E::INTERFACE as *const _ as *mut _)

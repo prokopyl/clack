@@ -29,7 +29,7 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 
     fn declare_extensions(&self, builder: &mut ExtensionDeclarations<Self>) {
-        builder.register::<ParamsDescriptor<Self>>()
+        builder.register::<ParamsDescriptor>()
     }
 }
 

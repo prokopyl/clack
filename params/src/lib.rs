@@ -1,12 +1,14 @@
-use clap_plugin::extension::ExtensionDescriptor;
+use clap_plugin::extension::{Extension, ExtensionDescriptor};
 use clap_plugin::plugin::{Plugin, PluginInstance};
 use clap_sys::events::clap_event_list;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS};
 use clap_sys::id::clap_id;
-use std::ffi::CStr;
+use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 
-pub struct ParamsDescriptor<P>(PhantomData<P>);
+// TODO
+pub struct ParamsDescriptor<'a>(PhantomData<&'a ()>);
 
 pub struct ParamInfo;
 
@@ -90,8 +92,15 @@ extern "C" fn flush<'a, P: PluginParams<'a>>(
     unsafe { P::flush(PluginInstance::get_plugin(plugin)) } // TODO
 }
 
-unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<P> for ParamsDescriptor<P> {
+unsafe impl<'a> Extension<'a> for ParamsDescriptor<'a> {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
+
+    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> Self {
+        todo!()
+    }
+}
+
+unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<'a, P> for ParamsDescriptor<'a> {
     type ExtensionInterface = clap_plugin_params;
     const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_params {
         count: count::<P>,
