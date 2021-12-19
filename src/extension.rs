@@ -4,12 +4,21 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
+/// # Safety
+/// The IDENTIFIER must match the official identifier for the given extension, otherwise
+/// the extension data could be misinterpreted, and UB could occur
 pub unsafe trait Extension<'a>: Sized + 'a {
     const IDENTIFIER: *const u8;
+
+    /// # Safety
+    /// The extension pointer must be valid
     unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> Self;
 }
 
-pub trait ExtensionDescriptor<P> {
+/// # Safety
+/// The IDENTIFIER must match the official identifier for the given extension, otherwise
+/// the extension data could be misinterpreted, and UB could occur
+pub unsafe trait ExtensionDescriptor<P> {
     const IDENTIFIER: *const u8;
     type ExtensionInterface: 'static;
 

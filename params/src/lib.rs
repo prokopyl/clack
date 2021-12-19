@@ -90,7 +90,7 @@ extern "C" fn flush<'a, P: PluginParams<'a>>(
     unsafe { P::flush(PluginInstance::get_plugin(plugin)) } // TODO
 }
 
-impl<'a, P: PluginParams<'a>> ExtensionDescriptor<P> for ParamsDescriptor<P> {
+unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<P> for ParamsDescriptor<P> {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
     type ExtensionInterface = clap_plugin_params;
     const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_params {

@@ -42,7 +42,7 @@ impl<'a> HostInfo<'a> {
     }
 
     #[inline]
-    pub(crate) unsafe fn to_handle(&self) -> HostHandle<'a> {
+    pub(crate) unsafe fn to_handle(self) -> HostHandle<'a> {
         HostHandle { inner: self.inner }
     }
 }

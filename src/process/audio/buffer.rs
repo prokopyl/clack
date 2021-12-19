@@ -29,7 +29,7 @@ impl<'a> AudioBuffer<'a> {
     #[inline]
     pub fn channels(&self) -> AudioBufferType<TAudioChannels<'a, f32>, TAudioChannels<'a, f64>> {
         unsafe {
-            if buffer_is_f32(&self.inner) {
+            if buffer_is_f32(self.inner) {
                 AudioBufferType::F32(TAudioChannels {
                     data: ::core::slice::from_raw_parts(
                         self.inner.data32,

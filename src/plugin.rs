@@ -40,6 +40,8 @@ impl<'a> PluginInstance<'a> {
         }
     }
 
+    /// # Safety
+    /// The plugin pointer must be valid
     pub unsafe fn get_plugin<P: Plugin<'a>>(plugin: *const clap_plugin) -> &'a P {
         let data = &mut *((*plugin).plugin_data as *mut PluginData<'a, P>);
         data.plugin_data
