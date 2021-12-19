@@ -1,15 +1,32 @@
 use crate::process::audio::buffer::{AudioBuffer, AudioBufferMut};
 use crate::process::audio::channels::{AudioBufferType, TAudioChannelsMut};
 use clap_sys::audio_buffer::clap_audio_buffer;
+use clap_sys::process::clap_process;
 use std::cell::Cell;
 
 pub struct Audio<'a> {
-    pub(crate) inputs: &'a mut [clap_audio_buffer],
-    pub(crate) outputs: &'a mut [clap_audio_buffer],
-    pub(crate) frames_count: u32,
+    inputs: &'a mut [clap_audio_buffer],
+    outputs: &'a mut [clap_audio_buffer],
+    frames_count: u32,
 }
 
 impl<'a> Audio<'a> {
+    #[inline]
+    pub(crate) fn from_raw(process: &clap_process) -> Audio {
+        unsafe {
+            Audio {
+                frames_count: process.frames_count,
+                inputs: ::core::slice::from_raw_parts_mut(
+                    process.audio_inputs as *mut _,
+                    process.audio_inputs_count as usize,
+                ),
+                outputs: ::core::slice::from_raw_parts_mut(
+                    process.audio_outputs as *mut _,
+                    process.audio_outputs_count as usize,
+                ),
+            }
+        }
+    }
     pub fn input(&self, index: usize) -> Option<AudioBuffer> {
         self.inputs
             .get(index)

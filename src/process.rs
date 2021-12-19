@@ -8,9 +8,10 @@ pub struct Process {
 
 impl Process {
     #[inline]
-    pub(crate) fn from_raw(raw: &clap_process) -> &Process {
+    pub(crate) fn from_raw(raw: &mut clap_process) -> (&Process, Audio) {
         // SAFETY: Process is repr(C) and is guaranteed to have the same memory representation
-        unsafe { ::core::mem::transmute(raw) }
+        let process: &Process = unsafe { &*(raw as *const _ as *const _) };
+        (process, Audio::from_raw(raw))
     }
 
     #[inline]
@@ -21,23 +22,6 @@ impl Process {
     #[inline]
     pub fn steady_time(&self) -> u64 {
         self.inner.steady_time
-    }
-
-    #[inline]
-    pub fn audio(&self) -> Audio {
-        unsafe {
-            Audio {
-                frames_count: self.inner.frames_count,
-                inputs: ::core::slice::from_raw_parts_mut(
-                    self.inner.audio_inputs as *mut _,
-                    self.inner.audio_inputs_count as usize,
-                ),
-                outputs: ::core::slice::from_raw_parts_mut(
-                    self.inner.audio_outputs as *mut _,
-                    self.inner.audio_outputs_count as usize,
-                ),
-            }
-        }
     }
 }
 

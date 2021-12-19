@@ -1,6 +1,7 @@
 use clap_audio_params::{ParamInfo, ParamsDescriptor, PluginParams};
 use clap_plugin::extension::ExtensionDeclarations;
 use clap_plugin::host::HostHandle;
+use clap_plugin::process::audio::Audio;
 use clap_plugin::process::Process;
 use clap_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
@@ -17,8 +18,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         Some(Self)
     }
 
-    fn process(&self, process: &Process) {
-        let mut audio = process.audio();
+    fn process(&self, _process: &Process, mut audio: Audio) {
         // Only handle f32 samples for simplicity
         let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
 
@@ -39,19 +39,19 @@ impl<'a> PluginParams<'a> for GainPlugin {
         0
     }
 
-    fn get_info(&self, param_index: i32, info: &mut ParamInfo) -> bool {
+    fn get_info(&self, _param_index: i32, _info: &mut ParamInfo) -> bool {
         false
     }
 
-    fn get_value(&self, param_id: u32) -> Option<f64> {
+    fn get_value(&self, _param_id: u32) -> Option<f64> {
         None
     }
 
-    fn value_to_text(&self, param_id: u32, value: f64, output_buf: &mut [u8]) -> bool {
+    fn value_to_text(&self, _param_id: u32, _value: f64, _output_buf: &mut [u8]) -> bool {
         false
     }
 
-    fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64> {
+    fn text_to_value(&self, _param_id: u32, _text: &str) -> Option<f64> {
         None
     }
 

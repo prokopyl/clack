@@ -10,6 +10,7 @@ use clap_sys::{
 use std::marker::PhantomData;
 
 use crate::host::{HostHandle, HostInfo};
+use crate::process::audio::Audio;
 use crate::process::Process;
 
 pub struct PluginInstance<'a> {
@@ -108,8 +109,9 @@ impl<'a> PluginInstance<'a> {
         plugin: *const clap_plugin,
         process: *const clap_process,
     ) -> clap_process_status {
-        let process = Process::from_raw(&*process);
-        P::process(Self::get_plugin(plugin), process); // TODO: handle return status
+        // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
+        let (process, audio) = Process::from_raw(&mut *(process as *mut _));
+        P::process(Self::get_plugin(plugin), process, audio); // TODO: handle return status
         CLAP_PROCESS_CONTINUE
     }
 
@@ -124,7 +126,7 @@ impl<'a> PluginInstance<'a> {
     }
 
     unsafe extern "C" fn on_main_thread<P: Plugin<'a>>(plugin: *const clap_plugin) {
-        todo!()
+        P::on_main_thread(Self::get_plugin(plugin))
     }
 }
 
@@ -149,10 +151,13 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     #[inline]
     fn stop_processing(&self) {}
 
-    fn process(&self, process: &Process); // TODO: status
+    fn process(&self, process: &Process, audio: Audio); // TODO: status
 
     #[inline]
     fn declare_extensions(&self, _builder: &mut ExtensionDeclarations<Self>) {}
+
+    #[inline]
+    fn on_main_thread(&self) {}
 
     const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor(clap_plugin_descriptor {
         clap_version: CLAP_VERSION,

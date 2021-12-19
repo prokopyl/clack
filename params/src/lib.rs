@@ -28,7 +28,7 @@ extern "C" fn count<'a, P: PluginParams<'a>>(
 extern "C" fn get_info<'a, P: PluginParams<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
     param_index: i32,
-    value: *mut clap_param_info,
+    _value: *mut clap_param_info,
 ) -> bool {
     let mut info = ParamInfo; // TODO
     unsafe { P::get_info(PluginInstance::get_plugin(plugin), param_index, &mut info) }
