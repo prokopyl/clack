@@ -100,7 +100,7 @@ impl<'a, S> TAudioChannels<'a, S> {
 // TODO: bikeshed
 pub struct TAudioChannelsMut<'a, S> {
     pub(crate) frames_count: u32,
-    pub(crate) data: &'a mut [*const S],
+    pub(crate) data: &'a [*const S],
 }
 
 impl<'a, S> TAudioChannelsMut<'a, S> {
@@ -117,7 +117,7 @@ impl<'a, S> TAudioChannelsMut<'a, S> {
     #[inline]
     pub fn get_channel_data_mut(&mut self, channel_index: usize) -> Option<&'a mut [S]> {
         unsafe {
-            self.data.get_mut(channel_index).map(|data| {
+            self.data.get(channel_index).map(|data| {
                 ::core::slice::from_raw_parts_mut(*data as *mut _, self.frames_count as usize)
             })
         }

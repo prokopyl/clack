@@ -5,6 +5,7 @@ use clap_sys::events::{
 use clap_sys::ext::params::{clap_plugin_params, CLAP_EXT_PARAMS};
 use clap_sys::process::clap_process;
 use clap_sys::{host::clap_host, plugin::clap_plugin_entry, version::CLAP_VERSION};
+use std::ffi::c_void;
 
 use gain::clap_plugin_entry;
 
@@ -27,6 +28,13 @@ fn noop_event_list() -> clap_event_list {
 
 #[test]
 pub fn it_works() {
+    extern "C" fn get_extension(_host: *const clap_host, _: *const i8) -> *const c_void {
+        todo!()
+    }
+    extern "C" fn request_restart(_host: *const clap_host) {}
+    extern "C" fn request_process(_host: *const clap_host) {}
+    extern "C" fn request_callback(_host: *const clap_host) {}
+
     let host = clap_host {
         clap_version: CLAP_VERSION,
         host_data: ::core::ptr::null_mut(),
@@ -34,10 +42,10 @@ pub fn it_works() {
         vendor: ::core::ptr::null_mut(),
         url: ::core::ptr::null_mut(),
         version: ::core::ptr::null_mut(),
-        get_extension: unsafe { ::core::mem::transmute(::core::ptr::null_mut::<()>()) }, // TODO all that
-        request_restart: unsafe { ::core::mem::transmute(::core::ptr::null_mut::<()>()) },
-        request_process: unsafe { ::core::mem::transmute(::core::ptr::null_mut::<()>()) },
-        request_callback: unsafe { ::core::mem::transmute(::core::ptr::null_mut::<()>()) },
+        get_extension,
+        request_restart,
+        request_process,
+        request_callback,
     };
 
     unsafe {

@@ -110,7 +110,7 @@ impl<'a> PluginInstance<'a> {
         process: *const clap_process,
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
-        let (process, audio) = Process::from_raw(&mut *(process as *mut _));
+        let (process, audio) = Process::from_raw(process);
         P::process(Self::get_plugin(plugin), process, audio); // TODO: handle return status
         CLAP_PROCESS_CONTINUE
     }

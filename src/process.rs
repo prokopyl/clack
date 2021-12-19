@@ -8,10 +8,10 @@ pub struct Process {
 
 impl Process {
     #[inline]
-    pub(crate) fn from_raw(raw: &mut clap_process) -> (&Process, Audio) {
+    pub(crate) unsafe fn from_raw<'a>(raw: *const clap_process) -> (&'a Process, Audio<'a>) {
         // SAFETY: Process is repr(C) and is guaranteed to have the same memory representation
-        let process: &Process = unsafe { &*(raw as *const _ as *const _) };
-        (process, Audio::from_raw(raw))
+        let process: &Process = &*(raw as *const _);
+        (process, Audio::from_raw(&*raw))
     }
 
     #[inline]

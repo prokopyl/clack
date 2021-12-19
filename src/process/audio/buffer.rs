@@ -76,13 +76,13 @@ impl<'a> AudioBuffer<'a> {
 }
 
 pub struct AudioBufferMut<'a> {
-    inner: &'a mut clap_audio_buffer,
+    inner: &'a clap_audio_buffer,
     frames_count: u32,
 }
 
 impl<'a> AudioBufferMut<'a> {
     #[inline]
-    pub(crate) unsafe fn from_raw(inner: &'a mut clap_audio_buffer, frames_count: u32) -> Self {
+    pub(crate) unsafe fn from_raw(inner: &'a clap_audio_buffer, frames_count: u32) -> Self {
         Self {
             inner,
             frames_count,
@@ -94,18 +94,18 @@ impl<'a> AudioBufferMut<'a> {
         &mut self,
     ) -> AudioBufferType<TAudioChannelsMut<'a, f32>, TAudioChannelsMut<'a, f64>> {
         unsafe {
-            if buffer_is_f32(&self.inner) {
+            if buffer_is_f32(self.inner) {
                 AudioBufferType::F32(TAudioChannelsMut {
-                    data: ::core::slice::from_raw_parts_mut(
-                        self.inner.data32 as *mut _,
+                    data: ::core::slice::from_raw_parts(
+                        self.inner.data32,
                         self.inner.channel_count as usize,
                     ),
                     frames_count: self.frames_count,
                 })
             } else {
                 AudioBufferType::F64(TAudioChannelsMut {
-                    data: ::core::slice::from_raw_parts_mut(
-                        self.inner.data64 as *mut _,
+                    data: ::core::slice::from_raw_parts(
+                        self.inner.data64,
                         self.inner.channel_count as usize,
                     ),
                     frames_count: self.frames_count,
