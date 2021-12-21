@@ -4,11 +4,10 @@ use clap_sys::events::clap_event_list;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS};
 use clap_sys::id::clap_id;
 use std::ffi::{c_void, CStr};
-use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 // TODO
-pub struct ParamsDescriptor<'a>(PhantomData<&'a ()>);
+pub struct ParamsDescriptor<'a>(&'a clap_plugin_params);
 
 pub struct ParamInfo;
 
@@ -95,7 +94,7 @@ extern "C" fn flush<'a, P: PluginParams<'a>>(
 unsafe impl<'a> Extension<'a> for ParamsDescriptor<'a> {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
 
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> Self {
+    unsafe fn from_extension_ptr(_ptr: NonNull<c_void>) -> Self {
         todo!()
     }
 }

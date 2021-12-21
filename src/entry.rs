@@ -13,6 +13,18 @@ use std::path::Path;
 #[repr(C)]
 pub struct PluginEntryDescriptor(clap_plugin_entry);
 
+impl PluginEntryDescriptor {
+    #[inline]
+    pub fn from_raw(raw: &clap_plugin_entry) -> &Self {
+        unsafe { ::core::mem::transmute(raw) }
+    }
+
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin_entry {
+        &self.0
+    }
+}
+
 pub trait PluginEntry: Sized {
     fn init(_plugin_path: &Path) {}
     fn de_init() {}

@@ -16,23 +16,27 @@ impl<'a> HostInfo<'a> {
     }
 
     pub fn name(&self) -> &'a str {
-        let bytes = unsafe { CStr::from_ptr(self.inner.name) }.to_bytes();
-        core::str::from_utf8(bytes).expect("Failed to read host name: invalid UTF-8 sequence")
+        unsafe { CStr::from_ptr(self.inner.name) }
+            .to_str()
+            .expect("Failed to read host name: invalid UTF-8 sequence")
     }
 
     pub fn vendor(&self) -> &'a str {
-        let bytes = unsafe { CStr::from_ptr(self.inner.vendor) }.to_bytes();
-        core::str::from_utf8(bytes).expect("Failed to read host name: invalid UTF-8 sequence")
+        unsafe { CStr::from_ptr(self.inner.vendor) }
+            .to_str()
+            .expect("Failed to read host vendor: invalid UTF-8 sequence")
     }
 
     pub fn url(&self) -> &'a str {
-        let bytes = unsafe { CStr::from_ptr(self.inner.url) }.to_bytes();
-        core::str::from_utf8(bytes).expect("Failed to read host name: invalid UTF-8 sequence")
+        unsafe { CStr::from_ptr(self.inner.url) }
+            .to_str()
+            .expect("Failed to read host url: invalid UTF-8 sequence")
     }
 
     pub fn version(&self) -> &'a str {
-        let bytes = unsafe { CStr::from_ptr(self.inner.version) }.to_bytes();
-        core::str::from_utf8(bytes).expect("Failed to read host name: invalid UTF-8 sequence")
+        unsafe { CStr::from_ptr(self.inner.version) }
+            .to_str()
+            .expect("Failed to read host version: invalid UTF-8 sequence")
     }
 
     pub fn get_extension<E: Extension<'a>>(&self) -> Option<E> {

@@ -1,0 +1,10 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
+clap-plugin = { path = ".." }
+clap-audio-core = { path = "../core" }
+basedrop = "0.1.2"
