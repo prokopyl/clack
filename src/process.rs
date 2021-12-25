@@ -1,4 +1,5 @@
 use crate::process::audio::Audio;
+use crate::process::events::ProcessEvents;
 use clap_sys::process::clap_process;
 
 #[repr(C)]
@@ -8,10 +9,16 @@ pub struct Process {
 
 impl Process {
     #[inline]
-    pub(crate) unsafe fn from_raw<'a>(raw: *const clap_process) -> (&'a Process, Audio<'a>) {
+    pub(crate) unsafe fn from_raw<'a>(
+        raw: *const clap_process,
+    ) -> (&'a Process, Audio<'a>, ProcessEvents<'a>) {
         // SAFETY: Process is repr(C) and is guaranteed to have the same memory representation
         let process: &Process = &*(raw as *const _);
-        (process, Audio::from_raw(&*raw))
+        (
+            process,
+            Audio::from_raw(&*raw),
+            ProcessEvents::from_raw(raw),
+        )
     }
 
     #[inline]
@@ -26,3 +33,4 @@ impl Process {
 }
 
 pub mod audio;
+pub mod events;

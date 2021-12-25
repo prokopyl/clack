@@ -47,6 +47,10 @@ impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
     }
 
     pub fn register<E: ExtensionDescriptor<'b, P>>(&mut self) {
+        if self.found.is_some() {
+            return;
+        }
+
         let uri = unsafe { CStr::from_ptr(E::IDENTIFIER as *const _) };
         if uri == self.requested {
             self.found = NonNull::new(E::INTERFACE as *const _ as *mut _)

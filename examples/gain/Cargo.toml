@@ -11,6 +11,7 @@ crate-type = ["rlib", "cdylib"]
 [dependencies]
 "clap-plugin" = { path = "../.." }
 "clap-audio-params" = { path = "../../params" }
+"clap-audio-core" = { path = "../../core" }
 
 [dev-dependencies]
 clap-sys = { git = "https://github.com/glowcoil/clap-sys" }

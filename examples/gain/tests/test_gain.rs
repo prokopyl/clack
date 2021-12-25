@@ -1,3 +1,7 @@
+use clap_audio_core::events::{
+    event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType,
+};
+
 use host::{
     entry::PluginEntry,
     host::{HostInfo, PluginHost},
@@ -31,6 +35,21 @@ pub fn it_works() {
     let inputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![69f32; 32]);
     let mut outputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![0f32; 32]);
 
+    let event = Event::new(
+        1,
+        EventType::NoteOn(NoteEvent::new(
+            42.into(),
+            EventTarget::All,
+            EventTarget::All,
+            6.9,
+        )),
+    );
+    let mut event_buffer_in = vec![event; 32];
+    let mut event_buffer_out = vec![];
+
+    let mut events_in = EventList::from_implementation(&mut event_buffer_in);
+    let mut events_out = EventList::from_implementation(&mut event_buffer_out);
+
     let mut processor = plugin
         .borrow_mut()
         .activate(configuration, |msg| {
@@ -42,7 +61,7 @@ pub fn it_works() {
         .unwrap();
 
     // Process
-    processor.process(&inputs, &mut outputs);
+    processor.process(&inputs, &mut outputs, &mut events_in, &mut events_out);
 
     // Check the gain was applied properly
     for channel_index in 0..1 {
@@ -51,5 +70,29 @@ pub fn it_works() {
         for (input, output) in inbuf.iter().zip(outbuf.iter()) {
             assert_eq!(*output, *input * 2.0)
         }
+    }
+
+    // Check velocity was changed properly
+    assert_eq!(event_buffer_in.len(), event_buffer_out.len());
+
+    for (input, output) in event_buffer_in.iter().zip(event_buffer_out.iter()) {
+        let input_note = if let Some(EventType::NoteOn(ev)) = input.event() {
+            ev
+        } else {
+            panic!("Invalid event type found")
+        };
+
+        assert_eq!(
+            output,
+            &Event::new(
+                input.time(),
+                EventType::NoteOn(NoteEvent::new(
+                    42.into(),
+                    EventTarget::All,
+                    EventTarget::All,
+                    input_note.velocity() * 2.0
+                ))
+            )
+        )
     }
 }

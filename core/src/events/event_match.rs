@@ -1,13 +1,13 @@
-use NoteEventMatch::*;
+use EventTarget::*;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub enum NoteEventMatch<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32> = u8> {
+pub enum EventTarget<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32> = u8> {
     Specific(T),
     All,
     None,
 }
 
-impl<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32>> NoteEventMatch<T> {
+impl<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32>> EventTarget<T> {
     #[inline]
     pub fn from_raw(raw: i32) -> Self {
         match raw {
@@ -23,5 +23,19 @@ impl<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32>> NoteEventMatch<T> {
             All => -1,
             None => i32::MAX,
         }
+    }
+}
+
+impl<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32>> From<T> for EventTarget<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        EventTarget::Specific(value)
+    }
+}
+
+impl<T: Copy + Ord + Eq + TryFrom<i32> + Into<i32>> Default for EventTarget<T> {
+    #[inline]
+    fn default() -> Self {
+        EventTarget::All
     }
 }

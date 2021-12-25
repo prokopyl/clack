@@ -42,6 +42,8 @@ impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> 
         &mut self,
         audio_inputs: &HostAudioBufferCollection<B, S>,
         audio_outputs: &mut HostAudioBufferCollection<B, S>,
+        events_input: &mut EventList,
+        events_output: &mut EventList,
     ) {
         let min_input_sample_count = audio_inputs.min_buffer_length();
         let min_output_sample_count = audio_outputs.min_buffer_length();
@@ -63,7 +65,6 @@ impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> 
             tsig_num: 4,
             tsig_denom: 4,
         };
-        let events = EventList::no_op();
 
         let process = clap_process {
             steady_time: 0, // TODO
@@ -73,8 +74,8 @@ impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> 
             audio_outputs: audio_outputs.raw_buffers(),
             audio_inputs_count: audio_inputs.port_count() as u32,
             audio_outputs_count: audio_outputs.port_count() as u32,
-            in_events: events.to_raw(),  // TODO
-            out_events: events.to_raw(), // TODO
+            in_events: events_input.as_raw_mut(),
+            out_events: events_output.as_raw_mut(),
         };
 
         unsafe { self.inner.process(&process) };

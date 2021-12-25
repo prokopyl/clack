@@ -1,8 +1,10 @@
-use crate::events::event_match::NoteEventMatch;
+use crate::events::event_match::EventTarget;
 use clap_sys::events::*;
+use std::fmt::{Debug, Formatter};
 
 #[non_exhaustive]
 #[repr(i32)]
+#[derive(Copy, Clone)]
 pub enum NoteExpressionType {
     Volume = CLAP_NOTE_EXPRESSION_VOLUME,
     Pan = CLAP_NOTE_EXPRESSION_PAN,
@@ -39,33 +41,67 @@ impl NoteExpressionType {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct NoteExpressionEvent {
     inner: clap_event_note_expression,
 }
 
 impl NoteExpressionEvent {
     #[inline]
+    pub(crate) fn from_raw(inner: clap_event_note_expression) -> Self {
+        Self { inner }
+    }
+
+    #[inline]
+    pub(crate) fn into_raw(self) -> clap_event_note_expression {
+        self.inner
+    }
+
+    #[inline]
     pub fn expression_type(&self) -> NoteExpressionType {
         NoteExpressionType::from_raw(self.inner.expression_id)
     }
 
     #[inline]
-    pub fn port_index(&self) -> NoteEventMatch<i32> {
-        NoteEventMatch::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> EventTarget<u16> {
+        EventTarget::from_raw(self.inner.port_index)
     }
 
     #[inline]
-    pub fn key(&self) -> NoteEventMatch<u8> {
-        NoteEventMatch::from_raw(self.inner.key)
+    pub fn key(&self) -> EventTarget<u8> {
+        EventTarget::from_raw(self.inner.key)
     }
 
     #[inline]
-    pub fn channel(&self) -> NoteEventMatch<u8> {
-        NoteEventMatch::from_raw(self.inner.channel)
+    pub fn channel(&self) -> EventTarget<u8> {
+        EventTarget::from_raw(self.inner.channel)
     }
 
     #[inline]
     pub fn value(&self) -> f64 {
         self.inner.value
+    }
+}
+
+impl PartialEq for NoteExpressionEvent {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.key == other.inner.key
+            && self.inner.expression_id == other.inner.expression_id
+            && self.inner.channel == other.inner.channel
+            && self.inner.port_index == other.inner.port_index
+            && self.inner.value == other.inner.value
+    }
+}
+
+impl Debug for NoteExpressionEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NoteExpressionEvent")
+            .field("port_index", &self.inner.port_index)
+            .field("channel", &self.inner.channel)
+            .field("key", &self.inner.key)
+            .field("expression_id", &self.inner.expression_id)
+            .field("value", &self.inner.value)
+            .finish()
     }
 }

@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 
 use crate::host::{HostHandle, HostInfo};
 use crate::process::audio::Audio;
+use crate::process::events::ProcessEvents;
 use crate::process::Process;
 
 pub struct PluginInstance<'a> {
@@ -112,8 +113,8 @@ impl<'a> PluginInstance<'a> {
         process: *const clap_process,
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
-        let (process, audio) = Process::from_raw(process);
-        P::process(Self::get_plugin(plugin), process, audio); // TODO: handle return status
+        let (process, audio, events) = Process::from_raw(process);
+        P::process(Self::get_plugin(plugin), process, audio, events); // TODO: handle return status
         CLAP_PROCESS_CONTINUE
     }
 
@@ -153,7 +154,7 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     #[inline]
     fn stop_processing(&self) {}
 
-    fn process(&self, process: &Process, audio: Audio); // TODO: status
+    fn process(&self, process: &Process, audio: Audio, events: ProcessEvents); // TODO: status
 
     #[inline]
     fn declare_extensions(&self, _builder: &mut ExtensionDeclarations<Self>) {}

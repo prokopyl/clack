@@ -1,7 +1,10 @@
+use clap_audio_core::events::event_types::NoteEvent;
+use clap_audio_core::events::{Event, EventType};
 use clap_audio_params::{ParamInfo, ParamsDescriptor, PluginParams};
 use clap_plugin::extension::ExtensionDeclarations;
 use clap_plugin::host::HostHandle;
 use clap_plugin::process::audio::Audio;
+use clap_plugin::process::events::ProcessEvents;
 use clap_plugin::process::Process;
 use clap_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
@@ -18,7 +21,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         Some(Self)
     }
 
-    fn process(&self, _process: &Process, mut audio: Audio) {
+    fn process(&self, _process: &Process, mut audio: Audio, events: ProcessEvents) {
         // Only handle f32 samples for simplicity
         let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
 
@@ -26,6 +29,21 @@ impl<'a> Plugin<'a> for GainPlugin {
         for (input, output) in io {
             output.set(input.get() * 2.0)
         }
+
+        events
+            .output
+            .extend(events.input.iter().map(|e| match e.event() {
+                Some(EventType::NoteOn(ne)) => Event::new(
+                    e.time(),
+                    EventType::NoteOn(NoteEvent::new(
+                        ne.port_index(),
+                        ne.key(),
+                        ne.channel(),
+                        ne.velocity() * 2.0,
+                    )),
+                ),
+                _ => *e,
+            }));
     }
 
     fn declare_extensions(&self, builder: &mut ExtensionDeclarations<Self>) {
