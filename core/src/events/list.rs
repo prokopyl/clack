@@ -15,12 +15,16 @@ pub struct EventList<'a> {
 }
 
 impl<'a> EventList<'a> {
+    /// # Safety
+    /// The given pointer must be valid for the requested lifetime
     #[inline]
     pub unsafe fn from_raw(raw: *const clap_event_list) -> &'a Self {
         // SAFETY: EventList has the same layout and is repr(C)
         &*(raw as *const _)
     }
 
+    /// # Safety
+    /// The given pointer must be valid for the requested lifetime
     #[inline]
     pub unsafe fn from_raw_mut(raw: *const clap_event_list) -> &'a mut Self {
         // SAFETY: EventList has the same layout and is repr(C)
