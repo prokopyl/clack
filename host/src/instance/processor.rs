@@ -1,7 +1,7 @@
 use crate::instance::channel::PluginInstanceChannelSend;
 use crate::instance::processor::audio::HostAudioBufferCollection;
 use crate::instance::processor::inner::PluginAudioProcessorInner;
-use clap_audio_core::events::list::EventList;
+use clap_audio_common::events::list::EventList;
 use clap_sys::events::{clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};

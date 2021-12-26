@@ -1,28 +1,9 @@
 use crate::plugin::Plugin;
+use clap_audio_common::extensions::ExtensionDescriptor;
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
-
-/// # Safety
-/// The IDENTIFIER must match the official identifier for the given extension, otherwise
-/// the extension data could be misinterpreted, and UB could occur
-pub unsafe trait Extension<'a>: Sized + 'a {
-    const IDENTIFIER: *const u8;
-
-    /// # Safety
-    /// The extension pointer must be valid
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> Self;
-}
-
-/// # Safety
-/// The IDENTIFIER must match the official identifier for the given extension, otherwise
-/// the extension data could be misinterpreted, and UB could occur
-pub unsafe trait ExtensionDescriptor<'a, P>: Extension<'a> {
-    type ExtensionInterface: 'static;
-
-    const INTERFACE: &'static Self::ExtensionInterface;
-}
 
 pub struct ExtensionDeclarations<'a, P> {
     found: Option<NonNull<c_void>>,

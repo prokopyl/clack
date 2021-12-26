@@ -1,12 +1,12 @@
-use clap_audio_core::events::event_types::NoteEvent;
-use clap_audio_core::events::{Event, EventType};
-use clap_audio_params::{ParamInfo, ParamsDescriptor, PluginParams};
-use clap_plugin::extension::ExtensionDeclarations;
-use clap_plugin::host::HostHandle;
-use clap_plugin::process::audio::Audio;
-use clap_plugin::process::events::ProcessEvents;
-use clap_plugin::process::Process;
-use clap_plugin::{
+use clap_audio_common::events::event_types::NoteEvent;
+use clap_audio_common::events::{Event, EventType};
+use clap_audio_extensions::params::{ParamInfo, ParamsDescriptor, PluginParams};
+use clap_audio_plugin::extension::ExtensionDeclarations;
+use clap_audio_plugin::host::HostHandle;
+use clap_audio_plugin::process::audio::Audio;
+use clap_audio_plugin::process::events::ProcessEvents;
+use clap_audio_plugin::process::Process;
+use clap_audio_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
     host::HostInfo,
     plugin::{Plugin, PluginDescriptor, PluginInstance},

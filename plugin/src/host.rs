@@ -1,4 +1,4 @@
-use crate::extension::Extension;
+use clap_audio_common::extensions::Extension;
 use clap_sys::host::clap_host;
 use clap_sys::version::clap_version;
 use std::ffi::CStr;
@@ -39,7 +39,7 @@ impl<'a> HostInfo<'a> {
             .expect("Failed to read host version: invalid UTF-8 sequence")
     }
 
-    pub fn get_extension<E: Extension<'a>>(&self) -> Option<E> {
+    pub fn get_extension<E: Extension<'a>>(&self) -> Option<&E> {
         let ptr =
             unsafe { (self.inner.get_extension)(self.inner, E::IDENTIFIER as *const i8) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })

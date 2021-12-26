@@ -1,10 +1,11 @@
 [package]
-name = "clap-audio-params"
+name = "clap-audio-extensions"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+"clap-audio-plugin" = { path = "../plugin" }
+"clap-audio-common" = { path = "../common" }
 clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
-clap-plugin = { path = ".." }

@@ -9,11 +9,11 @@ crate-type = ["rlib", "cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-"clap-plugin" = { path = "../.." }
-"clap-audio-params" = { path = "../../params" }
-"clap-audio-core" = { path = "../../core" }
+"clap-audio-plugin" = { path = "../../../plugin" }
+"clap-audio-extensions" = { path = "../../../extensions" }
+"clap-audio-common" = { path = "../../../common" }
 
 [dev-dependencies]
 clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
-host = { path = "../../host" }
-clap-audio-core = { path = "../../core" }
+host = { path = "../../../host" }
+clap-audio-common = { path = "../../../common" }

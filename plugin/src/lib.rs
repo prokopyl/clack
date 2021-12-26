@@ -5,4 +5,4 @@ pub mod plugin;
 
 pub mod process;
 
-pub use clap_audio_core as common;
+pub use clap_audio_common as common;

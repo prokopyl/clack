@@ -1,4 +1,4 @@
-use clap_audio_core::events::{
+use clap_audio_common::events::{
     event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType,
 };
 
