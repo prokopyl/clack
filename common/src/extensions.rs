@@ -1,5 +1,3 @@
-pub mod params;
-
 use core::ffi::c_void;
 use std::ptr::NonNull;
 
