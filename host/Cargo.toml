@@ -8,3 +8,4 @@ clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
 clap-audio-plugin = { path = "../plugin" } # TODO: remove
 clap-audio-common = { path = "../common" }
 basedrop = "0.1.2"
+libloading = "0.7.2"

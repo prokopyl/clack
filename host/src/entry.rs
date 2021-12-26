@@ -16,18 +16,27 @@ impl<'a> PluginEntry<'a> {
     // TODO: handle errors properly
     /// # Safety
     /// Must only be called once for a given descriptor, else entry could be init'd multiple times
-    pub unsafe fn from_descriptor(
-        desc: &'a PluginEntryDescriptor,
+    pub unsafe fn from_raw(
+        inner: &'a clap_plugin_entry,
         plugin_path: &str,
     ) -> Result<Self, Box<dyn Error>> {
         // TODO: check clap version
-        let path = CString::new(plugin_path)?;
-        let inner = desc.as_raw();
+        let path = CString::new(plugin_path)?; // TODO: OsStr?
 
         // TODO: clap-sys issue: this should return bool to indicate success/failure
         (inner.init)(path.as_ptr());
 
         Ok(Self { inner })
+    }
+
+    // TODO: handle errors properly
+    /// # Safety
+    /// Must only be called once for a given descriptor, else entry could be init'd multiple times
+    pub unsafe fn from_descriptor(
+        desc: &'a PluginEntryDescriptor,
+        plugin_path: &str,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::from_raw(desc.as_raw(), plugin_path)
     }
 
     #[inline]
