@@ -43,6 +43,14 @@ impl<'a> EventType<'a> {
                 CLAP_EVENT_NOTE_EXPRESSION => Some(NoteExpression(NoteExpressionEvent::from_raw(
                     data.note_expression,
                 ))),
+                CLAP_EVENT_NOTE_MASK => Some(NoteMask(NoteMaskEvent::from_raw(data.note_mask))),
+                CLAP_EVENT_PARAM_VALUE => {
+                    Some(ParamValue(ParamValueEvent::from_raw(data.param_value)))
+                }
+                CLAP_EVENT_PARAM_MOD => Some(ParamMod(ParamModEvent::from_raw(data.param_mod))),
+                CLAP_EVENT_TRANSPORT => Some(Transport(TransportEvent::from_raw(data.time_info))),
+                CLAP_EVENT_MIDI => Some(Midi(MidiEvent::from_raw(data.midi))),
+                CLAP_EVENT_MIDI_SYSEX => Some(MidiSysex(MidiSysexEvent::from_raw(data.midi_sysex))),
 
                 _ => None,
             }
