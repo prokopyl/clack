@@ -1,3 +1,4 @@
+use crate::params::info::ParamInfo;
 use clap_audio_common::events::list::EventList;
 use clap_audio_common::extensions::{Extension, ExtensionDescriptor};
 use clap_audio_plugin::plugin::wrapper::{handle_plugin, handle_plugin_returning};
@@ -13,11 +14,7 @@ use std::str::Utf8Error;
 // TODO
 pub struct ParamsDescriptor(clap_plugin_params);
 
-pub struct ParamInfo {
-    inner: clap_param_info,
-}
-
-impl ParamInfo {}
+pub mod info;
 
 pub struct ParamInfoWriter<'a> {
     initialized: bool,
@@ -80,6 +77,7 @@ impl<'a> ::core::fmt::Write for ParamDisplayWriter<'a> {
         }
 
         self.buffer[self.cursor_position..self.cursor_position + s.len()].copy_from_slice(s);
+        self.cursor_position += s.len();
 
         Ok(())
     }
