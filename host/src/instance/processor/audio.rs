@@ -1,7 +1,6 @@
 use clap_sys::audio_buffer::clap_audio_buffer;
 
 struct HostAudioPortBuffer<B, S> {
-    // TODO: use smallvec?
     channel_buffers: Vec<B>,
     buffer_list: Vec<*const S>,
     min_buffer_length: usize,

@@ -3,7 +3,7 @@ use crate::events::Event;
 pub trait EventListImplementation<'a>: 'a {
     fn size(&self) -> usize;
     fn get_mut(&mut self, index: usize) -> Option<&mut Event<'a>>;
-    fn push_back(&mut self, event: &Event<'a>);
+    fn push_back(&mut self, event: &Event<'a>); // TODO: events must be ordered
 }
 
 impl<'a> EventListImplementation<'a> for Vec<Event<'a>> {

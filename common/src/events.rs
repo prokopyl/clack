@@ -13,7 +13,6 @@ pub mod list;
 pub mod event_match;
 pub mod event_types;
 
-// TODO: support more types
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum EventType<'a> {
     NoteOn(NoteEvent),

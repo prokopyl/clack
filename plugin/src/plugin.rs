@@ -1,18 +1,21 @@
-use core::ffi::c_void;
-use std::ffi::CStr;
-
 use crate::extension::ExtensionDeclarations;
-use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_CONTINUE};
+use crate::process::audio::Audio;
+use crate::process::events::ProcessEvents;
+use crate::process::Process;
+use clap_audio_common::host::{HostHandle, HostInfo};
+use clap_audio_common::process::ProcessStatus;
+use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use clap_sys::{
     plugin::{clap_plugin, clap_plugin_descriptor, CLAP_PLUGIN_AUDIO_EFFECT},
     version::CLAP_VERSION,
 };
+use core::ffi::c_void;
+use std::ffi::CStr;
 use std::marker::PhantomData;
 
-use crate::host::{HostHandle, HostInfo};
-use crate::process::audio::Audio;
-use crate::process::events::ProcessEvents;
-use crate::process::Process;
+mod error;
+pub mod wrapper;
+pub use error::{PluginError, Result};
 
 pub struct PluginInstance<'a> {
     inner: Box<clap_plugin>,
@@ -41,15 +44,6 @@ impl<'a> PluginInstance<'a> {
         }
     }
 
-    /// # Safety
-    /// The plugin pointer must be valid
-    pub unsafe fn get_plugin<P: Plugin<'a>>(plugin: *const clap_plugin) -> &'a P {
-        let data = &mut *((*plugin).plugin_data as *mut PluginData<'a, P>);
-        data.plugin_data
-            .as_ref()
-            .expect("Plugin is not initialized") // TODO: unsafe unwrap
-    }
-
     pub fn new<P: Plugin<'a>>(host_info: HostInfo<'a>) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
@@ -70,6 +64,7 @@ impl<'a> PluginInstance<'a> {
             return false;
         }
 
+        // TODO: handle errors
         data.plugin_data = P::new(data.host);
         data.plugin_data.is_some()
     }
@@ -87,25 +82,31 @@ impl<'a> PluginInstance<'a> {
         sample_rate: f64,
         min_frames_count: u32,
         max_frames_count: u32,
-    ) {
-        P::activate(
-            Self::get_plugin(plugin),
-            sample_rate,
-            min_frames_count,
-            max_frames_count,
-        )
+    ) -> bool {
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::activate(p, sample_rate, min_frames_count, max_frames_count)
+        })
     }
 
     unsafe extern "C" fn deactivate<P: Plugin<'a>>(plugin: *const clap_plugin) {
-        P::deactivate(Self::get_plugin(plugin))
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::deactivate(p);
+            Ok(())
+        });
     }
 
     unsafe extern "C" fn start_processing<P: Plugin<'a>>(plugin: *const clap_plugin) -> bool {
-        P::start_processing(Self::get_plugin(plugin))
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::start_processing(p)?;
+            Ok(())
+        })
     }
 
     unsafe extern "C" fn stop_processing<P: Plugin<'a>>(plugin: *const clap_plugin) {
-        P::stop_processing(Self::get_plugin(plugin))
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::stop_processing(p);
+            Ok(())
+        });
     }
 
     unsafe extern "C" fn process<P: Plugin<'a>>(
@@ -114,8 +115,11 @@ impl<'a> PluginInstance<'a> {
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
         let (process, audio, events) = Process::from_raw(process);
-        P::process(Self::get_plugin(plugin), process, audio, events); // TODO: handle return status
-        CLAP_PROCESS_CONTINUE
+        wrapper::handle_plugin_returning::<_, _, _, PluginError>(plugin, |p| {
+            P::process(p, process, audio, events)
+        })
+        .map(|s| s as clap_process_status)
+        .unwrap_or(CLAP_PROCESS_ERROR)
     }
 
     unsafe extern "C" fn get_extension<P: Plugin<'a>>(
@@ -124,12 +128,18 @@ impl<'a> PluginInstance<'a> {
     ) -> *const c_void {
         let identifier = CStr::from_ptr(identifier);
         let mut builder = ExtensionDeclarations::new(identifier);
-        P::declare_extensions(Self::get_plugin(plugin), &mut builder);
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::declare_extensions(p, &mut builder);
+            Ok(())
+        });
         builder.found()
     }
 
     unsafe extern "C" fn on_main_thread<P: Plugin<'a>>(plugin: *const clap_plugin) {
-        P::on_main_thread(Self::get_plugin(plugin))
+        wrapper::handle_plugin::<_, _, PluginError>(plugin, |p| {
+            P::on_main_thread(p);
+            Ok(())
+        });
     }
 }
 
@@ -143,18 +153,30 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
 
     fn new(host: HostHandle<'a>) -> Option<Self>;
     #[inline]
-    fn activate(&self, _sample_rate: f64, _min_sample_count: u32, _max_sample_count: u32) {}
+    fn activate(
+        &self,
+        _sample_rate: f64,
+        _min_sample_count: u32,
+        _max_sample_count: u32,
+    ) -> Result {
+        Ok(())
+    }
     #[inline]
     fn deactivate(&self) {}
 
     #[inline]
-    fn start_processing(&self) -> bool {
-        true
+    fn start_processing(&self) -> Result {
+        Ok(())
     }
     #[inline]
     fn stop_processing(&self) {}
 
-    fn process(&self, process: &Process, audio: Audio, events: ProcessEvents); // TODO: status
+    fn process(
+        &self,
+        process: &Process,
+        audio: Audio,
+        events: ProcessEvents,
+    ) -> Result<ProcessStatus>;
 
     #[inline]
     fn declare_extensions(&self, _builder: &mut ExtensionDeclarations<Self>) {}

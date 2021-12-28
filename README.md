@@ -2,7 +2,7 @@
 
 A set of crates offering safe Rust wrappers to create audio plugins and hosts using the [CLAP](https://github.com/free-audio/clap) audio API.
 
-This library is an exploratory attempt to make safe bindings to CLAP, built on top of [`clap-sys`](https://github.com/glowcoil/clap-sys).
+This library is an exploratory attempt to make safe bindings to CLAP, built on top of [`clap-sys`](https://github.com/prokopyl/clap-sys).
 
 It should be considered **highly experimental** and subject to change, and is far from being ready for production use.
 

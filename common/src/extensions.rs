@@ -1,6 +1,8 @@
 use core::ffi::c_void;
 use std::ptr::NonNull;
 
+pub mod log;
+
 /// # Safety
 /// The IDENTIFIER must match the official identifier for the given extension, otherwise
 /// the extension data could be misinterpreted, and UB could occur
@@ -19,4 +21,9 @@ pub unsafe trait ExtensionDescriptor<'a, P>: Extension<'a> {
     type ExtensionInterface: 'static;
 
     const INTERFACE: &'static Self::ExtensionInterface;
+
+    fn from_implementation() -> &'a Self {
+        let ptr = NonNull::from(Self::INTERFACE).cast();
+        unsafe { Self::from_extension_ptr(ptr) }
+    }
 }

@@ -1,15 +1,18 @@
 use clap_audio_common::events::event_types::NoteEvent;
+use clap_audio_common::events::list::EventList;
 use clap_audio_common::events::{Event, EventType};
-use clap_audio_extensions::params::{ParamInfo, ParamsDescriptor, PluginParams};
+use clap_audio_common::host::{HostHandle, HostInfo};
+use clap_audio_common::process::ProcessStatus;
+use clap_audio_extensions::params::{
+    ParamDisplayWriter, ParamInfoWriter, ParamsDescriptor, PluginParams,
+};
 use clap_audio_plugin::extension::ExtensionDeclarations;
-use clap_audio_plugin::host::HostHandle;
 use clap_audio_plugin::process::audio::Audio;
 use clap_audio_plugin::process::events::ProcessEvents;
 use clap_audio_plugin::process::Process;
 use clap_audio_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
-    host::HostInfo,
-    plugin::{Plugin, PluginDescriptor, PluginInstance},
+    plugin::{Plugin, PluginDescriptor, PluginInstance, Result},
 };
 
 pub struct GainPlugin;
@@ -21,7 +24,12 @@ impl<'a> Plugin<'a> for GainPlugin {
         Some(Self)
     }
 
-    fn process(&self, _process: &Process, mut audio: Audio, events: ProcessEvents) {
+    fn process(
+        &self,
+        _process: &Process,
+        mut audio: Audio,
+        events: ProcessEvents,
+    ) -> Result<ProcessStatus> {
         // Only handle f32 samples for simplicity
         let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
 
@@ -44,6 +52,8 @@ impl<'a> Plugin<'a> for GainPlugin {
                 ),
                 _ => *e,
             }));
+
+        Ok(ProcessStatus::ContinueIfNotQuiet)
     }
 
     fn declare_extensions(&self, builder: &mut ExtensionDeclarations<Self>) {
@@ -51,29 +61,31 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 }
 
-// TODO: properly implement and design this API
 impl<'a> PluginParams<'a> for GainPlugin {
     fn count(&self) -> u32 {
         0
     }
 
-    fn get_info(&self, _param_index: i32, _info: &mut ParamInfo) -> bool {
-        false
-    }
+    fn get_info(&self, _param_index: i32, _writer: &mut ParamInfoWriter) {}
 
     fn get_value(&self, _param_id: u32) -> Option<f64> {
         None
     }
 
-    fn value_to_text(&self, _param_id: u32, _value: f64, _output_buf: &mut [u8]) -> bool {
-        false
+    fn value_to_text(
+        &self,
+        _param_id: u32,
+        _value: f64,
+        _writer: &mut ParamDisplayWriter,
+    ) -> ::core::fmt::Result {
+        Ok(())
     }
 
     fn text_to_value(&self, _param_id: u32, _text: &str) -> Option<f64> {
         None
     }
 
-    fn flush(&self) {}
+    fn flush(&self, _input_events: &EventList, _output_events: &EventList) {}
 }
 
 pub struct GainEntry;

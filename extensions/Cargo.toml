@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 "clap-audio-plugin" = { path = "../plugin" }
 "clap-audio-common" = { path = "../common" }
-clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
+clap-sys = { git = "https://github.com/prokopyl/clap-sys" }

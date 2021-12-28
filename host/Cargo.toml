@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap-sys = { git = "https://github.com/glowcoil/clap-sys" }
+clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
 clap-audio-plugin = { path = "../plugin" } # TODO: remove
 clap-audio-common = { path = "../common" }
 basedrop = "0.1.2"
