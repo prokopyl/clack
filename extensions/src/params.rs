@@ -12,7 +12,7 @@ use std::ptr::NonNull;
 use std::str::Utf8Error;
 
 // TODO
-pub struct ParamsDescriptor(clap_plugin_params);
+pub struct Params(clap_plugin_params);
 
 pub mod info;
 
@@ -83,7 +83,7 @@ impl<'a> ::core::fmt::Write for ParamDisplayWriter<'a> {
     }
 }
 
-pub trait PluginParams<'a>: Plugin<'a> {
+pub trait PluginMainThreadParams<'a> {
     fn count(&self) -> u32;
     fn get_info(&self, param_index: i32, info: &mut ParamInfoWriter);
     fn get_value(&self, param_id: u32) -> Option<f64>;
@@ -94,23 +94,39 @@ pub trait PluginParams<'a>: Plugin<'a> {
         writer: &mut ParamDisplayWriter,
     ) -> ::core::fmt::Result;
     fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64>;
-    fn flush(&self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
+    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
+}
+
+pub trait PluginParams<'a>: Plugin<'a>
+where
+    Self::MainThread: PluginMainThreadParams<'a>,
+{
+    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
 }
 
 unsafe extern "C" fn count<'a, P: PluginParams<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
-) -> u32 {
-    handle_plugin_returning::<_, _, _, PluginError>(plugin, |p| Ok(P::count(p))).unwrap_or(0)
+) -> u32
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
+    handle_plugin_returning::<P, _, _, PluginError>(plugin, |p| {
+        Ok(P::MainThread::count(p.main_thread().as_ref()))
+    })
+    .unwrap_or(0)
 }
 
 unsafe extern "C" fn get_info<'a, P: PluginParams<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
     param_index: i32,
     value: *mut clap_param_info,
-) -> bool {
+) -> bool
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
     let mut info = ParamInfoWriter::new(value);
-    handle_plugin::<_, _, PluginError>(plugin, |p| {
-        P::get_info(p, param_index, &mut info);
+    handle_plugin::<P, _, PluginError>(plugin, |p| {
+        P::MainThread::get_info(p.main_thread().as_ref(), param_index, &mut info);
         Ok(())
     }) && info.initialized
 }
@@ -119,10 +135,14 @@ unsafe extern "C" fn get_value<'a, P: PluginParams<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
     param_id: clap_id,
     value: *mut f64,
-) -> bool {
-    let val =
-        handle_plugin_returning::<_, _, _, PluginError>(plugin, |p| Ok(P::get_value(p, param_id)))
-            .flatten();
+) -> bool
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
+    let val = handle_plugin_returning::<P, _, _, PluginError>(plugin, |p| {
+        Ok(P::MainThread::get_value(p.main_thread().as_ref(), param_id))
+    })
+    .flatten();
 
     match val {
         None => false,
@@ -139,11 +159,14 @@ unsafe extern "C" fn value_to_text<'a, P: PluginParams<'a>>(
     value: f64,
     display: *mut ::std::os::raw::c_char,
     size: u32,
-) -> bool {
+) -> bool
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
     let buf = ::core::slice::from_raw_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
-    handle_plugin::<_, _, _>(plugin, |p| {
-        P::value_to_text(p, param_id, value, &mut writer)
+    handle_plugin::<P, _, _>(plugin, |p| {
+        P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
     }) && writer.finish()
 }
 
@@ -152,12 +175,19 @@ unsafe extern "C" fn text_to_value<'a, P: PluginParams<'a>>(
     param_id: clap_id,
     display: *const ::std::os::raw::c_char,
     value: *mut f64,
-) -> bool {
+) -> bool
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
     let display = CStr::from_ptr(display).to_bytes();
 
-    let val = handle_plugin_returning::<_, _, _, Utf8Error>(plugin, |p| {
+    let val = handle_plugin_returning::<P, _, _, Utf8Error>(plugin, |p| {
         let display = ::core::str::from_utf8(display)?;
-        Ok(P::text_to_value(p, param_id, display))
+        Ok(P::MainThread::text_to_value(
+            p.main_thread().as_ref(),
+            param_id,
+            display,
+        ))
     })
     .flatten();
 
@@ -174,17 +204,31 @@ unsafe extern "C" fn flush<'a, P: PluginParams<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
     input_parameter_changes: *const clap_event_list,
     output_parameter_changes: *const clap_event_list,
-) {
+) where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
     let input_parameter_changes = EventList::from_raw(input_parameter_changes);
     let output_parameter_changes = EventList::from_raw(output_parameter_changes);
 
-    handle_plugin::<_, _, PluginError>(plugin, |p| {
-        P::flush(p, input_parameter_changes, output_parameter_changes);
+    handle_plugin::<P, _, PluginError>(plugin, |p| {
+        if let Ok(mut audio) = p.audio_processor() {
+            P::flush(
+                audio.as_mut(),
+                input_parameter_changes,
+                output_parameter_changes,
+            );
+        } else {
+            P::MainThread::flush(
+                p.main_thread().as_mut(),
+                input_parameter_changes,
+                output_parameter_changes,
+            );
+        }
         Ok(())
     });
 }
 
-unsafe impl<'a> Extension<'a> for ParamsDescriptor {
+unsafe impl<'a> Extension<'a> for Params {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
 
     // TODO: this may be redundant
@@ -193,7 +237,10 @@ unsafe impl<'a> Extension<'a> for ParamsDescriptor {
     }
 }
 
-unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<'a, P> for ParamsDescriptor {
+unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<'a, P> for Params
+where
+    P::MainThread: PluginMainThreadParams<'a>,
+{
     type ExtensionInterface = clap_plugin_params;
     const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_params {
         count: count::<P>,

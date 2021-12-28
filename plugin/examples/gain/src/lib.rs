@@ -5,9 +5,11 @@ use clap_audio_common::host::{HostHandle, HostInfo};
 use clap_audio_common::process::ProcessStatus;
 use clap_audio_extensions::params::info::ParamInfoFlags;
 use clap_audio_extensions::params::{
-    info::ParamInfo, ParamDisplayWriter, ParamInfoWriter, ParamsDescriptor, PluginParams,
+    info::ParamInfo, ParamDisplayWriter, ParamInfoWriter, Params, PluginMainThreadParams,
+    PluginParams,
 };
 use clap_audio_plugin::extension::ExtensionDeclarations;
+use clap_audio_plugin::plugin::{PluginMainThread, SampleConfig};
 use clap_audio_plugin::process::audio::Audio;
 use clap_audio_plugin::process::events::ProcessEvents;
 use clap_audio_plugin::process::Process;
@@ -15,24 +17,26 @@ use clap_audio_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
     plugin::{Plugin, PluginDescriptor, PluginInstance, Result},
 };
-use core::sync::atomic::AtomicU32;
-use core::sync::atomic::Ordering::SeqCst;
 
-pub struct GainPlugin {
-    rusting: AtomicU32,
-}
+pub struct GainPlugin;
 
 impl<'a> Plugin<'a> for GainPlugin {
+    type Shared = ();
+    type MainThread = GainPluginMainThread;
+
     const ID: &'static [u8] = b"gain\0";
 
-    fn new(_host: HostHandle<'a>) -> Option<Self> {
-        Some(Self {
-            rusting: AtomicU32::new(0),
-        })
+    fn new(
+        _host: HostHandle<'a>,
+        _main_thread: &mut GainPluginMainThread,
+        _shared: &(),
+        _sample_config: SampleConfig,
+    ) -> Result<Self> {
+        Ok(Self)
     }
 
     fn process(
-        &self,
+        &mut self,
         _process: &Process,
         mut audio: Audio,
         events: ProcessEvents,
@@ -65,12 +69,31 @@ impl<'a> Plugin<'a> for GainPlugin {
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }
 
-    fn declare_extensions(&self, builder: &mut ExtensionDeclarations<Self>) {
-        builder.register::<ParamsDescriptor>()
+    fn declare_extensions(builder: &mut ExtensionDeclarations<Self>, _shared: &()) {
+        builder.register::<Params>();
     }
 }
 
 impl<'a> PluginParams<'a> for GainPlugin {
+    fn flush(
+        &mut self,
+        _input_parameter_changes: &EventList,
+        _output_parameter_changes: &EventList,
+    ) {
+    }
+}
+
+pub struct GainPluginMainThread {
+    rusting: u32,
+}
+
+impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
+    fn new(_host: HostHandle<'a>, _shared: &()) -> Result<Self> {
+        Ok(Self { rusting: 0 })
+    }
+}
+
+impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
     fn count(&self) -> u32 {
         1
     }
@@ -92,7 +115,7 @@ impl<'a> PluginParams<'a> for GainPlugin {
 
     fn get_value(&self, param_id: u32) -> Option<f64> {
         if param_id == 0 {
-            Some(self.rusting.load(SeqCst) as f64)
+            Some(self.rusting as f64)
         } else {
             None
         }
@@ -118,7 +141,7 @@ impl<'a> PluginParams<'a> for GainPlugin {
         None
     }
 
-    fn flush(&self, input_events: &EventList, _output_events: &EventList) {
+    fn flush(&mut self, input_events: &EventList, _output_events: &EventList) {
         let value_events = input_events.iter().filter_map(|e| match e.event()? {
             EventType::ParamValue(v) => Some(v),
             _ => None,
@@ -126,7 +149,7 @@ impl<'a> PluginParams<'a> for GainPlugin {
 
         for value in value_events {
             if value.param_id() == 0 {
-                self.rusting.store(value.value() as u32, SeqCst);
+                self.rusting = value.value() as u32;
             }
         }
     }

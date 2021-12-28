@@ -27,14 +27,16 @@ impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
             .unwrap_or(::core::ptr::null_mut())
     }
 
-    pub fn register<E: ExtensionDescriptor<'b, P>>(&mut self) {
+    pub fn register<E: ExtensionDescriptor<'b, P>>(&mut self) -> &mut Self {
         if self.found.is_some() {
-            return;
+            return self;
         }
 
         let uri = unsafe { CStr::from_ptr(E::IDENTIFIER as *const _) };
         if uri == self.requested {
             self.found = NonNull::new(E::INTERFACE as *const _ as *mut _)
         }
+
+        self
     }
 }

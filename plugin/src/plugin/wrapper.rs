@@ -1,5 +1,5 @@
 use crate::plugin::error::PluginInternalError;
-use crate::plugin::{wrapper, Plugin, PluginData};
+use crate::plugin::{wrapper, Plugin, PluginData, PluginInnerData};
 use clap_audio_common::extensions::log::implementation::StdoutLogger;
 use clap_audio_common::extensions::log::{Log, LogSeverity};
 use clap_audio_common::host::HostHandle;
@@ -34,7 +34,7 @@ unsafe fn handle<'a, P: Plugin<'a>, T, F, E>(
     handler: F,
 ) -> Result<T, PluginInternalError<E>>
 where
-    F: FnOnce(&P) -> Result<T, E>,
+    F: FnOnce(&PluginInnerData<'a, P>) -> Result<T, E>,
     E: Error,
 {
     let plugin = plugin.as_ref().ok_or(PluginInternalError::NulPluginDesc)?;
@@ -43,9 +43,35 @@ where
         .cast::<PluginData<'a, P>>()
         .as_ref()
         .ok_or(PluginInternalError::NulPluginData)?;
+
     let plugin = plugin
         .plugin_data
         .as_ref()
+        .ok_or(PluginInternalError::UninitializedPlugin)?;
+
+    // TODO: AssertUnwindSafe may not be good here
+    Ok(catch_unwind(AssertUnwindSafe(|| handler(plugin)))
+        .map_err(|_| PluginInternalError::Panic)??)
+}
+
+unsafe fn handle_mut<'a, P: Plugin<'a>, T, F, E>(
+    plugin: *const clap_plugin,
+    handler: F,
+) -> Result<T, PluginInternalError<E>>
+where
+    F: FnOnce(&mut PluginInnerData<'a, P>) -> Result<T, E>,
+    E: Error,
+{
+    let plugin = plugin.as_ref().ok_or(PluginInternalError::NulPluginDesc)?;
+    let plugin = plugin
+        .plugin_data
+        .cast::<PluginData<'a, P>>()
+        .as_mut()
+        .ok_or(PluginInternalError::NulPluginData)?;
+
+    let plugin = plugin
+        .plugin_data
+        .as_mut()
         .ok_or(PluginInternalError::UninitializedPlugin)?;
 
     // TODO: AssertUnwindSafe may not be good here
@@ -76,10 +102,31 @@ unsafe fn log_safe<'a, P: Plugin<'a>, E: Error>(
 // TODO: cleanup this sometime
 pub unsafe fn handle_plugin<'a, P: Plugin<'a>, F, E>(plugin: *const clap_plugin, handler: F) -> bool
 where
-    F: FnOnce(&P) -> Result<(), E>,
+    F: FnOnce(&PluginInnerData<'a, P>) -> Result<(), E>,
     E: Error,
 {
     match wrapper::handle(plugin, handler) {
+        Ok(()) => true,
+        Err(e) => {
+            wrapper::log_safe::<P, _>(plugin, e);
+
+            false
+        }
+    }
+}
+
+/// # Safety
+/// The plugin pointer must be valid
+// TODO: cleanup this sometime
+pub unsafe fn handle_plugin_mut<'a, P: Plugin<'a>, F, E>(
+    plugin: *const clap_plugin,
+    handler: F,
+) -> bool
+where
+    F: FnOnce(&mut PluginInnerData<'a, P>) -> Result<(), E>,
+    E: Error,
+{
+    match wrapper::handle_mut(plugin, handler) {
         Ok(()) => true,
         Err(e) => {
             wrapper::log_safe::<P, _>(plugin, e);
@@ -96,7 +143,7 @@ pub unsafe fn handle_plugin_returning<'a, P: Plugin<'a>, T, F, E>(
     handler: F,
 ) -> Option<T>
 where
-    F: FnOnce(&P) -> Result<T, E>,
+    F: FnOnce(&PluginInnerData<'a, P>) -> Result<T, E>,
     E: Error,
 {
     match handle(plugin, handler) {

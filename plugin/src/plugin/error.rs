@@ -19,10 +19,13 @@ impl Display for PluginError {
 
 impl Error for PluginError {}
 
-pub enum PluginInternalError<E: Error> {
+#[derive(Debug)]
+pub enum PluginInternalError<E: Error = PluginError> {
     NulPluginDesc,
     NulPluginData,
     UninitializedPlugin,
+    ActivatedPlugin,
+    DeactivatedPlugin,
     Panic,
     Other(E),
 }
@@ -56,8 +59,14 @@ impl<E: Error> Display for PluginInternalError<E> {
             PluginInternalError::UninitializedPlugin => {
                 f.write_str("Plugin was not properly initialized before use")
             }
+            PluginInternalError::ActivatedPlugin => f.write_str("Plugin was already activated"),
+            PluginInternalError::DeactivatedPlugin => {
+                f.write_str("Plugin was not activated before calling a processing-thread method")
+            }
             PluginInternalError::Other(e) => std::fmt::Display::fmt(&e, f),
             PluginInternalError::Panic => f.write_str("Plugin panicked"), // TODO: stacktrace
         }
     }
 }
+
+impl<E: Error> Error for PluginInternalError<E> {}
