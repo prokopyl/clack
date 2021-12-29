@@ -1,5 +1,5 @@
-use crate::extensions::{Extension, ExtensionDescriptor, ToShared};
-use crate::host::HostHandle;
+use clap_audio_common::extensions::{Extension, ToShared};
+use clap_audio_plugin::host::HostHandle;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use core::fmt::Display;
 use core::fmt::Write;
@@ -8,7 +8,6 @@ use std::ffi::{c_void, CStr, CString};
 
 mod error;
 pub mod implementation;
-use crate::extensions::log::implementation::StdoutLogger;
 pub use error::LogError;
 
 #[repr(i32)]
@@ -63,11 +62,6 @@ impl LogSeverity {
 pub struct Log(clap_host_log);
 
 impl Log {
-    #[inline]
-    pub fn fallback<'a>() -> &'a Self {
-        <Self as ExtensionDescriptor<StdoutLogger>>::from_implementation()
-    }
-
     #[inline]
     pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
         unsafe { (self.0.log)(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }

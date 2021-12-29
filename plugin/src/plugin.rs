@@ -1,8 +1,8 @@
 use crate::extension::ExtensionDeclarations;
+use crate::host::HostHandle;
 use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;
 use crate::process::Process;
-use clap_audio_common::host::HostHandle;
 use clap_audio_common::process::ProcessStatus;
 use clap_sys::{
     plugin::{clap_plugin_descriptor, CLAP_PLUGIN_AUDIO_EFFECT},
@@ -11,6 +11,7 @@ use clap_sys::{
 
 mod error;
 mod instance;
+mod logging;
 pub mod wrapper;
 pub use error::{PluginError, Result};
 pub use instance::*;

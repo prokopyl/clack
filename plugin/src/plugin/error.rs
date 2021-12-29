@@ -1,4 +1,6 @@
-use clap_audio_common::extensions::log::LogSeverity;
+use clap_sys::ext::log::{
+    clap_log_severity, CLAP_LOG_ERROR, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING,
+};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -31,11 +33,11 @@ pub enum PluginInternalError<E: Error = PluginError> {
 }
 
 impl<E: Error> PluginInternalError<E> {
-    pub fn severity(&self) -> LogSeverity {
+    pub fn severity(&self) -> clap_log_severity {
         match self {
-            PluginInternalError::Other(_) => LogSeverity::Error,
-            PluginInternalError::Panic => LogSeverity::PluginMisbehaving,
-            _ => LogSeverity::HostMisbehaving,
+            PluginInternalError::Other(_) => CLAP_LOG_ERROR,
+            PluginInternalError::Panic => CLAP_LOG_PLUGIN_MISBEHAVING,
+            _ => CLAP_LOG_HOST_MISBEHAVING,
         }
     }
 }

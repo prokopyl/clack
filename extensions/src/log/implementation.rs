@@ -1,5 +1,5 @@
 use super::{Log, LogSeverity};
-use crate::extensions::ExtensionDescriptor;
+use clap_audio_common::extensions::ExtensionDescriptor;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use std::borrow::Cow::Owned;

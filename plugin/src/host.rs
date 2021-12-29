@@ -1,4 +1,4 @@
-use crate::extensions::{Extension, ToShared};
+use clap_audio_common::extensions::{Extension, ToShared};
 use clap_sys::host::clap_host;
 use clap_sys::version::clap_version;
 use std::ffi::CStr;

@@ -1,8 +1,8 @@
 use crate::extension::ExtensionDeclarations;
+use crate::host::{HostHandle, HostInfo};
 use crate::plugin::error::PluginInternalError;
 use crate::plugin::{wrapper, Plugin, PluginError, PluginMainThread, PluginShared, SampleConfig};
 use crate::process::Process;
-use clap_audio_common::host::{HostHandle, HostInfo};
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;

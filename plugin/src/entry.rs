@@ -1,5 +1,5 @@
+use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
-use clap_audio_common::host::HostInfo;
 use clap_sys::{
     host::clap_host,
     plugin::{

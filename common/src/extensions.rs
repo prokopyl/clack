@@ -1,8 +1,6 @@
 use core::ffi::c_void;
 use std::ptr::NonNull;
 
-pub mod log;
-
 /// # Safety
 /// The IDENTIFIER must match the official identifier for the given extension, otherwise
 /// the extension data could be misinterpreted, and UB could occur
