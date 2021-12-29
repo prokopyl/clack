@@ -26,7 +26,7 @@ unsafe fn get_logger<'a, P: Plugin<'a>>(
         .as_ref()?
         .host;
 
-    Some((host, host.extension()?))
+    Some((host, host.extension::<Log>()?))
 }
 
 unsafe fn handle<'a, P: Plugin<'a>, T, F, E>(

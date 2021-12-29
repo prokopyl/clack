@@ -1,7 +1,8 @@
-use crate::extensions::Extension;
+use crate::extensions::{Extension, ToShared};
 use clap_sys::host::clap_host;
 use clap_sys::version::clap_version;
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 #[derive(Copy, Clone)]
@@ -92,6 +93,26 @@ impl<'a> HostHandle<'a> {
     pub fn request_callback(&self) {
         // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
         unsafe { (self.inner.request_callback)(self.inner) }
+    }
+
+    #[inline]
+    pub fn extension<E: Extension<'a> + ToShared<'a>>(&self) -> Option<&'a E::Shared> {
+        let id = E::IDENTIFIER;
+        let ptr = unsafe { (self.inner.get_extension)(self.inner, id as *const _) as *mut _ };
+        unsafe { Some(E::from_extension_ptr(NonNull::new(ptr)?).to_shared()) }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct HostMainThreadHandle<'a> {
+    inner: &'a clap_host,
+    _non_send: PhantomData<*const clap_host>,
+}
+
+impl<'a> HostMainThreadHandle<'a> {
+    #[inline]
+    pub fn shared(&self) -> HostHandle<'a> {
+        HostHandle { inner: self.inner }
     }
 
     #[inline]

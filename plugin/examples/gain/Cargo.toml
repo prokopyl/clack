@@ -15,5 +15,5 @@ crate-type = ["rlib", "cdylib"]
 
 [dev-dependencies]
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
-host = { path = "../../../host" }
+clap-audio-host = { path = "../../../host" }
 clap-audio-common = { path = "../../../common" }

@@ -2,7 +2,7 @@ use clap_audio_common::events::{
     event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType,
 };
 
-use host::{
+use clap_audio_host::{
     entry::PluginEntry,
     host::{HostInfo, PluginHost},
     instance::processor::audio::HostAudioBufferCollection,

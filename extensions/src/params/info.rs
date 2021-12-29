@@ -20,6 +20,7 @@ bitflags! {
     }
 }
 
+#[repr(C)]
 pub struct ParamInfo {
     pub(crate) inner: clap_param_info,
 }

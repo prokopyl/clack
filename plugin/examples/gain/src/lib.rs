@@ -4,10 +4,7 @@ use clap_audio_common::events::{Event, EventType};
 use clap_audio_common::host::{HostHandle, HostInfo};
 use clap_audio_common::process::ProcessStatus;
 use clap_audio_extensions::params::info::ParamInfoFlags;
-use clap_audio_extensions::params::{
-    info::ParamInfo, ParamDisplayWriter, ParamInfoWriter, Params, PluginMainThreadParams,
-    PluginParams,
-};
+use clap_audio_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
 use clap_audio_plugin::extension::ExtensionDeclarations;
 use clap_audio_plugin::plugin::{PluginMainThread, SampleConfig};
 use clap_audio_plugin::process::audio::Audio;
@@ -70,11 +67,11 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 
     fn declare_extensions(builder: &mut ExtensionDeclarations<Self>, _shared: &()) {
-        builder.register::<Params>();
+        builder.register::<PluginParams>();
     }
 }
 
-impl<'a> PluginParams<'a> for GainPlugin {
+impl<'a> PluginParamsImpl<'a> for GainPlugin {
     fn flush(
         &mut self,
         _input_parameter_changes: &EventList,

@@ -1,253 +1,154 @@
 use crate::params::info::ParamInfo;
 use clap_audio_common::events::list::EventList;
-use clap_audio_common::extensions::{Extension, ExtensionDescriptor};
-use clap_audio_plugin::plugin::wrapper::{handle_plugin, handle_plugin_returning};
-use clap_audio_plugin::plugin::{Plugin, PluginError};
-use clap_sys::events::clap_event_list;
-use clap_sys::ext::params::{clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS};
-use clap_sys::id::clap_id;
+use clap_audio_common::extensions::Extension;
+use clap_audio_host::instance::channel::PluginInstanceChannelSend;
+use clap_audio_host::instance::processor::StoppedPluginAudioProcessor;
+use clap_audio_host::instance::PluginInstance;
+use clap_sys::ext::params::{clap_plugin_params, CLAP_EXT_PARAMS};
 use std::ffi::{c_void, CStr};
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ptr::NonNull;
-use std::str::Utf8Error;
 
-// TODO
-pub struct Params(clap_plugin_params);
+#[repr(C)]
+pub struct PluginParams(clap_plugin_params, PhantomData<*const clap_plugin_params>);
 
+pub mod implementation;
 pub mod info;
 
-pub struct ParamInfoWriter<'a> {
-    initialized: bool,
-    inner: &'a mut MaybeUninit<clap_param_info>,
-}
-
-impl<'a> ParamInfoWriter<'a> {
-    fn new(ptr: *mut clap_param_info) -> Self {
-        Self {
-            initialized: false,
-            // SAFETY: MaybeUninit<T> and T have same memory representation
-            inner: unsafe { &mut *(ptr as *mut _) },
-        }
-    }
-    #[inline]
-    pub fn set(&mut self, param: &ParamInfo) {
-        self.inner.write(param.inner);
-        self.initialized = true;
-    }
-}
-
-pub struct ParamDisplayWriter<'a> {
-    cursor_position: usize,
-    buffer: &'a mut [u8],
-}
-
-impl<'a> ParamDisplayWriter<'a> {
-    #[inline]
-    fn new(buffer: &'a mut [u8]) -> Self {
-        Self {
-            cursor_position: 0,
-            buffer,
-        }
-    }
-
-    #[inline]
-    #[allow(clippy::len_without_is_empty)] // Len should never be 0, unless host is misbehaving
-    pub fn len(&self) -> usize {
-        self.buffer.len().saturating_sub(1)
-    }
-
-    #[inline]
-    pub fn remaining_len(&self) -> usize {
-        self.buffer.len().saturating_sub(self.cursor_position + 1)
-    }
-
-    fn finish(self) -> bool {
-        if self.cursor_position > 0 {
-            self.buffer[self.cursor_position] = 0;
-        }
-        self.cursor_position > 0
-    }
-}
-
-impl<'a> ::core::fmt::Write for ParamDisplayWriter<'a> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        let s = s.as_bytes();
-        if s.len() > self.remaining_len() {
-            return Err(::core::fmt::Error);
-        }
-
-        self.buffer[self.cursor_position..self.cursor_position + s.len()].copy_from_slice(s);
-        self.cursor_position += s.len();
-
-        Ok(())
-    }
-}
-
-pub trait PluginMainThreadParams<'a> {
-    fn count(&self) -> u32;
-    fn get_info(&self, param_index: i32, info: &mut ParamInfoWriter);
-    fn get_value(&self, param_id: u32) -> Option<f64>;
-    fn value_to_text(
-        &self,
-        param_id: u32,
-        value: f64,
-        writer: &mut ParamDisplayWriter,
-    ) -> ::core::fmt::Result;
-    fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64>;
-    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
-}
-
-pub trait PluginParams<'a>: Plugin<'a>
-where
-    Self::MainThread: PluginMainThreadParams<'a>,
-{
-    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
-}
-
-unsafe extern "C" fn count<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-) -> u32
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    handle_plugin_returning::<P, _, _, PluginError>(plugin, |p| {
-        Ok(P::MainThread::count(p.main_thread().as_ref()))
-    })
-    .unwrap_or(0)
-}
-
-unsafe extern "C" fn get_info<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-    param_index: i32,
-    value: *mut clap_param_info,
-) -> bool
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    let mut info = ParamInfoWriter::new(value);
-    handle_plugin::<P, _, PluginError>(plugin, |p| {
-        P::MainThread::get_info(p.main_thread().as_ref(), param_index, &mut info);
-        Ok(())
-    }) && info.initialized
-}
-
-unsafe extern "C" fn get_value<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-    param_id: clap_id,
-    value: *mut f64,
-) -> bool
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    let val = handle_plugin_returning::<P, _, _, PluginError>(plugin, |p| {
-        Ok(P::MainThread::get_value(p.main_thread().as_ref(), param_id))
-    })
-    .flatten();
-
-    match val {
-        None => false,
-        Some(val) => {
-            *value = val;
-            true
-        }
-    }
-}
-
-unsafe extern "C" fn value_to_text<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-    param_id: clap_id,
-    value: f64,
-    display: *mut ::std::os::raw::c_char,
-    size: u32,
-) -> bool
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    let buf = ::core::slice::from_raw_parts_mut(display as *mut u8, size as usize);
-    let mut writer = ParamDisplayWriter::new(buf);
-    handle_plugin::<P, _, _>(plugin, |p| {
-        P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
-    }) && writer.finish()
-}
-
-unsafe extern "C" fn text_to_value<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-    param_id: clap_id,
-    display: *const ::std::os::raw::c_char,
-    value: *mut f64,
-) -> bool
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    let display = CStr::from_ptr(display).to_bytes();
-
-    let val = handle_plugin_returning::<P, _, _, Utf8Error>(plugin, |p| {
-        let display = ::core::str::from_utf8(display)?;
-        Ok(P::MainThread::text_to_value(
-            p.main_thread().as_ref(),
-            param_id,
-            display,
-        ))
-    })
-    .flatten();
-
-    match val {
-        None => false,
-        Some(val) => {
-            *value = val;
-            true
-        }
-    }
-}
-
-unsafe extern "C" fn flush<'a, P: PluginParams<'a>>(
-    plugin: *const ::clap_sys::plugin::clap_plugin,
-    input_parameter_changes: *const clap_event_list,
-    output_parameter_changes: *const clap_event_list,
-) where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    let input_parameter_changes = EventList::from_raw(input_parameter_changes);
-    let output_parameter_changes = EventList::from_raw(output_parameter_changes);
-
-    handle_plugin::<P, _, PluginError>(plugin, |p| {
-        if let Ok(mut audio) = p.audio_processor() {
-            P::flush(
-                audio.as_mut(),
-                input_parameter_changes,
-                output_parameter_changes,
-            );
-        } else {
-            P::MainThread::flush(
-                p.main_thread().as_mut(),
-                input_parameter_changes,
-                output_parameter_changes,
-            );
-        }
-        Ok(())
-    });
-}
-
-unsafe impl<'a> Extension<'a> for Params {
+unsafe impl<'a> Extension<'a> for PluginParams {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
 
     // TODO: this may be redundant
+    #[inline]
     unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
         ptr.cast().as_ref()
     }
 }
 
-unsafe impl<'a, P: PluginParams<'a>> ExtensionDescriptor<'a, P> for Params
-where
-    P::MainThread: PluginMainThreadParams<'a>,
-{
-    type ExtensionInterface = clap_plugin_params;
-    const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_params {
-        count: count::<P>,
-        get_info: get_info::<P>,
-        get_value: get_value::<P>,
-        value_to_text: value_to_text::<P>,
-        text_to_value: text_to_value::<P>,
-        flush: flush::<P>,
-    };
+impl PluginParams {
+    pub fn count(&self, plugin: &PluginInstance) -> u32 {
+        unsafe { (self.0.count)(plugin.as_raw()) }
+    }
+
+    pub fn get_info<'b>(
+        &self,
+        plugin: &PluginInstance,
+        param_index: i32,
+        info: &'b mut MaybeUninit<ParamInfo>,
+    ) -> Option<&'b mut ParamInfo> {
+        let valid =
+            unsafe { (self.0.get_info)(plugin.as_raw(), param_index, info.as_mut_ptr() as *mut _) };
+
+        if valid {
+            unsafe { Some(info.assume_init_mut()) }
+        } else {
+            None
+        }
+    }
+
+    pub fn get_value(&self, plugin: &PluginInstance, param_id: u32) -> Option<f64> {
+        let mut value = MaybeUninit::uninit();
+        let valid = unsafe { (self.0.get_value)(plugin.as_raw(), param_id, value.as_mut_ptr()) };
+
+        if valid {
+            unsafe { Some(value.assume_init()) }
+        } else {
+            None
+        }
+    }
+
+    pub fn value_to_text<'b>(
+        &self,
+        plugin: &PluginInstance,
+        param_id: u32,
+        value: f64,
+        buffer: &'b mut [std::mem::MaybeUninit<u8>],
+    ) -> Option<&'b mut [u8]> {
+        let valid = unsafe {
+            (self.0.value_to_text)(
+                plugin.as_raw(),
+                param_id,
+                value,
+                buffer.as_mut_ptr() as *mut _,
+                buffer.len() as u32,
+            )
+        };
+
+        if valid {
+            // SAFETY: technically not all of the buffer may be initialized, but uninit u8 is fine
+            let buffer = unsafe { assume_init_slice(buffer) };
+            // If no nul byte found, we take the entire buffer
+            let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(buffer.len());
+            Some(&mut buffer[..buffer_total_len])
+        } else {
+            None
+        }
+    }
+
+    pub fn text_to_value(
+        &self,
+        plugin: &PluginInstance,
+        param_id: u32,
+        display: &CStr,
+    ) -> Option<f64> {
+        let mut value = MaybeUninit::uninit();
+        let valid = unsafe {
+            (self.0.text_to_value)(
+                plugin.as_raw(),
+                param_id,
+                display.as_ptr(),
+                value.as_mut_ptr(),
+            )
+        };
+
+        if valid {
+            unsafe { Some(value.assume_init()) }
+        } else {
+            None
+        }
+    }
+
+    // TODO: return a proper error
+    pub fn flush_inactive(
+        &self,
+        plugin: &mut PluginInstance,
+        input_event_list: &mut EventList,
+        output_event_list: &mut EventList,
+    ) -> bool {
+        if plugin.is_active() {
+            return false;
+        }
+
+        unsafe {
+            (self.0.flush)(
+                plugin.as_raw(),
+                input_event_list.as_raw_mut(),
+                output_event_list.as_raw_mut(),
+            )
+        };
+
+        true
+    }
+
+    pub fn flush_active<TChannel: PluginInstanceChannelSend>(
+        &self,
+        plugin: &mut StoppedPluginAudioProcessor<TChannel>,
+        input_event_list: &mut EventList,
+        output_event_list: &mut EventList,
+    ) {
+        // SAFETY: flush is already guaranteed by the types to be called on an active, non-processing plugin
+        unsafe {
+            (self.0.flush)(
+                plugin.as_raw(),
+                input_event_list.as_raw_mut(),
+                output_event_list.as_raw_mut(),
+            )
+        };
+    }
+}
+
+#[inline]
+unsafe fn assume_init_slice<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
+    &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
 }

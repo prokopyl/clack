@@ -27,3 +27,9 @@ pub unsafe trait ExtensionDescriptor<'a, P>: Extension<'a> {
         unsafe { Self::from_extension_ptr(ptr) }
     }
 }
+
+pub trait ToShared<'a>: Extension<'a> {
+    type Shared: Send + Sync + 'a;
+
+    fn to_shared(&self) -> &Self::Shared;
+}

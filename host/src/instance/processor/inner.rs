@@ -20,7 +20,7 @@ impl<TChannel: PluginInstanceChannelSend> PluginAudioProcessorInner<TChannel> {
     }
 
     #[inline]
-    fn shared(&self) -> &PluginInstanceShared {
+    pub(crate) fn shared(&self) -> &PluginInstanceShared {
         self.shared.as_ref().expect("Plugin audio processor attempted to be deactivated twice. This is a bug in clap-host, or worse")
     }
 

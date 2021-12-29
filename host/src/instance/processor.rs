@@ -3,6 +3,7 @@ use crate::instance::processor::audio::HostAudioBufferCollection;
 use crate::instance::processor::inner::PluginAudioProcessorInner;
 use clap_audio_common::events::list::EventList;
 use clap_sys::events::{clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
+use clap_sys::plugin::clap_plugin;
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};
 
@@ -87,6 +88,11 @@ impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> 
 
         StoppedPluginAudioProcessor { inner: self.inner }
     }
+
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin {
+        self.inner.shared().instance()
+    }
 }
 
 // TODO: unsound if the entry (i.e. the dyn lib file) gets dropped first
@@ -108,6 +114,11 @@ impl<TChannel: PluginInstanceChannelSend> StoppedPluginAudioProcessor<TChannel> 
             true => Ok(StartedPluginAudioProcessor { inner: self.inner }),
             false => Err(self),
         }
+    }
+
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin {
+        self.inner.shared().instance()
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::host::PluginHost;
 use basedrop::Shared;
+use clap_sys::plugin::clap_plugin;
 use std::ops::RangeInclusive;
 use std::pin::Pin;
 
@@ -79,5 +80,15 @@ impl<'a> PluginInstance<'a> {
                 }
             }
         }
+    }
+
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin {
+        self.shared.instance()
+    }
+
+    #[inline]
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 }

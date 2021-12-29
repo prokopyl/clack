@@ -1,4 +1,4 @@
-use crate::extensions::{Extension, ExtensionDescriptor};
+use crate::extensions::{Extension, ExtensionDescriptor, ToShared};
 use crate::host::HostHandle;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use core::fmt::Display;
@@ -106,5 +106,14 @@ unsafe impl<'a> Extension<'a> for Log {
     #[inline]
     unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
         ptr.cast().as_ref()
+    }
+}
+
+impl<'a> ToShared<'a> for Log {
+    type Shared = Self;
+
+    #[inline]
+    fn to_shared(&self) -> &Self::Shared {
+        self
     }
 }
