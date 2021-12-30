@@ -9,11 +9,11 @@ crate-type = ["rlib", "cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-"clap-audio-plugin" = { path = "../../../plugin" }
-"clap-audio-extensions" = { path = "../../../extensions" }
-"clap-audio-common" = { path = "../../../common" }
+"clack-plugin" = { path = "../../../plugin" }
+"clack-extensions" = { path = "../../../extensions" }
+"clack-common" = { path = "../../../common" }
 
 [dev-dependencies]
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
-clap-audio-host = { path = "../../../host" }
-clap-audio-common = { path = "../../../common" }
+clack-host = { path = "../../../host" }
+clack-common = { path = "../../../common" }

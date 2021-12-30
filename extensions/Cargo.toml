@@ -1,13 +1,13 @@
 [package]
-name = "clap-audio-extensions"
+name = "clack-extensions"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-"clap-audio-plugin" = { path = "../plugin" }
-"clap-audio-host" = { path = "../host" }
-"clap-audio-common" = { path = "../common" }
+"clack-plugin" = { path = "../plugin" }
+"clack-host" = { path = "../host" }
+"clack-common" = { path = "../common" }
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
 bitflags = "1.3.2"

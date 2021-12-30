@@ -1,4 +1,4 @@
-use clap_audio_common::events::list::EventList;
+use clack_common::events::list::EventList;
 use clap_sys::process::clap_process;
 
 pub struct ProcessEvents<'a> {

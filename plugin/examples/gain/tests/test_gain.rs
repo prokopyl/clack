@@ -1,8 +1,8 @@
-use clap_audio_common::events::{
+use clack_common::events::{
     event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType,
 };
 
-use clap_audio_host::{
+use clack_host::{
     entry::PluginEntry,
     host::{HostInfo, PluginHost},
     instance::processor::audio::HostAudioBufferCollection,

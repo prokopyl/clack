@@ -1,4 +1,4 @@
-use clap_audio_plugin::entry::PluginEntryDescriptor;
+use clack_plugin::entry::PluginEntryDescriptor;
 use clap_sys::plugin::clap_plugin_entry;
 use std::error::Error;
 use std::ffi::CString;

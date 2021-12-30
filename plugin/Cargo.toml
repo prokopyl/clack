@@ -1,5 +1,5 @@
 [package]
-name = "clap-audio-plugin"
+name = "clack-plugin"
 version = "0.1.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -8,4 +8,4 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
-clap-audio-common = { path = "../common" }
+clack-common = { path = "../common" }

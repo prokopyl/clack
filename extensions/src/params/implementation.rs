@@ -1,8 +1,8 @@
 use crate::params::info::ParamInfo;
-use clap_audio_common::events::list::EventList;
-use clap_audio_common::extensions::ExtensionDescriptor;
-use clap_audio_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
-use clap_audio_plugin::plugin::Plugin;
+use clack_common::events::list::EventList;
+use clack_common::extensions::ExtensionDescriptor;
+use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
+use clack_plugin::plugin::Plugin;
 use clap_sys::events::clap_event_list;
 use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};

@@ -1,16 +1,16 @@
-use clap_audio_common::events::event_types::NoteEvent;
-use clap_audio_common::events::list::EventList;
-use clap_audio_common::events::{Event, EventType};
-use clap_audio_common::process::ProcessStatus;
-use clap_audio_extensions::params::info::ParamInfoFlags;
-use clap_audio_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
-use clap_audio_plugin::extension::ExtensionDeclarations;
-use clap_audio_plugin::host::{HostHandle, HostInfo};
-use clap_audio_plugin::plugin::{PluginMainThread, SampleConfig};
-use clap_audio_plugin::process::audio::Audio;
-use clap_audio_plugin::process::events::ProcessEvents;
-use clap_audio_plugin::process::Process;
-use clap_audio_plugin::{
+use clack_common::events::event_types::NoteEvent;
+use clack_common::events::list::EventList;
+use clack_common::events::{Event, EventType};
+use clack_common::process::ProcessStatus;
+use clack_extensions::params::info::ParamInfoFlags;
+use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
+use clack_plugin::extension::ExtensionDeclarations;
+use clack_plugin::host::{HostHandle, HostInfo};
+use clack_plugin::plugin::{PluginMainThread, SampleConfig};
+use clack_plugin::process::audio::Audio;
+use clack_plugin::process::events::ProcessEvents;
+use clack_plugin::process::Process;
+use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
     plugin::{Plugin, PluginDescriptor, PluginInstance, Result},
 };

@@ -1,5 +1,5 @@
-use clap_audio_common::extensions::{Extension, ToShared};
-use clap_audio_plugin::host::HostHandle;
+use clack_common::extensions::{Extension, ToShared};
+use clack_plugin::host::HostHandle;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use core::fmt::Display;
 use core::fmt::Write;

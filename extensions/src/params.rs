@@ -1,9 +1,9 @@
 use crate::params::info::ParamInfo;
-use clap_audio_common::events::list::EventList;
-use clap_audio_common::extensions::Extension;
-use clap_audio_host::instance::channel::PluginInstanceChannelSend;
-use clap_audio_host::instance::processor::StoppedPluginAudioProcessor;
-use clap_audio_host::instance::PluginInstance;
+use clack_common::events::list::EventList;
+use clack_common::extensions::Extension;
+use clack_host::instance::channel::PluginInstanceChannelSend;
+use clack_host::instance::processor::StoppedPluginAudioProcessor;
+use clack_host::instance::PluginInstance;
 use clap_sys::ext::params::{clap_plugin_params, CLAP_EXT_PARAMS};
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;

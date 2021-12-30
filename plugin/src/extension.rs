@@ -1,5 +1,5 @@
 use crate::plugin::Plugin;
-use clap_audio_common::extensions::ExtensionDescriptor;
+use clack_common::extensions::ExtensionDescriptor;
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;

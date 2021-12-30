@@ -1,4 +1,4 @@
-use clap_audio_host::bundle::PluginBundle;
+use clack_host::bundle::PluginBundle;
 
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
