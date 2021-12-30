@@ -11,7 +11,7 @@ use clap_sys::{
 
 mod error;
 mod instance;
-mod logging;
+pub(crate) mod logging;
 pub mod wrapper;
 pub use error::{PluginError, Result};
 pub use instance::*;

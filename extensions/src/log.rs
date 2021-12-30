@@ -44,18 +44,6 @@ impl LogSeverity {
     pub(crate) fn to_raw(self) -> clap_log_severity {
         self as _
     }
-
-    pub fn tag_name(&self) -> &'static str {
-        match self {
-            LogSeverity::Debug => "[DEBUG]",
-            LogSeverity::Info => "[INFO]",
-            LogSeverity::Warning => "[WARNING]",
-            LogSeverity::Error => "[ERROR]",
-            LogSeverity::Fatal => "[FATAL]",
-            LogSeverity::HostMisbehaving => "[HOST_MISBEHAVING]",
-            LogSeverity::PluginMisbehaving => "[PLUGIN_MISBEHAVING]",
-        }
-    }
 }
 
 #[repr(C)]

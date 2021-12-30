@@ -47,16 +47,3 @@ unsafe extern "C" fn log<H: HostLog>(
         );
     }
 }
-
-pub struct StdoutLogger;
-
-impl HostLog for StdoutLogger {
-    fn log(&self, severity: LogSeverity, message: &str) {
-        match severity {
-            LogSeverity::Debug | LogSeverity::Info => {
-                println!("{} {}", severity.tag_name(), message)
-            }
-            _ => eprintln!("{} {}", severity.tag_name(), message),
-        }
-    }
-}
