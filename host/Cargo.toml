@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
-clack-plugin = { path = "../plugin" } # TODO: remove
 clack-common = { path = "../common" }
 basedrop = "0.1.2"
 libloading = "0.7.2"

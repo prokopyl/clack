@@ -1,5 +1,6 @@
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
+pub use clack_common::entry::PluginEntryDescriptor;
 use clap_sys::{
     host::clap_host,
     plugin::{
@@ -10,21 +11,6 @@ use clap_sys::{
 use std::ffi::CStr;
 use std::path::Path;
 
-#[repr(C)]
-pub struct PluginEntryDescriptor(clap_plugin_entry);
-
-impl PluginEntryDescriptor {
-    #[inline]
-    pub fn from_raw(raw: &clap_plugin_entry) -> &Self {
-        unsafe { ::core::mem::transmute(raw) }
-    }
-
-    #[inline]
-    pub fn as_raw(&self) -> &clap_plugin_entry {
-        &self.0
-    }
-}
-
 pub trait PluginEntry: Sized {
     fn init(_plugin_path: &Path) {}
     fn de_init() {}
@@ -33,7 +19,7 @@ pub trait PluginEntry: Sized {
     fn plugin_descriptor(index: u32) -> Option<&'static PluginDescriptor>;
     fn create_plugin<'a>(host_info: HostInfo<'a>, plugin_id: &[u8]) -> Option<PluginInstance<'a>>;
 
-    const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor(clap_plugin_entry {
+    const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor::new(clap_plugin_entry {
         clap_version: CLAP_VERSION,
         init: init::<Self>,
         deinit: de_init::<Self>,
