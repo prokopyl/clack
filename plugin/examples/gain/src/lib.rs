@@ -1,3 +1,5 @@
+#![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+
 use clack_common::events::event_types::NoteEvent;
 use clack_common::events::list::EventList;
 use clack_common::events::{Event, EventType};

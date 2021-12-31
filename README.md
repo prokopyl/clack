@@ -11,3 +11,7 @@ This library is also very incomplete. At the moment, there is barely enough for 
 ## License
 `clack` is distributed under the terms of both the [MIT license](LICENSE-MIT) and the [Apache license, version 2.0](LICENSE-APACHE).
 Contributions are accepted under the same terms.
+
+### Special Thanks
+
+The Clack logo was created by [jaxter184](https://github.com/jaxter184) and provided under a CC-BY-SA license.
