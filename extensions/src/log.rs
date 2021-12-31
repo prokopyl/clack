@@ -1,12 +1,7 @@
-use clack_common::extensions::{Extension, ToShared};
-use clack_plugin::host::HostHandle;
-use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
-use core::fmt::Display;
-use core::fmt::Write;
-use core::ptr::NonNull;
-use std::ffi::{c_void, CStr, CString};
+use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 
 mod error;
+#[cfg(feature = "clack-host")]
 pub mod implementation;
 pub use error::LogError;
 
@@ -49,53 +44,37 @@ impl LogSeverity {
 #[repr(C)]
 pub struct Log(clap_host_log);
 
-impl Log {
-    #[inline]
-    pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
-        unsafe { (self.0.log)(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
+#[cfg(feature = "clack-plugin")]
+mod plugin {
+    use super::*;
+    use clack_common::extensions::{Extension, ToShared};
+    use clack_plugin::host::HostHandle;
+    use clap_sys::ext::log::CLAP_EXT_LOG;
+    use core::ptr::NonNull;
+    use std::ffi::{c_void, CStr};
+
+    impl Log {
+        #[inline]
+        pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
+            unsafe { (self.0.log)(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
+        }
     }
 
-    pub fn log_str(
-        &self,
-        host: &HostHandle,
-        log_severity: LogSeverity,
-        message: &str,
-    ) -> Result<(), LogError> {
-        let message = CString::new(message)?;
+    unsafe impl<'a> Extension<'a> for Log {
+        const IDENTIFIER: *const u8 = CLAP_EXT_LOG as *const _;
 
-        self.log(host, log_severity, &message);
-        Ok(())
+        #[inline]
+        unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
+            ptr.cast().as_ref()
+        }
     }
 
-    pub fn log_display<D: Display>(
-        &self,
-        host: &HostHandle,
-        log_severity: LogSeverity,
-        message: &D,
-    ) -> Result<(), LogError> {
-        let mut buf = String::new();
-        write!(buf, "{}", message)?;
-        let message = CString::new(buf)?;
+    impl<'a> ToShared<'a> for Log {
+        type Shared = Self;
 
-        self.log(host, log_severity, &message);
-        Ok(())
-    }
-}
-
-unsafe impl<'a> Extension<'a> for Log {
-    const IDENTIFIER: *const u8 = CLAP_EXT_LOG as *const _;
-
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
-}
-
-impl<'a> ToShared<'a> for Log {
-    type Shared = Self;
-
-    #[inline]
-    fn to_shared(&self) -> &Self::Shared {
-        self
+        #[inline]
+        fn to_shared(&self) -> &Self::Shared {
+            self
+        }
     }
 }

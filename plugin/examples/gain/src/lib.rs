@@ -2,19 +2,20 @@
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
-use clack_plugin::events::event_types::NoteEvent;
-use clack_plugin::events::list::EventList;
-use clack_plugin::events::{Event, EventType};
-use clack_plugin::extension::ExtensionDeclarations;
-use clack_plugin::host::{HostHandle, HostInfo};
-use clack_plugin::plugin::{PluginMainThread, SampleConfig};
-use clack_plugin::process::audio::Audio;
-use clack_plugin::process::events::ProcessEvents;
-use clack_plugin::process::Process;
-use clack_plugin::process::ProcessStatus;
 use clack_plugin::{
+    entry::SinglePluginEntry,
     entry::{PluginEntry, PluginEntryDescriptor},
-    plugin::{Plugin, PluginDescriptor, PluginInstance, Result},
+    events::event_types::NoteEvent,
+    events::list::EventList,
+    events::{Event, EventType},
+    extension::ExtensionDeclarations,
+    host::HostHandle,
+    plugin::{Plugin, Result},
+    plugin::{PluginMainThread, SampleConfig},
+    process::audio::Audio,
+    process::events::ProcessEvents,
+    process::Process,
+    process::ProcessStatus,
 };
 
 pub struct GainPlugin;
@@ -154,28 +155,6 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
     }
 }
 
-pub struct GainEntry;
-
-impl PluginEntry for GainEntry {
-    fn plugin_count() -> u32 {
-        1
-    }
-
-    fn plugin_descriptor(index: u32) -> Option<&'static PluginDescriptor> {
-        match index {
-            0 => Some(GainPlugin::DESCRIPTOR),
-            _ => None,
-        }
-    }
-
-    fn create_plugin<'a>(host_info: HostInfo<'a>, plugin_id: &[u8]) -> Option<PluginInstance<'a>> {
-        match plugin_id {
-            GainPlugin::ID => Some(PluginInstance::new::<GainPlugin>(host_info)),
-            _ => None,
-        }
-    }
-}
-
 #[allow(non_upper_case_globals)]
 #[no_mangle]
-pub static clap_plugin_entry: PluginEntryDescriptor = GainEntry::DESCRIPTOR;
+pub static clap_plugin_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;

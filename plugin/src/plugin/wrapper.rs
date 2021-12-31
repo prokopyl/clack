@@ -177,7 +177,6 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     {
         let plugin = Self::from_raw(plugin)?;
 
-        // TODO: AssertUnwindSafe may not be good here
         panic::catch_unwind(AssertUnwindSafe(|| handler(plugin)))
             .map_err(|_| PluginWrapperError::Panic)?
     }
@@ -191,7 +190,6 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     {
         let plugin = Self::from_raw_mut(plugin)?;
 
-        // TODO: AssertUnwindSafe may not be good here
         panic::catch_unwind(AssertUnwindSafe(|| handler(plugin)))
             .map_err(|_| PluginWrapperError::Panic)?
     }
@@ -255,7 +253,7 @@ impl Display for PluginWrapperError {
             }
             PluginWrapperError::Plugin(e) => std::fmt::Display::fmt(&e, f),
             PluginWrapperError::Any(_, e) => std::fmt::Display::fmt(e, f),
-            PluginWrapperError::Panic => f.write_str("Plugin panicked"), // TODO: stacktrace
+            PluginWrapperError::Panic => f.write_str("Plugin panicked"),
         }
     }
 }

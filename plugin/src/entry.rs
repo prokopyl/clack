@@ -1,5 +1,5 @@
 use crate::host::HostInfo;
-use crate::plugin::{PluginDescriptor, PluginInstance};
+use crate::plugin::{Plugin, PluginDescriptor, PluginInstance};
 pub use clack_common::entry::PluginEntryDescriptor;
 use clap_sys::{
     host::clap_host,
@@ -9,10 +9,10 @@ use clap_sys::{
     version::CLAP_VERSION,
 };
 use std::ffi::CStr;
-use std::path::Path;
+use std::marker::PhantomData;
 
 pub trait PluginEntry: Sized {
-    fn init(_plugin_path: &Path) {}
+    fn init(_plugin_path: &CStr) {}
     fn de_init() {}
 
     fn plugin_count() -> u32;
@@ -33,9 +33,7 @@ pub trait PluginEntry: Sized {
 }
 
 unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const ::std::os::raw::c_char) {
-    let path = CStr::from_ptr(plugin_path).to_bytes();
-    let path = ::core::str::from_utf8(path).unwrap(); // TODO: unsafe unwrap
-    E::init(Path::new(path));
+    E::init(CStr::from_ptr(plugin_path));
 }
 
 unsafe extern "C" fn de_init<E: PluginEntry>() {
@@ -60,9 +58,14 @@ unsafe extern "C" fn create_plugin<E: PluginEntry>(
     plugin_id: *const std::os::raw::c_char,
 ) -> *const clap_plugin {
     let plugin_id = CStr::from_ptr(plugin_id).to_bytes_with_nul();
-    let host_info = HostInfo {
-        inner: clap_host.as_ref().unwrap(),
-    }; // TODO: unsafe unwrap
+    let clap_host = if let Some(clap_host) = clap_host.as_ref() {
+        clap_host
+    } else {
+        eprintln!("[ERROR] Null clap_host pointer was provided to entry::create_plugin.");
+        return ::core::ptr::null();
+    };
+
+    let host_info = HostInfo { inner: clap_host };
 
     match E::create_plugin(host_info, plugin_id) {
         None => ::core::ptr::null(),
@@ -82,4 +85,30 @@ unsafe extern "C" fn get_invalidation_source<E: PluginEntry>(
 
 unsafe extern "C" fn refresh<E: PluginEntry>() {
     // TODO
+}
+
+pub struct SinglePluginEntry<P: for<'a> Plugin<'a>>(PhantomData<P>);
+
+impl<P: for<'a> Plugin<'a>> PluginEntry for SinglePluginEntry<P> {
+    #[inline]
+    fn plugin_count() -> u32 {
+        1
+    }
+
+    #[inline]
+    fn plugin_descriptor(index: u32) -> Option<&'static PluginDescriptor> {
+        match index {
+            0 => Some(P::DESCRIPTOR),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn create_plugin<'p>(host_info: HostInfo<'p>, plugin_id: &[u8]) -> Option<PluginInstance<'p>> {
+        if plugin_id == P::ID {
+            Some(PluginInstance::<'p>::new::<P>(host_info))
+        } else {
+            None
+        }
+    }
 }
