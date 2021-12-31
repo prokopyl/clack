@@ -88,14 +88,22 @@ pub trait PluginMainThreadParams<'a> {
         writer: &mut ParamDisplayWriter,
     ) -> ::core::fmt::Result;
     fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64>;
-    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
+    fn flush(
+        &mut self,
+        input_parameter_changes: &EventList,
+        output_parameter_changes: &mut EventList,
+    );
 }
 
 pub trait PluginParamsImpl<'a>: Plugin<'a>
 where
     Self::MainThread: PluginMainThreadParams<'a>,
 {
-    fn flush(&mut self, input_parameter_changes: &EventList, output_parameter_changes: &EventList);
+    fn flush(
+        &mut self,
+        input_parameter_changes: &EventList,
+        output_parameter_changes: &mut EventList,
+    );
 }
 
 unsafe extern "C" fn count<'a, P: PluginParamsImpl<'a>>(
@@ -104,7 +112,7 @@ unsafe extern "C" fn count<'a, P: PluginParamsImpl<'a>>(
 where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    PluginWrapper::<P>::handle(plugin, |p| {
         Ok(P::MainThread::count(p.main_thread().as_ref()))
     })
     .unwrap_or(0)
@@ -119,7 +127,7 @@ where
     P::MainThread: PluginMainThreadParams<'a>,
 {
     let mut info = ParamInfoWriter::new(value);
-    PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    PluginWrapper::<P>::handle(plugin, |p| {
         P::MainThread::get_info(p.main_thread().as_ref(), param_index, &mut info);
         Ok(())
     })
@@ -135,7 +143,7 @@ unsafe extern "C" fn get_value<'a, P: PluginParamsImpl<'a>>(
 where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    let val = PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    let val = PluginWrapper::<P>::handle(plugin, |p| {
         Ok(P::MainThread::get_value(p.main_thread().as_ref(), param_id))
     })
     .flatten();
@@ -161,7 +169,7 @@ where
 {
     let buf = ::core::slice::from_raw_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
-    PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    PluginWrapper::<P>::handle(plugin, |p| {
         P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
@@ -180,7 +188,7 @@ where
 {
     let display = CStr::from_ptr(display).to_bytes();
 
-    let val = PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    let val = PluginWrapper::<P>::handle(plugin, |p| {
         let display = ::core::str::from_utf8(display)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
         Ok(P::MainThread::text_to_value(
@@ -208,9 +216,9 @@ unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
     P::MainThread: PluginMainThreadParams<'a>,
 {
     let input_parameter_changes = EventList::from_raw(input_parameter_changes);
-    let output_parameter_changes = EventList::from_raw(output_parameter_changes);
+    let output_parameter_changes = EventList::from_raw_mut(output_parameter_changes);
 
-    PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+    PluginWrapper::<P>::handle(plugin, |p| {
         if let Ok(mut audio) = p.audio_processor() {
             P::flush(
                 audio.as_mut(),

@@ -2,21 +2,17 @@
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
+use clack_extensions::state::{PluginState, PluginStateImplementation};
 use clack_plugin::{
-    entry::SinglePluginEntry,
-    entry::{PluginEntry, PluginEntryDescriptor},
-    events::event_types::NoteEvent,
-    events::list::EventList,
-    events::{Event, EventType},
+    entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
+    events::{event_types::NoteEvent, list::EventList, Event, EventType},
     extension::ExtensionDeclarations,
     host::HostHandle,
-    plugin::{Plugin, Result},
-    plugin::{PluginMainThread, SampleConfig},
-    process::audio::Audio,
-    process::events::ProcessEvents,
-    process::Process,
-    process::ProcessStatus,
+    plugin::{Plugin, PluginError, PluginMainThread, Result, SampleConfig},
+    process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus},
+    stream::{InputStream, OutputStream},
 };
+use std::io::Read;
 
 pub struct GainPlugin;
 
@@ -70,7 +66,7 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 
     fn declare_extensions(builder: &mut ExtensionDeclarations<Self>, _shared: &()) {
-        builder.register::<PluginParams>();
+        builder.register::<PluginParams>().register::<PluginState>();
     }
 }
 
@@ -78,7 +74,7 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin {
     fn flush(
         &mut self,
         _input_parameter_changes: &EventList,
-        _output_parameter_changes: &EventList,
+        _output_parameter_changes: &mut EventList,
     ) {
     }
 }
@@ -141,7 +137,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
         None
     }
 
-    fn flush(&mut self, input_events: &EventList, _output_events: &EventList) {
+    fn flush(&mut self, input_events: &EventList, _output_events: &mut EventList) {
         let value_events = input_events.iter().filter_map(|e| match e.event()? {
             EventType::ParamValue(v) => Some(v),
             _ => None,
@@ -152,6 +148,28 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
                 self.rusting = value.value() as u32;
             }
         }
+    }
+}
+
+impl PluginStateImplementation for GainPluginMainThread {
+    fn load(&mut self, input: &mut InputStream) -> std::result::Result<(), PluginError> {
+        let mut buf = Vec::new();
+        input.read_to_end(&mut buf)?;
+        let msg = String::from_utf8_lossy(&buf);
+        println!("Loaded: {}", msg);
+
+        Ok(())
+    }
+
+    fn save(&mut self, input: &mut OutputStream) -> std::result::Result<(), PluginError> {
+        use std::io::Write;
+
+        write!(
+            input,
+            "Hello! We are rusting with {} crabz today",
+            self.rusting
+        )?;
+        Ok(())
     }
 }
 

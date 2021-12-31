@@ -126,7 +126,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
 
     /// # Safety
     /// The plugin pointer must be valid
-    pub unsafe fn handle_plugin_returning<T, F>(plugin: *const clap_plugin, handler: F) -> Option<T>
+    pub unsafe fn handle<T, F>(plugin: *const clap_plugin, handler: F) -> Option<T>
     where
         F: FnOnce(&PluginWrapper<'a, P>) -> Result<T, PluginWrapperError>,
     {

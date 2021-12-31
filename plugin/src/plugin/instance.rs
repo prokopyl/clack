@@ -86,14 +86,14 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
     }
 
     unsafe extern "C" fn start_processing(plugin: *const clap_plugin) -> bool {
-        PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             Ok(P::start_processing(p.audio_processor()?.as_mut())?)
         })
         .is_some()
     }
 
     unsafe extern "C" fn stop_processing(plugin: *const clap_plugin) {
-        PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             P::stop_processing(p.audio_processor()?.as_mut());
             Ok(())
         });
@@ -105,7 +105,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
         let (process, audio, events) = Process::from_raw(process);
-        PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             Ok(P::process(
                 p.audio_processor()?.as_mut(),
                 process,
@@ -124,7 +124,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         let identifier = CStr::from_ptr(identifier);
         let mut builder = ExtensionDeclarations::new(identifier);
 
-        wrapper::PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+        wrapper::PluginWrapper::<P>::handle(plugin, |p| {
             P::declare_extensions(&mut builder, p.shared());
             Ok(())
         });
@@ -132,7 +132,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
     }
 
     unsafe extern "C" fn on_main_thread(plugin: *const clap_plugin) {
-        wrapper::PluginWrapper::<P>::handle_plugin_returning(plugin, |p| {
+        wrapper::PluginWrapper::<P>::handle(plugin, |p| {
             p.main_thread().as_mut().on_main_thread();
             Ok(())
         });
