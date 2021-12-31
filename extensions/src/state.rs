@@ -1,6 +1,6 @@
 use clack_common::extensions::Extension;
 use clack_common::stream::{InputStream, OutputStream};
-use clack_plugin::plugin::{PluginError, PluginMainThread};
+use clack_plugin::plugin::PluginError;
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::ffi::c_void;
 use std::fmt::{Display, Formatter};
