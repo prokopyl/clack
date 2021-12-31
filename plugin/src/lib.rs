@@ -7,4 +7,4 @@ pub mod host;
 pub mod plugin;
 pub mod process;
 
-pub use clack_common as common;
+pub use clack_common::events;

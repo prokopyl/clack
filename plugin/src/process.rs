@@ -2,6 +2,8 @@ use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;
 use clap_sys::process::clap_process;
 
+pub use clack_common::process::ProcessStatus;
+
 #[repr(C)]
 pub struct Process {
     inner: clap_process,

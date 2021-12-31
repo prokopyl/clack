@@ -1,17 +1,17 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 
-use clack_common::events::event_types::NoteEvent;
-use clack_common::events::list::EventList;
-use clack_common::events::{Event, EventType};
-use clack_common::process::ProcessStatus;
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
+use clack_plugin::events::event_types::NoteEvent;
+use clack_plugin::events::list::EventList;
+use clack_plugin::events::{Event, EventType};
 use clack_plugin::extension::ExtensionDeclarations;
 use clack_plugin::host::{HostHandle, HostInfo};
 use clack_plugin::plugin::{PluginMainThread, SampleConfig};
 use clack_plugin::process::audio::Audio;
 use clack_plugin::process::events::ProcessEvents;
 use clack_plugin::process::Process;
+use clack_plugin::process::ProcessStatus;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor},
     plugin::{Plugin, PluginDescriptor, PluginInstance, Result},

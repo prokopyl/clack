@@ -1,9 +1,6 @@
-use clack_common::events::{
-    event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType,
-};
-
 use clack_host::{
     entry::PluginEntry,
+    events::{event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType},
     host::{HostInfo, PluginHost},
     instance::processor::audio::HostAudioBufferCollection,
     instance::PluginAudioConfiguration,

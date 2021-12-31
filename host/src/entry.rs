@@ -1,7 +1,8 @@
-use clack_common::entry::PluginEntryDescriptor;
 use clap_sys::plugin::clap_plugin_entry;
 use std::error::Error;
 use std::ffi::CString;
+
+pub use clack_common::entry::PluginEntryDescriptor;
 
 mod descriptor;
 use crate::host::PluginHost;

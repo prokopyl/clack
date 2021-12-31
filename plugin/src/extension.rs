@@ -1,9 +1,10 @@
 use crate::plugin::Plugin;
-use clack_common::extensions::ExtensionDescriptor;
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
+
+pub use clack_common::extensions::*;
 
 pub struct ExtensionDeclarations<'a, P> {
     found: Option<NonNull<c_void>>,
