@@ -2,15 +2,15 @@ use clap_sys::audio_buffer::clap_audio_buffer;
 
 struct HostAudioPortBuffer<B, S> {
     channel_buffers: Vec<B>,
-    buffer_list: Vec<*const S>,
+    buffer_list: Vec<*mut S>,
     min_buffer_length: usize,
 }
 
-impl<B: Sized + AsRef<[S]>, S> HostAudioPortBuffer<B, S> {
-    pub fn new(channel_buffers: Vec<B>) -> Self {
+impl<B: Sized + AsMut<[S]>, S> HostAudioPortBuffer<B, S> {
+    pub fn new(mut channel_buffers: Vec<B>) -> Self {
         let buffer_list: Vec<_> = channel_buffers
-            .iter()
-            .map(|b| b.as_ref().as_ptr())
+            .iter_mut()
+            .map(|b| b.as_mut().as_mut_ptr())
             .collect();
 
         let mut buf = Self {
@@ -26,18 +26,29 @@ impl<B: Sized + AsRef<[S]>, S> HostAudioPortBuffer<B, S> {
     fn update_lengths(&mut self) {
         self.min_buffer_length = self
             .channel_buffers
-            .iter()
-            .map(|b| b.as_ref().len())
+            .iter_mut()
+            .map(|b| b.as_mut().len())
             .min()
             .unwrap_or(0);
     }
+
+    fn replace(&mut self, channel_index: usize, new_buffer: B) -> Result<B, B> {
+        let old_buffer = match self.channel_buffers.get_mut(channel_index) {
+            None => return Err(new_buffer),
+            Some(channel_buffer) => ::core::mem::replace(channel_buffer, new_buffer),
+        };
+
+        self.buffer_list[channel_index] = self.channel_buffers[channel_index].as_mut().as_mut_ptr();
+        self.update_lengths();
+        Ok(old_buffer)
+    }
 }
 
-impl<B: Sized + AsRef<[f32]>> HostAudioPortBuffer<B, f32> {
+impl<B: Sized + AsMut<[f32]>> HostAudioPortBuffer<B, f32> {
     // TODO: maybe unsafe?
     pub fn as_raw(&self) -> clap_audio_buffer {
         clap_audio_buffer {
-            data32: self.buffer_list.as_ptr(),
+            data32: self.buffer_list.as_ptr() as *const _,
             data64: ::core::ptr::null(),
             channel_count: self.buffer_list.len() as u32,
             latency: 0,       // TODO
@@ -69,6 +80,20 @@ impl<B, S> HostAudioBufferCollection<B, S> {
     }
 }
 
+impl<B: Sized + AsMut<[S]>, S> HostAudioBufferCollection<B, S> {
+    pub fn replace(
+        &mut self,
+        port_index: usize,
+        channel_index: usize,
+        new_buffer: B,
+    ) -> Result<B, B> {
+        match self.ports.get_mut(port_index) {
+            None => Err(new_buffer),
+            Some(port) => port.replace(channel_index, new_buffer),
+        }
+    }
+}
+
 impl<B: Sized + AsRef<[S]>, S> HostAudioBufferCollection<B, S> {
     pub fn get_channel_buffer(&self, port_index: usize, channel_index: usize) -> Option<&[S]> {
         Some(
@@ -81,7 +106,23 @@ impl<B: Sized + AsRef<[S]>, S> HostAudioBufferCollection<B, S> {
     }
 }
 
-impl<B: Sized + AsRef<[f32]>> HostAudioBufferCollection<B, f32> {
+impl<B: Sized + AsMut<[S]>, S> HostAudioBufferCollection<B, S> {
+    pub fn get_channel_buffer_mut(
+        &mut self,
+        port_index: usize,
+        channel_index: usize,
+    ) -> Option<&mut [S]> {
+        Some(
+            self.ports
+                .get_mut(port_index)?
+                .channel_buffers
+                .get_mut(channel_index)?
+                .as_mut(),
+        )
+    }
+}
+
+impl<B: Sized + AsMut<[f32]>> HostAudioBufferCollection<B, f32> {
     #[inline]
     pub fn for_ports_and_channels<F>(port_count: usize, channel_count: usize, buffer: F) -> Self
     where
