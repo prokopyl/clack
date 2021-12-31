@@ -8,3 +8,4 @@ pub mod instance;
 pub use clack_common::events;
 pub use clack_common::extensions;
 pub use clack_common::process;
+pub use clack_common::stream;
