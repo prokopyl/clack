@@ -1,4 +1,4 @@
-use clack_common::extensions::Extension;
+use clack_common::extensions::{Extension, HostExtension};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use core::ptr::NonNull;
 use std::ffi::c_void;
@@ -49,11 +49,7 @@ pub struct Log(clap_host_log);
 
 unsafe impl<'a> Extension<'a> for Log {
     const IDENTIFIER: *const u8 = CLAP_EXT_LOG as *const _;
-
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
+    type ExtensionType = HostExtension;
 }
 
 #[cfg(feature = "clack-plugin")]

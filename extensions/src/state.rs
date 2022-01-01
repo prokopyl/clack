@@ -1,22 +1,16 @@
-use clack_common::extensions::Extension;
+use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clack_common::stream::{InputStream, OutputStream};
 use clack_plugin::plugin::PluginError;
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
-use std::ffi::c_void;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
-use std::ptr::NonNull;
 
 #[repr(C)]
 pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
 
 unsafe impl<'a> Extension<'a> for PluginState {
     const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
-
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
+    type ExtensionType = PluginExtension;
 }
 
 #[repr(C)]
@@ -24,11 +18,7 @@ pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
 unsafe impl<'a> Extension<'a> for HostState {
     const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
-
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
+    type ExtensionType = HostExtension;
 }
 
 #[derive(Copy, Clone, Debug)]

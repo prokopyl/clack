@@ -1,8 +1,6 @@
-use clack_common::extensions::Extension;
+use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::params::{clap_plugin_params, CLAP_EXT_PARAMS};
-use std::ffi::c_void;
 use std::marker::PhantomData;
-use std::ptr::NonNull;
 
 #[repr(C)]
 pub struct PluginParams(clap_plugin_params, PhantomData<*const clap_plugin_params>);
@@ -13,12 +11,7 @@ pub mod info;
 
 unsafe impl<'a> Extension<'a> for PluginParams {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
-
-    // TODO: this may be redundant
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
+    type ExtensionType = PluginExtension;
 }
 
 #[cfg(feature = "clack-host")]

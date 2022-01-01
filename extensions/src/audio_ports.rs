@@ -1,9 +1,7 @@
 use bitflags::bitflags;
-use clack_common::extensions::Extension;
+use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::audio_ports::*;
-use std::ffi::c_void;
 use std::marker::PhantomData;
-use std::ptr::NonNull;
 
 #[repr(C)]
 pub struct PluginAudioPorts(
@@ -37,11 +35,7 @@ bitflags! {
 
 unsafe impl<'a> Extension<'a> for PluginAudioPorts {
     const IDENTIFIER: *const u8 = CLAP_EXT_AUDIO_PORTS as *const _;
-
-    #[inline]
-    unsafe fn from_extension_ptr(ptr: NonNull<c_void>) -> &'a Self {
-        ptr.cast().as_ref()
-    }
+    type ExtensionType = PluginExtension;
 }
 
 #[cfg(feature = "clack-plugin")]
