@@ -1,4 +1,3 @@
-use crate::events::event_match::EventTarget;
 use clap_sys::events::clap_event_note_mask;
 use std::fmt::{Debug, Formatter};
 
@@ -9,10 +8,10 @@ pub struct NoteMaskEvent {
 
 impl NoteMaskEvent {
     #[inline]
-    pub fn new(port_index: EventTarget<u16>, note_mask: u16, root_note: u8) -> Self {
+    pub fn new(port_index: i32, note_mask: u16, root_note: u8) -> Self {
         Self {
             inner: clap_event_note_mask {
-                port_index: port_index.to_raw(),
+                port_index,
                 note_mask,
                 root_note,
             },

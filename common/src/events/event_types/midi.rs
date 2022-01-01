@@ -1,4 +1,3 @@
-use crate::events::event_match::EventTarget;
 use clap_sys::events::{clap_event_midi, clap_event_midi_sysex};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -56,11 +55,11 @@ impl<'buf> MidiSysexEvent<'buf> {
     }
 
     #[inline]
-    pub fn new(port_index: EventTarget<u16>, buffer: &'buf [u8]) -> Self {
+    pub fn new(port_index: i32, buffer: &'buf [u8]) -> Self {
         Self {
             _buffer_lifetime: PhantomData,
             inner: clap_event_midi_sysex {
-                port_index: port_index.to_raw(),
+                port_index,
                 buffer: buffer.as_ptr(),
                 size: buffer.len() as u32,
             },
@@ -68,8 +67,8 @@ impl<'buf> MidiSysexEvent<'buf> {
     }
 
     #[inline]
-    pub fn port_index(&self) -> EventTarget<u16> {
-        EventTarget::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> i32 {
+        self.inner.port_index
     }
 
     #[inline]

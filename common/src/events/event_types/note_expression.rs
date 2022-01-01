@@ -1,4 +1,3 @@
-use crate::events::event_match::EventTarget;
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -14,30 +13,28 @@ pub enum NoteExpressionType {
     Breath = CLAP_NOTE_EXPRESSION_BREATH,
     Pressure = CLAP_NOTE_EXPRESSION_PRESSURE,
     Timbre = CLAP_NOTE_EXPRESSION_TIMBRE,
-
-    Unknown = i32::MAX,
 }
 
 impl NoteExpressionType {
     #[inline]
-    pub fn from_raw(raw: i32) -> Self {
+    pub fn from_raw(raw: i32) -> Option<Self> {
         use NoteExpressionType::*;
         match raw {
-            CLAP_NOTE_EXPRESSION_VOLUME => Volume,
-            CLAP_NOTE_EXPRESSION_PAN => Pan,
-            CLAP_NOTE_EXPRESSION_TUNING => Tuning,
-            CLAP_NOTE_EXPRESSION_VIBRATO => Vibrato,
-            CLAP_NOTE_EXPRESSION_BRIGHTNESS => Brightness,
-            CLAP_NOTE_EXPRESSION_BREATH => Breath,
-            CLAP_NOTE_EXPRESSION_PRESSURE => Pressure,
-            CLAP_NOTE_EXPRESSION_TIMBRE => Timbre,
-            _ => Unknown,
+            CLAP_NOTE_EXPRESSION_VOLUME => Some(Volume),
+            CLAP_NOTE_EXPRESSION_PAN => Some(Pan),
+            CLAP_NOTE_EXPRESSION_TUNING => Some(Tuning),
+            CLAP_NOTE_EXPRESSION_VIBRATO => Some(Vibrato),
+            CLAP_NOTE_EXPRESSION_BRIGHTNESS => Some(Brightness),
+            CLAP_NOTE_EXPRESSION_BREATH => Some(Breath),
+            CLAP_NOTE_EXPRESSION_PRESSURE => Some(Pressure),
+            CLAP_NOTE_EXPRESSION_TIMBRE => Some(Timbre),
+            _ => None,
         }
     }
 
     #[inline]
-    pub fn into_raw(self) -> i32 {
-        self as i32
+    pub fn into_raw(self) -> clap_note_expression {
+        self as clap_note_expression
     }
 }
 
@@ -58,23 +55,23 @@ impl NoteExpressionEvent {
     }
 
     #[inline]
-    pub fn expression_type(&self) -> NoteExpressionType {
+    pub fn expression_type(&self) -> Option<NoteExpressionType> {
         NoteExpressionType::from_raw(self.inner.expression_id)
     }
 
     #[inline]
-    pub fn port_index(&self) -> EventTarget<u16> {
-        EventTarget::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> i32 {
+        self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.key)
+    pub fn key(&self) -> i32 {
+        self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.channel)
+    pub fn channel(&self) -> i32 {
+        self.inner.channel
     }
 
     #[inline]

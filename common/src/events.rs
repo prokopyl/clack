@@ -12,9 +12,7 @@ use std::marker::PhantomData;
 mod list;
 pub use list::*;
 
-mod event_match;
 pub mod event_types;
-pub use event_match::EventTarget;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum EventType<'a> {
@@ -84,26 +82,26 @@ impl<'a> EventType<'a> {
                 },
             ),
             ParamValue(e) => (
-                CLAP_EVENT_NOTE_MASK,
+                CLAP_EVENT_PARAM_VALUE,
                 clap_event_data {
                     param_value: e.into_raw(),
                 },
             ),
             ParamMod(e) => (
-                CLAP_EVENT_NOTE_MASK,
+                CLAP_EVENT_PARAM_MOD,
                 clap_event_data {
                     param_mod: e.into_raw(),
                 },
             ),
             Transport(e) => (
-                CLAP_EVENT_NOTE_MASK,
+                CLAP_EVENT_TRANSPORT,
                 clap_event_data {
                     time_info: e.into_raw(),
                 },
             ),
-            Midi(e) => (CLAP_EVENT_NOTE_MASK, clap_event_data { midi: e.into_raw() }),
+            Midi(e) => (CLAP_EVENT_MIDI, clap_event_data { midi: e.into_raw() }),
             MidiSysex(e) => (
-                CLAP_EVENT_NOTE_MASK,
+                CLAP_EVENT_MIDI_SYSEX,
                 clap_event_data {
                     midi_sysex: e.into_raw(),
                 },

@@ -1,4 +1,3 @@
-use crate::events::event_match::EventTarget;
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_param_mod, clap_event_param_value, CLAP_EVENT_PARAM_BEGIN_ADJUST,
@@ -26,9 +25,9 @@ impl ParamValueEvent {
     pub fn new(
         cookie: *mut c_void,
         param_id: u32,
-        port_index: EventTarget<u16>,
-        channel: EventTarget<u8>,
-        key: EventTarget<u8>,
+        port_index: i32,
+        channel: i32,
+        key: i32,
         flags: ParamEventFlags,
         value: f64,
     ) -> Self {
@@ -36,9 +35,9 @@ impl ParamValueEvent {
             inner: clap_event_param_value {
                 cookie,
                 param_id,
-                port_index: port_index.to_raw(),
-                key: key.to_raw(),
-                channel: channel.to_raw(),
+                port_index,
+                key,
+                channel,
                 flags: flags.bits,
                 value,
             },
@@ -56,18 +55,18 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> EventTarget<u16> {
-        EventTarget::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> i32 {
+        self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.key)
+    pub fn key(&self) -> i32 {
+        self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.channel)
+    pub fn channel(&self) -> i32 {
+        self.inner.channel
     }
 
     #[inline]
@@ -125,18 +124,18 @@ impl ParamModEvent {
     pub fn new(
         cookie: *mut c_void,
         param_id: u32,
-        port_index: EventTarget<u16>,
-        channel: EventTarget<u8>,
-        key: EventTarget<u8>,
+        port_index: i32,
+        channel: i32,
+        key: i32,
         amount: f64,
     ) -> Self {
         Self {
             inner: clap_event_param_mod {
                 cookie,
                 param_id,
-                port_index: port_index.to_raw(),
-                key: key.to_raw(),
-                channel: channel.to_raw(),
+                port_index,
+                key,
+                channel,
                 amount,
             },
         }
@@ -153,18 +152,18 @@ impl ParamModEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> EventTarget<u16> {
-        EventTarget::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> i32 {
+        self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.key)
+    pub fn key(&self) -> i32 {
+        self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> EventTarget<u8> {
-        EventTarget::from_raw(self.inner.channel)
+    pub fn channel(&self) -> i32 {
+        self.inner.channel
     }
 
     #[inline]
