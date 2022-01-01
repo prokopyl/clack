@@ -1,8 +1,12 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 
+use clack_extensions::audio_ports::{
+    AudioPortInfoWriter, PluginAudioPortsImplementation, SampleSize,
+};
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
 use clack_extensions::state::{PluginState, PluginStateImplementation};
+use clack_plugin::ports::ChannelMap;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
     events::{event_types::NoteEvent, list::EventList, Event, EventType},
@@ -170,6 +174,31 @@ impl PluginStateImplementation for GainPluginMainThread {
             self.rusting
         )?;
         Ok(())
+    }
+}
+
+impl PluginAudioPortsImplementation for GainPluginMainThread {
+    #[inline]
+    fn count(&self, _is_input: bool) -> usize {
+        1
+    }
+
+    #[inline]
+    fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
+        if index != 0 {
+            return;
+        }
+
+        writer.set(
+            0,
+            "main",
+            2,
+            ChannelMap::Stereo,
+            SampleSize::F32,
+            true,
+            false,
+            true,
+        );
     }
 }
 

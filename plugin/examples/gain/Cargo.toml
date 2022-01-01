@@ -10,8 +10,9 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 "clack-plugin" = { path = "../../../plugin" }
-"clack-extensions" = { path = "../../../extensions", features = ["params", "state", "clack-plugin"] }
+"clack-extensions" = { path = "../../../extensions", features = ["audio-ports", "params", "state", "clack-plugin"] }
 
 [dev-dependencies]
 clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
 clack-host = { path = "../../../host" }
+"clack-extensions" = { path = "../../../extensions", features = ["audio-ports", "params", "state", "clack-host"] }

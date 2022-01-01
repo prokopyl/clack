@@ -202,6 +202,7 @@ unsafe impl<'a, P: Plugin<'a>> Sync for PluginWrapper<'a, P> {}
 pub enum PluginWrapperError {
     NulPluginDesc,
     NulPluginData,
+    NulPtr(&'static str),
     UninitializedPlugin,
     ActivatedPlugin,
     DeactivatedPlugin,
@@ -243,6 +244,9 @@ impl Display for PluginWrapperError {
             }
             PluginWrapperError::NulPluginData => {
                 f.write_str("Plugin method was called with null clap_plugin.plugin_data pointer")
+            }
+            PluginWrapperError::NulPtr(ptr_name) => {
+                write!(f, "Plugin method was called with null {} pointer", ptr_name)
             }
             PluginWrapperError::UninitializedPlugin => {
                 f.write_str("Plugin was not properly initialized before use")
