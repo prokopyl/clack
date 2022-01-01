@@ -1,7 +1,7 @@
 use crate::instance::channel::PluginInstanceChannelSend;
 use crate::instance::processor::audio::HostAudioBufferCollection;
 use crate::instance::processor::inner::PluginAudioProcessorInner;
-use clack_common::events::list::EventList;
+use clack_common::events::EventList;
 use clap_sys::events::{clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::clap_process;

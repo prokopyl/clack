@@ -1,4 +1,3 @@
-use crate::events::event_match::EventTarget;
 use clap_sys::events::clap_event_note;
 use std::fmt::{Debug, Formatter};
 
@@ -9,35 +8,30 @@ pub struct NoteEvent {
 
 impl NoteEvent {
     #[inline]
-    pub fn new(
-        port_index: EventTarget<u16>,
-        key: EventTarget,
-        channel: EventTarget,
-        velocity: f64,
-    ) -> Self {
+    pub fn new(port_index: i32, key: i32, channel: i32, velocity: f64) -> Self {
         Self {
             inner: clap_event_note {
-                port_index: port_index.to_raw(),
-                key: key.to_raw(),
-                channel: channel.to_raw(),
+                port_index,
+                key,
+                channel,
                 velocity,
             },
         }
     }
 
     #[inline]
-    pub fn port_index(&self) -> EventTarget<u16> {
-        EventTarget::from_raw(self.inner.port_index)
+    pub fn port_index(&self) -> i32 {
+        self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> EventTarget {
-        EventTarget::from_raw(self.inner.key)
+    pub fn key(&self) -> i32 {
+        self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> EventTarget {
-        EventTarget::from_raw(self.inner.channel)
+    pub fn channel(&self) -> i32 {
+        self.inner.channel
     }
 
     #[inline]

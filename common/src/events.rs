@@ -1,17 +1,20 @@
-use crate::events::event_types::NoteExpressionEvent;
-use crate::events::event_types::{
-    MidiEvent, MidiSysexEvent, NoteEvent, NoteMaskEvent, ParamModEvent, ParamValueEvent,
-    TransportEvent,
-};
+//! Events and related utilities.
+//!
+//! All events in CLAP are sample-accurate time-stamped events ([`TimestampedEvent`](crate::events::TimestampedEvent)), that are provided to the plugin's
+//! audio processor alongside the audio buffers through [`EventList`s](crate::events::EventList).
+
+use crate::events::event_types::*;
 use clap_sys::events::{clap_event, clap_event_data, clap_event_type};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
-pub mod list;
+mod list;
+pub use list::*;
 
-pub mod event_match;
+mod event_match;
 pub mod event_types;
+pub use event_match::EventTarget;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum EventType<'a> {
@@ -111,12 +114,12 @@ impl<'a> EventType<'a> {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Event<'a> {
+pub struct TimestampedEvent<'a> {
     inner: clap_event,
     _lifetime: PhantomData<&'a clap_event>, // For MIDI SysEx data
 }
 
-impl<'a> Event<'a> {
+impl<'a> TimestampedEvent<'a> {
     #[inline]
     pub fn new(time: u32, event: EventType) -> Self {
         let (type_, data) = event.into_raw();
@@ -143,39 +146,27 @@ impl<'a> Event<'a> {
     }
 
     #[inline]
-    pub fn from_raw_mut(event: &mut clap_event) -> &mut Self {
-        // SAFETY: Event is repr(C) and shares the same memory representation
-        unsafe { ::core::mem::transmute(event) }
-    }
-
-    #[inline]
     pub fn as_raw(&self) -> &clap_event {
-        // SAFETY: Event is repr(C) and shares the same memory representation
-        unsafe { ::core::mem::transmute(self) }
-    }
-
-    #[inline]
-    pub fn as_raw_mut(&mut self) -> &mut clap_event {
         // SAFETY: Event is repr(C) and shares the same memory representation
         unsafe { ::core::mem::transmute(self) }
     }
 }
 
-impl<'a> PartialEq for Event<'a> {
+impl<'a> PartialEq for TimestampedEvent<'a> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.time() == other.time() && self.event() == other.event()
     }
 }
 
-impl<'a> PartialOrd for Event<'a> {
+impl<'a> PartialOrd for TimestampedEvent<'a> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.time().partial_cmp(&other.time())
     }
 }
 
-impl<'a> Debug for Event<'a> {
+impl<'a> Debug for TimestampedEvent<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Event")
             .field("time", &self.time())

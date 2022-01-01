@@ -9,7 +9,7 @@ use clack_extensions::state::{PluginState, PluginStateImplementation};
 use clack_plugin::ports::ChannelMap;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
-    events::{event_types::NoteEvent, list::EventList, Event, EventType},
+    events::{event_types::NoteEvent, EventList, EventType, TimestampedEvent},
     extension::ExtensionDeclarations,
     host::HostHandle,
     plugin::{Plugin, PluginError, PluginMainThread, Result, SampleConfig},
@@ -52,7 +52,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         events
             .output
             .extend(events.input.iter().map(|e| match e.event() {
-                Some(EventType::NoteOn(ne)) => Event::new(
+                Some(EventType::NoteOn(ne)) => TimestampedEvent::new(
                     e.time(),
                     EventType::NoteOn(NoteEvent::new(
                         ne.port_index(),

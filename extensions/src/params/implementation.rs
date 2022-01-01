@@ -1,5 +1,5 @@
 use crate::params::info::ParamInfo;
-use clack_common::events::list::EventList;
+use clack_common::events::EventList;
 use clack_common::extensions::ExtensionDescriptor;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
 use clack_plugin::plugin::Plugin;

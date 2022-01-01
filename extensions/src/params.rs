@@ -25,7 +25,7 @@ unsafe impl<'a> Extension<'a> for PluginParams {
 mod host {
     use super::*;
     use crate::params::info::ParamInfo;
-    use clack_common::events::list::EventList;
+    use clack_common::events::EventList;
     use clack_host::instance::channel::PluginInstanceChannelSend;
     use clack_host::instance::processor::StoppedPluginAudioProcessor;
     use clack_host::instance::PluginInstance;

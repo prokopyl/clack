@@ -1,6 +1,6 @@
 use clack_host::{
     entry::PluginEntry,
-    events::{event_match::EventTarget, event_types::NoteEvent, list::EventList, Event, EventType},
+    events::{event_types::NoteEvent, EventList, EventType, TimestampedEvent},
     host::{HostInfo, PluginHost},
     instance::processor::audio::HostAudioBufferCollection,
     instance::PluginAudioConfiguration,
@@ -32,20 +32,12 @@ pub fn it_works() {
     let inputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![69f32; 32]);
     let mut outputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![0f32; 32]);
 
-    let event = Event::new(
-        1,
-        EventType::NoteOn(NoteEvent::new(
-            42.into(),
-            EventTarget::All,
-            EventTarget::All,
-            6.9,
-        )),
-    );
+    let event = TimestampedEvent::new(1, EventType::NoteOn(NoteEvent::new(42, -1, -1, 6.9)));
     let mut event_buffer_in = vec![event; 32];
     let mut event_buffer_out = vec![];
 
-    let mut events_in = EventList::from_implementation(&mut event_buffer_in);
-    let mut events_out = EventList::from_implementation(&mut event_buffer_out);
+    let mut events_in = EventList::from_buffer(&mut event_buffer_in);
+    let mut events_out = EventList::from_buffer(&mut event_buffer_out);
 
     let mut processor = plugin
         .borrow_mut()
@@ -81,14 +73,9 @@ pub fn it_works() {
 
         assert_eq!(
             output,
-            &Event::new(
+            &TimestampedEvent::new(
                 input.time(),
-                EventType::NoteOn(NoteEvent::new(
-                    42.into(),
-                    EventTarget::All,
-                    EventTarget::All,
-                    input_note.velocity() * 2.0
-                ))
+                EventType::NoteOn(NoteEvent::new(42, -1, -1, input_note.velocity() * 2.0))
             )
         )
     }
