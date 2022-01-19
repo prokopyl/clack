@@ -1,3 +1,5 @@
+//! All structures representing the different supported CLAP event types.
+
 mod midi;
 mod note;
 mod note_expression;

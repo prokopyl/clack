@@ -20,6 +20,10 @@ pub use list::*;
 
 pub mod event_types;
 
+/// An enum of all possible CLAP events that can be passed between hosts and plugins.
+///
+/// If this event is a MIDI SysEx event, it contains a reference to a host-owned buffer, which is
+/// tied to the `'a` lifetime.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Event<'a> {
     NoteOn(NoteEvent),
@@ -146,7 +150,7 @@ impl<'a> TimestampedEvent<'a> {
 
     /// Returns the associated event.
     ///
-    /// If the host somehow sent an unknown or invalid event type, `None` is returned, and the event
+    /// The the event is an unknown or invalid event type, `None` is returned, and the event
     /// should be ignored.
     #[inline]
     pub fn event(&self) -> Option<Event> {

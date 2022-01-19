@@ -158,19 +158,19 @@ impl<'a> EventList<'a> {
         &mut *(raw as *const _ as *mut _)
     }
 
-    /// Returns C FFI-compatible pointer to this event list.
+    /// Returns a C FFI-compatible pointer to this event list.
     ///
     /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub fn as_raw(&self) -> *const clap_event_list {
+    pub fn as_raw(&self) -> &clap_event_list {
         &self.list
     }
 
-    /// Returns C FFI-compatible mutable pointer to this event list.
+    /// Returns a C FFI-compatible mutable pointer to this event list.
     ///
     /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub fn as_raw_mut(&mut self) -> *mut clap_event_list {
+    pub fn as_raw_mut(&mut self) -> &mut clap_event_list {
         &mut self.list
     }
 }

@@ -195,6 +195,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     }
 }
 
+#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<'a, P: Plugin<'a>> Send for PluginWrapper<'a, P> {}
 unsafe impl<'a, P: Plugin<'a>> Sync for PluginWrapper<'a, P> {}
 

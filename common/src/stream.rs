@@ -1,3 +1,5 @@
+//! Stream utilities.
+
 use clap_sys::stream::{clap_istream, clap_ostream};
 use std::error::Error;
 use std::ffi::c_void;
@@ -5,9 +7,17 @@ use std::fmt::{Display, Formatter};
 use std::io::{ErrorKind, Read, Write};
 use std::marker::PhantomData;
 
+/// An error code that can be raised by CLAP stream methods.
 #[derive(Copy, Clone, Debug)]
 pub struct StreamError {
     code: i64,
+}
+
+impl StreamError {
+    /// Returns the underlying error code returned by the CLAP stream.
+    pub fn code(&self) -> i64 {
+        self.code
+    }
 }
 
 impl Display for StreamError {
@@ -19,10 +29,14 @@ impl Display for StreamError {
 
 impl Error for StreamError {}
 
+/// A CLAP data stream that can be read from.
+///
+/// This helper struct is designed to work with the standard [`Read`](std::io::Read) trait.
 #[repr(C)]
 pub struct InputStream<'a>(clap_istream, PhantomData<&'a clap_istream>);
 
 impl<'a> InputStream<'a> {
+    /// Creates a new input stream for an existing [reader](std::io::Read) implementation.
     pub fn from_reader<R: Read + Sized + 'a>(reader: &'a mut R) -> Self {
         Self(
             clap_istream {
@@ -33,11 +47,17 @@ impl<'a> InputStream<'a> {
         )
     }
 
+    /// Crates a new input stream for a C FFI-compatible pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the given `clap_istream` instance is valid.
     #[inline]
-    pub fn from_raw_mut(raw: &mut clap_istream) -> &mut Self {
-        unsafe { &mut *(raw as *mut _ as *mut _) }
+    pub unsafe fn from_raw_mut(raw: &mut clap_istream) -> &mut Self {
+        &mut *(raw as *mut _ as *mut _)
     }
 
+    /// Returns this input stream as a C FFI-compatible pointer.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_istream {
         &mut self.0
@@ -54,10 +74,14 @@ impl<'a> Read for InputStream<'a> {
     }
 }
 
+/// A CLAP data stream that can be written to.
+///
+/// This helper struct is designed to work with the standard [`Write`](std::io::Write) trait.
 #[repr(C)]
 pub struct OutputStream<'a>(clap_ostream, PhantomData<&'a clap_ostream>);
 
 impl<'a> OutputStream<'a> {
+    /// Creates a new output stream for an existing [write](std::io::Write) implementation.
     pub fn from_writer<W: Write + Sized + 'a>(reader: &'a mut W) -> Self {
         Self(
             clap_ostream {
@@ -68,11 +92,17 @@ impl<'a> OutputStream<'a> {
         )
     }
 
+    /// Crates a new output stream for a C FFI-compatible pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the given `clap_ostream` instance is valid.
     #[inline]
-    pub fn from_raw_mut(raw: &mut clap_ostream) -> &mut Self {
-        unsafe { &mut *(raw as *mut _ as *mut _) }
+    pub unsafe fn from_raw_mut(raw: &mut clap_ostream) -> &mut Self {
+        &mut *(raw as *mut _ as *mut _)
     }
 
+    /// Returns this output stream as a C FFI-compatible pointer.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_ostream {
         &mut self.0
