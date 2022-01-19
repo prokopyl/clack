@@ -23,9 +23,11 @@ pub(crate) fn handle_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
 }
 
 mod fixed_point;
+mod id;
 mod version;
 
 pub use fixed_point::*;
+pub use id::ClapId;
 pub use version::ClapVersion;
 
 use std::ffi::c_void;

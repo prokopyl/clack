@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
-use clack_common::utils::Cookie;
+use clack_common::utils::{ClapId, Cookie};
 use clap_sys::ext::params::*;
 use std::ffi::CStr;
 
@@ -81,7 +81,7 @@ unsafe impl Send for HostParams {}
 unsafe impl Sync for HostParams {}
 
 pub struct ParamInfo<'a> {
-    pub id: u32,
+    pub id: ClapId,
     pub flags: ParamInfoFlags,
     pub cookie: Cookie,
     pub name: &'a [u8],
@@ -92,9 +92,9 @@ pub struct ParamInfo<'a> {
 }
 
 impl<'a> ParamInfo<'a> {
-    pub fn from_raw(raw: &'a clap_param_info) -> Self {
-        Self {
-            id: raw.id,
+    pub fn from_raw(raw: &'a clap_param_info) -> Option<Self> {
+        Some(Self {
+            id: ClapId::from_raw(raw.id)?,
             flags: ParamInfoFlags::from_bits_truncate(raw.flags),
             cookie: Cookie::from_raw(raw.cookie),
             name: crate::utils::data_from_array_buf(&raw.name),
@@ -102,7 +102,7 @@ impl<'a> ParamInfo<'a> {
             min_value: raw.min_value,
             max_value: raw.max_value,
             default_value: raw.default_value,
-        }
+        })
     }
 }
 

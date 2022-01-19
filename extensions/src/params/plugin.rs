@@ -31,7 +31,7 @@ impl<'a> ParamInfoWriter<'a> {
 
         // SAFETY: all pointers come from `inner`, which is valid for writes and well-aligned
         unsafe {
-            core::ptr::addr_of_mut!((*buf).id).write(info.id);
+            core::ptr::addr_of_mut!((*buf).id).write(info.id.get());
             core::ptr::addr_of_mut!((*buf).flags).write(info.flags.bits());
             core::ptr::addr_of_mut!((*buf).min_value).write(info.min_value);
             core::ptr::addr_of_mut!((*buf).max_value).write(info.max_value);

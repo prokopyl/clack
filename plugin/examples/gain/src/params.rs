@@ -91,7 +91,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
             return;
         }
         info.set(&ParamInfo {
-            id: 1,
+            id: 1.into(),
             flags: ParamInfoFlags::IS_AUTOMATABLE,
             cookie: Default::default(),
             name: b"Volume",

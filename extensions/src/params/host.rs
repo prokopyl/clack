@@ -45,7 +45,7 @@ impl PluginParams {
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to.
-            unsafe { Some(ParamInfo::from_raw(buffer.inner.assume_init_mut())) }
+            unsafe { ParamInfo::from_raw(buffer.inner.assume_init_mut()) }
         } else {
             None
         }
