@@ -1,7 +1,13 @@
-//! Events and related utilities.
+//! Audio-processing events and related utilities.
 //!
-//! All events in CLAP are sample-accurate time-stamped events ([`TimestampedEvent`](crate::events::TimestampedEvent)), that are provided to the plugin's
-//! audio processor alongside the audio buffers through [`EventList`s](crate::events::EventList).
+//! Events notify a plugin's Audio Processor of anything that may change its audio output, such as
+//! note [on](crate::events::Event::NoteOn)/[off](crate::events::Event::NoteOff) events,
+//! [parameter changes](crate::events::Event::ParamValue), [MIDI events](crate::events::Event::Midi),
+//! and more.
+//!
+//! All events in CLAP are sample-accurate time-stamped events ([`TimestampedEvent`](crate::events::TimestampedEvent)).
+//! They are provided to the plugin's audio processor alongside the audio buffers through [`EventList`s](crate::events::EventList)
+//! (see the plugin's `process` method).
 
 use crate::events::event_types::*;
 use clap_sys::events::{clap_event, clap_event_data, clap_event_type};
@@ -15,7 +21,7 @@ pub use list::*;
 pub mod event_types;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub enum EventType<'a> {
+pub enum Event<'a> {
     NoteOn(NoteEvent),
     NoteOff(NoteEvent),
     NoteEnd(NoteEvent),
@@ -29,10 +35,10 @@ pub enum EventType<'a> {
     MidiSysex(MidiSysexEvent<'a>),
 }
 
-impl<'a> EventType<'a> {
+impl<'a> Event<'a> {
     fn from_raw(type_: clap_event_type, data: clap_event_data) -> Option<Self> {
         use clap_sys::events::*;
-        use EventType::*;
+        use Event::*;
 
         unsafe {
             match type_ {
@@ -59,7 +65,7 @@ impl<'a> EventType<'a> {
 
     fn into_raw(self) -> (clap_event_type, clap_event_data) {
         use clap_sys::events::*;
-        use EventType::*;
+        use Event::*;
 
         match self {
             NoteOn(e) => (CLAP_EVENT_NOTE_ON, clap_event_data { note: e.into_raw() }),
@@ -110,6 +116,10 @@ impl<'a> EventType<'a> {
     }
 }
 
+/// An event with an associated sample-accurate timestamp.
+///
+/// The associated `'a` lifetime represents the lifetime of the host buffer that some event types
+/// are related to, e.g. MIDI SysEx events.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TimestampedEvent<'a> {
@@ -118,8 +128,9 @@ pub struct TimestampedEvent<'a> {
 }
 
 impl<'a> TimestampedEvent<'a> {
+    /// Creates a new timestamped event from a given timestamp and event.
     #[inline]
-    pub fn new(time: u32, event: EventType) -> Self {
+    pub fn new(time: u32, event: Event) -> Self {
         let (type_, data) = event.into_raw();
         Self {
             inner: clap_event { type_, data, time },
@@ -127,22 +138,33 @@ impl<'a> TimestampedEvent<'a> {
         }
     }
 
+    /// Returns the timestamp of the event, in samples.
     #[inline]
     pub fn time(&self) -> u32 {
         self.inner.time
     }
 
+    /// Returns the associated event.
+    ///
+    /// If the host somehow sent an unknown or invalid event type, `None` is returned, and the event
+    /// should be ignored.
     #[inline]
-    pub fn event(&self) -> Option<EventType> {
-        EventType::from_raw(self.inner.type_, self.inner.data)
+    pub fn event(&self) -> Option<Event> {
+        Event::from_raw(self.inner.type_, self.inner.data)
     }
 
+    /// Creates a timestamped event from a FFI-compatible pointer to a C `clap_event` struct.
+    ///
+    /// # Safety
+    /// The pointer and the pointed clap_event struct must be valid and unmodified for the requested
+    /// lifetime.
     #[inline]
-    pub fn from_raw(event: &clap_event) -> &Self {
+    pub unsafe fn from_raw<'e>(event: *const clap_event) -> &'e Self {
         // SAFETY: Event is repr(C) and shares the same memory representation
-        unsafe { ::core::mem::transmute(event) }
+        ::core::mem::transmute(&*event)
     }
 
+    /// Returns this event as a FFI-compatible pointer to a C `clap_event` struct.
     #[inline]
     pub fn as_raw(&self) -> &clap_event {
         // SAFETY: Event is repr(C) and shares the same memory representation

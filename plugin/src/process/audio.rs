@@ -27,13 +27,24 @@ impl<'a> Audio<'a> {
             }
         }
     }
+
     pub fn input(&self, index: usize) -> Option<AudioBuffer> {
         self.inputs
             .get(index)
             .map(|buf| unsafe { AudioBuffer::from_raw(buf, self.frames_count) })
     }
 
+    #[inline]
     pub fn output(&mut self, index: usize) -> Option<AudioBufferMut> {
+        // SAFETY: &mut ensures there is no input being read concurrently
+        unsafe { self.output_unchecked(index) }
+    }
+
+    ///
+    /// # Safety
+    /// The caller must guarantee that the requested buffer is not aliased to any input buffer by
+    /// the host.
+    pub unsafe fn output_unchecked(&self, index: usize) -> Option<AudioBufferMut> {
         self.outputs
             .get(index)
             .map(|buf| unsafe { AudioBufferMut::from_raw(buf, self.frames_count) })
@@ -67,9 +78,7 @@ impl<'a> Audio<'a> {
     > {
         let mut input_buffer =
             unsafe { AudioBufferMut::from_raw(self.inputs.get(port_index)?, self.frames_count) };
-
-        let mut output_buffer =
-            unsafe { AudioBufferMut::from_raw(self.outputs.get(port_index)?, self.frames_count) };
+        let mut output_buffer = unsafe { self.output_unchecked(port_index) }?;
 
         match (input_buffer.channels_mut(), output_buffer.channels_mut()) {
             (AudioBufferType::F32(mut in_chans), AudioBufferType::F32(mut out_chans)) => {

@@ -1,6 +1,6 @@
 use clack_host::{
     entry::PluginEntry,
-    events::{event_types::NoteEvent, EventList, EventType, TimestampedEvent},
+    events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
     host::{HostInfo, PluginHost},
     instance::processor::audio::HostAudioBufferCollection,
     instance::PluginAudioConfiguration,
@@ -32,7 +32,7 @@ pub fn it_works() {
     let inputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![69f32; 32]);
     let mut outputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![0f32; 32]);
 
-    let event = TimestampedEvent::new(1, EventType::NoteOn(NoteEvent::new(42, -1, -1, 6.9)));
+    let event = TimestampedEvent::new(1, Event::NoteOn(NoteEvent::new(42, -1, -1, 6.9)));
     let mut event_buffer_in = vec![event; 32];
     let mut event_buffer_out = vec![];
 
@@ -65,7 +65,7 @@ pub fn it_works() {
     assert_eq!(event_buffer_in.len(), event_buffer_out.len());
 
     for (input, output) in event_buffer_in.iter().zip(event_buffer_out.iter()) {
-        let input_note = if let Some(EventType::NoteOn(ev)) = input.event() {
+        let input_note = if let Some(Event::NoteOn(ev)) = input.event() {
             ev
         } else {
             panic!("Invalid event type found")
@@ -75,7 +75,7 @@ pub fn it_works() {
             output,
             &TimestampedEvent::new(
                 input.time(),
-                EventType::NoteOn(NoteEvent::new(42, -1, -1, input_note.velocity() * 2.0))
+                Event::NoteOn(NoteEvent::new(42, -1, -1, input_note.velocity() * 2.0))
             )
         )
     }

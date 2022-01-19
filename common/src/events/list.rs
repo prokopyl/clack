@@ -24,14 +24,14 @@ pub use implementation::EventBuffer;
 ///
 /// # Example
 ///```
-/// use clack_common::events::{EventList, EventType, TimestampedEvent};
+/// use clack_common::events::{EventList, Event, TimestampedEvent};
 /// use clack_common::events::event_types::NoteEvent;
 /// let mut buf = vec![];
 /// let mut event_list = EventList::from_buffer(&mut buf);
 ///
 /// assert!(event_list.is_empty());
 ///
-/// let event = TimestampedEvent::new(0, EventType::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
+/// let event = TimestampedEvent::new(0, Event::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
 /// event_list.append(&event);
 ///
 /// assert_eq!(1, event_list.len());
@@ -67,7 +67,7 @@ impl<'a> EventList<'a> {
         unsafe {
             (self.list.get)(&self.list, index as u32)
                 .as_ref()
-                .map(TimestampedEvent::from_raw)
+                .map(|e| TimestampedEvent::from_raw(e))
         }
     }
 
@@ -111,14 +111,14 @@ impl<'a> EventList<'a> {
     /// This is a very cheap, realtime-safe operation that does not change the given buffer in any
     /// way. However, since users of the `EventList` may call `append` on it, the buffer should have
     /// a reasonable amount of storage pre-allocated, as to not have to perform additional
-    /// allocations on the main thread.
+    /// allocations on the audio thread.
     ///
     /// # Example
     /// ```
-    /// use clack_common::events::{EventList, EventType, TimestampedEvent};
+    /// use clack_common::events::{EventList, Event, TimestampedEvent};
     /// use clack_common::events::event_types::NoteEvent;
     ///
-    /// let event = TimestampedEvent::new(0, EventType::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
+    /// let event = TimestampedEvent::new(0, Event::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
     /// let mut buf = vec![event];
     ///
     /// let event_list = EventList::from_buffer(&mut buf);
@@ -276,6 +276,6 @@ unsafe extern "C" fn push_back<'a, E: EventBuffer<'a>>(
 ) {
     E::push_back(
         &mut *((*list).ctx as *const _ as *mut E),
-        TimestampedEvent::from_raw(&*event),
+        TimestampedEvent::from_raw(event),
     )
 }

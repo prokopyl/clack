@@ -1,7 +1,5 @@
 use clack_common::extensions::{Extension, HostExtension};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
-use core::ptr::NonNull;
-use std::ffi::c_void;
 
 mod error;
 #[cfg(feature = "clack-host")]
@@ -55,7 +53,6 @@ unsafe impl<'a> Extension<'a> for Log {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ToShared;
     use clack_plugin::host::HostHandle;
     use std::ffi::CStr;
 
@@ -63,15 +60,6 @@ mod plugin {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
             unsafe { (self.0.log)(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
-        }
-    }
-
-    impl<'a> ToShared<'a> for Log {
-        type Shared = Self;
-
-        #[inline]
-        fn to_shared(&self) -> &Self::Shared {
-            self
         }
     }
 }

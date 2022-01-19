@@ -9,7 +9,7 @@ use clack_extensions::state::{PluginState, PluginStateImplementation};
 use clack_plugin::ports::ChannelMap;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
-    events::{event_types::NoteEvent, EventList, EventType, TimestampedEvent},
+    events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
     extension::ExtensionDeclarations,
     host::HostHandle,
     plugin::{Plugin, PluginError, PluginMainThread, Result, SampleConfig},
@@ -52,9 +52,9 @@ impl<'a> Plugin<'a> for GainPlugin {
         events
             .output
             .extend(events.input.iter().map(|e| match e.event() {
-                Some(EventType::NoteOn(ne)) => TimestampedEvent::new(
+                Some(Event::NoteOn(ne)) => TimestampedEvent::new(
                     e.time(),
-                    EventType::NoteOn(NoteEvent::new(
+                    Event::NoteOn(NoteEvent::new(
                         ne.port_index(),
                         ne.key(),
                         ne.channel(),
@@ -143,7 +143,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
 
     fn flush(&mut self, input_events: &EventList, _output_events: &mut EventList) {
         let value_events = input_events.iter().filter_map(|e| match e.event()? {
-            EventType::ParamValue(v) => Some(v),
+            Event::ParamValue(v) => Some(v),
             _ => None,
         });
 
