@@ -171,7 +171,7 @@ impl<'a> EventList<'a> {
     /// This pointer is only valid until the list is dropped.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_event_list {
-        &mut self.list
+        unsafe { &mut *(self as *mut _ as *mut _) }
     }
 }
 
