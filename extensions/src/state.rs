@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 #[repr(C)]
 pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
 
-unsafe impl<'a> Extension<'a> for PluginState {
+unsafe impl Extension for PluginState {
     const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
     type ExtensionType = PluginExtension;
 }
@@ -16,7 +16,7 @@ unsafe impl<'a> Extension<'a> for PluginState {
 #[repr(C)]
 pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
-unsafe impl<'a> Extension<'a> for HostState {
+unsafe impl Extension for HostState {
     const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
     type ExtensionType = HostExtension;
 }
@@ -49,7 +49,12 @@ mod host {
     use std::io::{Read, Write};
 
     impl PluginState {
-        pub fn load<R: Read>(
+        pub fn load<R: Read>(&self, plugin: &mut PluginInstance, reader: &mut R) {
+            let mut stream = InputStream::from_reader(reader);
+            unsafe { (self.0.load)(plugin.as_raw(), stream.as_raw_mut()) };
+        }
+
+        pub fn loada<R: Read>(
             &self,
             plugin: &mut PluginInstance,
             reader: &mut R,

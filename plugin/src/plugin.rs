@@ -27,14 +27,17 @@ impl<'a> PluginShared<'a> for () {
     }
 }
 
-pub trait PluginMainThread<'a, S>: Sized + 'a {
+pub trait PluginMainThread<'a, P, S>: Sized + 'a {
     fn new(host: HostHandle<'a>, shared: &S) -> Result<Self>;
 
     #[inline]
     fn on_main_thread(&mut self) {}
+
+    #[inline]
+    fn deactivate(&mut self, _audio_processor: P) {} // By default, simply drop it
 }
 
-impl<'a, S> PluginMainThread<'a, S> for () {
+impl<'a, P, S> PluginMainThread<'a, P, S> for () {
     #[inline]
     fn new(_host: HostHandle<'a>, _shared: &S) -> Result<Self> {
         Ok(())
@@ -52,7 +55,7 @@ pub struct SampleConfig {
 
 pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     type Shared: PluginShared<'a>;
-    type MainThread: PluginMainThread<'a, Self::Shared>;
+    type MainThread: PluginMainThread<'a, Self, Self::Shared>;
 
     const ID: &'static [u8]; // TODO: handle null-terminating stuff safely
 

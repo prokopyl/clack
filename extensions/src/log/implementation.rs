@@ -1,5 +1,5 @@
 use super::{Log, LogSeverity};
-use clack_common::extensions::ExtensionDescriptor;
+use clack_common::extensions::ExtensionImplementation;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use std::borrow::Cow::Owned;
@@ -10,9 +10,9 @@ pub trait HostLog {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-unsafe impl<'a, H: HostLog> ExtensionDescriptor<'a, H> for Log {
-    type ExtensionInterface = clap_host_log;
-    const INTERFACE: &'static Self::ExtensionInterface = &clap_host_log { log: log::<H> };
+unsafe impl<H: HostLog> ExtensionImplementation<H> for Log {
+    type Interface = clap_host_log;
+    const INTERFACE: &'static Self::Interface = &clap_host_log { log: log::<H> };
 }
 
 unsafe extern "C" fn log<H: HostLog>(

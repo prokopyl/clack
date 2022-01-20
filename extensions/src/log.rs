@@ -45,7 +45,7 @@ impl LogSeverity {
 #[repr(C)]
 pub struct Log(clap_host_log);
 
-unsafe impl<'a> Extension<'a> for Log {
+unsafe impl Extension for Log {
     const IDENTIFIER: *const u8 = CLAP_EXT_LOG as *const _;
     type ExtensionType = HostExtension;
 }

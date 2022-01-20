@@ -1,6 +1,6 @@
 use crate::params::info::ParamInfo;
 use clack_common::events::EventList;
-use clack_common::extensions::ExtensionDescriptor;
+use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
 use clack_plugin::plugin::Plugin;
 use clap_sys::events::clap_event_list;
@@ -236,12 +236,12 @@ unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
     });
 }
 
-unsafe impl<'a, P: PluginParamsImpl<'a>> ExtensionDescriptor<'a, P> for super::PluginParams
+unsafe impl<'a, P: PluginParamsImpl<'a>> ExtensionImplementation<P> for super::PluginParams
 where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    type ExtensionInterface = clap_plugin_params;
-    const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_params {
+    type Interface = clap_plugin_params;
+    const INTERFACE: &'static Self::Interface = &clap_plugin_params {
         count: count::<P>,
         get_info: get_info::<P>,
         get_value: get_value::<P>,

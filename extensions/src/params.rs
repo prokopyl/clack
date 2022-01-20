@@ -9,7 +9,7 @@ pub struct PluginParams(clap_plugin_params, PhantomData<*const clap_plugin_param
 pub mod implementation;
 pub mod info;
 
-unsafe impl<'a> Extension<'a> for PluginParams {
+unsafe impl Extension for PluginParams {
     const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
     type ExtensionType = PluginExtension;
 }

@@ -47,7 +47,7 @@ impl<'a> HostInfo<'a> {
             .expect("Failed to read host version: invalid UTF-8 sequence")
     }
 
-    pub fn get_extension<E: Extension<'a, ExtensionType = HostExtension>>(&self) -> Option<&E> {
+    pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&E> {
         let ptr =
             unsafe { (self.inner.get_extension)(self.inner, E::IDENTIFIER as *const i8) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })
@@ -96,7 +96,7 @@ impl<'a> HostHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<'a, ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
         let id = E::IDENTIFIER;
         let ptr = unsafe { (self.inner.get_extension)(self.inner, id as *const _) as *mut _ };
         unsafe { Some(E::from_extension_ptr(NonNull::new(ptr)?)) }
@@ -116,7 +116,7 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<'a>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension>(&self) -> Option<&'a E> {
         let id = E::IDENTIFIER;
         let ptr = unsafe { (self.inner.get_extension)(self.inner, id as *const _) as *mut _ };
         unsafe { Some(E::from_extension_ptr(NonNull::new(ptr)?)) }

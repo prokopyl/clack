@@ -33,7 +33,7 @@ bitflags! {
     }
 }
 
-unsafe impl<'a> Extension<'a> for PluginAudioPorts {
+unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: *const u8 = CLAP_EXT_AUDIO_PORTS as *const _;
     type ExtensionType = PluginExtension;
 }
@@ -41,7 +41,7 @@ unsafe impl<'a> Extension<'a> for PluginAudioPorts {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use crate::audio_ports::{PluginAudioPorts, SampleSize};
-    use clack_common::extensions::ExtensionDescriptor;
+    use clack_common::extensions::ExtensionImplementation;
     use clack_common::ports::ChannelMap;
     use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
     use clack_plugin::plugin::Plugin;
@@ -107,12 +107,12 @@ mod plugin {
         fn get(&self, is_input: bool, index: usize, writer: &mut AudioPortInfoWriter);
     }
 
-    unsafe impl<'a, P: Plugin<'a>> ExtensionDescriptor<'a, P> for PluginAudioPorts
+    unsafe impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPorts
     where
         P::MainThread: PluginAudioPortsImplementation,
     {
-        type ExtensionInterface = clap_plugin_audio_ports;
-        const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_audio_ports {
+        type Interface = clap_plugin_audio_ports;
+        const INTERFACE: &'static Self::Interface = &clap_plugin_audio_ports {
             count: count::<P>,
             get: get::<P>,
         };

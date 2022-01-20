@@ -87,7 +87,7 @@ pub struct GainPluginMainThread {
     rusting: u32,
 }
 
-impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
+impl<'a> PluginMainThread<'a, GainPlugin, ()> for GainPluginMainThread {
     fn new(_host: HostHandle<'a>, _shared: &()) -> Result<Self> {
         Ok(Self { rusting: 0 })
     }

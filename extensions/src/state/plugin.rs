@@ -1,5 +1,5 @@
 use super::*;
-use clack_common::extensions::ExtensionDescriptor;
+use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::host::HostMainThreadHandle;
 use clack_plugin::plugin::wrapper::PluginWrapper;
 use clack_plugin::plugin::Plugin;
@@ -15,15 +15,15 @@ impl HostState {
 
 pub trait PluginStateImplementation {
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
-    fn save(&mut self, input: &mut OutputStream) -> Result<(), PluginError>;
+    fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
 }
 
-unsafe impl<'a, P: Plugin<'a>> ExtensionDescriptor<'a, P> for super::PluginState
+unsafe impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for super::PluginState
 where
     P::MainThread: PluginStateImplementation,
 {
-    type ExtensionInterface = clap_plugin_state;
-    const INTERFACE: &'static Self::ExtensionInterface = &clap_plugin_state {
+    type Interface = clap_plugin_state;
+    const INTERFACE: &'static Self::Interface = &clap_plugin_state {
         save: save::<P>,
         load: load::<P>,
     };
