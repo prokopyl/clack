@@ -10,9 +10,8 @@ pub trait HostLog {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-unsafe impl<H: HostLog> ExtensionImplementation<H> for Log {
-    type Interface = clap_host_log;
-    const INTERFACE: &'static Self::Interface = &clap_host_log { log: log::<H> };
+impl<H: HostLog> ExtensionImplementation<H> for Log {
+    const IMPLEMENTATION: &'static Self = &Log(clap_host_log { log: log::<H> });
 }
 
 unsafe extern "C" fn log<H: HostLog>(

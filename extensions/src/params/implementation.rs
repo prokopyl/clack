@@ -8,6 +8,7 @@ use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 pub struct ParamInfoWriter<'a> {
@@ -236,17 +237,19 @@ unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
     });
 }
 
-unsafe impl<'a, P: PluginParamsImpl<'a>> ExtensionImplementation<P> for super::PluginParams
+impl<'a, P: PluginParamsImpl<'a>> ExtensionImplementation<P> for super::PluginParams
 where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    type Interface = clap_plugin_params;
-    const INTERFACE: &'static Self::Interface = &clap_plugin_params {
-        count: count::<P>,
-        get_info: get_info::<P>,
-        get_value: get_value::<P>,
-        value_to_text: value_to_text::<P>,
-        text_to_value: text_to_value::<P>,
-        flush: flush::<P>,
-    };
+    const IMPLEMENTATION: &'static Self = &super::PluginParams(
+        clap_plugin_params {
+            count: count::<P>,
+            get_info: get_info::<P>,
+            get_value: get_value::<P>,
+            value_to_text: value_to_text::<P>,
+            text_to_value: text_to_value::<P>,
+            flush: flush::<P>,
+        },
+        PhantomData,
+    );
 }

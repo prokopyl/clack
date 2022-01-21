@@ -10,7 +10,7 @@ use clack_plugin::ports::ChannelMap;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
     events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
-    extension::ExtensionDeclarations,
+    extension::PluginExtensions,
     host::HostHandle,
     plugin::{Plugin, PluginError, PluginMainThread, Result, SampleConfig},
     process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus},
@@ -69,7 +69,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }
 
-    fn declare_extensions(builder: &mut ExtensionDeclarations<Self>, _shared: &()) {
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &()) {
         builder.register::<PluginParams>().register::<PluginState>();
     }
 }

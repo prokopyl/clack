@@ -2,7 +2,7 @@
 //!
 //! These traits are designed to be used for *implementing* custom or unsupported extensions.
 //! If you want to use an existing extension in your plugin, see the `clack_extensions`
-//! crate instead.  
+//! crate instead.
 //!
 //! # Example
 //!
@@ -38,18 +38,17 @@
 //! // to provide the C FFI-compatible struct.
 //! use clack_plugin::plugin::Plugin;
 //!
-//! unsafe impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
+//! impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
 //! where
 //!     // In this case, all of the CLAP State methods belong to the main thread.
 //!     // Other extensions may have other requirements, possibly split between multiple threads.
 //!     P::MainThread: PluginStateImplementation,
 //! {
-//!     type Interface = clap_plugin_state;
-//!     const INTERFACE: &'static Self::Interface = &clap_plugin_state {
+//!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
 //!         # save,
 //!         // For the sake of this example, we are only implementing the load() method.
 //!         load: load::<P>,
-//!     };
+//!     });
 //! }
 //! # unsafe extern "C" fn save(_: *const clap_plugin, _: *mut clap_sys::stream::clap_ostream) -> bool {
 //! #    unimplemented!()
@@ -87,13 +86,19 @@ use std::ptr::NonNull;
 
 pub use clack_common::extensions::*;
 
-pub struct ExtensionDeclarations<'a, P> {
+/// A collection of all extensions supported for a given plugin type `P`.
+///
+/// Plugins can declare the different extensions they support by using the
+/// [`register`](PluginExtensions::register) method on this struct, during a call to
+/// [`declare_extensions`](crate::plugin::Plugin::declare_extensions).
+pub struct PluginExtensions<'a, P> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
     plugin_type: PhantomData<P>,
 }
 
-impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
+impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
+    #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {
             found: None,
@@ -109,6 +114,7 @@ impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
             .unwrap_or(::core::ptr::null_mut())
     }
 
+    /// Adds a given extension implementation to the list of extensions this plugin supports.
     pub fn register<E: ExtensionImplementation<P, ExtensionType = PluginExtension>>(
         &mut self,
     ) -> &mut Self {
@@ -118,7 +124,7 @@ impl<'a, 'b, P: Plugin<'b>> ExtensionDeclarations<'a, P> {
 
         let uri = unsafe { CStr::from_ptr(E::IDENTIFIER as *const _) };
         if uri == self.requested {
-            self.found = NonNull::new(E::INTERFACE as *const _ as *mut _)
+            self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }
 
         self

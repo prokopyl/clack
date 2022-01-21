@@ -49,12 +49,7 @@ mod host {
     use std::io::{Read, Write};
 
     impl PluginState {
-        pub fn load<R: Read>(&self, plugin: &mut PluginInstance, reader: &mut R) {
-            let mut stream = InputStream::from_reader(reader);
-            unsafe { (self.0.load)(plugin.as_raw(), stream.as_raw_mut()) };
-        }
-
-        pub fn loada<R: Read>(
+        pub fn load<R: Read>(
             &self,
             plugin: &mut PluginInstance,
             reader: &mut R,

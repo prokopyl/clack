@@ -1,4 +1,4 @@
-use crate::extension::ExtensionDeclarations;
+use crate::extension::PluginExtensions;
 use crate::host::HostHandle;
 use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;
@@ -66,13 +66,6 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
         sample_config: SampleConfig,
     ) -> Result<Self>;
 
-    #[inline]
-    fn start_processing(&mut self) -> Result {
-        Ok(())
-    }
-    #[inline]
-    fn stop_processing(&mut self) {}
-
     fn process(
         &mut self,
         process: &Process,
@@ -81,7 +74,14 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     ) -> Result<ProcessStatus>;
 
     #[inline]
-    fn declare_extensions(_builder: &mut ExtensionDeclarations<Self>, _shared: &Self::Shared) {}
+    fn start_processing(&mut self) -> Result {
+        Ok(())
+    }
+    #[inline]
+    fn stop_processing(&mut self) {}
+
+    #[inline]
+    fn declare_extensions(_builder: &mut PluginExtensions<Self>, _shared: &Self::Shared) {}
 
     const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor(clap_plugin_descriptor {
         clap_version: CLAP_VERSION,

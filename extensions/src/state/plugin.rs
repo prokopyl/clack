@@ -18,15 +18,17 @@ pub trait PluginStateImplementation {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
 }
 
-unsafe impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for super::PluginState
+impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for super::PluginState
 where
     P::MainThread: PluginStateImplementation,
 {
-    type Interface = clap_plugin_state;
-    const INTERFACE: &'static Self::Interface = &clap_plugin_state {
-        save: save::<P>,
-        load: load::<P>,
-    };
+    const IMPLEMENTATION: &'static Self = &super::PluginState(
+        clap_plugin_state {
+            save: save::<P>,
+            load: load::<P>,
+        },
+        PhantomData,
+    );
 }
 
 unsafe extern "C" fn load<'a, P: Plugin<'a>>(

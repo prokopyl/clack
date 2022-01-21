@@ -1,4 +1,4 @@
-use crate::extension::ExtensionDeclarations;
+use crate::extension::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::wrapper::PluginWrapper;
 use crate::plugin::{wrapper, Plugin, PluginMainThread, SampleConfig};
@@ -122,7 +122,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         identifier: *const std::os::raw::c_char,
     ) -> *const c_void {
         let identifier = CStr::from_ptr(identifier);
-        let mut builder = ExtensionDeclarations::new(identifier);
+        let mut builder = PluginExtensions::new(identifier);
 
         wrapper::PluginWrapper::<P>::handle(plugin, |p| {
             P::declare_extensions(&mut builder, p.shared());

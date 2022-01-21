@@ -48,6 +48,7 @@ mod plugin {
     use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
     use clap_sys::plugin::clap_plugin;
     use clap_sys::string_sizes::CLAP_NAME_SIZE;
+    use std::marker::PhantomData;
     use std::mem::MaybeUninit;
     use std::ptr::addr_of_mut;
 
@@ -107,15 +108,17 @@ mod plugin {
         fn get(&self, is_input: bool, index: usize, writer: &mut AudioPortInfoWriter);
     }
 
-    unsafe impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPorts
+    impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPorts
     where
         P::MainThread: PluginAudioPortsImplementation,
     {
-        type Interface = clap_plugin_audio_ports;
-        const INTERFACE: &'static Self::Interface = &clap_plugin_audio_ports {
-            count: count::<P>,
-            get: get::<P>,
-        };
+        const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
+            clap_plugin_audio_ports {
+                count: count::<P>,
+                get: get::<P>,
+            },
+            PhantomData,
+        );
     }
 
     unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin, is_input: bool) -> u32
