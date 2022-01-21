@@ -92,10 +92,9 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         match audio_processor.take() {
             None => Err(PluginWrapperError::DeactivatedPlugin),
             Some(audio_processor) => {
-                pinned_self
-                    .main_thread
-                    .get_mut()
-                    .deactivate(audio_processor.into_inner());
+                audio_processor
+                    .into_inner()
+                    .deactivate(pinned_self.main_thread.get_mut());
 
                 Ok(())
             }

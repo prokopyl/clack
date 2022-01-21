@@ -6,6 +6,7 @@ use clack_extensions::audio_ports::{
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
 use clack_extensions::state::{PluginState, PluginStateImplementation};
+use clack_plugin::plugin::PluginDescriptor;
 use clack_plugin::ports::ChannelMap;
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
@@ -24,7 +25,7 @@ impl<'a> Plugin<'a> for GainPlugin {
     type Shared = ();
     type MainThread = GainPluginMainThread;
 
-    const ID: &'static [u8] = b"gain\0";
+    const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor::new(b"gain\0");
 
     fn new(
         _host: HostHandle<'a>,
@@ -87,7 +88,7 @@ pub struct GainPluginMainThread {
     rusting: u32,
 }
 
-impl<'a> PluginMainThread<'a, GainPlugin, ()> for GainPluginMainThread {
+impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
     fn new(_host: HostHandle<'a>, _shared: &()) -> Result<Self> {
         Ok(Self { rusting: 0 })
     }

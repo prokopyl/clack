@@ -105,7 +105,7 @@ impl<P: for<'a> Plugin<'a>> PluginEntry for SinglePluginEntry<P> {
 
     #[inline]
     fn create_plugin<'p>(host_info: HostInfo<'p>, plugin_id: &[u8]) -> Option<PluginInstance<'p>> {
-        if plugin_id == P::ID {
+        if plugin_id == P::DESCRIPTOR.id().to_bytes_with_nul() {
             Some(PluginInstance::<'p>::new::<P>(host_info))
         } else {
             None

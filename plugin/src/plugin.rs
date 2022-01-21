@@ -4,15 +4,14 @@ use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;
 use crate::process::Process;
 use clack_common::process::ProcessStatus;
-use clap_sys::{
-    plugin::{clap_plugin_descriptor, CLAP_PLUGIN_AUDIO_EFFECT},
-    version::CLAP_VERSION,
-};
 
+mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 pub mod wrapper;
+
+pub use descriptor::*;
 pub use error::{PluginError, Result};
 pub use instance::*;
 
@@ -27,17 +26,14 @@ impl<'a> PluginShared<'a> for () {
     }
 }
 
-pub trait PluginMainThread<'a, P, S>: Sized + 'a {
+pub trait PluginMainThread<'a, S>: Sized + 'a {
     fn new(host: HostHandle<'a>, shared: &S) -> Result<Self>;
 
     #[inline]
     fn on_main_thread(&mut self) {}
-
-    #[inline]
-    fn deactivate(&mut self, _audio_processor: P) {} // By default, simply drop it
 }
 
-impl<'a, P, S> PluginMainThread<'a, P, S> for () {
+impl<'a, S> PluginMainThread<'a, S> for () {
     #[inline]
     fn new(_host: HostHandle<'a>, _shared: &S) -> Result<Self> {
         Ok(())
@@ -55,9 +51,9 @@ pub struct SampleConfig {
 
 pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     type Shared: PluginShared<'a>;
-    type MainThread: PluginMainThread<'a, Self, Self::Shared>;
+    type MainThread: PluginMainThread<'a, Self::Shared>;
 
-    const ID: &'static [u8]; // TODO: handle null-terminating stuff safely
+    const DESCRIPTOR: &'static PluginDescriptor;
 
     fn new(
         host: HostHandle<'a>,
@@ -74,6 +70,9 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
     ) -> Result<ProcessStatus>;
 
     #[inline]
+    fn deactivate(self, _main_thread: &mut Self::MainThread) {}
+
+    #[inline]
     fn start_processing(&mut self) -> Result {
         Ok(())
     }
@@ -82,23 +81,4 @@ pub trait Plugin<'a>: Sized + Send + Sync + 'a {
 
     #[inline]
     fn declare_extensions(_builder: &mut PluginExtensions<Self>, _shared: &Self::Shared) {}
-
-    const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor(clap_plugin_descriptor {
-        clap_version: CLAP_VERSION,
-        id: Self::ID.as_ptr() as *const i8,
-        name: EMPTY.as_ptr() as *const i8,
-        vendor: EMPTY.as_ptr() as *const i8,
-        url: EMPTY.as_ptr() as *const i8,
-        manual_url: EMPTY.as_ptr() as *const i8,
-        version: EMPTY.as_ptr() as *const i8,
-        description: EMPTY.as_ptr() as *const i8,
-        keywords: EMPTY.as_ptr() as *const i8,
-        support_url: EMPTY.as_ptr() as *const i8,
-        // FIXME: Why is this u64 but plugin types are i32?
-        plugin_type: CLAP_PLUGIN_AUDIO_EFFECT as u64, // TODO
-    });
 }
-
-pub struct PluginDescriptor(pub(crate) clap_plugin_descriptor);
-
-const EMPTY: &[u8] = b"\0"; // TODO
