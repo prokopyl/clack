@@ -39,6 +39,7 @@ mod panic {
 /// The only way to access an instance of `PluginWrapper` is through the
 /// [`handle`](crate::plugin::wrapper::PluginWrapper::handle) function.
 pub struct PluginWrapper<'a, P: Plugin<'a>> {
+    host: HostHandle<'a>,
     shared: P::Shared,
     main_thread: UnsafeCell<P::MainThread>,
     audio_processor: Option<UnsafeCell<P>>,
@@ -50,6 +51,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         let main_thread = UnsafeCell::new(P::MainThread::new(host, &shared)?);
 
         Ok(Self {
+            host: host.shared(),
             shared,
             main_thread,
             audio_processor: None,
@@ -60,7 +62,6 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     /// Caller must ensure this method is only called on main thread and has exclusivity
     pub(crate) unsafe fn activate(
         self: Pin<&mut Self>,
-        host: HostHandle<'a>,
         audio_config: AudioConfiguration,
     ) -> Result<(), PluginWrapperError> {
         if self.audio_processor.is_some() {
@@ -69,6 +70,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
 
         // SAFETY: self cannot move, and pointer is valid for the lifetime of P
         let shared = &*(&self.shared as *const _);
+        let host = self.host;
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = Pin::get_unchecked_mut(self);
 

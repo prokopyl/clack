@@ -22,8 +22,8 @@
 //!   One exception is for CLAP plugins' activation and deactivation (represented in Clack by the
 //!   plugin type's construction and destruction), which is guaranteed to happen in the Main Thread
 //!   instead. This allows the plugin's [`activate`](Plugin::activate) and
-//!   [`deactivate`](Plugin::activate) to receive temporary exclusive references to the main thread
-//!   type during its construction and destruction.
+//!   [`deactivate`](Plugin::deactivate) methods to receive temporary exclusive references to the
+//!   main thread type during its construction and destruction.
 //!
 //! * The *main thread* (`[main-thread]` in the CLAP specification): this is represented by a type
 //!   implementing the [`PluginMainThread`] trait, which is neither [`Send`] nor [`Sync`]. If
@@ -196,7 +196,7 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     /// # Errors
     ///
     /// If the plugin's audio processor was already activated, this method should return a
-    /// [PluginError::AlreadyActivated] error. This is a fatal error which only possible due to a
+    /// [`PluginError::AlreadyActivated`] error. This is a fatal error which only possible due to a
     /// faulty host, and should be considered to be a bug. In this case, the plugin's activation is
     /// aborted.
     ///

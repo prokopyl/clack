@@ -60,13 +60,9 @@ impl PluginInstanceShared {
             },
         );
 
-        let raw_ptr = &arc as *const _ as *const c_void as *mut c_void;
-        let raw_host_ptr = &arc.raw_host as *const _;
-        let instance = unsafe { Self::instantiate(entry, plugin_id, raw_host_ptr) };
-
         let mutable = Shared::get_mut(&mut arc).unwrap();
-        mutable.raw_host.host_data = raw_ptr;
-        mutable.instance = instance;
+        mutable.raw_host.host_data = mutable as *mut PluginInstanceShared as *mut c_void;
+        mutable.instance = unsafe { Self::instantiate(entry, plugin_id, &mutable.raw_host) };
 
         (
             // SAFETY: Arc never moves its contents

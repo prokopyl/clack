@@ -75,8 +75,8 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
                 min_sample_count,
                 max_sample_count,
             };
-            let host = (*((*plugin).plugin_data as *mut PluginInstanceImpl<'a, P>)).host;
-            p.activate(host, config)
+
+            p.activate(config)
         })
         .is_some()
     }
