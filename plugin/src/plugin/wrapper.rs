@@ -1,11 +1,12 @@
-//! Utilities to manipulate Plugin instances from a FFI context.
+//! Utilities to manipulate Plugin instances from an FFI context.
 //!
 //! These unsafe utilities are targeted at extension implementors. Most `clack-plugin` users do not
 //! have to use those utilities to use extensions, see `clack-extensions` instead.
 
-use crate::host::HostHandle;
+use crate::host::{HostHandle, HostMainThreadHandle};
 use crate::plugin::{
-    logging, Plugin, PluginError, PluginInstanceImpl, PluginMainThread, PluginShared, SampleConfig,
+    logging, AudioConfiguration, Plugin, PluginError, PluginInstanceImpl, PluginMainThread,
+    PluginShared,
 };
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
@@ -44,8 +45,8 @@ pub struct PluginWrapper<'a, P: Plugin<'a>> {
 }
 
 impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
-    pub(crate) fn new(host: HostHandle<'a>) -> Result<Self, PluginError> {
-        let shared = P::Shared::new(host)?;
+    pub(crate) fn new(host: HostMainThreadHandle<'a>) -> Result<Self, PluginError> {
+        let shared = P::Shared::new(host.shared())?;
         let main_thread = UnsafeCell::new(P::MainThread::new(host, &shared)?);
 
         Ok(Self {
@@ -60,7 +61,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     pub(crate) unsafe fn activate(
         self: Pin<&mut Self>,
         host: HostHandle<'a>,
-        sample_config: SampleConfig,
+        audio_config: AudioConfiguration,
     ) -> Result<(), PluginWrapperError> {
         if self.audio_processor.is_some() {
             return Err(PluginWrapperError::ActivatedPlugin);
@@ -71,11 +72,11 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = Pin::get_unchecked_mut(self);
 
-        let processor = P::new(
-            host,
+        let processor = P::activate(
+            host.to_audio_thread(),
             pinned_self.main_thread.get_mut(),
             shared,
-            sample_config,
+            audio_config,
         )?;
         pinned_self.audio_processor = Some(UnsafeCell::new(processor));
 

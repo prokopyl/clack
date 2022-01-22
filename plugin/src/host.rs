@@ -47,7 +47,7 @@ impl<'a> HostInfo<'a> {
             .expect("Failed to read host version: invalid UTF-8 sequence")
     }
 
-    pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&E> {
+    pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
         let ptr =
             unsafe { (self.inner.get_extension)(self.inner, E::IDENTIFIER as *const i8) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })
@@ -56,7 +56,7 @@ impl<'a> HostInfo<'a> {
     /// # Safety
     /// Some functions exposed by HostHandle cannot be called until plugin is initialized
     #[inline]
-    pub unsafe fn to_handle(self) -> HostHandle<'a> {
+    pub(crate) unsafe fn to_handle(self) -> HostHandle<'a> {
         HostHandle { inner: self.inner }
     }
 }
@@ -97,9 +97,27 @@ impl<'a> HostHandle<'a> {
 
     #[inline]
     pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
-        let id = E::IDENTIFIER;
-        let ptr = unsafe { (self.inner.get_extension)(self.inner, id as *const _) as *mut _ };
-        unsafe { Some(E::from_extension_ptr(NonNull::new(ptr)?)) }
+        self.info().get_extension()
+    }
+
+    #[inline]
+    pub(crate) unsafe fn to_main_thread(self) -> HostMainThreadHandle<'a> {
+        HostMainThreadHandle {
+            inner: self.inner,
+            _non_send: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn to_audio_thread(self) -> HostAudioThreadHandle<'a> {
+        HostAudioThreadHandle { inner: self.inner }
+    }
+}
+
+impl<'a> From<HostHandle<'a>> for HostInfo<'a> {
+    #[inline]
+    fn from(h: HostHandle<'a>) -> Self {
+        h.info()
     }
 }
 
@@ -116,9 +134,38 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension>(&self) -> Option<&'a E> {
-        let id = E::IDENTIFIER;
-        let ptr = unsafe { (self.inner.get_extension)(self.inner, id as *const _) as *mut _ };
-        unsafe { Some(E::from_extension_ptr(NonNull::new(ptr)?)) }
+    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+        self.shared().extension()
+    }
+}
+
+impl<'a> From<HostMainThreadHandle<'a>> for HostHandle<'a> {
+    #[inline]
+    fn from(h: HostMainThreadHandle<'a>) -> Self {
+        h.shared()
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct HostAudioThreadHandle<'a> {
+    inner: &'a clap_host,
+}
+
+impl<'a> HostAudioThreadHandle<'a> {
+    #[inline]
+    pub fn shared(&self) -> HostHandle<'a> {
+        HostHandle { inner: self.inner }
+    }
+
+    #[inline]
+    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+        self.shared().extension()
+    }
+}
+
+impl<'a> From<HostAudioThreadHandle<'a>> for HostHandle<'a> {
+    #[inline]
+    fn from(h: HostAudioThreadHandle<'a>) -> Self {
+        h.shared()
     }
 }

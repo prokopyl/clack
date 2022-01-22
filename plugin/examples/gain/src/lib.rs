@@ -8,12 +8,13 @@ use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams}
 use clack_extensions::state::{PluginState, PluginStateImplementation};
 use clack_plugin::plugin::PluginDescriptor;
 use clack_plugin::ports::ChannelMap;
+// TODO: make prelude
 use clack_plugin::{
     entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
     events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
     extension::PluginExtensions,
-    host::HostHandle,
-    plugin::{Plugin, PluginError, PluginMainThread, Result, SampleConfig},
+    host::{HostAudioThreadHandle, HostMainThreadHandle},
+    plugin::{AudioConfiguration, Plugin, PluginError, PluginMainThread, Result},
     process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus},
     stream::{InputStream, OutputStream},
 };
@@ -27,11 +28,11 @@ impl<'a> Plugin<'a> for GainPlugin {
 
     const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor::new(b"gain\0");
 
-    fn new(
-        _host: HostHandle<'a>,
+    fn activate(
+        _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
         _shared: &(),
-        _sample_config: SampleConfig,
+        _audio_config: AudioConfiguration,
     ) -> Result<Self> {
         Ok(Self)
     }
@@ -89,7 +90,7 @@ pub struct GainPluginMainThread {
 }
 
 impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
-    fn new(_host: HostHandle<'a>, _shared: &()) -> Result<Self> {
+    fn new(_host: HostMainThreadHandle<'a>, _shared: &()) -> Result<Self> {
         Ok(Self { rusting: 0 })
     }
 }

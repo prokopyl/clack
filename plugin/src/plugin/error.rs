@@ -5,6 +5,7 @@ pub type Result<T = ()> = ::core::result::Result<T, PluginError>;
 
 #[derive(Debug)]
 pub enum PluginError {
+    AlreadyActivated,
     Io(std::io::Error),
     Custom(Box<dyn Error + 'static>),
 }
@@ -12,6 +13,12 @@ pub enum PluginError {
 impl Display for PluginError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            PluginError::AlreadyActivated => {
+                write!(
+                    f,
+                    "This plugin's activate() function was called while already activated"
+                )
+            }
             PluginError::Custom(e) => std::fmt::Display::fmt(&e, f),
             PluginError::Io(e) => std::fmt::Display::fmt(&e, f),
         }

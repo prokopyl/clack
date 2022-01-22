@@ -1,7 +1,7 @@
 use crate::extension::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::wrapper::PluginWrapper;
-use crate::plugin::{wrapper, Plugin, PluginMainThread, SampleConfig};
+use crate::plugin::{wrapper, AudioConfiguration, Plugin, PluginMainThread};
 use crate::process::Process;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
@@ -44,7 +44,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
             return false;
         }
 
-        data.plugin_data = Some(match PluginWrapper::new(data.host) {
+        data.plugin_data = Some(match PluginWrapper::new(data.host.to_main_thread()) {
             Ok(d) => d,
             Err(e) => {
                 super::logging::plugin_log::<P>(plugin, &e.into());
@@ -70,7 +70,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         max_sample_count: u32,
     ) -> bool {
         PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
-            let config = SampleConfig {
+            let config = AudioConfiguration {
                 sample_rate,
                 min_sample_count,
                 max_sample_count,
