@@ -1,13 +1,38 @@
+use clack_host::host::SharedHoster;
+use clack_host::instance::PluginInstance;
 use clack_host::{
     entry::PluginEntry,
     events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
-    host::{HostInfo, PluginHost},
-    instance::processor::audio::HostAudioBufferCollection,
+    host::{AudioProcessorHoster, HostInfo, PluginHost, PluginHoster},
+    instance::processor::audio::{AudioBuffer, AudioPorts, ChannelBuffer},
     instance::PluginAudioConfiguration,
 };
-use std::cell::RefCell;
 
 use gain::clap_plugin_entry;
+
+struct TestHost;
+struct TestHostAudioProcessor;
+struct TestHostShared;
+
+impl<'a> PluginHoster<'a> for TestHost {
+    type AudioProcessor = TestHostAudioProcessor;
+    type Shared = TestHostShared;
+}
+
+impl AudioProcessorHoster for TestHostAudioProcessor {}
+impl SharedHoster for TestHostShared {
+    fn request_restart(&self) {
+        todo!()
+    }
+
+    fn request_process(&self) {
+        todo!()
+    }
+
+    fn request_callback(&self) {
+        todo!()
+    }
+}
 
 #[test]
 pub fn it_works() {
@@ -18,19 +43,23 @@ pub fn it_works() {
     // SAFETY: only called this once here
     let entry = unsafe { PluginEntry::from_descriptor(&clap_plugin_entry, "") }.unwrap();
     let desc = entry.plugin_descriptor(0).unwrap();
-    assert_eq!(desc.id().unwrap(), "gain");
+    assert_eq!(desc.id().unwrap().to_bytes(), b"gain");
 
     // Instantiate the desired plugin
-    // Using RefCell is dumb but enough for single-threaded testing
-    let plugin = RefCell::new(entry.instantiate("gain", &host));
+    let mut plugin =
+        PluginInstance::new(|| TestHostShared, |_| TestHost, &entry, b"gain", &host).unwrap();
 
     // Setting up some buffers
     let configuration = PluginAudioConfiguration {
         sample_rate: 44_100.0,
         frames_count_range: 32..=32,
     };
-    let inputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![69f32; 32]);
-    let mut outputs = HostAudioBufferCollection::for_ports_and_channels(1, 2, || vec![0f32; 32]);
+
+    let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
+    let mut outputs_descriptors = AudioPorts::with_capacity(2, 1);
+
+    let mut inputs = [vec![69f32; 32], vec![69f32; 32]];
+    let mut outputs = [vec![0f32; 32], vec![0f32; 32]];
 
     let event = TimestampedEvent::new(1, Event::NoteOn(NoteEvent::new(42, -1, -1, 6.9)));
     let mut event_buffer_in = vec![event; 32];
@@ -40,22 +69,33 @@ pub fn it_works() {
     let mut events_out = EventList::from_buffer(&mut event_buffer_out);
 
     let mut processor = plugin
-        .borrow_mut()
-        .activate(configuration, |msg| {
-            // Technically that's an spsc "channel" ¯\_(ツ)_/¯
-            plugin.borrow_mut().process_received_message(msg)
-        })
+        .activate(TestHostAudioProcessor, configuration)
         .unwrap()
         .start_processing()
         .unwrap();
 
+    let input_channels = inputs_descriptors.with_buffers_f32([AudioBuffer {
+        channels: inputs.iter_mut().map(|buf| ChannelBuffer::variable(buf)),
+        latency: 0,
+    }]);
+
+    let output_channels = outputs_descriptors.with_buffers_f32([AudioBuffer {
+        channels: outputs.iter_mut().map(|buf| ChannelBuffer::variable(buf)),
+        latency: 0,
+    }]);
+
     // Process
-    processor.process(&inputs, &mut outputs, &mut events_in, &mut events_out);
+    processor.process(
+        &input_channels,
+        &output_channels,
+        &mut events_in,
+        &mut events_out,
+    );
 
     // Check the gain was applied properly
     for channel_index in 0..1 {
-        let inbuf = inputs.get_channel_buffer(0, channel_index).unwrap();
-        let outbuf = outputs.get_channel_buffer(0, channel_index).unwrap();
+        let inbuf = &inputs[channel_index];
+        let outbuf = &outputs[channel_index];
         for (input, output) in inbuf.iter().zip(outbuf.iter()) {
             assert_eq!(*output, *input * 2.0)
         }
@@ -79,4 +119,6 @@ pub fn it_works() {
             )
         )
     }
+
+    plugin.deactivate(processor.stop_processing());
 }

@@ -1,12 +1,13 @@
-use clap_sys::plugin::clap_plugin_entry;
+use clap_sys::host::clap_host;
+use clap_sys::plugin::{clap_plugin, clap_plugin_entry};
 use std::error::Error;
 use std::ffi::CString;
+use std::ptr::NonNull;
 
 pub use clack_common::entry::PluginEntryDescriptor;
 
 mod descriptor;
-use crate::host::PluginHost;
-use crate::instance::PluginInstance;
+use crate::wrapper::HostError;
 pub use descriptor::PluginDescriptor;
 
 pub struct PluginEntry<'a> {
@@ -53,15 +54,27 @@ impl<'a> PluginEntry<'a> {
             .map(PluginDescriptor::from_raw)
     }
 
-    // TODO: handle errors
-    #[inline]
-    pub fn instantiate(&self, plugin_id: &str, host: &PluginHost) -> PluginInstance<'a> {
-        PluginInstance::new(self, plugin_id, host)
-    }
-
     #[inline]
     pub(crate) fn as_raw(&self) -> &clap_plugin_entry {
         self.inner
+    }
+
+    pub(crate) unsafe fn instantiate(
+        &self,
+        plugin_id: &[u8],
+        host: &clap_host,
+    ) -> Option<NonNull<clap_plugin>> {
+        let plugin_id = CString::new(plugin_id).ok()?;
+        let ptr = NonNull::new(
+            (self.as_raw().create_plugin)(host, plugin_id.as_ptr()) as *mut clap_plugin
+        )?
+        .as_ref();
+
+        if !(ptr.init)(ptr) {
+            return Err(HostError::InstantiationFailed).unwrap();
+        }
+
+        Some(NonNull::new_unchecked(ptr as *const _ as *mut _))
     }
 }
 

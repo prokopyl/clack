@@ -45,13 +45,13 @@ pub use plugin::*;
 mod host {
     use super::*;
     use clack_common::stream::{InputStream, OutputStream};
-    use clack_host::instance::PluginInstance;
+    use clack_host::plugin::PluginMainThread;
     use std::io::{Read, Write};
 
     impl PluginState {
         pub fn load<R: Read>(
             &self,
-            plugin: &mut PluginInstance,
+            plugin: PluginMainThread,
             reader: &mut R,
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
@@ -64,7 +64,7 @@ mod host {
 
         pub fn save<W: Write>(
             &self,
-            plugin: &mut PluginInstance,
+            plugin: PluginMainThread,
             writer: &mut W,
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);

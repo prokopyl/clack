@@ -1,156 +1,134 @@
 use clap_sys::audio_buffer::clap_audio_buffer;
 
-struct HostAudioPortBuffer<B, S> {
-    channel_buffers: Vec<B>,
-    buffer_list: Vec<*mut S>,
-    min_buffer_length: usize,
+pub struct ChannelBuffer<'a, S> {
+    pub data: &'a mut [S],
+    pub is_constant: bool,
 }
 
-impl<B: Sized + AsMut<[S]>, S> HostAudioPortBuffer<B, S> {
-    pub fn new(mut channel_buffers: Vec<B>) -> Self {
-        let buffer_list: Vec<_> = channel_buffers
-            .iter_mut()
-            .map(|b| b.as_mut().as_mut_ptr())
-            .collect();
-
-        let mut buf = Self {
-            buffer_list,
-            channel_buffers,
-            min_buffer_length: 0,
-        };
-
-        buf.update_lengths();
-        buf
-    }
-
-    fn update_lengths(&mut self) {
-        self.min_buffer_length = self
-            .channel_buffers
-            .iter_mut()
-            .map(|b| b.as_mut().len())
-            .min()
-            .unwrap_or(0);
-    }
-
-    fn replace(&mut self, channel_index: usize, new_buffer: B) -> Result<B, B> {
-        let old_buffer = match self.channel_buffers.get_mut(channel_index) {
-            None => return Err(new_buffer),
-            Some(channel_buffer) => ::core::mem::replace(channel_buffer, new_buffer),
-        };
-
-        self.buffer_list[channel_index] = self.channel_buffers[channel_index].as_mut().as_mut_ptr();
-        self.update_lengths();
-        Ok(old_buffer)
-    }
-}
-
-impl<B: Sized + AsMut<[f32]>> HostAudioPortBuffer<B, f32> {
-    // TODO: maybe unsafe?
-    pub fn as_raw(&self) -> clap_audio_buffer {
-        clap_audio_buffer {
-            data32: self.buffer_list.as_ptr() as *const _,
-            data64: ::core::ptr::null(),
-            channel_count: self.buffer_list.len() as u32,
-            latency: 0,       // TODO
-            constant_mask: 0, // TODO
-        }
-    }
-}
-
-pub struct HostAudioBufferCollection<B, S> {
-    ports: Vec<HostAudioPortBuffer<B, S>>,
-    raw_ports: Vec<clap_audio_buffer>,
-    min_buffer_length: usize,
-}
-
-impl<B, S> HostAudioBufferCollection<B, S> {
+impl<'a, S> ChannelBuffer<'a, S> {
     #[inline]
-    pub(crate) fn raw_buffers(&self) -> *const clap_audio_buffer {
-        self.raw_ports.as_ptr()
-    }
-
-    #[inline]
-    pub(crate) fn port_count(&self) -> usize {
-        self.raw_ports.len()
-    }
-
-    #[inline]
-    pub(crate) fn min_buffer_length(&self) -> usize {
-        self.min_buffer_length
-    }
-}
-
-impl<B: Sized + AsMut<[S]>, S> HostAudioBufferCollection<B, S> {
-    pub fn replace(
-        &mut self,
-        port_index: usize,
-        channel_index: usize,
-        new_buffer: B,
-    ) -> Result<B, B> {
-        match self.ports.get_mut(port_index) {
-            None => Err(new_buffer),
-            Some(port) => port.replace(channel_index, new_buffer),
-        }
-    }
-}
-
-impl<B: Sized + AsRef<[S]>, S> HostAudioBufferCollection<B, S> {
-    pub fn get_channel_buffer(&self, port_index: usize, channel_index: usize) -> Option<&[S]> {
-        Some(
-            self.ports
-                .get(port_index)?
-                .channel_buffers
-                .get(channel_index)?
-                .as_ref(),
-        )
-    }
-}
-
-impl<B: Sized + AsMut<[S]>, S> HostAudioBufferCollection<B, S> {
-    pub fn get_channel_buffer_mut(
-        &mut self,
-        port_index: usize,
-        channel_index: usize,
-    ) -> Option<&mut [S]> {
-        Some(
-            self.ports
-                .get_mut(port_index)?
-                .channel_buffers
-                .get_mut(channel_index)?
-                .as_mut(),
-        )
-    }
-}
-
-impl<B: Sized + AsMut<[f32]>> HostAudioBufferCollection<B, f32> {
-    #[inline]
-    pub fn for_ports_and_channels<F>(port_count: usize, channel_count: usize, buffer: F) -> Self
-    where
-        F: Fn() -> B,
-    {
-        Self::from_buffers((0..port_count).map(|_| (0..channel_count).map(|_| buffer())))
-    }
-
-    #[inline]
-    pub fn from_buffers<IPorts, IChannels>(ports: IPorts) -> Self
-    where
-        IPorts: IntoIterator<Item = IChannels>,
-        IChannels: IntoIterator<Item = B>,
-    {
-        let buffers = ports
-            .into_iter()
-            .map(|channels| HostAudioPortBuffer::new(channels.into_iter().collect()))
-            .collect();
-        Self::from_vecs(buffers)
-    }
-
-    fn from_vecs(ports: Vec<HostAudioPortBuffer<B, f32>>) -> Self {
-        let raw_ports = ports.iter().map(|p| p.as_raw()).collect();
-
+    pub fn variable(data: &'a mut [S]) -> Self {
         Self {
-            min_buffer_length: ports.iter().map(|p| p.min_buffer_length).min().unwrap_or(0),
-            ports,
-            raw_ports,
+            data,
+            is_constant: false,
         }
     }
+}
+
+pub struct AudioBuffer<I> {
+    pub channels: I,
+    pub latency: u32,
+}
+
+// bikeshed
+pub struct AudioPorts {
+    buffer_lists: Vec<*const f32>, // Can be f32 or f64, casted on-demand
+    buffer_configs: Vec<clap_audio_buffer>,
+}
+
+impl AudioPorts {
+    pub fn with_capacity(channel_count: usize, port_count: usize) -> Self {
+        let mut bufs = Self {
+            buffer_configs: Vec::with_capacity(port_count),
+            buffer_lists: Vec::with_capacity(port_count * channel_count),
+        };
+        bufs.resize_buffer_configs(port_count);
+
+        bufs
+    }
+
+    fn resize_buffer_configs(&mut self, new_size: usize) {
+        if new_size > self.buffer_configs.len() {
+            self.buffer_configs.resize(
+                new_size,
+                clap_audio_buffer {
+                    data32: ::core::ptr::null(),
+                    data64: ::core::ptr::null(),
+                    channel_count: 0,
+                    latency: 0,
+                    constant_mask: 0,
+                },
+            );
+        }
+    }
+
+    pub fn with_buffers_f32<'a, I, Iter, ChannelIter>(&'a mut self, iter: I) -> AudioBuffers<'a>
+    where
+        I: IntoIterator<Item = AudioBuffer<ChannelIter>, IntoIter = Iter>,
+        Iter: ExactSizeIterator<Item = AudioBuffer<ChannelIter>>,
+        ChannelIter: Iterator<Item = ChannelBuffer<'a, f32>>,
+    {
+        // SAFETY: pointer is guaranteed to be f32
+        unsafe { self.with_data(iter.into_iter(), false) }
+    }
+
+    pub fn with_buffers_f64<'a, I, Iter, ChannelIter>(&'a mut self, iter: I) -> AudioBuffers<'a>
+    where
+        I: IntoIterator<Item = AudioBuffer<ChannelIter>, IntoIter = Iter>,
+        Iter: ExactSizeIterator<Item = AudioBuffer<ChannelIter>>,
+        ChannelIter: Iterator<Item = ChannelBuffer<'a, f64>>,
+    {
+        // SAFETY: pointer is guaranteed to be f64
+        unsafe { self.with_data(iter.into_iter(), true) }
+    }
+
+    /// # Safety
+    /// Caller must ensure the sample type S is correctly either f32 or f64
+    unsafe fn with_data<'a, I, S: 'static, ChannelIter>(
+        &'a mut self,
+        iter: I,
+        is_f64: bool,
+    ) -> AudioBuffers<'a>
+    where
+        I: ExactSizeIterator<Item = AudioBuffer<ChannelIter>>,
+        ChannelIter: Iterator<Item = ChannelBuffer<'a, S>>,
+    {
+        self.resize_buffer_configs(iter.len());
+        self.buffer_lists.clear();
+
+        let mut min_buffer_length = usize::MAX;
+        let mut total = 0;
+
+        for (i, port) in iter.enumerate() {
+            total = i + 1;
+
+            let last = self.buffer_lists.len();
+
+            let mut constant_mask = 0u64;
+            for channel in port.channels {
+                min_buffer_length = min_buffer_length.min(channel.data.len());
+                if channel.is_constant {
+                    constant_mask |= 1 << i as u64
+                }
+
+                self.buffer_lists.push(channel.data.as_ptr().cast())
+            }
+
+            let buffers = self.buffer_lists.get(last..).unwrap_or(&[]);
+
+            // PANIC: this can only panic with an invalid implementation of ExactSizeIterator
+            let descriptor = &mut self.buffer_configs[i];
+            descriptor.channel_count = buffers.len() as u32;
+            descriptor.latency = port.latency;
+            descriptor.constant_mask = constant_mask;
+
+            if is_f64 {
+                descriptor.data64 = buffers.as_ptr().cast();
+                descriptor.data32 = ::core::ptr::null();
+            } else {
+                descriptor.data64 = ::core::ptr::null();
+                descriptor.data32 = buffers.as_ptr();
+            }
+        }
+
+        AudioBuffers {
+            buffers: &self.buffer_configs[..total],
+            min_buffer_length,
+        }
+    }
+}
+
+pub struct AudioBuffers<'a> {
+    pub(crate) buffers: &'a [clap_audio_buffer],
+    pub(crate) min_buffer_length: usize,
 }

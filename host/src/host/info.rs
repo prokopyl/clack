@@ -23,7 +23,7 @@ impl HostInfo {
         })
     }
 
-    pub(crate) unsafe fn write_to_raw(&self, host: &mut clap_host) {
+    pub(crate) fn write_to_raw(&self, host: &mut clap_host) {
         host.name = self.name.as_ptr();
         host.vendor = self.vendor.as_ptr();
         host.url = self.url.as_ptr();

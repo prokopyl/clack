@@ -1,53 +1,30 @@
-use crate::instance::channel::PluginInstanceChannelSend;
-use crate::instance::processor::audio::HostAudioBufferCollection;
-use crate::instance::processor::inner::PluginAudioProcessorInner;
+use crate::host::PluginHoster;
+use crate::instance::processor::audio::AudioBuffers;
+use crate::plugin::{PluginAudioProcessor, PluginShared};
+use crate::wrapper::HostWrapper;
 use clack_common::events::EventList;
 use clap_sys::events::{clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
-use clap_sys::plugin::clap_plugin;
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};
-
-pub(crate) mod inner;
+use std::pin::Pin;
+use std::sync::Arc;
 
 pub mod audio;
 
-pub enum PluginAudioProcessor<TChannel: PluginInstanceChannelSend> {
-    Started(StartedPluginAudioProcessor<TChannel>),
-    Stopped(StoppedPluginAudioProcessor<TChannel>),
+pub struct StartedPluginAudioProcessor<'a, H: PluginHoster<'a>> {
+    wrapper: Pin<Arc<HostWrapper<'a, H>>>,
 }
 
-impl<TChannel: PluginInstanceChannelSend> From<StartedPluginAudioProcessor<TChannel>>
-    for PluginAudioProcessor<TChannel>
-{
-    #[inline]
-    fn from(processor: StartedPluginAudioProcessor<TChannel>) -> Self {
-        PluginAudioProcessor::Started(processor)
-    }
-}
-
-impl<TChannel: PluginInstanceChannelSend> From<StoppedPluginAudioProcessor<TChannel>>
-    for PluginAudioProcessor<TChannel>
-{
-    #[inline]
-    fn from(processor: StoppedPluginAudioProcessor<TChannel>) -> Self {
-        PluginAudioProcessor::Stopped(processor)
-    }
-}
-
-pub struct StartedPluginAudioProcessor<TChannel: PluginInstanceChannelSend> {
-    inner: PluginAudioProcessorInner<TChannel>,
-}
-
-impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> {
-    pub fn process<B, S>(
+impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
+    pub fn process(
         &mut self,
-        audio_inputs: &HostAudioBufferCollection<B, S>,
-        audio_outputs: &mut HostAudioBufferCollection<B, S>,
+        audio_inputs: &AudioBuffers,
+        audio_outputs: &AudioBuffers,
         events_input: &mut EventList,
         events_output: &mut EventList,
     ) {
-        let min_input_sample_count = audio_inputs.min_buffer_length();
-        let min_output_sample_count = audio_outputs.min_buffer_length();
+        let min_input_sample_count = audio_inputs.min_buffer_length;
+        let min_output_sample_count = audio_outputs.min_buffer_length;
 
         // TODO
         let transport = clap_event_transport {
@@ -71,58 +48,128 @@ impl<TChannel: PluginInstanceChannelSend> StartedPluginAudioProcessor<TChannel> 
             steady_time: 0, // TODO
             frames_count: min_input_sample_count.min(min_output_sample_count) as u32,
             transport: &transport, // TODO
-            audio_inputs: audio_inputs.raw_buffers(),
-            audio_outputs: audio_outputs.raw_buffers(),
-            audio_inputs_count: audio_inputs.port_count() as u32,
-            audio_outputs_count: audio_outputs.port_count() as u32,
+            audio_inputs: audio_inputs.buffers.as_ptr(),
+            audio_outputs: audio_outputs.buffers.as_ptr(),
+            audio_inputs_count: audio_inputs.buffers.len() as u32,
+            audio_outputs_count: audio_outputs.buffers.len() as u32,
             in_events: events_input.as_raw_mut(),
             out_events: events_output.as_raw_mut(),
         };
 
-        unsafe { self.inner.process(&process) };
+        let instance = self.wrapper.raw_instance();
+
+        unsafe { (instance.process)(instance, &process) };
     }
 
     #[inline]
-    pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<TChannel> {
-        unsafe { self.inner.stop_processing() };
+    pub fn stop_processing(self) -> StoppedPluginAudioProcessor<'a, H> {
+        // SAFETY: this is called on the audio thread
+        unsafe { self.wrapper.stop_processing() };
 
-        StoppedPluginAudioProcessor { inner: self.inner }
-    }
-
-    #[inline]
-    pub fn as_raw(&self) -> &clap_plugin {
-        self.inner.shared().instance()
-    }
-}
-
-// TODO: unsound if the entry (i.e. the dyn lib file) gets dropped first
-pub struct StoppedPluginAudioProcessor<TChannel: PluginInstanceChannelSend> {
-    inner: PluginAudioProcessorInner<TChannel>, // TODO: accessors
-}
-
-impl<TChannel: PluginInstanceChannelSend> StoppedPluginAudioProcessor<TChannel> {
-    #[inline]
-    pub(crate) fn new(inner: PluginAudioProcessorInner<TChannel>) -> Self {
-        Self { inner }
-    }
-
-    #[inline]
-    pub fn start_processing(mut self) -> Result<StartedPluginAudioProcessor<TChannel>, Self> {
-        let success = unsafe { self.inner.start_processing() };
-
-        match success {
-            true => Ok(StartedPluginAudioProcessor { inner: self.inner }),
-            false => Err(self),
+        StoppedPluginAudioProcessor {
+            wrapper: self.wrapper,
         }
     }
 
     #[inline]
-    pub fn as_raw(&self) -> &clap_plugin {
-        self.inner.shared().instance()
+    pub fn shared_host_data(&self) -> &H::Shared {
+        self.wrapper.shared()
+    }
+
+    #[inline]
+    pub fn audio_processor_host_data(&self) -> &H::AudioProcessor {
+        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
+        // we can guarantee there are no mutable references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { self.wrapper.audio_processor().unwrap().as_ref() }
+    }
+
+    #[inline]
+    pub fn audio_processor_host_data_mut(&mut self) -> &mut H::AudioProcessor {
+        // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
+        // therefore we can guarantee there are other references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { self.wrapper.audio_processor().unwrap().as_mut() }
+    }
+
+    #[inline]
+    pub fn shared_plugin_data(&mut self) -> PluginShared {
+        PluginShared::new((self.wrapper.raw_instance() as *const _) as *mut _)
+    }
+
+    #[inline]
+    pub fn audio_processor_plugin_data(&mut self) -> PluginAudioProcessor {
+        PluginAudioProcessor::new((self.wrapper.raw_instance() as *const _) as *mut _)
     }
 }
 
-impl<TChannel: PluginInstanceChannelSend> Debug for StoppedPluginAudioProcessor<TChannel> {
+pub struct StoppedPluginAudioProcessor<'a, H: PluginHoster<'a>> {
+    pub(crate) wrapper: Pin<Arc<HostWrapper<'a, H>>>,
+}
+
+impl<'a, H: PluginHoster<'a>> StoppedPluginAudioProcessor<'a, H> {
+    #[inline]
+    pub(crate) fn new(inner: Pin<Arc<HostWrapper<'a, H>>>) -> Self {
+        Self { wrapper: inner }
+    }
+
+    #[inline]
+    pub fn start_processing(
+        self,
+    ) -> Result<StartedPluginAudioProcessor<'a, H>, ProcessingStartError<'a, H>> {
+        // SAFETY: this is called on the audio thread
+        match unsafe { self.wrapper.start_processing() } {
+            Ok(_) => Ok(StartedPluginAudioProcessor {
+                wrapper: self.wrapper,
+            }),
+            Err(_) => Err(ProcessingStartError { processor: self }),
+        }
+    }
+
+    #[inline]
+    pub fn shared_host_data(&self) -> &H::Shared {
+        self.wrapper.shared()
+    }
+
+    #[inline]
+    pub fn audio_processor_host_data(&self) -> &H::AudioProcessor {
+        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
+        // we can guarantee there are no mutable references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { self.wrapper.audio_processor().unwrap().as_ref() }
+    }
+
+    #[inline]
+    pub fn audio_processor_host_data_mut(&mut self) -> &mut H::AudioProcessor {
+        // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
+        // therefore we can guarantee there are other references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { self.wrapper.audio_processor().unwrap().as_mut() }
+    }
+
+    #[inline]
+    pub fn shared_plugin_data(&mut self) -> PluginShared {
+        PluginShared::new((self.wrapper.raw_instance() as *const _) as *mut _)
+    }
+
+    #[inline]
+    pub fn audio_processor_plugin_data(&mut self) -> PluginAudioProcessor {
+        PluginAudioProcessor::new((self.wrapper.raw_instance() as *const _) as *mut _)
+    }
+}
+
+pub struct ProcessingStartError<'a, H: PluginHoster<'a>> {
+    processor: StoppedPluginAudioProcessor<'a, H>,
+}
+
+impl<'a, H: PluginHoster<'a>> ProcessingStartError<'a, H> {
+    #[inline]
+    pub fn into_stopped_processor(self) -> StoppedPluginAudioProcessor<'a, H> {
+        self.processor
+    }
+}
+
+impl<'a, H: PluginHoster<'a>> Debug for ProcessingStartError<'a, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Failed to start plugin processing")
     }

@@ -65,7 +65,7 @@ unsafe extern "C" fn create_plugin<E: PluginEntry>(
         return ::core::ptr::null();
     };
 
-    let host_info = HostInfo { inner: clap_host };
+    let host_info = HostInfo::from_raw(clap_host);
 
     match E::create_plugin(host_info, plugin_id) {
         None => ::core::ptr::null(),

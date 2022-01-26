@@ -13,5 +13,5 @@ pub fn it_works() {
     let entry = bundle.get_entry().unwrap();
 
     let desc = entry.plugin_descriptor(0).unwrap();
-    assert_eq!(desc.id().unwrap(), "gain");
+    assert_eq!(desc.id().unwrap().to_bytes(), b"gain");
 }

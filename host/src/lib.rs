@@ -2,11 +2,13 @@
 
 pub mod bundle;
 pub mod entry;
+pub mod extensions;
 pub mod host;
 pub mod instance;
+pub mod plugin;
+pub mod wrapper;
 
 pub use clack_common::events;
-pub use clack_common::extensions;
 pub use clack_common::ports;
 pub use clack_common::process;
 pub use clack_common::stream;

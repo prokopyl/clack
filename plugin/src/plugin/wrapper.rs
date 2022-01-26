@@ -19,10 +19,12 @@ use std::ptr::NonNull;
 
 mod panic {
     #[cfg(not(test))]
+    #[allow(unused)]
     pub use std::panic::catch_unwind;
 
     #[cfg(test)]
     #[inline]
+    #[allow(unused)]
     pub fn catch_unwind<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
         f: F,
     ) -> std::thread::Result<R> {
@@ -241,11 +243,11 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
 
     unsafe fn from_raw(raw: *const clap_plugin) -> Result<&'a Self, PluginWrapperError> {
         raw.as_ref()
-            .ok_or(PluginWrapperError::NulPluginInstance)?
+            .ok_or(PluginWrapperError::NullPluginInstance)?
             .plugin_data
             .cast::<PluginInstanceImpl<'a, P>>()
             .as_ref()
-            .ok_or(PluginWrapperError::NulPluginData)?
+            .ok_or(PluginWrapperError::NullPluginData)?
             .plugin_data
             .as_ref()
             .ok_or(PluginWrapperError::UninitializedPlugin)
@@ -256,11 +258,11 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     ) -> Result<Pin<&'a mut Self>, PluginWrapperError> {
         Ok(Pin::new_unchecked(
             raw.as_ref()
-                .ok_or(PluginWrapperError::NulPluginInstance)?
+                .ok_or(PluginWrapperError::NullPluginInstance)?
                 .plugin_data
                 .cast::<PluginInstanceImpl<'a, P>>()
                 .as_mut()
-                .ok_or(PluginWrapperError::NulPluginData)?
+                .ok_or(PluginWrapperError::NullPluginData)?
                 .plugin_data
                 .as_mut()
                 .ok_or(PluginWrapperError::UninitializedPlugin)?,
@@ -294,7 +296,6 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     }
 }
 
-#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<'a, P: Plugin<'a>> Send for PluginWrapper<'a, P> {}
 unsafe impl<'a, P: Plugin<'a>> Sync for PluginWrapper<'a, P> {}
 
@@ -302,9 +303,9 @@ unsafe impl<'a, P: Plugin<'a>> Sync for PluginWrapper<'a, P> {}
 #[derive(Debug)]
 pub enum PluginWrapperError {
     /// The `clap_plugin` raw pointer was null.
-    NulPluginInstance,
+    NullPluginInstance,
     /// The `clap_plugin.plugin_data` raw pointer was null.
-    NulPluginData,
+    NullPluginData,
     /// A unexpectedly null raw pointer was encountered.
     ///
     /// The given string may contain more information about which pointer was found to be null.
@@ -380,10 +381,10 @@ impl From<PluginError> for PluginWrapperError {
 impl Display for PluginWrapperError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            PluginWrapperError::NulPluginInstance => {
+            PluginWrapperError::NullPluginInstance => {
                 f.write_str("Plugin method was called with null clap_plugin pointer")
             }
-            PluginWrapperError::NulPluginData => {
+            PluginWrapperError::NullPluginData => {
                 f.write_str("Plugin method was called with null clap_plugin.plugin_data pointer")
             }
             PluginWrapperError::NulPtr(ptr_name) => {
