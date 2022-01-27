@@ -4,5 +4,6 @@ members = [
     "plugin/examples/gain",
     "host",
     "plugin",
-    "extensions"
+    "extensions",
+    "test-host"
 ]

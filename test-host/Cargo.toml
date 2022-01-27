@@ -1,0 +1,10 @@
+[package]
+name = "clack-test-host"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+"clack-host" = { path = "../host" }
+"clack-extensions" = { path = "../extensions", features = ["audio-ports", "params", "state", "clack-plugin"] }
