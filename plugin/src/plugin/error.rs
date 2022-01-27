@@ -1,8 +1,6 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-pub type Result<T = ()> = ::core::result::Result<T, PluginError>;
-
 #[derive(Debug)]
 pub enum PluginError {
     AlreadyActivated,

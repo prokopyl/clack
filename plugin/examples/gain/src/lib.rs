@@ -6,18 +6,15 @@ use clack_extensions::audio_ports::{
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
 use clack_extensions::state::{PluginState, PluginStateImplementation};
-use clack_plugin::plugin::PluginDescriptor;
-use clack_plugin::ports::ChannelMap;
-// TODO: make prelude
+
 use clack_plugin::{
-    entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry},
-    events::{event_types::NoteEvent, Event, EventList, TimestampedEvent},
-    extension::PluginExtensions,
-    host::{HostAudioThreadHandle, HostMainThreadHandle},
-    plugin::{AudioConfiguration, Plugin, PluginError, PluginMainThread, Result},
-    process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus},
+    events::event_types::NoteEvent,
+    plugin::PluginDescriptor,
+    ports::ChannelMap,
+    prelude::*,
     stream::{InputStream, OutputStream},
 };
+
 use std::io::Read;
 
 pub struct GainPlugin;
@@ -33,7 +30,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         _main_thread: &mut GainPluginMainThread,
         _shared: &(),
         _audio_config: AudioConfiguration,
-    ) -> Result<Self> {
+    ) -> Result<Self, PluginError> {
         Ok(Self)
     }
 
@@ -42,7 +39,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         _process: &Process,
         mut audio: Audio,
         events: ProcessEvents,
-    ) -> Result<ProcessStatus> {
+    ) -> Result<ProcessStatus, PluginError> {
         // Only handle f32 samples for simplicity
         let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
 
@@ -90,7 +87,7 @@ pub struct GainPluginMainThread {
 }
 
 impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &()) -> Result<Self> {
+    fn new(_host: HostMainThreadHandle<'a>, _shared: &()) -> Result<Self, PluginError> {
         Ok(Self { rusting: 0 })
     }
 }

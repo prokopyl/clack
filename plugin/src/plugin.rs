@@ -60,7 +60,7 @@ pub(crate) mod logging;
 pub mod wrapper;
 
 pub use descriptor::*;
-pub use error::{PluginError, Result};
+pub use error::PluginError;
 pub use instance::*;
 
 /// The part of the data and operations of a plugin that are thread-safe.
@@ -80,12 +80,12 @@ pub trait PluginShared<'a>: Sized + Send + Sync + 'a {
     /// # Errors
     /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
     /// not instantiated.
-    fn new(host: HostHandle<'a>) -> Result<Self>;
+    fn new(host: HostHandle<'a>) -> Result<Self, PluginError>;
 }
 
 impl<'a> PluginShared<'a> for () {
     #[inline]
-    fn new(_host: HostHandle<'a>) -> Result<Self> {
+    fn new(_host: HostHandle<'a>) -> Result<Self, PluginError> {
         Ok(())
     }
 }
@@ -107,7 +107,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
     /// # Errors
     /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
     /// not instantiated.
-    fn new(host: HostMainThreadHandle<'a>, shared: &S) -> Result<Self>; // FIXME: shared should be &'a
+    fn new(host: HostMainThreadHandle<'a>, shared: &S) -> Result<Self, PluginError>; // FIXME: shared should be &'a
 
     /// This is called by the host on the main thread, in response to a previous call to
     /// [`HostHandle::request_callback`](crate::host::HostHandle::request_callback).
@@ -119,7 +119,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
 
 impl<'a, S> PluginMainThread<'a, S> for () {
     #[inline]
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &S) -> Result<Self> {
+    fn new(_host: HostMainThreadHandle<'a>, _shared: &S) -> Result<Self, PluginError> {
         Ok(())
     }
 }
@@ -212,14 +212,14 @@ pub trait Plugin<'a>: Sized + Send + 'a {
         main_thread: &mut Self::MainThread,
         shared: &'a Self::Shared,
         audio_config: AudioConfiguration,
-    ) -> Result<Self>;
+    ) -> Result<Self, PluginError>;
 
     fn process(
         &mut self,
         process: &Process,
         audio: Audio,
         events: ProcessEvents,
-    ) -> Result<ProcessStatus>;
+    ) -> Result<ProcessStatus, PluginError>;
 
     /// Deactivates the audio processor.
     ///
@@ -240,7 +240,7 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     fn deactivate(self, _main_thread: &mut Self::MainThread) {}
 
     #[inline]
-    fn start_processing(&mut self) -> Result {
+    fn start_processing(&mut self) -> Result<(), PluginError> {
         Ok(())
     }
     #[inline]

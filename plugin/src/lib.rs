@@ -10,3 +10,14 @@ pub mod process;
 pub use clack_common::events;
 pub use clack_common::ports;
 pub use clack_common::stream;
+
+pub mod prelude {
+    pub use crate::entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry};
+    pub use crate::events::{Event, EventList, TimestampedEvent};
+    pub use crate::extension::PluginExtensions;
+    pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
+    pub use crate::plugin::{
+        AudioConfiguration, Plugin, PluginError, PluginMainThread, PluginShared,
+    };
+    pub use crate::process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus};
+}
