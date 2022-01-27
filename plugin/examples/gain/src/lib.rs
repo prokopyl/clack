@@ -16,7 +16,14 @@ use clack_plugin::{
 
 use clack_plugin::events::event_types::NoteOnEvent;
 use clack_plugin::events::Event;
+
+use baseview::WindowHandle;
+use clack_extensions::gui::attached::PluginGuiX11;
+use clack_extensions::gui::PluginGui;
+
 use std::io::Read;
+
+mod gui;
 
 pub struct GainPlugin;
 
@@ -72,7 +79,7 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &()) {
-        // builder.register::<PluginParams>().register::<PluginState>(); TODO
+        builder.register::<PluginGui>().register::<PluginGuiX11>();
     }
 }
 /*
@@ -87,11 +94,16 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin {
 */
 pub struct GainPluginMainThread {
     rusting: u32,
+
+    open_window: Option<WindowHandle>,
 }
 
 impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
     fn new(_host: HostMainThreadHandle<'a>, _shared: &()) -> Result<Self, PluginError> {
-        Ok(Self { rusting: 0 })
+        Ok(Self {
+            rusting: 0,
+            open_window: None,
+        })
     }
 }
 /*
