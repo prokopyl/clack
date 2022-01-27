@@ -10,7 +10,7 @@
 //! (see the plugin's `process` method).
 
 use crate::events::event_types::*;
-use clap_sys::events::{clap_event, clap_event_data, clap_event_type};
+use clap_sys::events::{clap_event_data, clap_event_header, clap_event_type};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;

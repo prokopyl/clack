@@ -9,7 +9,7 @@ edition = "2021"
 clack-plugin = { path = "../plugin", optional = true }
 clack-host = { path = "../host", optional = true }
 clack-common = { path = "../common" }
-clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
+clap-sys = { git = "https://github.com/prokopyl/clap-sys", branch = "clap-0-18" }
 bitflags = "1.3.2"
 
 [features]

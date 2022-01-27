@@ -7,5 +7,5 @@ license = "MIT/Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
+clap-sys = { git = "https://github.com/prokopyl/clap-sys", branch = "clap-0-18" }
 clack-common = { path = "../common" }

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap-sys = { git = "https://github.com/prokopyl/clap-sys" }
+clap-sys = { git = "https://github.com/prokopyl/clap-sys", branch = "clap-0-18" }
 clack-common = { path = "../common" }
 basedrop = "0.1.2"
 libloading = "0.7.2"

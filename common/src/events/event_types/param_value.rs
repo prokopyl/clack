@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_param_mod, clap_event_param_value, CLAP_EVENT_PARAM_BEGIN_ADJUST,
-    CLAP_EVENT_PARAM_END_ADJUST, CLAP_EVENT_PARAM_SHOULD_RECORD,
+    clap_event_param_mod, clap_event_param_value, CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST,
+    CLAP_EVENT_IS_LIVE, CLAP_EVENT_SHOULD_RECORD,
 };
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
@@ -9,9 +9,10 @@ use std::fmt::{Debug, Formatter};
 bitflags! {
     #[repr(C)]
     pub struct ParamEventFlags: i32 {
-        const BEGIN_ADJUST = CLAP_EVENT_PARAM_BEGIN_ADJUST;
-        const END_ADJUST = CLAP_EVENT_PARAM_END_ADJUST;
-        const SHOULD_RECORD = CLAP_EVENT_PARAM_SHOULD_RECORD;
+        const IS_LIVE = CLAP_EVENT_IS_LIVE;
+        const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
+        const END_ADJUST = CLAP_EVENT_END_ADJUST;
+        const SHOULD_RECORD = CLAP_EVENT_SHOULD_RECORD;
     }
 }
 

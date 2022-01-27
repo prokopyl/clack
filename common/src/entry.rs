@@ -1,4 +1,4 @@
-use clap_sys::plugin::clap_plugin_entry;
+use clap_sys::entry::clap_plugin_entry;
 
 // TODO: this doesn't look very useful
 #[repr(C)]
