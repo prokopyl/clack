@@ -46,7 +46,7 @@
 //!   However, it should be noted that this type *can* be used by the host simultaneously from
 //!   threads that are neither the main thread nor the audio thread.
 
-use crate::extension::PluginExtensions;
+use crate::extensions::PluginExtensions;
 use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
 use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;

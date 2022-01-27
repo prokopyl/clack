@@ -1,4 +1,4 @@
-use crate::extension::PluginExtensions;
+use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::wrapper::PluginWrapper;
 use crate::plugin::{wrapper, AudioConfiguration, Plugin, PluginMainThread};
