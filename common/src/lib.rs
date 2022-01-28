@@ -12,3 +12,5 @@ pub mod extensions;
 pub mod ports;
 pub mod process;
 pub mod stream;
+
+pub(crate) mod utils;

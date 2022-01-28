@@ -2,6 +2,7 @@ use clap_sys::events::clap_event_note;
 use std::fmt::{Debug, Formatter};
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct NoteEvent {
     inner: clap_event_note,
 }

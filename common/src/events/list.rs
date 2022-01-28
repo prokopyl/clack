@@ -5,7 +5,11 @@ use std::ops::{Index, Range};
 
 mod implementation;
 
-pub use implementation::EventBuffer;
+mod input;
+mod output;
+
+pub use input::*;
+pub use output::*;
 
 /// An ordered list of timestamped events.
 ///
