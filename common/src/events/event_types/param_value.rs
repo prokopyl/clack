@@ -1,3 +1,4 @@
+use crate::events::EventHeader;
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_param_mod, clap_event_param_value, CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST,
@@ -8,7 +9,7 @@ use std::fmt::{Debug, Formatter};
 
 bitflags! {
     #[repr(C)]
-    pub struct ParamEventFlags: i32 {
+    pub struct ParamEventFlags: u32 {
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
         const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
         const END_ADJUST = CLAP_EVENT_END_ADJUST;
@@ -16,7 +17,6 @@ bitflags! {
     }
 }
 
-#[derive(Copy, Clone)]
 pub struct ParamValueEvent {
     inner: clap_event_param_value,
 }
@@ -24,22 +24,22 @@ pub struct ParamValueEvent {
 impl ParamValueEvent {
     #[inline]
     pub fn new(
+        header: EventHeader<Self>,
         cookie: *mut c_void,
         param_id: u32,
-        port_index: i32,
-        channel: i32,
-        key: i32,
-        flags: ParamEventFlags,
+        port_index: i16,
+        channel: i16,
+        key: i16,
         value: f64,
     ) -> Self {
         Self {
             inner: clap_event_param_value {
+                header: header.into_raw(),
                 cookie,
                 param_id,
                 port_index,
                 key,
                 channel,
-                flags: flags.bits,
                 value,
             },
         }
@@ -56,23 +56,18 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> i32 {
+    pub fn port_index(&self) -> i16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> i32 {
+    pub fn key(&self) -> i16 {
         self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> i32 {
+    pub fn channel(&self) -> i16 {
         self.inner.channel
-    }
-
-    #[inline]
-    pub fn flags(&self) -> ParamEventFlags {
-        ParamEventFlags::from_bits_truncate(self.inner.flags)
     }
 
     #[inline]
@@ -95,9 +90,9 @@ impl PartialEq for ParamValueEvent {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
+            && self.inner.header == other.inner.header
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
-            && self.inner.flags == other.inner.flags
             && self.inner.param_id == other.inner.param_id
             && self.inner.value == other.inner.value
     }
@@ -115,7 +110,6 @@ impl Debug for ParamValueEvent {
     }
 }
 
-#[derive(Copy, Clone)]
 pub struct ParamModEvent {
     inner: clap_event_param_mod,
 }
@@ -123,15 +117,17 @@ pub struct ParamModEvent {
 impl ParamModEvent {
     #[inline]
     pub fn new(
+        header: EventHeader<Self>,
         cookie: *mut c_void,
         param_id: u32,
-        port_index: i32,
-        channel: i32,
-        key: i32,
+        port_index: i16,
+        channel: i16,
+        key: i16,
         amount: f64,
     ) -> Self {
         Self {
             inner: clap_event_param_mod {
+                header: header.into_raw(),
                 cookie,
                 param_id,
                 port_index,
@@ -153,17 +149,17 @@ impl ParamModEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> i32 {
+    pub fn port_index(&self) -> i16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> i32 {
+    pub fn key(&self) -> i16 {
         self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> i32 {
+    pub fn channel(&self) -> i16 {
         self.inner.channel
     }
 
@@ -187,6 +183,7 @@ impl PartialEq for ParamModEvent {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
+            && self.inner.header == other.inner.header
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
             && self.inner.param_id == other.inner.param_id

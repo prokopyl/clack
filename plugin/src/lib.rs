@@ -13,7 +13,7 @@ pub use clack_common::stream;
 
 pub mod prelude {
     pub use crate::entry::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry};
-    pub use crate::events::{Event, EventList, TimestampedEvent};
+    pub use crate::events::{InputEvents, OutputEvents, UnknownEvent};
     pub use crate::extensions::PluginExtensions;
     pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
     pub use crate::plugin::{

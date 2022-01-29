@@ -1,3 +1,4 @@
+use crate::events::EventHeader;
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_transport, CLAP_TRANSPORT_HAS_BEATS_TIMELINE, CLAP_TRANSPORT_HAS_SECONDS_TIMELINE,
@@ -22,7 +23,7 @@ bitflags! {
 #[repr(C)]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug)]
 pub struct TransportEvent {
-    pub flags: TransportEventFlags,
+    pub header: EventHeader<TransportEvent>,
     pub song_pos_beats: i64,
     pub song_pos_seconds: i64,
     pub tempo: f64,

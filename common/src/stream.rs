@@ -41,7 +41,7 @@ impl<'a> InputStream<'a> {
         Self(
             clap_istream {
                 ctx: reader as *mut R as *mut _,
-                read: read::<R>,
+                read: Some(read::<R>),
             },
             PhantomData,
         )
@@ -66,7 +66,9 @@ impl<'a> InputStream<'a> {
 
 impl<'a> Read for InputStream<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let ret = unsafe { (self.0.read)(&mut self.0, buf.as_mut_ptr().cast(), buf.len() as u64) };
+        let ret = unsafe {
+            (self.0.read.unwrap())(&mut self.0, buf.as_mut_ptr().cast(), buf.len() as u64)
+        };
         match ret {
             i if i >= 0 => Ok(i as usize),
             code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),
@@ -86,7 +88,7 @@ impl<'a> OutputStream<'a> {
         Self(
             clap_ostream {
                 ctx: reader as *mut W as *mut _,
-                write: write::<W>,
+                write: Some(write::<W>),
             },
             PhantomData,
         )
@@ -111,7 +113,8 @@ impl<'a> OutputStream<'a> {
 
 impl<'a> Write for OutputStream<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let ret = unsafe { (self.0.write)(&mut self.0, buf.as_ptr().cast(), buf.len() as u64) };
+        let ret =
+            unsafe { (self.0.write.unwrap())(&mut self.0, buf.as_ptr().cast(), buf.len() as u64) };
         match ret {
             i if i >= 0 => Ok(i as usize),
             code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),

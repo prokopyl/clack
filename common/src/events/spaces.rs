@@ -6,7 +6,7 @@ pub use id::*;
 use crate::events::UnknownEvent;
 use std::ffi::CStr;
 
-pub unsafe trait EventSpace {
+pub unsafe trait EventSpace: Sized {
     const NAME: &'static CStr;
 
     unsafe fn from_unknown(event: &UnknownEvent) -> Option<Self>;

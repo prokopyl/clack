@@ -11,6 +11,7 @@
 
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
+use std::cmp::Ordering;
 use std::marker::PhantomData;
 
 mod list;
@@ -22,7 +23,7 @@ pub use spaces::*;
 
 pub mod event_types;
 
-pub unsafe trait Event: Sized {
+pub unsafe trait Event<'a>: Sized + 'a {
     const TYPE_ID: u16;
     type EventSpace: EventSpace;
 
@@ -43,7 +44,7 @@ pub unsafe trait Event: Sized {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, Debug)]
 pub struct EventHeader<E = ()> {
     inner: clap_event_header,
     _event: PhantomData<E>,
@@ -79,9 +80,9 @@ impl EventHeader<()> {
     }
 }
 
-impl<E: Event> EventHeader<E> {
+impl<'a, E: Event<'a>> EventHeader<E> {
     #[inline]
-    pub const fn new_for_space(
+    pub fn new_for_space(
         space_id: EventSpaceId<E::EventSpace>,
         time: u32,
         flags: EventFlags,
@@ -99,15 +100,15 @@ impl<E: Event> EventHeader<E> {
     }
 
     #[inline]
-    pub const fn space_id(&self) -> EventSpaceId<E::EventSpace> {
+    pub fn space_id(&self) -> EventSpaceId<E::EventSpace> {
         // SAFETY: the EventHeader type guarantees the space_id correctness
         unsafe { EventSpaceId::new_unchecked(self.inner.space_id) }
     }
 }
 
-impl<'a, E: Event<EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
+impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
     #[inline]
-    pub const fn new(time: u32, flags: EventFlags) -> Self {
+    pub fn new(time: u32, flags: EventFlags) -> Self {
         Self::new_for_space(EventSpaceId::core(), time, flags)
     }
 }
@@ -124,6 +125,20 @@ bitflags! {
         const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
         const END_ADJUST = CLAP_EVENT_END_ADJUST;
         const SHOULD_RECORD = CLAP_EVENT_SHOULD_RECORD;
+    }
+}
+
+impl<E> PartialEq for EventHeader<E> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.time == other.inner.time
+    }
+}
+
+impl<E> PartialOrd for EventHeader<E> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.inner.time.partial_cmp(&other.inner.time)
     }
 }
 
@@ -150,12 +165,12 @@ impl UnknownEvent {
     }
 
     #[inline]
-    pub const fn as_event_for_space<E: Event>(
+    pub fn as_event_for_space<'a, E: Event<'a>>(
         &self,
         space_id: EventSpaceId<E::EventSpace>,
     ) -> Option<&E> {
         let raw = &self.header.inner;
-        if raw.space_id != space_id.get()
+        if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
             || raw.size != ::core::mem::size_of::<E>() as u32
         {
@@ -163,12 +178,17 @@ impl UnknownEvent {
         }
 
         // SAFETY: this type guarantees the header is followed by event data, and we just checked the space_id, type and size fields
-        Some(unsafe { &*(self as *const _ as *const E) })
+        Some(unsafe { self.as_event_unchecked() })
     }
 
     #[inline]
-    pub const fn as_event<'a, E: Event<EventSpace = CoreEventSpace<'a>>>(&self) -> Option<&E> {
+    pub fn as_event<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>>(&self) -> Option<&E> {
         self.as_event_for_space(EventSpaceId::core())
+    }
+
+    #[inline]
+    pub unsafe fn as_event_unchecked<'a, E: Event<'a>>(&self) -> &E {
+        &*(self as *const _ as *const E)
     }
 
     #[inline]
@@ -178,7 +198,7 @@ impl UnknownEvent {
 
     #[inline]
     pub fn as_event_space<S: EventSpace>(&self, space_id: EventSpaceId<S>) -> Option<S> {
-        if space_id.get() != self.header.inner.space_id {
+        if space_id.id() != self.header.inner.space_id {
             return None;
         }
 

@@ -9,7 +9,6 @@ pub enum ProcessStatus {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct Transport {
     inner: clap_event_transport,
 }

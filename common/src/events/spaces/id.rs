@@ -1,4 +1,5 @@
 use crate::events::core::CoreEventSpace;
+use crate::events::EventSpace;
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -12,9 +13,17 @@ impl<S> EventSpaceId<S> {
     pub const fn id(&self) -> u16 {
         self.id
     }
+
+    #[inline]
+    pub const unsafe fn new_unchecked(id: u16) -> Self {
+        Self {
+            id,
+            _space: PhantomData,
+        }
+    }
 }
 
-impl<S> From<EventSpaceId<S>> for EventSpaceId<()> {
+impl<S: EventSpace> From<EventSpaceId<S>> for EventSpaceId<()> {
     #[inline]
     fn from(id: EventSpaceId<S>) -> Self {
         Self {
@@ -44,14 +53,6 @@ impl EventSpaceId<()> {
                 id,
                 _space: PhantomData,
             })
-        }
-    }
-
-    #[inline]
-    pub const unsafe fn new_unchecked(id: u16) -> Self {
-        Self {
-            id,
-            _space: PhantomData,
         }
     }
 }

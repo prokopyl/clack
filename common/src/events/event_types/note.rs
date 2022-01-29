@@ -1,5 +1,16 @@
-use clap_sys::events::clap_event_note;
+use crate::events::core::CoreEventSpace;
+use crate::events::{Event, EventHeader};
+use clap_sys::events::{clap_event_note, CLAP_EVENT_NOTE_ON};
 use std::fmt::{Debug, Formatter};
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct NoteOnEvent(pub NoteEvent);
+
+unsafe impl<'a> Event<'a> for NoteOnEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -9,9 +20,16 @@ pub struct NoteEvent {
 
 impl NoteEvent {
     #[inline]
-    pub fn new(port_index: i32, key: i32, channel: i32, velocity: f64) -> Self {
+    pub fn new(
+        header: EventHeader<Self>,
+        port_index: i16,
+        key: i16,
+        channel: i16,
+        velocity: f64,
+    ) -> Self {
         Self {
             inner: clap_event_note {
+                header: header.into_raw(),
                 port_index,
                 key,
                 channel,
@@ -21,17 +39,17 @@ impl NoteEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> i32 {
+    pub fn port_index(&self) -> i16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn key(&self) -> i32 {
+    pub fn key(&self) -> i16 {
         self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> i32 {
+    pub fn channel(&self) -> i16 {
         self.inner.channel
     }
 

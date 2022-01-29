@@ -44,22 +44,53 @@ pub struct InputEvents<'a> {
 }
 
 impl<'a> InputEvents<'a> {
+    /// Creates a shared reference to an EventList from a given C FFI-compatible pointer.
+    ///
+    /// # Safety
+    /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
     pub unsafe fn from_raw(raw: &'a clap_input_events) -> &'a Self {
         &*(raw as *const _ as *const _)
     }
 
+    /// Returns a C FFI-compatible pointer to this event list.
+    ///
+    /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub const fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
+    pub fn as_raw(&self) -> &clap_input_events {
+        &self.inner
+    }
+
+    #[inline]
+    pub fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
         Self {
             inner: raw_input_events(buffer),
             _lifetime: PhantomData,
         }
     }
 
+    /// Returns the number of events in the list.
     #[inline]
     pub fn len(&self) -> usize {
-        unsafe { (self.inner.size)(self.inner.ctx) }
+        unsafe { (self.inner.size.unwrap())(&self.inner) as usize }
+    }
+
+    /// Returns if there are no events in the list.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Attempts to retrieve an event from the list using its `index`.
+    ///
+    /// If `index` is out of bounds, `None` is returned.
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<&'a UnknownEvent> {
+        unsafe {
+            (self.inner.get.unwrap())(&self.inner, index as u32)
+                .as_ref()
+                .map(|e| UnknownEvent::from_raw(e))
+        }
     }
 
     #[inline]
@@ -96,15 +127,6 @@ impl<'a> Index<usize> for InputEvents<'a> {
     #[inline]
     fn index(&self, index: usize) -> &'a Self::Output {
         self.get(index).expect(INDEX_ERROR)
-    }
-}
-
-impl<'a> Extend<&'a UnknownEvent> for InputEvents<'a> {
-    #[inline]
-    fn extend<T: IntoIterator<Item = &'a UnknownEvent>>(&mut self, iter: T) {
-        for event in iter {
-            self.append(&event)
-        }
     }
 }
 
