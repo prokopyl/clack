@@ -1,9 +1,8 @@
-use clap_sys::plugin::{clap_plugin_descriptor, CLAP_PLUGIN_AUDIO_EFFECT};
+use clap_sys::plugin::clap_plugin_descriptor;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::CStr;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct PluginDescriptor(pub(crate) clap_plugin_descriptor);
 
 const EMPTY: &[u8] = b"\0"; // TODO
@@ -19,10 +18,8 @@ impl PluginDescriptor {
             manual_url: EMPTY.as_ptr() as *const i8,
             version: EMPTY.as_ptr() as *const i8,
             description: EMPTY.as_ptr() as *const i8,
-            keywords: EMPTY.as_ptr() as *const i8,
             support_url: EMPTY.as_ptr() as *const i8,
-            // FIXME: Why is this u64 but plugin types are i32?
-            plugin_type: CLAP_PLUGIN_AUDIO_EFFECT as u64, // TODO
+            features: (EMPTY.as_ptr() as *const _ as *mut _), // FIXME: this will probably crash
         })
     }
 

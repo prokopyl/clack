@@ -10,7 +10,6 @@ use clack_extensions::state::{PluginState, PluginStateImplementation};
 use clack_plugin::{
     events::event_types::NoteEvent,
     plugin::PluginDescriptor,
-    ports::ChannelMap,
     prelude::*,
     stream::{InputStream, OutputStream},
 };
@@ -48,40 +47,40 @@ impl<'a> Plugin<'a> for GainPlugin {
             output.set(input.get() * 2.0)
         }
 
-        events
-            .output
-            .extend(events.input.iter().map(|e| match e.event() {
-                Some(Event::NoteOn(ne)) => TimestampedEvent::new(
-                    e.time(),
-                    Event::NoteOn(NoteEvent::new(
-                        ne.port_index(),
-                        ne.key(),
-                        ne.channel(),
-                        ne.velocity() * 2.0,
-                    )),
-                ),
-                _ => *e,
-            }));
+        /*events
+        .output
+        .extend(events.input.iter().map(|e| match e.event() {
+            Some(Event::NoteOn(ne)) => TimestampedEvent::new(
+                e.time(),
+                Event::NoteOn(NoteEvent::new(
+                    ne.port_index(),
+                    ne.key(),
+                    ne.channel(),
+                    ne.velocity() * 2.0,
+                )),
+            ),
+            _ => *e,
+        })); */
 
-        self.flush(events.input, events.output);
+        //self.flush(events.input, events.output);
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &()) {
-        builder.register::<PluginParams>().register::<PluginState>();
+        // builder.register::<PluginParams>().register::<PluginState>(); TODO
     }
 }
-
+/*
 impl<'a> PluginParamsImpl<'a> for GainPlugin {
     fn flush(
         &mut self,
-        _input_parameter_changes: &EventList,
+        _input_parameter_changes: &InputEvents,
         _output_parameter_changes: &mut EventList,
     ) {
     }
 }
-
+*/
 pub struct GainPluginMainThread {
     rusting: u32,
 }
@@ -91,13 +90,13 @@ impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
         Ok(Self { rusting: 0 })
     }
 }
-
+/*
 impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
     fn count(&self) -> u32 {
         1
     }
 
-    fn get_info(&self, param_index: i32, info: &mut ParamInfoWriter) {
+    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter) {
         if param_index > 0 {
             return;
         }
@@ -140,7 +139,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
         None
     }
 
-    fn flush(&mut self, input_events: &EventList, _output_events: &mut EventList) {
+    fn flush(&mut self, input_events: &InputEvents, _output_events: &mut OutputEvents) {
         let value_events = input_events.iter().filter_map(|e| match e.event()? {
             Event::ParamValue(v) => Some(v),
             _ => None,
@@ -192,14 +191,13 @@ impl PluginAudioPortsImplementation for GainPluginMainThread {
             0,
             "main",
             2,
-            ChannelMap::Stereo,
             SampleSize::F32,
             true,
             false,
             true,
         );
     }
-}
+}*/
 
 #[allow(non_upper_case_globals)]
 #[no_mangle]

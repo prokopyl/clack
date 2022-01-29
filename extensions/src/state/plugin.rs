@@ -9,7 +9,7 @@ use clap_sys::stream::{clap_istream, clap_ostream};
 impl HostState {
     #[inline]
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
-        unsafe { (self.0.mark_dirty)(host.shared().as_raw()) }
+        unsafe { (self.0.mark_dirty.unwrap())(host.shared().as_raw()) }
     }
 }
 
@@ -24,8 +24,8 @@ where
 {
     const IMPLEMENTATION: &'static Self = &super::PluginState(
         clap_plugin_state {
-            save: save::<P>,
-            load: load::<P>,
+            save: Some(save::<P>),
+            load: Some(load::<P>),
         },
         PhantomData,
     );

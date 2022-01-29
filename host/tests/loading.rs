@@ -1,4 +1,5 @@
 use clack_host::bundle::PluginBundle;
+use clack_host::factory::PluginFactory;
 
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
@@ -12,6 +13,10 @@ pub fn it_works() {
     let bundle = PluginBundle::load(&bundle_path).unwrap();
     let entry = bundle.get_entry().unwrap();
 
-    let desc = entry.plugin_descriptor(0).unwrap();
+    let desc = entry
+        .get_factory::<PluginFactory>()
+        .unwrap()
+        .plugin_descriptor(0)
+        .unwrap();
     assert_eq!(desc.id().unwrap().to_bytes(), b"gain");
 }

@@ -42,15 +42,12 @@ unsafe impl Extension for PluginAudioPorts {
 mod plugin {
     use crate::audio_ports::{PluginAudioPorts, SampleSize};
     use clack_common::extensions::ExtensionImplementation;
-    use clack_common::ports::ChannelMap;
     use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
     use clack_plugin::plugin::Plugin;
     use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
     use clap_sys::plugin::clap_plugin;
-    use clap_sys::string_sizes::CLAP_NAME_SIZE;
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
-    use std::ptr::addr_of_mut;
 
     pub struct AudioPortInfoWriter<'a> {
         buf: &'a mut MaybeUninit<clap_audio_port_info>,
@@ -73,12 +70,12 @@ mod plugin {
             id: u32,
             name: &str,
             channel_count: u32,
-            channel_map: ChannelMap,
             sample_size: SampleSize,
             is_main: bool,
             is_cv: bool,
             in_place: bool,
         ) {
+            /*
             let buf = self.buf.as_mut_ptr();
             unsafe { core::ptr::write(addr_of_mut!((*buf).id), id) };
             unsafe { core::ptr::write(addr_of_mut!((*buf).channel_count), channel_count) };
@@ -97,9 +94,11 @@ mod plugin {
             let dst_name = &mut dst_name[..len];
             let src_name = &src_name[..len];
             dst_name.copy_from_slice(src_name);
-            dst_name[len] = MaybeUninit::new(0);
+            dst_name[len] = MaybeUninit::new(0);*/
 
             self.is_set = true;
+
+            todo!()
         }
     }
 
@@ -114,8 +113,8 @@ mod plugin {
     {
         const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
             clap_plugin_audio_ports {
-                count: count::<P>,
-                get: get::<P>,
+                count: Some(count::<P>),
+                get: Some(get::<P>),
             },
             PhantomData,
         );

@@ -55,7 +55,7 @@ mod host {
             reader: &mut R,
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
-            let result = unsafe { (self.0.load)(plugin.as_raw(), stream.as_raw_mut()) };
+            let result = unsafe { (self.0.load.unwrap())(plugin.as_raw(), stream.as_raw_mut()) };
             match result {
                 true => Ok(()),
                 false => Err(StateError { saving: false }),
@@ -68,7 +68,7 @@ mod host {
             writer: &mut W,
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
-            let result = unsafe { (self.0.save)(plugin.as_raw(), stream.as_raw_mut()) };
+            let result = unsafe { (self.0.save.unwrap())(plugin.as_raw(), stream.as_raw_mut()) };
             match result {
                 true => Ok(()),
                 false => Err(StateError { saving: true }),

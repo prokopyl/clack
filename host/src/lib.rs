@@ -3,6 +3,7 @@
 pub mod bundle;
 pub mod entry;
 pub mod extensions;
+pub mod factory;
 pub mod host;
 pub mod instance;
 pub mod plugin;

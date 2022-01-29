@@ -45,16 +45,6 @@ pub struct NoteExpressionEvent {
 
 impl NoteExpressionEvent {
     #[inline]
-    pub(crate) fn from_raw(inner: clap_event_note_expression) -> Self {
-        Self { inner }
-    }
-
-    #[inline]
-    pub(crate) fn into_raw(self) -> clap_event_note_expression {
-        self.inner
-    }
-
-    #[inline]
     pub fn expression_type(&self) -> Option<NoteExpressionType> {
         NoteExpressionType::from_raw(self.inner.expression_id)
     }

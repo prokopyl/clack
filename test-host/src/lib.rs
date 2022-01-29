@@ -1,6 +1,7 @@
 use crate::host::{TestHostAudioProcessor, TestHostMainThread, TestHostShared};
 use clack_host::entry::PluginEntryDescriptor;
-use clack_host::events::{EventList, TimestampedEvent};
+use clack_host::events::{InputEvents, OutputEvents};
+use clack_host::factory::PluginFactory;
 use clack_host::instance::processor::audio::{AudioBuffer, AudioPorts, ChannelBuffer};
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginAudioConfiguration;
@@ -32,7 +33,11 @@ impl<'a> TestHost<'a> {
         // Get plugin entry from the exported static
         // SAFETY: only called this once here
         let entry = unsafe { PluginEntry::from_descriptor(entry, "") }.unwrap();
-        let desc = entry.plugin_descriptor(0).unwrap();
+        let desc = entry
+            .get_factory::<PluginFactory>()
+            .unwrap()
+            .plugin_descriptor(0)
+            .unwrap();
 
         // Instantiate the desired plugin
         let plugin = PluginInstance::new(
@@ -120,7 +125,7 @@ impl<'a> TestHost<'a> {
             latency: 0,
         }]);
 
-        let output_channels = outputs_descriptors.with_buffers_f32([AudioBuffer {
+        let mut output_channels = outputs_descriptors.with_buffers_f32([AudioBuffer {
             channels: self
                 .output_buffers
                 .iter_mut()
@@ -128,12 +133,12 @@ impl<'a> TestHost<'a> {
             latency: 0,
         }]);
 
-        let mut events_in = EventList::from_buffer(&mut self.input_events);
-        let mut events_out = EventList::from_buffer(&mut self.output_events);
+        let mut events_in = InputEvents::from_buffer(&mut self.input_events);
+        let mut events_out = OutputEvents::from_buffer(&mut self.output_events);
 
         processor.process(
             &input_channels,
-            &output_channels,
+            &mut output_channels,
             &mut events_in,
             &mut events_out,
         );

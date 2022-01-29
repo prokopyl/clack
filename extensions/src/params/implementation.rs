@@ -1,9 +1,9 @@
 use crate::params::info::ParamInfo;
-use clack_common::events::EventList;
+use clack_common::events::{InputEvents, OutputEvents};
 use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
 use clack_plugin::plugin::Plugin;
-use clap_sys::events::clap_event_list;
+use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
@@ -26,8 +26,9 @@ impl<'a> ParamInfoWriter<'a> {
     }
     #[inline]
     pub fn set(&mut self, param: &ParamInfo) {
-        self.inner.write(param.inner);
+        // self.inner.write(&param.inner);
         self.initialized = true;
+        todo!()
     }
 }
 
@@ -80,7 +81,7 @@ impl<'a> ::core::fmt::Write for ParamDisplayWriter<'a> {
 
 pub trait PluginMainThreadParams<'a> {
     fn count(&self) -> u32;
-    fn get_info(&self, param_index: i32, info: &mut ParamInfoWriter);
+    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter);
     fn get_value(&self, param_id: u32) -> Option<f64>;
     fn value_to_text(
         &self,
@@ -91,8 +92,8 @@ pub trait PluginMainThreadParams<'a> {
     fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64>;
     fn flush(
         &mut self,
-        input_parameter_changes: &EventList,
-        output_parameter_changes: &mut EventList,
+        input_parameter_changes: &InputEvents,
+        output_parameter_changes: &mut OutputEvents,
     );
 }
 
@@ -102,8 +103,8 @@ where
 {
     fn flush(
         &mut self,
-        input_parameter_changes: &EventList,
-        output_parameter_changes: &mut EventList,
+        input_parameter_changes: &InputEvents,
+        output_parameter_changes: &mut OutputEvents,
     );
 }
 
@@ -121,7 +122,7 @@ where
 
 unsafe extern "C" fn get_info<'a, P: PluginParamsImpl<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
-    param_index: i32,
+    param_index: u32,
     value: *mut clap_param_info,
 ) -> bool
 where
@@ -172,7 +173,7 @@ where
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
         P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
-            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
+            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR as i32))
     })
     .is_some()
         && writer.finish()
@@ -191,7 +192,7 @@ where
 
     let val = PluginWrapper::<P>::handle(plugin, |p| {
         let display = ::core::str::from_utf8(display)
-            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
+            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR as i32))?;
         Ok(P::MainThread::text_to_value(
             p.main_thread().as_ref(),
             param_id,
@@ -211,13 +212,14 @@ where
 
 unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
     plugin: *const ::clap_sys::plugin::clap_plugin,
-    input_parameter_changes: *const clap_event_list,
-    output_parameter_changes: *const clap_event_list,
+    input_parameter_changes: *const clap_input_events,
+    output_parameter_changes: *const clap_output_events,
 ) where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    let input_parameter_changes = EventList::from_raw(input_parameter_changes);
-    let output_parameter_changes = EventList::from_raw_mut(output_parameter_changes);
+    let input_parameter_changes = InputEvents::from_raw(&*input_parameter_changes);
+    let output_parameter_changes =
+        OutputEvents::from_raw_mut(&mut *(output_parameter_changes as *mut _));
 
     PluginWrapper::<P>::handle(plugin, |p| {
         if let Ok(mut audio) = p.audio_processor() {
@@ -243,12 +245,12 @@ where
 {
     const IMPLEMENTATION: &'static Self = &super::PluginParams(
         clap_plugin_params {
-            count: count::<P>,
-            get_info: get_info::<P>,
-            get_value: get_value::<P>,
-            value_to_text: value_to_text::<P>,
-            text_to_value: text_to_value::<P>,
-            flush: flush::<P>,
+            count: Some(count::<P>),
+            get_info: Some(get_info::<P>),
+            get_value: Some(get_value::<P>),
+            value_to_text: Some(value_to_text::<P>),
+            text_to_value: Some(text_to_value::<P>),
+            flush: Some(flush::<P>),
         },
         PhantomData,
     );

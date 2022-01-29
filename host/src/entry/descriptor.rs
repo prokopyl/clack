@@ -1,5 +1,6 @@
 use clap_sys::plugin::clap_plugin_descriptor;
 use std::ffi::CStr;
+use std::marker::PhantomData;
 
 pub struct PluginDescriptor<'a> {
     descriptor: &'a clap_plugin_descriptor,
@@ -51,14 +52,29 @@ impl<'a> PluginDescriptor<'a> {
         unsafe { cstr_to_str(self.descriptor.description) }
     }
 
-    pub fn keywords_string(&self) -> Option<&'a CStr> {
-        unsafe { cstr_to_str(self.descriptor.keywords) }
+    #[inline]
+    pub fn features(&self) -> impl Iterator<Item = &'a CStr> {
+        FeaturesIter {
+            current: self.descriptor.features,
+            _lifetime: PhantomData,
+        }
     }
+}
 
-    pub fn keywords(&self) -> impl Iterator<Item = &'a [u8]> {
-        self.keywords_string()
-            .unwrap_or_default()
-            .to_bytes()
-            .split(|b| *b == b';')
+struct FeaturesIter<'a> {
+    current: *mut *const ::std::os::raw::c_char,
+    _lifetime: PhantomData<&'a CStr>,
+}
+
+impl<'a> Iterator for FeaturesIter<'a> {
+    type Item = &'a CStr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: list is guaranteed to be null-terminated
+        let current = unsafe { self.current.as_ref() }?;
+        let cstr = unsafe { CStr::from_ptr(*current) };
+        // SAFETY: we just checked the current element was non-null, so there must be another element next
+        self.current = unsafe { self.current.add(1) };
+        Some(cstr)
     }
 }

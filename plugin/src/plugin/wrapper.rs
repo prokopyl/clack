@@ -17,7 +17,7 @@ use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
 
-mod panic {
+pub(crate) mod panic {
     #[cfg(not(test))]
     #[allow(unused)]
     pub use std::panic::catch_unwind;
@@ -340,12 +340,12 @@ impl PluginWrapperError {
     /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
     /// ```
     pub fn severity(&self) -> clap_log_severity {
-        match self {
+        (match self {
             PluginWrapperError::Plugin(_) => CLAP_LOG_ERROR,
             PluginWrapperError::Panic => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginWrapperError::Any(s, _) => *s,
+            PluginWrapperError::Any(s, _) => *s as u32,
             _ => CLAP_LOG_HOST_MISBEHAVING,
-        }
+        }) as i32
     }
 
     /// Returns a closure that maps an error to a [`PluginWrapperError::Any`] error of a given

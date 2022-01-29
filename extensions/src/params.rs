@@ -18,7 +18,7 @@ unsafe impl Extension for PluginParams {
 mod host {
     use super::*;
     use crate::params::info::ParamInfo;
-    use clack_common::events::EventList;
+    use clack_common::events::{InputEvents, OutputEvents};
     use clack_host::host::PluginHoster;
     use clack_host::instance::processor::StoppedPluginAudioProcessor;
     use clack_host::instance::PluginInstance;
@@ -27,17 +27,17 @@ mod host {
 
     impl PluginParams {
         pub fn count<'a, H: PluginHoster<'a>>(&self, plugin: &PluginInstance<'a, H>) -> u32 {
-            unsafe { (self.0.count)(plugin.raw_instance()) }
+            unsafe { (self.0.count.unwrap())(plugin.raw_instance()) }
         }
 
         pub fn get_info<'a, 'b, H: PluginHoster<'a>>(
             &self,
             plugin: &PluginInstance<'a, H>,
-            param_index: i32,
+            param_index: u32,
             info: &'b mut MaybeUninit<ParamInfo>,
         ) -> Option<&'b mut ParamInfo> {
             let valid = unsafe {
-                (self.0.get_info)(
+                (self.0.get_info.unwrap())(
                     plugin.raw_instance(),
                     param_index,
                     info.as_mut_ptr() as *mut _,
@@ -57,8 +57,9 @@ mod host {
             param_id: u32,
         ) -> Option<f64> {
             let mut value = MaybeUninit::uninit();
-            let valid =
-                unsafe { (self.0.get_value)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
+            let valid = unsafe {
+                (self.0.get_value.unwrap())(plugin.raw_instance(), param_id, value.as_mut_ptr())
+            };
 
             if valid {
                 unsafe { Some(value.assume_init()) }
@@ -75,7 +76,7 @@ mod host {
             buffer: &'b mut [std::mem::MaybeUninit<u8>],
         ) -> Option<&'b mut [u8]> {
             let valid = unsafe {
-                (self.0.value_to_text)(
+                (self.0.value_to_text.unwrap())(
                     plugin.raw_instance(),
                     param_id,
                     value,
@@ -103,7 +104,7 @@ mod host {
         ) -> Option<f64> {
             let mut value = MaybeUninit::uninit();
             let valid = unsafe {
-                (self.0.text_to_value)(
+                (self.0.text_to_value.unwrap())(
                     plugin.raw_instance(),
                     param_id,
                     display.as_ptr(),
@@ -122,17 +123,17 @@ mod host {
         pub fn flush_inactive<'a, H: PluginHoster<'a>>(
             &self,
             plugin: &mut PluginInstance<'a, H>,
-            input_event_list: &mut EventList,
-            output_event_list: &mut EventList,
+            input_event_list: &InputEvents,
+            output_event_list: &mut OutputEvents,
         ) -> bool {
             if plugin.is_active() {
                 return false;
             }
 
             unsafe {
-                (self.0.flush)(
+                (self.0.flush.unwrap())(
                     plugin.raw_instance(),
-                    input_event_list.as_raw_mut(),
+                    input_event_list.as_raw(),
                     output_event_list.as_raw_mut(),
                 )
             };
@@ -143,14 +144,14 @@ mod host {
         pub fn flush_active<'a, H: PluginHoster<'a>>(
             &self,
             plugin: &mut StoppedPluginAudioProcessor<'a, H>, // TODO: separate handle type
-            input_event_list: &mut EventList,
-            output_event_list: &mut EventList,
+            input_event_list: &InputEvents,
+            output_event_list: &mut OutputEvents,
         ) {
             // SAFETY: flush is already guaranteed by the types to be called on an active, non-processing plugin
             unsafe {
-                (self.0.flush)(
+                (self.0.flush.unwrap())(
                     plugin.audio_processor_plugin_data().as_raw(),
-                    input_event_list.as_raw_mut(),
+                    input_event_list.as_raw(),
                     output_event_list.as_raw_mut(),
                 )
             };

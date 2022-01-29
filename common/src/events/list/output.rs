@@ -48,9 +48,9 @@ impl<'a> OutputEvents<'a> {
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
-    pub unsafe fn from_raw_mut(raw: *const clap_output_events) -> &'a mut Self {
+    pub unsafe fn from_raw_mut(raw: &mut clap_output_events) -> &'a mut Self {
         // SAFETY: EventList has the same layout and is repr(C)
-        &mut *(raw as *const _ as *mut _)
+        &mut *(raw as *mut _ as *mut _)
     }
 
     /// Returns a C FFI-compatible mutable pointer to this event list.

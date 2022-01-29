@@ -1,10 +1,12 @@
 use crate::entry::PluginEntry;
 use crate::extensions::HostExtensions;
+use crate::factory::PluginFactory;
 use crate::host::{HostShared, PluginHoster, SharedHoster};
 use crate::instance::PluginAudioConfiguration;
 use crate::plugin::{PluginMainThread, PluginShared};
+use clap_sys::entry::clap_plugin_entry;
 use clap_sys::host::clap_host;
-use clap_sys::plugin::{clap_plugin, clap_plugin_entry};
+use clap_sys::plugin::clap_plugin;
 use clap_sys::version::CLAP_VERSION;
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CStr};
@@ -61,10 +63,10 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
             vendor: ::core::ptr::null_mut(),
             url: ::core::ptr::null_mut(),
             version: ::core::ptr::null_mut(),
-            get_extension: get_extension::<H>,
-            request_restart: request_restart::<H>,
-            request_process: request_process::<H>,
-            request_callback: request_callback::<H>,
+            get_extension: Some(get_extension::<H>),
+            request_restart: Some(request_restart::<H>),
+            request_process: Some(request_process::<H>),
+            request_callback: Some(request_callback::<H>),
         };
 
         host_info.info().write_to_raw(&mut host_descriptor);
@@ -85,6 +87,8 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
         mutable.main_thread = MaybeUninit::new(UnsafeCell::new(main_thread(shared)));
         mutable.instance = unsafe {
             entry
+                .get_factory::<PluginFactory>()
+                .ok_or(HostError::MissingPluginFactory)?
                 .instantiate(plugin_id, &mutable._host_descriptor)
                 .ok_or(HostError::PluginEntryNotFound)?
                 .as_mut()
@@ -116,7 +120,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 
         let success = unsafe {
             println!("{}", mutable._host_descriptor.clap_version.major);
-            ((*mutable.instance).activate)(
+            ((*mutable.instance).activate.unwrap())(
                 mutable.instance,
                 configuration.sample_rate,
                 *configuration.frames_count_range.start(),
@@ -144,7 +148,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     }
 
     pub(crate) unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if (self.raw_instance().start_processing)(self.instance) {
+        if (self.raw_instance().start_processing.unwrap())(self.instance) {
             Ok(())
         } else {
             Err(HostError::StartProcessingFailed)
@@ -152,7 +156,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     }
 
     pub(crate) unsafe fn stop_processing(&self) {
-        (self.raw_instance().stop_processing)(self.instance)
+        (self.raw_instance().stop_processing.unwrap())(self.instance)
     }
 
     /// Returns a raw, non-null pointer to the host's main thread ([`PluginHoster`](crate::host::PluginHoster))
@@ -243,7 +247,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 impl<'a, H: PluginHoster<'a>> Drop for HostWrapper<'a, H> {
     #[inline]
     fn drop(&mut self) {
-        unsafe { ((*self.instance).destroy)(self.instance) }
+        unsafe { ((*self.instance).destroy.unwrap())(self.instance) }
     }
 }
 
@@ -254,6 +258,7 @@ pub enum HostError {
     DeactivatedPlugin,
     ActivationFailed,
     PluginEntryNotFound,
+    MissingPluginFactory,
     InstantiationFailed,
 }
 // TODO: impl error

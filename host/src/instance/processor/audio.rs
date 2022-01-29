@@ -22,7 +22,7 @@ pub struct AudioBuffer<I> {
 
 // bikeshed
 pub struct AudioPorts {
-    buffer_lists: Vec<*const f32>, // Can be f32 or f64, casted on-demand
+    buffer_lists: Vec<*mut f32>, // Can be f32 or f64, casted on-demand
     buffer_configs: Vec<clap_audio_buffer>,
 }
 
@@ -42,8 +42,8 @@ impl AudioPorts {
             self.buffer_configs.resize(
                 new_size,
                 clap_audio_buffer {
-                    data32: ::core::ptr::null(),
-                    data64: ::core::ptr::null(),
+                    data32: ::core::ptr::null_mut(),
+                    data64: ::core::ptr::null_mut(),
                     channel_count: 0,
                     latency: 0,
                     constant_mask: 0,
@@ -101,10 +101,10 @@ impl AudioPorts {
                     constant_mask |= 1 << i as u64
                 }
 
-                self.buffer_lists.push(channel.data.as_ptr().cast())
+                self.buffer_lists.push(channel.data.as_mut_ptr().cast())
             }
 
-            let buffers = self.buffer_lists.get(last..).unwrap_or(&[]);
+            let buffers = self.buffer_lists.get_mut(last..).unwrap_or(&mut []);
 
             // PANIC: this can only panic with an invalid implementation of ExactSizeIterator
             let descriptor = &mut self.buffer_configs[i];
@@ -113,22 +113,22 @@ impl AudioPorts {
             descriptor.constant_mask = constant_mask;
 
             if is_f64 {
-                descriptor.data64 = buffers.as_ptr().cast();
-                descriptor.data32 = ::core::ptr::null();
+                descriptor.data64 = buffers.as_mut_ptr().cast();
+                descriptor.data32 = ::core::ptr::null_mut();
             } else {
-                descriptor.data64 = ::core::ptr::null();
-                descriptor.data32 = buffers.as_ptr();
+                descriptor.data64 = ::core::ptr::null_mut();
+                descriptor.data32 = buffers.as_mut_ptr();
             }
         }
 
         AudioBuffers {
-            buffers: &self.buffer_configs[..total],
+            buffers: &mut self.buffer_configs[..total],
             min_buffer_length,
         }
     }
 }
 
 pub struct AudioBuffers<'a> {
-    pub(crate) buffers: &'a [clap_audio_buffer],
+    pub(crate) buffers: &'a mut [clap_audio_buffer],
     pub(crate) min_buffer_length: usize,
 }

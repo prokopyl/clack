@@ -2,8 +2,8 @@ use crate::host::PluginHoster;
 use crate::instance::processor::audio::AudioBuffers;
 use crate::plugin::{PluginAudioProcessor, PluginShared};
 use crate::wrapper::HostWrapper;
-use clack_common::events::EventList;
-use clap_sys::events::{clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
+use clack_common::events::{InputEvents, OutputEvents};
+use clap_sys::events::{clap_event_header, clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};
 use std::pin::Pin;
@@ -19,15 +19,22 @@ impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
     pub fn process(
         &mut self,
         audio_inputs: &AudioBuffers,
-        audio_outputs: &AudioBuffers,
-        events_input: &mut EventList,
-        events_output: &mut EventList,
+        audio_outputs: &mut AudioBuffers,
+        events_input: &mut InputEvents,
+        events_output: &mut OutputEvents,
     ) {
         let min_input_sample_count = audio_inputs.min_buffer_length;
         let min_output_sample_count = audio_outputs.min_buffer_length;
 
         // TODO
         let transport = clap_event_transport {
+            header: clap_event_header {
+                size: 0,
+                time: 0,
+                space_id: 0,
+                type_: 0,
+                flags: 0,
+            },
             flags: CLAP_TRANSPORT_IS_PLAYING,
 
             song_pos_beats: 0,
@@ -49,16 +56,16 @@ impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
             frames_count: min_input_sample_count.min(min_output_sample_count) as u32,
             transport: &transport, // TODO
             audio_inputs: audio_inputs.buffers.as_ptr(),
-            audio_outputs: audio_outputs.buffers.as_ptr(),
+            audio_outputs: audio_outputs.buffers.as_mut_ptr(),
             audio_inputs_count: audio_inputs.buffers.len() as u32,
             audio_outputs_count: audio_outputs.buffers.len() as u32,
-            in_events: events_input.as_raw_mut(),
+            in_events: events_input.as_raw(),
             out_events: events_output.as_raw_mut(),
         };
 
         let instance = self.wrapper.raw_instance();
 
-        unsafe { (instance.process)(instance, &process) };
+        unsafe { (instance.process.unwrap())(instance, &process) };
     }
 
     #[inline]

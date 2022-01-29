@@ -1,5 +1,5 @@
 use crate::entry::PluginEntry;
-use clap_sys::plugin::clap_plugin_entry;
+use clap_sys::entry::clap_plugin_entry;
 use libloading::Library;
 use std::error::Error;
 use std::ffi::OsStr;

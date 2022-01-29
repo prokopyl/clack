@@ -1,16 +1,16 @@
-use clack_common::events::EventList;
+use clack_common::events::{InputEvents, OutputEvents};
 use clap_sys::process::clap_process;
 
 pub struct ProcessEvents<'a> {
-    pub input: &'a EventList<'a>,
-    pub output: &'a mut EventList<'a>,
+    pub input: &'a InputEvents<'a>,
+    pub output: &'a mut OutputEvents<'a>,
 }
 
 impl<'a> ProcessEvents<'a> {
     pub(crate) unsafe fn from_raw(process: *const clap_process) -> Self {
         Self {
-            input: EventList::from_raw_mut((*process).in_events),
-            output: EventList::from_raw_mut((*process).out_events),
+            input: InputEvents::from_raw(&*(*process).in_events),
+            output: OutputEvents::from_raw_mut(&mut *((*process).out_events as *mut _)),
         }
     }
 }

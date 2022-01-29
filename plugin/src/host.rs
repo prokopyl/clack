@@ -52,8 +52,9 @@ impl<'a> HostInfo<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
-        let ptr = unsafe { (self.as_raw().get_extension)(self.raw, E::IDENTIFIER as *const i8) }
-            as *mut _;
+        let ptr =
+            unsafe { (self.as_raw().get_extension.unwrap())(self.raw, E::IDENTIFIER as *const i8) }
+                as *mut _;
         NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })
     }
 
@@ -96,19 +97,19 @@ impl<'a> HostHandle<'a> {
     #[inline]
     pub fn request_restart(&self) {
         // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_restart)(self.raw) }
+        unsafe { (self.as_raw().request_restart.unwrap())(self.raw) }
     }
 
     #[inline]
     pub fn request_process(&self) {
         // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_process)(self.raw) }
+        unsafe { (self.as_raw().request_process.unwrap())(self.raw) }
     }
 
     #[inline]
     pub fn request_callback(&self) {
         // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_callback)(self.raw) }
+        unsafe { (self.as_raw().request_callback.unwrap())(self.raw) }
     }
 
     #[inline]

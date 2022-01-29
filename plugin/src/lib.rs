@@ -3,6 +3,7 @@
 
 pub mod entry;
 pub mod extensions;
+pub mod factory;
 pub mod host;
 pub mod plugin;
 pub mod process;

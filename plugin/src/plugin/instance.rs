@@ -19,15 +19,15 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         clap_plugin {
             desc: &P::DESCRIPTOR.0,
             plugin_data: Box::into_raw(Box::new(self)).cast(),
-            init: Self::init,
-            destroy: Self::destroy,
-            activate: Self::activate,
-            deactivate: Self::deactivate,
-            start_processing: Self::start_processing,
-            stop_processing: Self::stop_processing,
-            process: Self::process,
-            get_extension: Self::get_extension,
-            on_main_thread: Self::on_main_thread,
+            init: Some(Self::init),
+            destroy: Some(Self::destroy),
+            activate: Some(Self::activate),
+            deactivate: Some(Self::deactivate),
+            start_processing: Some(Self::start_processing),
+            stop_processing: Some(Self::stop_processing),
+            process: Some(Self::process),
+            get_extension: Some(Self::get_extension),
+            on_main_thread: Some(Self::on_main_thread),
         }
     }
 
@@ -114,7 +114,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
             )?)
         })
         .map(|s| s as clap_process_status)
-        .unwrap_or(CLAP_PROCESS_ERROR)
+        .unwrap_or(CLAP_PROCESS_ERROR as i32)
     }
 
     unsafe extern "C" fn get_extension(

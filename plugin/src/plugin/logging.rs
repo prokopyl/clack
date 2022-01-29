@@ -16,7 +16,8 @@ unsafe fn get_logger<'a, P: Plugin<'a>>(
         .host()
         .as_raw();
 
-    let log = (host.get_extension)(host, CLAP_EXT_LOG as *const _) as *mut clap_host_log;
+    let log = (host.get_extension.unwrap())(host, CLAP_EXT_LOG.as_ptr() as *const _)
+        as *mut clap_host_log;
     Some((host, log.as_ref()?))
 }
 
@@ -30,7 +31,7 @@ pub unsafe fn plugin_log<'a, P: Plugin<'a>>(plugin: *const clap_plugin, e: &Plug
     if let Some((host, logger)) = get_logger::<P>(plugin) {
         match log_display(e) {
             Ok(cstr) => {
-                (logger.log)(host, e.severity(), cstr.as_ptr());
+                (logger.log.unwrap())(host, e.severity(), cstr.as_ptr());
                 return;
             }
             Err(e) => eprintln!(

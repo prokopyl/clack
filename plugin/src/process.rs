@@ -29,7 +29,7 @@ impl Process {
     }
 
     #[inline]
-    pub fn steady_time(&self) -> u64 {
+    pub fn steady_time(&self) -> i64 {
         self.inner.steady_time
     }
 
