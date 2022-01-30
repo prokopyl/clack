@@ -85,7 +85,7 @@ impl<'a> InputEvents<'a> {
     ///
     /// If `index` is out of bounds, `None` is returned.
     #[inline]
-    pub fn get(&self, index: usize) -> Option<&'a UnknownEvent> {
+    pub fn get(&self, index: usize) -> Option<&UnknownEvent<'a>> {
         unsafe {
             (self.inner.get.unwrap())(&self.inner, index as u32)
                 .as_ref()
@@ -103,7 +103,7 @@ impl<'a> InputEvents<'a> {
 }
 
 impl<'a> IntoIterator for &'a InputEvents<'a> {
-    type Item = &'a UnknownEvent;
+    type Item = &'a UnknownEvent<'a>;
     type IntoIter = InputEventsIter<'a>;
 
     #[inline]
@@ -122,10 +122,10 @@ impl<'a, I: InputEventBuffer> From<&'a mut I> for InputEvents<'a> {
 const INDEX_ERROR: &str = "Indexed EventList out of bounds";
 
 impl<'a> Index<usize> for InputEvents<'a> {
-    type Output = UnknownEvent;
+    type Output = UnknownEvent<'a>;
 
     #[inline]
-    fn index(&self, index: usize) -> &'a Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         self.get(index).expect(INDEX_ERROR)
     }
 }
@@ -137,7 +137,7 @@ pub struct InputEventsIter<'a> {
 }
 
 impl<'a, 'list> Iterator for InputEventsIter<'a> {
-    type Item = &'a UnknownEvent;
+    type Item = &'a UnknownEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range.next().and_then(|i| self.list.get(i))

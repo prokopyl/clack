@@ -110,7 +110,7 @@ impl<'a> OutputEvents<'a> {
     /// reasonable amount of space before forwarding the list to the plugin, in order to make
     /// allocations as unlikely as possible.
     #[inline]
-    pub fn append(&mut self, event: &UnknownEvent) {
+    pub fn push_back(&mut self, event: &UnknownEvent) {
         unsafe { (self.inner.push_back.unwrap())(&self.inner, event.as_raw()) }
     }
 }
@@ -122,11 +122,11 @@ impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     }
 }
 
-impl<'a> Extend<&'a UnknownEvent> for OutputEvents<'a> {
+impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
     #[inline]
-    fn extend<T: IntoIterator<Item = &'a UnknownEvent>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = &'b UnknownEvent<'a>>>(&mut self, iter: T) {
         for event in iter {
-            self.append(event)
+            self.push_back(event)
         }
     }
 }

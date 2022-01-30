@@ -42,6 +42,12 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
+    pub fn header(&self) -> &EventHeader<E> {
+        // SAFETY: this type guarantees the event header is valid
+        unsafe { EventHeader::from_raw(&self.inner.header) }
+    }
+
+    #[inline]
     pub fn port_index(&self) -> i16 {
         self.inner.port_index
     }

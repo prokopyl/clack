@@ -25,7 +25,7 @@ pub mod event_types;
 
 pub unsafe trait Event<'a>: Sized + 'a {
     const TYPE_ID: u16;
-    type EventSpace: EventSpace;
+    type EventSpace: EventSpace<'a>;
 
     #[inline]
     fn raw_header(&self) -> &clap_event_header {
@@ -38,7 +38,7 @@ pub unsafe trait Event<'a>: Sized + 'a {
     }
 
     #[inline]
-    fn as_unknown(&self) -> &UnknownEvent {
+    fn as_unknown(&self) -> &UnknownEvent<'a> {
         unsafe { UnknownEvent::from_raw(self.raw_header()) }
     }
 }
@@ -153,11 +153,12 @@ impl<E> PartialOrd for EventHeader<E> {
 }
 
 #[repr(C)]
-pub struct UnknownEvent {
+pub struct UnknownEvent<'a> {
     header: EventHeader,
+    _sysex_lifetime: PhantomData<&'a u8>,
 }
 
-impl UnknownEvent {
+impl<'a> UnknownEvent<'a> {
     #[inline]
     pub const unsafe fn from_raw(header: &clap_event_header) -> &Self {
         // SAFETY: EventHeader is repr(C) and ABI compatible
@@ -175,7 +176,7 @@ impl UnknownEvent {
     }
 
     #[inline]
-    pub fn as_event_for_space<'a, E: Event<'a>>(
+    pub fn as_event_for_space<E: Event<'a>>(
         &self,
         space_id: EventSpaceId<E::EventSpace>,
     ) -> Option<&E> {
@@ -192,12 +193,12 @@ impl UnknownEvent {
     }
 
     #[inline]
-    pub fn as_event<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>>(&self) -> Option<&E> {
+    pub fn as_event<E: Event<'a, EventSpace = CoreEventSpace<'a>>>(&self) -> Option<&E> {
         self.as_event_for_space(EventSpaceId::core())
     }
 
     #[inline]
-    pub unsafe fn as_event_unchecked<'a, E: Event<'a>>(&self) -> &E {
+    pub unsafe fn as_event_unchecked<E: Event<'a>>(&self) -> &E {
         &*(self as *const _ as *const E)
     }
 
@@ -207,7 +208,10 @@ impl UnknownEvent {
     }
 
     #[inline]
-    pub fn as_event_space<S: EventSpace>(&self, space_id: EventSpaceId<S>) -> Option<S> {
+    pub fn as_event_space<'s, S: EventSpace<'s>>(&'s self, space_id: EventSpaceId<S>) -> Option<S>
+    where
+        'a: 's,
+    {
         if space_id.id() != self.header.inner.space_id {
             return None;
         }

@@ -14,6 +14,8 @@ use clack_plugin::{
     stream::{InputStream, OutputStream},
 };
 
+use clack_plugin::events::event_types::NoteOnEvent;
+use clack_plugin::events::Event;
 use std::io::Read;
 
 pub struct GainPlugin;
@@ -47,20 +49,22 @@ impl<'a> Plugin<'a> for GainPlugin {
             output.set(input.get() * 2.0)
         }
 
-        /*events
-        .output
-        .extend(events.input.iter().map(|e| match e.event() {
-            Some(Event::NoteOn(ne)) => TimestampedEvent::new(
-                e.time(),
-                Event::NoteOn(NoteEvent::new(
-                    ne.port_index(),
-                    ne.key(),
-                    ne.channel(),
-                    ne.velocity() * 2.0,
-                )),
-            ),
-            _ => *e,
-        })); */
+        for e in events.input {
+            if let Some(NoteOnEvent(ne)) = e.as_event() {
+                events.output.push_back(
+                    NoteOnEvent(NoteEvent::new(
+                        *ne.header(),
+                        ne.port_index(),
+                        ne.key(),
+                        ne.channel(),
+                        ne.velocity() * 2.0,
+                    ))
+                    .as_unknown(),
+                );
+            } else {
+                events.output.push_back(e)
+            }
+        }
 
         //self.flush(events.input, events.output);
 

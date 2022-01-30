@@ -23,7 +23,7 @@ impl<S> EventSpaceId<S> {
     }
 }
 
-impl<S: EventSpace> From<EventSpaceId<S>> for EventSpaceId<()> {
+impl<'a, S: EventSpace<'a>> From<EventSpaceId<S>> for EventSpaceId<()> {
     #[inline]
     fn from(id: EventSpaceId<S>) -> Self {
         Self {

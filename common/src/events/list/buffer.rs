@@ -114,7 +114,7 @@ pub struct EventBufferIter<'a> {
 }
 
 impl<'a> Iterator for EventBufferIter<'a> {
-    type Item = &'a UnknownEvent;
+    type Item = &'a UnknownEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.range.next()?;
