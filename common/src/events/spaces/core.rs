@@ -1,9 +1,9 @@
-use crate::events::event_types::NoteEvent;
+use crate::events::event_types::{NoteEvent, NoteOnEvent};
 use crate::events::{EventSpace, UnknownEvent};
 use std::ffi::CStr;
 
 pub enum CoreEventSpace<'a> {
-    NoteOn(&'a NoteEvent),
+    NoteOn(&'a NoteOnEvent),
 }
 
 unsafe impl<'a> EventSpace for CoreEventSpace<'a> {

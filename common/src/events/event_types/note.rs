@@ -2,10 +2,11 @@ use crate::events::core::CoreEventSpace;
 use crate::events::{Event, EventHeader};
 use clap_sys::events::{clap_event_note, CLAP_EVENT_NOTE_ON};
 use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(C)]
-pub struct NoteOnEvent(pub NoteEvent);
+pub struct NoteOnEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteOnEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON as u16;
@@ -14,14 +15,15 @@ unsafe impl<'a> Event<'a> for NoteOnEvent {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct NoteEvent {
+pub struct NoteEvent<E> {
     inner: clap_event_note,
+    _event: PhantomData<E>,
 }
 
-impl NoteEvent {
+impl<E> NoteEvent<E> {
     #[inline]
     pub fn new(
-        header: EventHeader<Self>,
+        header: EventHeader<E>,
         port_index: i16,
         key: i16,
         channel: i16,
@@ -35,6 +37,7 @@ impl NoteEvent {
                 channel,
                 velocity,
             },
+            _event: PhantomData,
         }
     }
 
@@ -60,7 +63,10 @@ impl NoteEvent {
 
     #[inline]
     pub fn from_raw(inner: clap_event_note) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            _event: PhantomData,
+        }
     }
 
     #[inline]
@@ -69,7 +75,7 @@ impl NoteEvent {
     }
 }
 
-impl PartialEq for NoteEvent {
+impl<E> PartialEq for NoteEvent<E> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
@@ -79,7 +85,7 @@ impl PartialEq for NoteEvent {
     }
 }
 
-impl Debug for NoteEvent {
+impl<E> Debug for NoteEvent<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NoteEvent")
             .field("port_index", &self.inner.port_index)

@@ -71,6 +71,16 @@ impl<E> EventHeader<E> {
     pub const fn type_id(&self) -> u16 {
         self.inner.type_
     }
+
+    #[inline]
+    pub const fn time(&self) -> u32 {
+        self.inner.time
+    }
+
+    #[inline]
+    pub const fn flags(&self) -> EventFlags {
+        EventFlags::from_bits_truncate(self.inner.flags)
+    }
 }
 
 impl EventHeader<()> {
@@ -215,5 +225,10 @@ impl UnknownEvent {
                 self.header.inner.size as usize,
             )
         }
+    }
+
+    #[inline]
+    pub unsafe fn from_bytes(bytes: &[u8]) -> &UnknownEvent {
+        &*(bytes.as_ptr() as *const _)
     }
 }

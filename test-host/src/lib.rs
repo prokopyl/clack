@@ -1,5 +1,6 @@
 use crate::host::{TestHostAudioProcessor, TestHostMainThread, TestHostShared};
-use clack_host::entry::PluginEntryDescriptor;
+use clack_host::entry::{PluginDescriptor, PluginEntryDescriptor};
+use clack_host::events::buffer::EventBuffer;
 use clack_host::events::{InputEvents, OutputEvents};
 use clack_host::factory::PluginFactory;
 use clack_host::instance::processor::audio::{AudioBuffer, AudioPorts, ChannelBuffer};
@@ -16,13 +17,14 @@ mod host;
 pub struct TestHost<'a> {
     entry: PluginEntry<'a>,
     plugin: PluginInstance<'a, TestHostMainThread>,
+    descriptor: PluginDescriptor<'a>,
     processor: Option<StoppedPluginAudioProcessor<'a, TestHostMainThread>>,
 
     input_buffers: [Vec<f32>; 2],
     output_buffers: [Vec<f32>; 2],
 
-    input_events: Vec<TimestampedEvent<'static>>,
-    output_events: Vec<TimestampedEvent<'static>>,
+    input_events: EventBuffer,
+    output_events: EventBuffer,
 }
 
 impl<'a> TestHost<'a> {
@@ -33,7 +35,7 @@ impl<'a> TestHost<'a> {
         // Get plugin entry from the exported static
         // SAFETY: only called this once here
         let entry = unsafe { PluginEntry::from_descriptor(entry, "") }.unwrap();
-        let desc = entry
+        let descriptor = entry
             .get_factory::<PluginFactory>()
             .unwrap()
             .plugin_descriptor(0)
@@ -44,7 +46,7 @@ impl<'a> TestHost<'a> {
             || TestHostShared,
             |_| TestHostMainThread,
             &entry,
-            desc.id().unwrap().to_bytes(),
+            descriptor.id().unwrap().to_bytes(),
             &host,
         )
         .unwrap();
@@ -52,13 +54,18 @@ impl<'a> TestHost<'a> {
         Self {
             plugin,
             entry,
+            descriptor,
             processor: None,
             input_buffers: [vec![0f32; 32], vec![0f32; 32]],
             output_buffers: [vec![0f32; 32], vec![0f32; 32]],
 
-            input_events: Vec::new(),
-            output_events: Vec::new(),
+            input_events: EventBuffer::with_capacity(10),
+            output_events: EventBuffer::with_capacity(10),
         }
+    }
+
+    pub fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
     }
 
     pub fn entry(&self) -> &PluginEntry {
@@ -81,19 +88,19 @@ impl<'a> TestHost<'a> {
         &mut self.output_buffers
     }
 
-    pub fn input_events(&self) -> &Vec<TimestampedEvent<'static>> {
+    pub fn input_events(&self) -> &EventBuffer {
         &self.input_events
     }
 
-    pub fn output_events(&self) -> &Vec<TimestampedEvent<'static>> {
+    pub fn output_events(&self) -> &EventBuffer {
         &self.output_events
     }
 
-    pub fn input_events_mut(&mut self) -> &mut Vec<TimestampedEvent<'static>> {
+    pub fn input_events_mut(&mut self) -> &mut EventBuffer {
         &mut self.input_events
     }
 
-    pub fn output_events_mut(&mut self) -> &mut Vec<TimestampedEvent<'static>> {
+    pub fn output_events_mut(&mut self) -> &mut EventBuffer {
         &mut self.output_events
     }
 
@@ -133,7 +140,7 @@ impl<'a> TestHost<'a> {
             latency: 0,
         }]);
 
-        let mut events_in = InputEvents::from_buffer(&mut self.input_events);
+        let mut events_in = InputEvents::from_buffer(&self.input_events);
         let mut events_out = OutputEvents::from_buffer(&mut self.output_events);
 
         processor.process(
