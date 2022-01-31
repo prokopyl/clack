@@ -11,7 +11,9 @@ pub trait HostLog {
 }
 
 impl<H: HostLog> ExtensionImplementation<H> for Log {
-    const IMPLEMENTATION: &'static Self = &Log(clap_host_log { log: log::<H> });
+    const IMPLEMENTATION: &'static Self = &Log(clap_host_log {
+        log: Some(log::<H>),
+    });
 }
 
 unsafe extern "C" fn log<H: HostLog>(

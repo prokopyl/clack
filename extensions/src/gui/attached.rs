@@ -11,7 +11,7 @@ pub struct PluginGuiWin32 {
 }
 
 unsafe impl Extension for PluginGuiWin32 {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI_WIN32.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_WIN32;
     type ExtensionType = PluginExtension;
 }
 
@@ -19,13 +19,12 @@ unsafe impl Extension for PluginGuiWin32 {
 impl PluginGuiWin32 {
     /// # Safety
     /// The window_hwnd pointer must be valid
-
     pub unsafe fn attach(
         &self,
         plugin: &mut clack_host::plugin::PluginMainThread,
         window_hwnd: *mut c_void,
     ) -> bool {
-        (self.inner.attach)(plugin.as_raw(), window_hwnd)
+        (self.inner.attach.unwrap())(plugin.as_raw(), window_hwnd)
     }
 }
 
@@ -34,7 +33,7 @@ pub struct PluginGuiCocoa {
 }
 
 unsafe impl Extension for PluginGuiCocoa {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI_COCOA.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_COCOA;
     type ExtensionType = PluginExtension;
 }
 
@@ -47,7 +46,7 @@ impl PluginGuiCocoa {
         plugin: &mut clack_host::plugin::PluginMainThread,
         ns_view: *mut c_void,
     ) -> bool {
-        (self.inner.attach)(plugin.as_raw(), ns_view)
+        (self.inner.attach.unwrap())(plugin.as_raw(), ns_view)
     }
 }
 
@@ -56,7 +55,7 @@ pub struct PluginGuiX11 {
 }
 
 unsafe impl Extension for PluginGuiX11 {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI_X11.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_X11;
     type ExtensionType = PluginExtension;
 }
 
@@ -70,7 +69,7 @@ impl PluginGuiX11 {
         display_name: Option<&CStr>,
         window_id: u64,
     ) -> bool {
-        (self.inner.attach)(
+        (self.inner.attach.unwrap())(
             plugin.as_raw(),
             display_name
                 .map(|s| s.as_ptr())
@@ -107,7 +106,7 @@ pub mod implementation {
     {
         const IMPLEMENTATION: &'static Self = &PluginGuiWin32 {
             inner: clap_plugin_gui_win32 {
-                attach: attach_win32::<P>,
+                attach: Some(attach_win32::<P>),
             },
         };
     }
@@ -118,7 +117,7 @@ pub mod implementation {
     {
         const IMPLEMENTATION: &'static Self = &PluginGuiCocoa {
             inner: clap_plugin_gui_cocoa {
-                attach: attach_cocoa::<P>,
+                attach: Some(attach_cocoa::<P>),
             },
         };
     }
@@ -129,7 +128,7 @@ pub mod implementation {
     {
         const IMPLEMENTATION: &'static Self = &PluginGuiX11 {
             inner: clap_plugin_gui_x11 {
-                attach: attach_x11::<P>,
+                attach: Some(attach_x11::<P>),
             },
         };
     }

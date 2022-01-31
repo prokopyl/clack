@@ -52,9 +52,9 @@ impl<'a> HostInfo<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
-        let ptr =
-            unsafe { (self.as_raw().get_extension.unwrap())(self.raw, E::IDENTIFIER as *const i8) }
-                as *mut _;
+        let ptr = unsafe {
+            (self.as_raw().get_extension.unwrap())(self.raw, E::IDENTIFIER.as_ptr() as *const _)
+        } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })
     }
 

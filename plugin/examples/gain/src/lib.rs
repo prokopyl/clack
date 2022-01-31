@@ -3,7 +3,7 @@
 use clack_extensions::audio_ports::{
     AudioPortInfoWriter, PluginAudioPortsImplementation, SampleSize,
 };
-use clack_extensions::params::info::ParamInfoFlags;
+use clack_extensions::params::info::{ParamInfo, ParamInfoFlags};
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use clack_extensions::state::{PluginState, PluginStateImplementation};
 
@@ -79,19 +79,22 @@ impl<'a> Plugin<'a> for GainPlugin {
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &()) {
-        builder.register::<PluginGui>().register::<PluginGuiX11>();
+        builder
+            .register::<PluginParams>()
+            .register::<PluginGui>()
+            .register::<PluginGuiX11>();
     }
 }
-/*
+
 impl<'a> PluginParamsImpl<'a> for GainPlugin {
     fn flush(
         &mut self,
         _input_parameter_changes: &InputEvents,
-        _output_parameter_changes: &mut EventList,
+        _output_parameter_changes: &mut OutputEvents,
     ) {
     }
 }
-*/
+
 pub struct GainPluginMainThread {
     rusting: u32,
 
@@ -106,7 +109,7 @@ impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
         })
     }
 }
-/*
+
 impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
     fn count(&self) -> u32 {
         1
@@ -117,14 +120,27 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
             return;
         }
 
-        info.set(
-            ParamInfo::new(0)
-                .with_name("Rusting")
-                .with_module("gain/rusting")
-                .with_default_value(0.0)
-                .with_value_bounds(0.0, 1000.0)
-                .with_flags(ParamInfoFlags::IS_STEPPED),
-        )
+        /*
+
+
+           ParamInfo::new(0)
+               .with_name("Rusting")
+               .with_module("gain/rusting")
+               .with_default_value(0.0)
+               .with_value_bounds(0.0, 1000.0)
+               .with_flags(ParamInfoFlags::IS_STEPPED),
+        */
+
+        info.set(&ParamInfoData {
+            id: 0,
+            name: "Rusting",
+            module: "gain/rusting",
+            default_value: 0.0,
+            min_value: 0.0,
+            max_value: 1000.0,
+            flags: ParamInfoFlags::IS_STEPPED,
+            cookie: ::core::ptr::null_mut(),
+        })
     }
 
     fn get_value(&self, param_id: u32) -> Option<f64> {
@@ -156,7 +172,8 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
     }
 
     fn flush(&mut self, input_events: &InputEvents, _output_events: &mut OutputEvents) {
-        let value_events = input_events.iter().filter_map(|e| match e.event()? {
+        // TODO
+        /*let value_events = input_events.iter().filter_map(|e| match e.as_event()? {
             Event::ParamValue(v) => Some(v),
             _ => None,
         });
@@ -165,56 +182,56 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
             if value.param_id() == 0 {
                 self.rusting = value.value() as u32;
             }
-        }
+        }*/
     }
-}
+} /*
 
-impl PluginStateImplementation for GainPluginMainThread {
-    fn load(&mut self, input: &mut InputStream) -> std::result::Result<(), PluginError> {
-        let mut buf = Vec::new();
-        input.read_to_end(&mut buf)?;
-        let msg = String::from_utf8_lossy(&buf);
-        println!("Loaded: {}", msg);
+  impl PluginStateImplementation for GainPluginMainThread {
+      fn load(&mut self, input: &mut InputStream) -> std::result::Result<(), PluginError> {
+          let mut buf = Vec::new();
+          input.read_to_end(&mut buf)?;
+          let msg = String::from_utf8_lossy(&buf);
+          println!("Loaded: {}", msg);
 
-        Ok(())
-    }
+          Ok(())
+      }
 
-    fn save(&mut self, input: &mut OutputStream) -> std::result::Result<(), PluginError> {
-        use std::io::Write;
+      fn save(&mut self, input: &mut OutputStream) -> std::result::Result<(), PluginError> {
+          use std::io::Write;
 
-        write!(
-            input,
-            "Hello! We are rusting with {} crabz today",
-            self.rusting
-        )?;
-        Ok(())
-    }
-}
+          write!(
+              input,
+              "Hello! We are rusting with {} crabz today",
+              self.rusting
+          )?;
+          Ok(())
+      }
+  }
 
-impl PluginAudioPortsImplementation for GainPluginMainThread {
-    #[inline]
-    fn count(&self, _is_input: bool) -> usize {
-        1
-    }
+  impl PluginAudioPortsImplementation for GainPluginMainThread {
+      #[inline]
+      fn count(&self, _is_input: bool) -> usize {
+          1
+      }
 
-    #[inline]
-    fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
-        if index != 0 {
-            return;
-        }
+      #[inline]
+      fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
+          if index != 0 {
+              return;
+          }
 
-        writer.set(
-            0,
-            "main",
-            2,
-            SampleSize::F32,
-            true,
-            false,
-            true,
-        );
-    }
-}*/
+          writer.set(
+              0,
+              "main",
+              2,
+              SampleSize::F32,
+              true,
+              false,
+              true,
+          );
+      }
+  }*/
 
 #[allow(non_upper_case_globals)]
 #[no_mangle]
-pub static clap_plugin_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;
+pub static clap_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;

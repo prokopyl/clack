@@ -22,7 +22,7 @@ impl PluginBundle {
     }
 
     pub fn get_entry(&self) -> Result<PluginEntry, Box<dyn Error>> {
-        const SYMBOL_NAME: &[u8] = b"clap_plugin_entry\0";
+        const SYMBOL_NAME: &[u8] = b"clap_entry\0";
         let symbol = unsafe { self.library.get::<*const clap_plugin_entry>(SYMBOL_NAME) }?;
         Ok(unsafe { PluginEntry::from_raw(&**symbol, self.path.to_str().unwrap())? })
         // TODO: OsStr unwrap

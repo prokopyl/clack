@@ -9,7 +9,7 @@ pub struct PluginLatency {
 }
 
 unsafe impl Extension for PluginLatency {
-    const IDENTIFIER: *const u8 = CLAP_EXT_LATENCY.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_LATENCY;
     type ExtensionType = PluginExtension;
 }
 
@@ -20,7 +20,7 @@ const _: () = {
     impl PluginLatency {
         #[inline]
         pub fn get(&self, plugin: &mut PluginMainThread) -> u32 {
-            unsafe { (self.inner.get)(plugin.as_raw()) }
+            unsafe { (self.inner.get.unwrap())(plugin.as_raw()) }
         }
     }
 };
@@ -31,7 +31,7 @@ pub struct HostLatency {
 }
 
 unsafe impl Extension for HostLatency {
-    const IDENTIFIER: *const u8 = CLAP_EXT_LATENCY.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_LATENCY;
     type ExtensionType = HostExtension;
 }
 
@@ -42,7 +42,7 @@ const _: () = {
     impl HostLatency {
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
-            unsafe { (self.inner.changed)(host.shared().as_raw()) }
+            unsafe { (self.inner.changed.unwrap())(host.shared().as_raw()) }
         }
     }
 };

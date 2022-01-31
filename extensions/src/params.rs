@@ -10,7 +10,7 @@ pub mod implementation;
 pub mod info;
 
 unsafe impl Extension for PluginParams {
-    const IDENTIFIER: *const u8 = CLAP_EXT_PARAMS as *const _;
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_PARAMS;
     type ExtensionType = PluginExtension;
 }
 

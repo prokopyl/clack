@@ -46,7 +46,7 @@ pub unsafe trait Extension: Sized + 'static {
     /// The standard identifier for this extension.
     ///
     /// This MUST point to a C-style, null-terminated string.
-    const IDENTIFIER: *const u8;
+    const IDENTIFIER: &'static [u8];
     /// Whether this is a host extension or a plugin extension
     type ExtensionType: ExtensionType;
 

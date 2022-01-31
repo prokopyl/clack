@@ -21,7 +21,7 @@
 //! pub struct PluginState(clap_plugin_state);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
+//!     const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE as *const _;
 //!     type ExtensionType = PluginExtension;
 //! }
 //!
@@ -122,7 +122,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
             return self;
         }
 
-        let uri = unsafe { CStr::from_ptr(E::IDENTIFIER as *const _) };
+        let uri = CStr::from_bytes_with_nul(E::IDENTIFIER).unwrap(); // TODO
         if uri == self.requested {
             self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }

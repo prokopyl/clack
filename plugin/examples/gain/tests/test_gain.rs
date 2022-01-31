@@ -1,14 +1,13 @@
 use clack_plugin::events::event_types::{NoteEvent, NoteOnEvent};
 use clack_plugin::events::{Event, EventFlags, EventHeader};
-use clack_plugin::prelude::*;
 use clack_test_host::TestHost;
 
-use gain::clap_plugin_entry;
+use gain::clap_entry;
 
 #[test]
 pub fn it_works() {
     // Initialize host
-    let mut host = TestHost::instantiate(&clap_plugin_entry);
+    let mut host = TestHost::instantiate(&clap_entry);
     assert_eq!(host.descriptor().id().unwrap().to_bytes(), b"gain");
     host.activate();
 

@@ -34,7 +34,7 @@ bitflags! {
 }
 
 unsafe impl Extension for PluginAudioPorts {
-    const IDENTIFIER: *const u8 = CLAP_EXT_AUDIO_PORTS as *const _;
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_AUDIO_PORTS;
     type ExtensionType = PluginExtension;
 }
 

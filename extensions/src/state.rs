@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
 
 unsafe impl Extension for PluginState {
-    const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
     type ExtensionType = PluginExtension;
 }
 
@@ -17,7 +17,7 @@ unsafe impl Extension for PluginState {
 pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
 unsafe impl Extension for HostState {
-    const IDENTIFIER: *const u8 = CLAP_EXT_STATE as *const _;
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
     type ExtensionType = HostExtension;
 }
 

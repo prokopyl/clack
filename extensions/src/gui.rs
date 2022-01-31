@@ -16,7 +16,7 @@ pub struct PluginGui {
 }
 
 unsafe impl Extension for PluginGui {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI;
     type ExtensionType = PluginExtension;
 }
 
@@ -32,7 +32,8 @@ impl HostGui {
         width: u32,
         height: u32,
     ) -> Result<(), HostGuiError> {
-        let res = unsafe { (self.inner.resize)(host.shared().as_raw(), width, height) };
+        let res =
+            unsafe { (self.inner.request_resize.unwrap())(host.shared().as_raw(), width, height) };
         if res {
             Ok(())
         } else {
@@ -42,7 +43,7 @@ impl HostGui {
 }
 
 unsafe impl Extension for HostGui {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI;
     type ExtensionType = HostExtension;
 }
 

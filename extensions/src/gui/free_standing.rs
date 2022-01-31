@@ -7,14 +7,14 @@ pub struct PluginFreeStandingGui {
 }
 
 unsafe impl Extension for PluginFreeStandingGui {
-    const IDENTIFIER: *const u8 = CLAP_EXT_GUI_FREE_STANDING.cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_FREE_STANDING;
     type ExtensionType = PluginExtension;
 }
 
 impl PluginFreeStandingGui {
     #[inline]
     pub fn open(&self, plugin: &mut PluginMainThread) -> bool {
-        unsafe { (self.inner.open)(plugin.as_raw()) }
+        unsafe { (self.inner.open.unwrap())(plugin.as_raw()) }
     }
 }
 
@@ -34,7 +34,9 @@ pub mod implementation {
         P::MainThread: PluginFreeStandingGui,
     {
         const IMPLEMENTATION: &'static Self = &super::PluginFreeStandingGui {
-            inner: clap_plugin_gui_free_standing { open: open::<P> },
+            inner: clap_plugin_gui_free_standing {
+                open: Some(open::<P>),
+            },
         };
     }
 

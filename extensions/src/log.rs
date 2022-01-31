@@ -24,7 +24,7 @@ impl LogSeverity {
         use clap_sys::ext::log::*;
         use LogSeverity::*;
 
-        match raw {
+        match raw as u32 {
             CLAP_LOG_DEBUG => Some(Debug),
             CLAP_LOG_INFO => Some(Info),
             CLAP_LOG_WARNING => Some(Warning),
@@ -46,7 +46,7 @@ impl LogSeverity {
 pub struct Log(clap_host_log);
 
 unsafe impl Extension for Log {
-    const IDENTIFIER: *const u8 = CLAP_EXT_LOG as *const _;
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_LOG;
     type ExtensionType = HostExtension;
 }
 
@@ -59,7 +59,7 @@ mod plugin {
     impl Log {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
-            unsafe { (self.0.log)(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
+            unsafe { (self.0.log.unwrap())(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
         }
     }
 }

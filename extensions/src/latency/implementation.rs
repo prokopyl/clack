@@ -16,7 +16,9 @@ const _: () = {
         P::MainThread: PluginLatency,
     {
         const IMPLEMENTATION: &'static Self = &Self {
-            inner: clap_plugin_latency { get: get::<P> },
+            inner: clap_plugin_latency {
+                get: Some(get::<P>),
+            },
         };
     }
 
@@ -48,7 +50,7 @@ const _: () = {
     {
         const IMPLEMENTATION: &'static Self = &Self {
             inner: clap_host_latency {
-                changed: changed::<H>,
+                changed: Some(changed::<H>),
             },
         };
     }

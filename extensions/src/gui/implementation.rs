@@ -30,15 +30,15 @@ where
 {
     const IMPLEMENTATION: &'static Self = &super::PluginGui {
         inner: clap_plugin_gui {
-            create: create::<P>,
-            destroy: destroy::<P>,
-            set_scale: set_scale::<P>,
-            get_size: get_size::<P>,
-            can_resize: can_resize::<P>,
-            round_size: round_size::<P>,
-            set_size: set_size::<P>,
-            show: show::<P>,
-            hide: hide::<P>,
+            create: Some(create::<P>),
+            destroy: Some(destroy::<P>),
+            set_scale: Some(set_scale::<P>),
+            get_size: Some(get_size::<P>),
+            can_resize: Some(can_resize::<P>),
+            round_size: Some(round_size::<P>),
+            set_size: Some(set_size::<P>),
+            show: Some(show::<P>),
+            hide: Some(hide::<P>),
         },
     };
 }
@@ -64,14 +64,14 @@ where
     });
 }
 
-unsafe extern "C" fn set_scale<'a, P: Plugin<'a>>(plugin: *const clap_plugin, scale: f64)
+unsafe extern "C" fn set_scale<'a, P: Plugin<'a>>(plugin: *const clap_plugin, scale: f64) -> bool
 where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().set_scale(scale))
     })
-    .unwrap_or(false);
+    .unwrap_or(false)
 }
 
 unsafe extern "C" fn get_size<'a, P: Plugin<'a>>(
@@ -120,18 +120,19 @@ unsafe extern "C" fn round_size<'a, P: Plugin<'a>>(
     });
 }
 
-// FIXME: clap-sys issue: this should return bool
 unsafe extern "C" fn set_size<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
     width: u32,
     height: u32,
-) where
+) -> bool
+where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = UiSize { width, height };
         Ok(plugin.main_thread().as_mut().set_size(size))
-    });
+    })
+    .is_some()
 }
 
 unsafe extern "C" fn show<'a, P: Plugin<'a>>(plugin: *const clap_plugin)
