@@ -16,7 +16,7 @@ pub fn it_works() {
     host.inputs_mut()[1].fill(69f32);
 
     let event = NoteOnEvent(NoteEvent::new(
-        EventHeader::new(1, EventFlags::empty()),
+        EventHeader::new_with_flags(1, EventFlags::empty()),
         -1,
         -1,
         1,

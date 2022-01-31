@@ -1,6 +1,7 @@
-pub mod core;
+mod core;
 mod id;
 
+pub use self::core::*;
 pub use id::*;
 
 use crate::events::UnknownEvent;

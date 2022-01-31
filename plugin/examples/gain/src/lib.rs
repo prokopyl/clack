@@ -4,7 +4,7 @@ use clack_extensions::audio_ports::{
     AudioPortInfoWriter, PluginAudioPortsImplementation, SampleSize,
 };
 use clack_extensions::params::info::ParamInfoFlags;
-use clack_extensions::params::{implementation::*, info::ParamInfo, PluginParams};
+use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use clack_extensions::state::{PluginState, PluginStateImplementation};
 
 use clack_plugin::{

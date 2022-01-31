@@ -2,7 +2,7 @@ use crate::host::PluginHoster;
 use crate::instance::processor::audio::AudioBuffers;
 use crate::plugin::{PluginAudioProcessor, PluginShared};
 use crate::wrapper::HostWrapper;
-use clack_common::events::{InputEvents, OutputEvents};
+use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::events::{clap_event_header, clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};

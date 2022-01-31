@@ -18,7 +18,7 @@ unsafe impl Extension for PluginParams {
 mod host {
     use super::*;
     use crate::params::info::ParamInfo;
-    use clack_common::events::{InputEvents, OutputEvents};
+    use clack_common::events::io::{InputEvents, OutputEvents};
     use clack_host::host::PluginHoster;
     use clack_host::instance::processor::StoppedPluginAudioProcessor;
     use clack_host::instance::PluginInstance;

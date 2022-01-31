@@ -1,4 +1,4 @@
-use crate::events::list::implementation::{raw_output_events, OutputEventBuffer};
+use crate::events::io::implementation::{raw_output_events, OutputEventBuffer};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_output_events;
 use std::marker::PhantomData;

@@ -1,5 +1,6 @@
-use crate::events::core::CoreEventSpace;
+use crate::events::spaces::core::CoreEventSpace;
 use crate::events::EventSpace;
+use clap_sys::ext::event_registry::CLAP_CORE_EVENT_SPACE_ID;
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -37,9 +38,9 @@ impl<'a> EventSpaceId<CoreEventSpace<'a>> {
     #[inline]
     pub const fn core() -> Self {
         Self {
-            id: 0,
+            id: CLAP_CORE_EVENT_SPACE_ID,
             _space: PhantomData,
-        } // TODO: CLAP_CORE_EVENT_SPACE_ID clap_sys
+        }
     }
 }
 
@@ -54,5 +55,10 @@ impl EventSpaceId<()> {
                 _space: PhantomData,
             })
         }
+    }
+
+    #[inline]
+    pub const unsafe fn into_unchecked<S>(self) -> EventSpaceId<S> {
+        EventSpaceId::new_unchecked(self.id)
     }
 }

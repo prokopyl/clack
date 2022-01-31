@@ -9,19 +9,16 @@
 //! They are provided to the plugin's audio processor alongside the audio buffers through [`EventList`s](crate::events::EventList)
 //! (see the plugin's `process` method).
 
-use bitflags::bitflags;
+use crate::events::spaces::*;
 use clap_sys::events::clap_event_header;
-use std::cmp::Ordering;
 use std::marker::PhantomData;
 
-mod list;
-pub use list::*;
-
-mod spaces;
-
-pub use spaces::*;
-
 pub mod event_types;
+pub mod io;
+pub mod spaces;
+
+mod header;
+pub use header::*;
 
 pub unsafe trait Event<'a>: Sized + 'a {
     const TYPE_ID: u16;
@@ -44,115 +41,6 @@ pub unsafe trait Event<'a>: Sized + 'a {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Eq, Debug)]
-pub struct EventHeader<E = ()> {
-    inner: clap_event_header,
-    _event: PhantomData<E>,
-}
-
-impl<E> EventHeader<E> {
-    #[inline]
-    pub const unsafe fn from_raw(header: &clap_event_header) -> &Self {
-        // SAFETY: EventHeader is repr(C) and ABI compatible
-        &*(header as *const _ as *const _)
-    }
-
-    #[inline]
-    pub const fn into_raw(self) -> clap_event_header {
-        self.inner
-    }
-
-    #[inline]
-    pub const fn size(&self) -> u32 {
-        self.inner.size
-    }
-
-    #[inline]
-    pub const fn type_id(&self) -> u16 {
-        self.inner.type_
-    }
-
-    #[inline]
-    pub const fn time(&self) -> u32 {
-        self.inner.time
-    }
-
-    #[inline]
-    pub const fn flags(&self) -> EventFlags {
-        EventFlags::from_bits_truncate(self.inner.flags)
-    }
-}
-
-impl EventHeader<()> {
-    #[inline]
-    pub const fn space_id(&self) -> Option<EventSpaceId> {
-        EventSpaceId::new(self.inner.space_id)
-    }
-}
-
-impl<'a, E: Event<'a>> EventHeader<E> {
-    #[inline]
-    pub fn new_for_space(
-        space_id: EventSpaceId<E::EventSpace>,
-        time: u32,
-        flags: EventFlags,
-    ) -> Self {
-        Self {
-            inner: clap_event_header {
-                size: ::core::mem::size_of::<E>() as u32,
-                time,
-                space_id: space_id.id(),
-                type_: E::TYPE_ID,
-                flags: flags.bits,
-            },
-            _event: PhantomData,
-        }
-    }
-
-    #[inline]
-    pub fn space_id(&self) -> EventSpaceId<E::EventSpace> {
-        // SAFETY: the EventHeader type guarantees the space_id correctness
-        unsafe { EventSpaceId::new_unchecked(self.inner.space_id) }
-    }
-}
-
-impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
-    #[inline]
-    pub fn new(time: u32, flags: EventFlags) -> Self {
-        Self::new_for_space(EventSpaceId::core(), time, flags)
-    }
-}
-
-use crate::events::core::CoreEventSpace;
-use clap_sys::events::{
-    CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST, CLAP_EVENT_IS_LIVE, CLAP_EVENT_SHOULD_RECORD,
-};
-
-bitflags! {
-    #[repr(C)]
-    pub struct EventFlags: u32 {
-        const IS_LIVE = CLAP_EVENT_IS_LIVE;
-        const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
-        const END_ADJUST = CLAP_EVENT_END_ADJUST;
-        const SHOULD_RECORD = CLAP_EVENT_SHOULD_RECORD;
-    }
-}
-
-impl<E> PartialEq for EventHeader<E> {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.inner.time == other.inner.time
-    }
-}
-
-impl<E> PartialOrd for EventHeader<E> {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.inner.time.partial_cmp(&other.inner.time)
-    }
-}
-
-#[repr(C)]
 pub struct UnknownEvent<'a> {
     header: EventHeader,
     _sysex_lifetime: PhantomData<&'a u8>,
@@ -167,7 +55,7 @@ impl<'a> UnknownEvent<'a> {
 
     #[inline]
     pub const fn as_raw(&self) -> &clap_event_header {
-        &self.header.inner
+        self.header.as_raw()
     }
 
     #[inline]
@@ -180,7 +68,7 @@ impl<'a> UnknownEvent<'a> {
         &self,
         space_id: EventSpaceId<E::EventSpace>,
     ) -> Option<&E> {
-        let raw = &self.header.inner;
+        let raw = self.header.as_raw();
         if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
             || raw.size != ::core::mem::size_of::<E>() as u32
@@ -212,7 +100,7 @@ impl<'a> UnknownEvent<'a> {
     where
         'a: 's,
     {
-        if space_id.id() != self.header.inner.space_id {
+        if space_id.id() != self.header.space_id()?.id() {
             return None;
         }
 
@@ -224,10 +112,7 @@ impl<'a> UnknownEvent<'a> {
         // SAFETY: any data can be safely transmuted to a slice of bytes. This type also ensures
         // the size field is correct
         unsafe {
-            ::core::slice::from_raw_parts(
-                self as *const _ as *const _,
-                self.header.inner.size as usize,
-            )
+            ::core::slice::from_raw_parts(self as *const _ as *const _, self.header.size() as usize)
         }
     }
 

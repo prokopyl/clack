@@ -1,7 +1,6 @@
 use crate::host::{TestHostAudioProcessor, TestHostMainThread, TestHostShared};
 use clack_host::entry::{PluginDescriptor, PluginEntryDescriptor};
-use clack_host::events::buffer::EventBuffer;
-use clack_host::events::{InputEvents, OutputEvents};
+use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
 use clack_host::factory::PluginFactory;
 use clack_host::instance::processor::audio::{AudioBuffer, AudioPorts, ChannelBuffer};
 use clack_host::instance::processor::StoppedPluginAudioProcessor;

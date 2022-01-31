@@ -1,7 +1,6 @@
 use bitflags::bitflags;
 use clap_sys::ext::params::*;
-use clap_sys::string_sizes::{CLAP_MODULE_SIZE, CLAP_NAME_SIZE};
-use std::cmp::min;
+use std::ffi::c_void;
 
 bitflags! {
     #[repr(C)]
@@ -20,66 +19,63 @@ bitflags! {
     }
 }
 
+fn data_from_array_buf<const N: usize>(data: &[i8; N]) -> &[u8] {
+    // SAFETY: casting from i8 to u8 is safe
+    let data = unsafe { ::core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
+
+    data.iter()
+        .position(|b| *b == 0)
+        .map(|pos| &data[..pos])
+        .unwrap_or(data)
+}
+
 #[repr(C)]
 pub struct ParamInfo {
     pub(crate) inner: clap_param_info,
 }
 
-#[inline]
-fn write_to_array_buf(buf: &mut [i8], value: &str) {
-    let max_len = min(buf.len() - 1, value.len());
-    let value = &value.as_bytes()[..max_len];
-    // SAFETY: casting from i8 to u8 is safe
-    let value = unsafe { ::core::slice::from_raw_parts(value.as_ptr() as *const i8, value.len()) };
-
-    buf[..max_len].copy_from_slice(value);
-}
-
 impl ParamInfo {
     #[inline]
-    pub fn new(id: u32) -> Self {
-        Self {
-            inner: clap_param_info {
-                id,
-                flags: 0,
-                cookie: ::core::ptr::null_mut(),
-                name: [0; CLAP_NAME_SIZE as usize],
-                module: [0; CLAP_MODULE_SIZE as usize],
-                min_value: 0.0,
-                max_value: 1.0,
-                default_value: 0.0,
-            },
-        }
+    pub fn id(&self) -> u32 {
+        self.inner.id
     }
-
     #[inline]
-    pub fn with_flags(&mut self, flags: ParamInfoFlags) -> &mut Self {
-        self.inner.flags = flags.bits;
-        self
+    pub fn flags(&self) -> u32 {
+        self.inner.flags
     }
-
     #[inline]
-    pub fn with_default_value(&mut self, default_value: f64) -> &mut Self {
-        self.inner.default_value = default_value;
-        self
+    pub fn min_value(&self) -> f64 {
+        self.inner.min_value
     }
-
     #[inline]
-    pub fn with_value_bounds(&mut self, min_value: f64, max_value: f64) -> &mut Self {
-        self.inner.min_value = min_value;
-        self.inner.max_value = max_value;
-        self
+    pub fn max_value(&self) -> f64 {
+        self.inner.max_value
     }
-
     #[inline]
-    pub fn with_name(&mut self, name: &str) -> &mut Self {
-        write_to_array_buf(&mut self.inner.name, name);
-        self
+    pub fn default_value(&self) -> f64 {
+        self.inner.default_value
     }
-
     #[inline]
-    pub fn with_module(&mut self, module: &str) -> &mut Self {
-        write_to_array_buf(&mut self.inner.module, module);
-        self
+    pub fn cookie(&self) -> *mut c_void {
+        self.inner.cookie
     }
+    #[inline]
+    pub fn module(&self) -> &[u8] {
+        data_from_array_buf(&self.inner.module)
+    }
+    #[inline]
+    pub fn name(&self) -> &[u8] {
+        data_from_array_buf(&self.inner.name)
+    }
+}
+
+pub struct ParamInfoData<'a> {
+    pub id: u32,
+    pub flags: ParamInfoFlags,
+    pub cookie: *mut ::core::ffi::c_void,
+    pub name: &'a str,
+    pub module: &'a str,
+    pub min_value: f64,
+    pub max_value: f64,
+    pub default_value: f64,
 }

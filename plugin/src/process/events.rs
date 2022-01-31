@@ -1,4 +1,4 @@
-use clack_common::events::{InputEvents, OutputEvents};
+use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::process::clap_process;
 
 pub struct ProcessEvents<'a> {

@@ -1,4 +1,4 @@
-use crate::events::core::CoreEventSpace;
+use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
 use clap_sys::events::{clap_event_note, CLAP_EVENT_NOTE_ON};
 use std::fmt::{Debug, Formatter};

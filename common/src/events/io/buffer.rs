@@ -1,4 +1,4 @@
-use crate::events::list::implementation::{InputEventBuffer, OutputEventBuffer};
+use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::{Event, UnknownEvent};
 use clap_sys::events::clap_event_header;
 use core::mem::{size_of_val, MaybeUninit};
@@ -21,6 +21,15 @@ pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
 }
 
 impl EventBuffer {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            headers: Vec::new(),
+            indexes: Vec::new(),
+        }
+    }
+
+    #[inline]
     pub fn with_capacity(event_headers: usize) -> Self {
         Self {
             headers: Vec::with_capacity(event_headers),
@@ -105,6 +114,13 @@ impl OutputEventBuffer for EventBuffer {
         // PANIC: bytes is guaranteed by allocate_mut to be just the right size
         bytes.copy_from_slice(event_bytes);
         self.indexes.push(index as u32);
+    }
+}
+
+impl Default for EventBuffer {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
     }
 }
 
