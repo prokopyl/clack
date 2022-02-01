@@ -2,6 +2,8 @@
 
 #[cfg(feature = "audio-ports")]
 pub mod audio_ports;
+#[cfg(feature = "event-registry")]
+pub mod event_registry;
 #[cfg(feature = "latency")]
 pub mod latency;
 #[cfg(feature = "log")]
