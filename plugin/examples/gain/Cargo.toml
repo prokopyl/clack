@@ -8,7 +8,7 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 clack-plugin = { path = "../../../plugin" }
-clack-extensions = { path = "../../../extensions", features = ["audio-ports", "gui-attached", "params", "state", "clack-plugin"] }
+clack-extensions = { path = "../../../extensions", features = ["audio-ports", "gui-attached", "params", "state", "clack-plugin", "gui-free-standing"] }
 baseview = { git = "https://github.com/RustAudio/baseview", rev = "f6e99e9aa6f5aeb6b721cb05e4d882a51d995909" }
 vizia = { git = "https://github.com/geom3trik/VIZIA", default-features = false, features = ["baseview"] }
 

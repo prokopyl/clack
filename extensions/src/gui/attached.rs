@@ -2,7 +2,6 @@ use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::gui_cocoa::{clap_plugin_gui_cocoa, CLAP_EXT_GUI_COCOA};
 use clap_sys::ext::gui_win32::{clap_plugin_gui_win32, CLAP_EXT_GUI_WIN32};
 use clap_sys::ext::gui_x11::{clap_plugin_gui_x11, CLAP_EXT_GUI_X11};
-use std::ffi::{c_void, CStr};
 
 pub mod window;
 
@@ -22,7 +21,7 @@ impl PluginGuiWin32 {
     pub unsafe fn attach(
         &self,
         plugin: &mut clack_host::plugin::PluginMainThread,
-        window_hwnd: *mut c_void,
+        window_hwnd: *mut std::ffi::c_void,
     ) -> bool {
         (self.inner.attach.unwrap())(plugin.as_raw(), window_hwnd)
     }
@@ -44,7 +43,7 @@ impl PluginGuiCocoa {
     pub unsafe fn attach(
         &self,
         plugin: &mut clack_host::plugin::PluginMainThread,
-        ns_view: *mut c_void,
+        ns_view: *mut std::ffi::c_void,
     ) -> bool {
         (self.inner.attach.unwrap())(plugin.as_raw(), ns_view)
     }
@@ -66,7 +65,7 @@ impl PluginGuiX11 {
     pub unsafe fn attach(
         &self,
         plugin: &mut clack_host::plugin::PluginMainThread,
-        display_name: Option<&CStr>,
+        display_name: Option<&std::ffi::CStr>,
         window_id: u64,
     ) -> bool {
         (self.inner.attach.unwrap())(

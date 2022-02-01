@@ -1,4 +1,5 @@
 use crate::GainPluginMainThread;
+use clack_extensions::gui::free_standing::implementation::PluginFreeStandingGui;
 use clack_extensions::{
     gui::attached::implementation::PluginAttachedGui, gui::attached::window::AttachableWindow,
     gui::UiSize,
@@ -25,6 +26,25 @@ impl PluginAttachedGui for GainPluginMainThread {
             .font("material");
         })
         .open_parented(&window);
+
+        self.open_window = Some(window);
+
+        Ok(())
+    }
+}
+
+impl PluginFreeStandingGui for GainPluginMainThread {
+    fn open(&mut self) -> Result<(), PluginError> {
+        let title = "Some default title I dunno";
+
+        let window = Application::new(WindowDescription::new().with_title(&title), |cx| {
+            HStack::new(cx, |cx| {
+                Label::new(cx, "\u{e88a}");
+            })
+            .font_size(50.0)
+            .font("material");
+        })
+        .open_as_if_parented();
 
         self.open_window = Some(window);
 

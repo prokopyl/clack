@@ -1,5 +1,4 @@
 use clack_common::extensions::{Extension, PluginExtension};
-use clack_host::plugin::PluginMainThread;
 use clap_sys::ext::gui_free_standing::{clap_plugin_gui_free_standing, CLAP_EXT_GUI_FREE_STANDING};
 
 pub struct PluginFreeStandingGui {
@@ -11,9 +10,10 @@ unsafe impl Extension for PluginFreeStandingGui {
     type ExtensionType = PluginExtension;
 }
 
+#[cfg(feature = "clack-host")]
 impl PluginFreeStandingGui {
     #[inline]
-    pub fn open(&self, plugin: &mut PluginMainThread) -> bool {
+    pub fn open(&self, plugin: &mut clack_host::plugin::PluginMainThread) -> bool {
         unsafe { (self.inner.open.unwrap())(plugin.as_raw()) }
     }
 }

@@ -21,6 +21,7 @@ use baseview::WindowHandle;
 use clack_extensions::gui::attached::PluginGuiX11;
 use clack_extensions::gui::PluginGui;
 
+use clack_extensions::gui::free_standing::PluginFreeStandingGui;
 use std::io::Read;
 
 mod gui;
@@ -82,7 +83,7 @@ impl<'a> Plugin<'a> for GainPlugin {
         builder
             .register::<PluginParams>()
             .register::<PluginGui>()
-            .register::<PluginGuiX11>();
+            .register::<PluginFreeStandingGui>();
     }
 }
 
