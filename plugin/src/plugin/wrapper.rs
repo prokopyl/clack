@@ -42,15 +42,17 @@ pub(crate) mod panic {
 /// [`handle`](crate::plugin::wrapper::PluginWrapper::handle) function.
 pub struct PluginWrapper<'a, P: Plugin<'a>> {
     host: HostHandle<'a>,
-    shared: P::Shared,
+    shared: Pin<Box<P::Shared>>,
     main_thread: UnsafeCell<P::MainThread>,
     audio_processor: Option<UnsafeCell<P>>,
 }
 
 impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     pub(crate) fn new(host: HostMainThreadHandle<'a>) -> Result<Self, PluginError> {
-        let shared = P::Shared::new(host.shared())?;
-        let main_thread = UnsafeCell::new(P::MainThread::new(host, &shared)?);
+        let shared = Box::pin(P::Shared::new(host.shared())?);
+        // SAFETY: this lives long enough
+        let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
+        let main_thread = UnsafeCell::new(P::MainThread::new(host, shared_ref)?);
 
         Ok(Self {
             host: host.shared(),
@@ -70,8 +72,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
             return Err(PluginWrapperError::ActivatedPlugin);
         }
 
-        // SAFETY: self cannot move, and pointer is valid for the lifetime of P
-        let shared = &*(&self.shared as *const _);
+        let shared = &*(self.shared() as *const _);
         let host = self.host;
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = Pin::get_unchecked_mut(self);

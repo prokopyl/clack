@@ -107,7 +107,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
     /// # Errors
     /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
     /// not instantiated.
-    fn new(host: HostMainThreadHandle<'a>, shared: &S) -> Result<Self, PluginError>; // FIXME: shared should be &'a
+    fn new(host: HostMainThreadHandle<'a>, shared: &'a S) -> Result<Self, PluginError>;
 
     /// This is called by the host on the main thread, in response to a previous call to
     /// [`HostHandle::request_callback`](crate::host::HostHandle::request_callback).
@@ -119,7 +119,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
 
 impl<'a, S> PluginMainThread<'a, S> for () {
     #[inline]
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &S) -> Result<Self, PluginError> {
+    fn new(_host: HostMainThreadHandle<'a>, _shared: &'a S) -> Result<Self, PluginError> {
         Ok(())
     }
 }

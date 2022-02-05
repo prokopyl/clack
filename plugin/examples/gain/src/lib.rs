@@ -1,53 +1,47 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 
-use clack_extensions::audio_ports::{
-    AudioPortInfoWriter, PluginAudioPortsImplementation, SampleSize,
-};
-use clack_extensions::params::info::{ParamInfo, ParamInfoFlags};
+use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
-use clack_extensions::state::{PluginState, PluginStateImplementation};
+use std::sync::Arc;
 
-use clack_plugin::{
-    events::event_types::NoteEvent,
-    plugin::PluginDescriptor,
-    prelude::*,
-    stream::{InputStream, OutputStream},
-};
-
-use clack_plugin::events::event_types::NoteOnEvent;
-use clack_plugin::events::Event;
+use clack_plugin::{plugin::PluginDescriptor, prelude::*};
 
 use baseview::WindowHandle;
 use clack_extensions::gui::attached::PluginGuiX11;
 use clack_extensions::gui::PluginGui;
 
-use clack_extensions::gui::free_standing::PluginFreeStandingGui;
-use std::io::Read;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 mod gui;
 
-pub struct GainPlugin;
+pub struct GainPlugin<'a> {
+    shared: &'a GainPluginShared,
+    latest_gain_value: i32,
+}
 
-impl<'a> Plugin<'a> for GainPlugin {
-    type Shared = ();
-    type MainThread = GainPluginMainThread;
+impl<'a> Plugin<'a> for GainPlugin<'a> {
+    type Shared = GainPluginShared;
+    type MainThread = GainPluginMainThread<'a>;
 
     const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor::new(b"gain\0");
 
     fn activate(
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
-        _shared: &(),
+        shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
-        Ok(Self)
+        Ok(Self {
+            shared,
+            latest_gain_value: 0,
+        })
     }
 
     fn process(
         &mut self,
         _process: &Process,
         mut audio: Audio,
-        events: ProcessEvents,
+        _events: ProcessEvents,
     ) -> Result<ProcessStatus, PluginError> {
         // Only handle f32 samples for simplicity
         let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
@@ -57,37 +51,24 @@ impl<'a> Plugin<'a> for GainPlugin {
             output.set(input.get() * 2.0)
         }
 
-        for e in events.input {
-            if let Some(NoteOnEvent(ne)) = e.as_event() {
-                events.output.push_back(
-                    NoteOnEvent(NoteEvent::new(
-                        *ne.header(),
-                        ne.port_index(),
-                        ne.key(),
-                        ne.channel(),
-                        ne.velocity() * 2.0,
-                    ))
-                    .as_unknown(),
-                );
-            } else {
-                events.output.push_back(e)
-            }
+        let new_gain = self.shared.from_ui.gain.load(Ordering::Relaxed);
+        if new_gain != self.latest_gain_value {
+            println!("New gain value: {}", new_gain);
+            self.latest_gain_value = new_gain;
         }
-
-        //self.flush(events.input, events.output);
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }
 
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &()) {
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
         builder
             .register::<PluginParams>()
             .register::<PluginGui>()
-            .register::<PluginFreeStandingGui>();
+            .register::<PluginGuiX11>();
     }
 }
 
-impl<'a> PluginParamsImpl<'a> for GainPlugin {
+impl<'a> PluginParamsImpl<'a> for GainPlugin<'a> {
     fn flush(
         &mut self,
         _input_parameter_changes: &InputEvents,
@@ -96,22 +77,44 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin {
     }
 }
 
-pub struct GainPluginMainThread {
+#[derive(Default)]
+pub struct UiAtomics {
+    gain: AtomicI32, // in dB TODO
+}
+
+pub struct GainPluginShared {
+    from_ui: Arc<UiAtomics>,
+}
+
+impl<'a> PluginShared<'a> for GainPluginShared {
+    fn new(_host: HostHandle<'a>) -> Result<Self, PluginError> {
+        Ok(Self {
+            from_ui: Arc::new(UiAtomics::default()),
+        })
+    }
+}
+
+pub struct GainPluginMainThread<'a> {
     rusting: u32,
+    shared: &'a GainPluginShared,
 
     open_window: Option<WindowHandle>,
 }
 
-impl<'a> PluginMainThread<'a, ()> for GainPluginMainThread {
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &()) -> Result<Self, PluginError> {
+impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
+    fn new(
+        _host: HostMainThreadHandle<'a>,
+        shared: &'a GainPluginShared,
+    ) -> Result<Self, PluginError> {
         Ok(Self {
             rusting: 0,
+            shared,
             open_window: None,
         })
     }
 }
 
-impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
+impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
     fn count(&self) -> u32 {
         1
     }
@@ -120,17 +123,6 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
         if param_index > 0 {
             return;
         }
-
-        /*
-
-
-           ParamInfo::new(0)
-               .with_name("Rusting")
-               .with_module("gain/rusting")
-               .with_default_value(0.0)
-               .with_value_bounds(0.0, 1000.0)
-               .with_flags(ParamInfoFlags::IS_STEPPED),
-        */
 
         info.set(&ParamInfoData {
             id: 0,
@@ -185,53 +177,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread {
             }
         }*/
     }
-} /*
-
-  impl PluginStateImplementation for GainPluginMainThread {
-      fn load(&mut self, input: &mut InputStream) -> std::result::Result<(), PluginError> {
-          let mut buf = Vec::new();
-          input.read_to_end(&mut buf)?;
-          let msg = String::from_utf8_lossy(&buf);
-          println!("Loaded: {}", msg);
-
-          Ok(())
-      }
-
-      fn save(&mut self, input: &mut OutputStream) -> std::result::Result<(), PluginError> {
-          use std::io::Write;
-
-          write!(
-              input,
-              "Hello! We are rusting with {} crabz today",
-              self.rusting
-          )?;
-          Ok(())
-      }
-  }
-
-  impl PluginAudioPortsImplementation for GainPluginMainThread {
-      #[inline]
-      fn count(&self, _is_input: bool) -> usize {
-          1
-      }
-
-      #[inline]
-      fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
-          if index != 0 {
-              return;
-          }
-
-          writer.set(
-              0,
-              "main",
-              2,
-              SampleSize::F32,
-              true,
-              false,
-              true,
-          );
-      }
-  }*/
+}
 
 #[allow(non_upper_case_globals)]
 #[no_mangle]

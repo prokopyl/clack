@@ -7,16 +7,13 @@ pub mod implementation {
     use clap_sys::plugin_factory::clap_plugin_factory;
     use std::ffi::CStr;
 
-    pub trait PluginFactory {
+    pub trait PluginFactory<'a> {
         fn plugin_count() -> u32;
         fn plugin_descriptor(index: u32) -> Option<&'static PluginDescriptor>;
-        fn create_plugin<'a>(
-            host_info: HostInfo<'a>,
-            plugin_id: &[u8],
-        ) -> Option<PluginInstance<'a>>;
+        fn create_plugin(host_info: HostInfo<'a>, plugin_id: &[u8]) -> Option<PluginInstance<'a>>;
     }
 
-    impl<'a, F: PluginFactory> FactoryImplementation<'a, F>
+    impl<'a, F: PluginFactory<'a>> FactoryImplementation<'a, F>
         for clack_common::factory::plugin::PluginFactory
     {
         const IMPLEMENTATION: &'static Self = &clack_common::factory::plugin::PluginFactory {
@@ -28,11 +25,13 @@ pub mod implementation {
         };
     }
 
-    unsafe extern "C" fn get_plugin_count<E: PluginFactory>(_f: *const clap_plugin_factory) -> u32 {
+    unsafe extern "C" fn get_plugin_count<'a, E: PluginFactory<'a>>(
+        _f: *const clap_plugin_factory,
+    ) -> u32 {
         E::plugin_count()
     }
 
-    unsafe extern "C" fn get_plugin_descriptor<E: PluginFactory>(
+    unsafe extern "C" fn get_plugin_descriptor<'a, E: PluginFactory<'a>>(
         _f: *const clap_plugin_factory,
         index: u32,
     ) -> *const clap_plugin_descriptor {
@@ -42,7 +41,7 @@ pub mod implementation {
         }
     }
 
-    unsafe extern "C" fn create_plugin<E: PluginFactory>(
+    unsafe extern "C" fn create_plugin<'a, E: PluginFactory<'a>>(
         _f: *const clap_plugin_factory,
         clap_host: *const clap_host,
         plugin_id: *const std::os::raw::c_char,

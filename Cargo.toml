@@ -7,3 +7,12 @@ members = [
     "extensions",
     "test-host"
 ]
+
+[patch."https://github.com/glowcoil/raw-gl-context"]
+raw-gl-context = { path = "/home/adrien/Projects/RustAudio/temp/raw-gl-context" }
+
+[patch."https://github.com/geom3trik/VIZIA"]
+vizia = { path = "/home/adrien/Projects/RustAudio/temp/VIZIA" }
+
+[patch."https://github.com/RustAudio/baseview"]
+baseview = { path = "/home/adrien/Projects/RustAudio/temp/baseview" }

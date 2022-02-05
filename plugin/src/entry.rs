@@ -48,16 +48,16 @@ unsafe extern "C" fn get_factory<E: PluginEntry>(
     .unwrap_or_else(|_| ::core::ptr::null())
 }
 
-pub struct SinglePluginEntry<P: for<'a> Plugin<'a>>(PhantomData<P>);
+pub struct SinglePluginEntry<'a, P: Plugin<'a>>(PhantomData<&'a P>);
 
-impl<P: for<'a> Plugin<'a>> PluginEntry for SinglePluginEntry<P> {
+impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
     #[inline]
     fn declare_factories(builder: &mut PluginFactories) {
         builder.register::<PluginFactory, Self>();
     }
 }
 
-impl<P: for<'a> Plugin<'a>> implementation::PluginFactory for SinglePluginEntry<P> {
+impl<'a, P: Plugin<'a>> implementation::PluginFactory<'a> for SinglePluginEntry<'a, P> {
     #[inline]
     fn plugin_count() -> u32 {
         1
@@ -72,9 +72,9 @@ impl<P: for<'a> Plugin<'a>> implementation::PluginFactory for SinglePluginEntry<
     }
 
     #[inline]
-    fn create_plugin<'p>(host_info: HostInfo<'p>, plugin_id: &[u8]) -> Option<PluginInstance<'p>> {
+    fn create_plugin(host_info: HostInfo<'a>, plugin_id: &[u8]) -> Option<PluginInstance<'a>> {
         if plugin_id == P::DESCRIPTOR.id().to_bytes_with_nul() {
-            Some(PluginInstance::<'p>::new::<P>(host_info))
+            Some(PluginInstance::<'a>::new::<P>(host_info))
         } else {
             None
         }
