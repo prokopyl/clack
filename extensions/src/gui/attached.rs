@@ -77,7 +77,7 @@ impl PluginGuiX11 {
         &self,
         plugin: &mut clack_host::plugin::PluginMainThread,
         display_name: Option<&std::ffi::CStr>,
-        window_id: u64,
+        window_id: ::std::os::raw::c_ulong,
     ) -> bool {
         if let Some(attach) = self.inner.attach {
             attach(
@@ -184,7 +184,7 @@ pub mod implementation {
     unsafe extern "C" fn attach_x11<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         display_name: *const std::os::raw::c_char,
-        window: u64,
+        window: ::std::os::raw::c_ulong,
     ) -> bool
     where
         P::MainThread: PluginAttachedGui,

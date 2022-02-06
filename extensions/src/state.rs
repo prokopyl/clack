@@ -78,7 +78,7 @@ mod host {
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
 
-            if let Some(save) = self.0.save {
+            let result = if let Some(save) = self.0.save {
                 unsafe { save(plugin.as_raw(), stream.as_raw_mut()) }
             } else {
                 false

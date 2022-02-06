@@ -1,4 +1,3 @@
-use clack_common::events::spaces::{EventSpace, EventSpaceId};
 use clack_common::extensions::{Extension, HostExtension};
 use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
@@ -38,29 +37,38 @@ const _: () = {
 
 #[cfg(feature = "clack-host")]
 const _: () = {
+    use clack_common::events::spaces::{EventSpace, EventSpaceId};
     use clack_common::extensions::ExtensionImplementation;
     use clack_host::host::PluginHoster;
     use clap_sys::host::clap_host;
-    use std::ffi::c_void;
     use std::ffi::CStr;
-    use std::ptr::NonNull;
 
+    /// Host implementation of an event registry
+    ///
+    /// # Safety
+    ///
+    /// The implementation of the [`query`](HostEventRegistryImpl) method must return stable, unique
+    /// event space ids.
     pub unsafe trait HostEventRegistryImpl {
         fn query(&self, space_name: &CStr) -> Option<EventSpaceId>;
 
         #[inline]
-        fn query_type<S: EventSpace>(&self) -> Option<EventSpaceId<S>> {
+        fn query_type<'a, S: EventSpace<'a>>(&self) -> Option<EventSpaceId<S>> {
             unsafe { self.query(S::NAME).map(|i| i.into_unchecked()) }
         }
     }
 
-    impl<H: PluginHoster + HostEventRegistryImpl> ExtensionImplementation<H> for HostEventRegistry {
-        const IMPLEMENTATION: &'static Self = &HostEventRegistry(clap_host_event_registry {
-            query: Some(query::<H>),
-        });
+    impl<'a, H: PluginHoster<'a> + HostEventRegistryImpl> ExtensionImplementation<H>
+        for HostEventRegistry
+    {
+        const IMPLEMENTATION: &'static Self = &HostEventRegistry {
+            inner: clap_host_event_registry {
+                query: Some(query::<H>),
+            },
+        };
     }
 
-    unsafe extern "C" fn query<H: PluginHoster + HostEventRegistryImpl>(
+    unsafe extern "C" fn query<'a, H: PluginHoster<'a> + HostEventRegistryImpl>(
         host: *const clap_host,
         space_name: *const ::std::os::raw::c_char,
         space_id: *mut u16,

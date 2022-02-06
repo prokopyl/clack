@@ -14,7 +14,7 @@ unsafe impl HasRawWindowHandle for Win32Window {
     }
 }
 
-pub struct X11Window(pub(crate) u64);
+pub struct X11Window(pub(crate) ::std::os::raw::c_ulong);
 
 unsafe impl HasRawWindowHandle for X11Window {
     fn raw_window_handle(&self) -> RawWindowHandle {

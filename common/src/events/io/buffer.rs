@@ -5,8 +5,12 @@ use core::mem::{size_of_val, MaybeUninit};
 use core::slice::from_raw_parts_mut;
 use std::ops::Range;
 
+#[repr(C, align(8))]
+#[derive(Copy, Clone)]
+struct AlignedEventHeader(clap_event_header);
+
 pub struct EventBuffer {
-    headers: Vec<MaybeUninit<clap_event_header>>,
+    headers: Vec<MaybeUninit<AlignedEventHeader>>, // force 64-bit alignment
     indexes: Vec<u32>,
 }
 
@@ -68,7 +72,7 @@ impl EventBuffer {
 
     fn allocate_mut(&mut self, byte_size: usize) -> &mut [u8] {
         let previous_len = self.headers.len();
-        let headers_size = byte_index_to_value_index::<clap_event_header>(byte_size);
+        let headers_size = byte_index_to_value_index::<AlignedEventHeader>(byte_size);
         self.headers
             .resize(previous_len + headers_size, MaybeUninit::zeroed());
 
@@ -101,7 +105,7 @@ impl InputEventBuffer for EventBuffer {
         let event = unsafe { self.headers[header_index].assume_init_ref() };
 
         // SAFETY: the event header was written from a valid UnknownEvent in push_back
-        Some(unsafe { UnknownEvent::from_raw(event) })
+        Some(unsafe { UnknownEvent::from_raw(&event.0) })
     }
 }
 
