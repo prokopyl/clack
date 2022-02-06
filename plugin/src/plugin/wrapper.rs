@@ -338,7 +338,7 @@ impl PluginWrapperError {
     /// use clack_plugin::plugin::wrapper::PluginWrapperError;
     /// let error = PluginWrapperError::Panic;
     ///
-    /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
+    /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING as i32);
     /// ```
     pub fn severity(&self) -> clap_log_severity {
         (match self {
@@ -360,9 +360,9 @@ impl PluginWrapperError {
     /// # use clack_plugin::plugin::wrapper::PluginWrapperError;
     ///
     /// let x: Result<(), _> = Err(std::env::VarError::NotPresent); // Some random error type
-    /// let clap_error = x.map_err(PluginWrapperError::with_severity(CLAP_LOG_PLUGIN_MISBEHAVING));
+    /// let clap_error = x.map_err(PluginWrapperError::with_severity(CLAP_LOG_PLUGIN_MISBEHAVING as i32));
     ///
-    /// assert_eq!(clap_error.unwrap_err().severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
+    /// assert_eq!(clap_error.unwrap_err().severity(), CLAP_LOG_PLUGIN_MISBEHAVING as i32);
     /// ```
     #[inline]
     pub fn with_severity<E: 'static + Error>(

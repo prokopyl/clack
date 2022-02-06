@@ -19,20 +19,19 @@ use std::ops::{Index, Range};
 ///
 /// # Example
 ///```
-/// use clack_common::events::{InputEvents, Event, EventHeader, buffer::EventBuffer};
+/// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
+/// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
+///
 /// let mut buf = EventBuffer::new();
 /// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 0, 12, 0, 4.2));
 /// buf.push_back(event.as_unknown());
-///
-/// let mut event_list = InputEvents::from_buffer(&mut buf);
-///
-///
-/// assert_eq!(1, event_list.len());
-/// assert_eq!(event, event_list[0]);
-///
 /// assert_eq!(1, buf.len());
-/// assert_eq!(event, buf[0]);
+///
+/// let mut input_events = InputEvents::from_buffer(&mut buf);
+///
+/// assert_eq!(1, input_events.len());
+/// assert_eq!(&event, input_events[0].as_event().unwrap());
 /// ```
 #[repr(C)]
 pub struct InputEvents<'a> {

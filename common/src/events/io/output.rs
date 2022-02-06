@@ -20,21 +20,17 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///```
-/// use clack_common::events::{EventList, Event, TimestampedEvent};
-/// use clack_common::events::event_types::NoteEvent;
-/// let mut buf = vec![];
-/// let mut event_list = EventList::from_buffer(&mut buf);
+/// use clack_common::events::{Event, EventHeader};
+/// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
+/// use clack_common::events::io::{EventBuffer, OutputEvents};
 ///
-/// assert!(event_list.is_empty());
+/// let mut buf = EventBuffer::new();
+/// let mut output_events = OutputEvents::from_buffer(&mut buf);
 ///
-/// let event = TimestampedEvent::new(0, Event::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
-/// event_list.append(&event);
-///
-/// assert_eq!(1, event_list.len());
-/// assert_eq!(event, event_list[0]);
+/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 0, 12, 0, 4.2));
+/// output_events.push_back(event.as_unknown());
 ///
 /// assert_eq!(1, buf.len());
-/// assert_eq!(event, buf[0]);
 /// ```
 #[repr(C)]
 pub struct OutputEvents<'a> {
@@ -76,15 +72,13 @@ impl<'a> OutputEvents<'a> {
     ///
     /// # Example
     /// ```
-    /// use clack_common::events::{EventList, Event, TimestampedEvent};
-    /// use clack_common::events::event_types::NoteEvent;
+    /// use clack_common::events::io::{EventBuffer, OutputEvents};
     ///
-    /// let event = TimestampedEvent::new(0, Event::NoteOn(NoteEvent::new(0, 12, 0, 4.2)));
-    /// let mut buf = vec![event];
+    /// // Allocate the buffer on the main thread
+    /// let mut buf = EventBuffer::new();
     ///
-    /// let event_list = EventList::from_buffer(&mut buf);
-    /// assert_eq!(1, event_list.len());
-    /// assert_eq!(event, event_list[0]);
+    /// // Later, on the DSP thread
+    /// let output_events = OutputEvents::from_buffer(&mut buf);
     /// ```
     #[inline]
     pub fn from_buffer<I: OutputEventBuffer>(buffer: &'a mut I) -> Self {

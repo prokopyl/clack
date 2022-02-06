@@ -21,7 +21,7 @@
 //! pub struct PluginState(clap_plugin_state);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE as *const _;
+//!     const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
 //!     type ExtensionType = PluginExtension;
 //! }
 //!
@@ -45,9 +45,9 @@
 //!     P::MainThread: PluginStateImplementation,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
-//!         # save,
+//!         # save: Some(save),
 //!         // For the sake of this example, we are only implementing the load() method.
-//!         load: load::<P>,
+//!         load: Some(load::<P>),
 //!     });
 //! }
 //! # unsafe extern "C" fn save(_: *const clap_plugin, _: *mut clap_sys::stream::clap_ostream) -> bool {
