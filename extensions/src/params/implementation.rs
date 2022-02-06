@@ -38,8 +38,8 @@ impl<'a> ParamInfoWriter<'a> {
             (core::ptr::addr_of_mut!((*buf).default_value) as *mut f64).write(param.default_value);
             (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void).write(param.cookie);
 
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), &param.name);
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), &param.module);
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name);
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), param.module);
         }
         self.initialized = true;
     }

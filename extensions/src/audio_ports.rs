@@ -75,7 +75,7 @@ mod plugin {
 
             unsafe {
                 write(addr_of_mut!((*buf).id), data.id);
-                write_to_array_buf(addr_of_mut!((*buf).name), &data.name);
+                write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
                 write(addr_of_mut!((*buf).flags), data.flags.bits);
                 write(addr_of_mut!((*buf).channel_count), data.channel_count);

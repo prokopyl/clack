@@ -1,4 +1,6 @@
+use clack_common::events::spaces::{EventSpace, EventSpaceId};
 use clack_common::extensions::{Extension, HostExtension};
+use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
 
 #[repr(C)]
@@ -31,5 +33,46 @@ const _: () = {
 
             unsafe { Some(EventSpaceId::new(out)?.into_unchecked()) }
         }
+    }
+};
+
+#[cfg(feature = "clack-host")]
+const _: () = {
+    use clack_common::extensions::ExtensionImplementation;
+    use clack_host::host::PluginHoster;
+    use clap_sys::host::clap_host;
+    use std::ffi::c_void;
+    use std::ffi::CStr;
+    use std::ptr::NonNull;
+
+    pub unsafe trait HostEventRegistryImpl {
+        fn query(&self, space_name: &CStr) -> Option<EventSpaceId>;
+
+        #[inline]
+        fn query_type<S: EventSpace>(&self) -> Option<EventSpaceId<S>> {
+            unsafe { self.query(S::NAME).map(|i| i.into_unchecked()) }
+        }
+    }
+
+    impl<H: PluginHoster + HostEventRegistryImpl> ExtensionImplementation<H> for HostEventRegistry {
+        const IMPLEMENTATION: &'static Self = &HostEventRegistry(clap_host_event_registry {
+            query: Some(query::<H>),
+        });
+    }
+
+    unsafe extern "C" fn query<H: PluginHoster + HostEventRegistryImpl>(
+        host: *const clap_host,
+        space_name: *const ::std::os::raw::c_char,
+        space_id: *mut u16,
+    ) -> bool {
+        HostWrapper::<H>::handle(host, |host| {
+            let space_name = CStr::from_ptr(space_name);
+
+            let result = host.main_thread().as_ref().query(space_name);
+            *space_id = EventSpaceId::optional_id(&result);
+
+            Ok(result.is_some())
+        })
+        .unwrap_or(false)
     }
 };

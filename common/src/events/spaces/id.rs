@@ -10,11 +10,27 @@ pub struct EventSpaceId<S = ()> {
 }
 
 impl<S> EventSpaceId<S> {
+    pub const INVALID_ID: u16 = u16::MAX;
+
     #[inline]
     pub const fn id(&self) -> u16 {
         self.id
     }
 
+    #[inline]
+    pub const fn optional_id(this: &Option<Self>) -> u16 {
+        match this {
+            Some(i) => i.id,
+            None => u16::MAX,
+        }
+    }
+
+    /// Gets an event space ID from a numerical value, without performing any checks.
+    ///
+    /// # Safety
+    ///
+    /// The caller *must* ensure the event type is properly associated to the event space `S`.
+    /// The caller must also ensure the ID is not equal to [`INVALID_ID`].
     #[inline]
     pub const unsafe fn new_unchecked(id: u16) -> Self {
         Self {
@@ -57,6 +73,11 @@ impl EventSpaceId<()> {
         }
     }
 
+    /// Turns this unassociated event space ID into one associated with the given event space.
+    ///
+    /// # Safety
+    ///
+    /// The caller *must* ensure the event type is properly associated to the event space `S`.
     #[inline]
     pub const unsafe fn into_unchecked<S>(self) -> EventSpaceId<S> {
         EventSpaceId::new_unchecked(self.id)

@@ -2,6 +2,7 @@ use crate::events::UnknownEvent;
 use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
 
+#[allow(clippy::len_without_is_empty)] // This is not necessary, the trait is intended for FFI
 pub trait InputEventBuffer: Sized {
     fn len(&self) -> u32;
     fn get(&self, index: u32) -> Option<&UnknownEvent>;
@@ -30,7 +31,7 @@ unsafe extern "C" fn size<I: InputEventBuffer>(list: *const clap_input_events) -
     handle_panic(|| I::len(&*((*list).ctx as *const _))).unwrap_or(0)
 }
 
-unsafe extern "C" fn get<'a, I: InputEventBuffer>(
+unsafe extern "C" fn get<I: InputEventBuffer>(
     list: *const clap_input_events,
     index: u32,
 ) -> *const clap_event_header {
@@ -42,7 +43,7 @@ unsafe extern "C" fn get<'a, I: InputEventBuffer>(
     .unwrap_or_else(|_| ::core::ptr::null())
 }
 
-unsafe extern "C" fn push_back<'a, O: OutputEventBuffer>(
+unsafe extern "C" fn push_back<O: OutputEventBuffer>(
     list: *const clap_output_events,
     event: *const clap_event_header,
 ) {

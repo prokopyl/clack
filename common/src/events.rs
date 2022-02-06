@@ -20,6 +20,15 @@ pub mod spaces;
 mod header;
 pub use header::*;
 
+/// A specific event type.
+///
+/// # Safety
+///
+/// This trait allows casting to and from pointers to raw event headers. This means implementers of
+/// this trait must enforce the following:
+///
+/// * The [`EventSpace`](Event::EventSpace) type *must* be the [`EventSpace`] implementation that
+/// * [`TYPE_ID`](Event::TYPE_ID) *must* match the event ID from its
 pub unsafe trait Event<'a>: Sized + 'a {
     const TYPE_ID: u16;
     type EventSpace: EventSpace<'a>;
@@ -31,7 +40,7 @@ pub unsafe trait Event<'a>: Sized + 'a {
 
     #[inline]
     fn header(&self) -> &EventHeader<Self> {
-        unsafe { EventHeader::from_raw(self.raw_header()) }
+        unsafe { EventHeader::from_raw_unchecked(self.raw_header()) }
     }
 
     #[inline]
@@ -47,6 +56,12 @@ pub struct UnknownEvent<'a> {
 }
 
 impl<'a> UnknownEvent<'a> {
+    /// Gets an unknown event from a raw event header.
+    ///
+    /// # Safety
+    /// The caller *must* ensure that not only the contents of the header are valid, but also that
+    /// they are immediately preceding the rest of the event struct matching the event and space IDs
+    /// in the header.
     #[inline]
     pub const unsafe fn from_raw(header: &clap_event_header) -> &Self {
         // SAFETY: EventHeader is repr(C) and ABI compatible
@@ -85,6 +100,11 @@ impl<'a> UnknownEvent<'a> {
         self.as_event_for_space(EventSpaceId::core())
     }
 
+    /// Casts this event as an event of a given type, without performing any checks.
+    ///
+    /// # Safety
+    /// The caller *must* ensure the event is of the given type, otherwise this will perform an
+    /// incorrect cast, leading to Undefined Behavior.
     #[inline]
     pub unsafe fn as_event_unchecked<E: Event<'a>>(&self) -> &E {
         &*(self as *const _ as *const E)
@@ -116,8 +136,14 @@ impl<'a> UnknownEvent<'a> {
         }
     }
 
+    /// Retrieves an event from a byte buffer, without performing any checks.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the byte buffer is properly aligned, and that is also contains a
+    /// valid event header as well as the remaining of the event struct.
     #[inline]
-    pub unsafe fn from_bytes(bytes: &[u8]) -> &UnknownEvent {
+    pub unsafe fn from_bytes_unchecked(bytes: &[u8]) -> &UnknownEvent {
         &*(bytes.as_ptr() as *const _)
     }
 }

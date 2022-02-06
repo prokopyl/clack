@@ -11,8 +11,13 @@ pub struct EventHeader<E = ()> {
 }
 
 impl<E> EventHeader<E> {
+    /// Gets a typed event header from a raw, untyped header, without performing any checks.
+    ///
+    /// # Safety
+    ///
+    /// The caller *must* ensure the given header matches the given event type `E`.
     #[inline]
-    pub const unsafe fn from_raw(header: &clap_event_header) -> &Self {
+    pub const unsafe fn from_raw_unchecked(header: &clap_event_header) -> &Self {
         // SAFETY: EventHeader is repr(C) and ABI compatible
         &*(header as *const _ as *const _)
     }
