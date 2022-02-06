@@ -1,3 +1,5 @@
+use crate::events::spaces::CoreEventSpace;
+use crate::events::Event;
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -41,6 +43,11 @@ impl NoteExpressionType {
 #[derive(Copy, Clone)]
 pub struct NoteExpressionEvent {
     inner: clap_event_note_expression,
+}
+
+unsafe impl<'a> Event<'a> for NoteExpressionEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_EXPRESSION as u16;
+    type EventSpace = CoreEventSpace<'a>;
 }
 
 impl NoteExpressionEvent {

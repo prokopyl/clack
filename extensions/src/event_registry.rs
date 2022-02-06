@@ -7,7 +7,7 @@ pub struct HostEventRegistry {
 }
 
 unsafe impl Extension for HostEventRegistry {
-    const IDENTIFIER: *const u8 = CLAP_EXT_EVENT_REGISTRY.as_ptr().cast();
+    const IDENTIFIER: &'static [u8] = CLAP_EXT_EVENT_REGISTRY;
     type ExtensionType = HostExtension;
 }
 

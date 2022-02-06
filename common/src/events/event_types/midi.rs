@@ -1,11 +1,20 @@
-use crate::events::EventHeader;
-use clap_sys::events::{clap_event_midi, clap_event_midi_sysex};
+use crate::events::spaces::CoreEventSpace;
+use crate::events::{Event, EventHeader};
+use clap_sys::events::{
+    clap_event_midi, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
+    CLAP_EVENT_MIDI_SYSEX,
+};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 pub struct MidiEvent {
     inner: clap_event_midi,
+}
+
+unsafe impl<'a> Event<'a> for MidiEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI as u16;
+    type EventSpace = CoreEventSpace<'a>;
 }
 
 impl MidiEvent {
@@ -41,6 +50,11 @@ impl Debug for MidiEvent {
 pub struct MidiSysexEvent<'buf> {
     inner: clap_event_midi_sysex,
     _buffer_lifetime: PhantomData<&'buf [u8]>,
+}
+
+unsafe impl<'buf> Event<'buf> for MidiSysexEvent<'buf> {
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI_SYSEX as u16;
+    type EventSpace = CoreEventSpace<'buf>;
 }
 
 impl<'buf> MidiSysexEvent<'buf> {
@@ -97,6 +111,44 @@ impl<'a> Debug for MidiSysexEvent<'a> {
         f.debug_struct("MidiSysexEvent")
             .field("port_index", &self.inner.port_index)
             .field("data", &self.data())
+            .finish()
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Midi2Event {
+    inner: clap_event_midi,
+}
+
+unsafe impl<'a> Event<'a> for Midi2Event {
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI2 as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+impl Midi2Event {
+    #[inline]
+    pub fn from_raw(raw: clap_event_midi) -> Self {
+        Self { inner: raw }
+    }
+
+    #[inline]
+    pub fn into_raw(self) -> clap_event_midi {
+        self.inner
+    }
+}
+
+impl PartialEq for Midi2Event {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.data == other.inner.data && self.inner.port_index == other.inner.port_index
+    }
+}
+
+impl Debug for Midi2Event {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Midi2Event")
+            .field("port_index", &self.inner.port_index)
+            .field("data", &self.inner.data)
             .finish()
     }
 }

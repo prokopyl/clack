@@ -1,8 +1,9 @@
-use crate::events::EventHeader;
+use crate::events::spaces::CoreEventSpace;
+use crate::events::{Event, EventHeader};
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_param_mod, clap_event_param_value, CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST,
-    CLAP_EVENT_IS_LIVE, CLAP_EVENT_SHOULD_RECORD,
+    CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_MOD, CLAP_EVENT_PARAM_VALUE, CLAP_EVENT_SHOULD_RECORD,
 };
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
@@ -19,6 +20,11 @@ bitflags! {
 
 pub struct ParamValueEvent {
     inner: clap_event_param_value,
+}
+
+unsafe impl<'a> Event<'a> for ParamValueEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_VALUE as u16;
+    type EventSpace = CoreEventSpace<'a>;
 }
 
 impl ParamValueEvent {
@@ -112,6 +118,11 @@ impl Debug for ParamValueEvent {
 
 pub struct ParamModEvent {
     inner: clap_event_param_mod,
+}
+
+unsafe impl<'a> Event<'a> for ParamModEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_MOD as u16;
+    type EventSpace = CoreEventSpace<'a>;
 }
 
 impl ParamModEvent {

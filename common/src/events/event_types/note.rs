@@ -1,6 +1,6 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
-use clap_sys::events::{clap_event_note, CLAP_EVENT_NOTE_ON};
+use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
@@ -10,6 +10,33 @@ pub struct NoteOnEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteOnEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(C)]
+pub struct NoteOffEvent(pub NoteEvent<Self>);
+
+unsafe impl<'a> Event<'a> for NoteOffEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_OFF as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(C)]
+pub struct NoteChokeEvent(pub NoteEvent<Self>);
+
+unsafe impl<'a> Event<'a> for NoteChokeEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_CHOKE as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(C)]
+pub struct NoteEndEvent(pub NoteEvent<Self>);
+
+unsafe impl<'a> Event<'a> for NoteEndEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_END as u16;
     type EventSpace = CoreEventSpace<'a>;
 }
 

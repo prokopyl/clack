@@ -1,9 +1,11 @@
-use crate::events::EventHeader;
+use crate::events::spaces::CoreEventSpace;
+use crate::events::{Event, EventHeader};
 use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_transport, CLAP_TRANSPORT_HAS_BEATS_TIMELINE, CLAP_TRANSPORT_HAS_SECONDS_TIMELINE,
-    CLAP_TRANSPORT_HAS_TEMPO, CLAP_TRANSPORT_HAS_TIME_SIGNATURE, CLAP_TRANSPORT_IS_LOOP_ACTIVE,
-    CLAP_TRANSPORT_IS_PLAYING, CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL,
+    clap_event_transport, CLAP_EVENT_TRANSPORT, CLAP_TRANSPORT_HAS_BEATS_TIMELINE,
+    CLAP_TRANSPORT_HAS_SECONDS_TIMELINE, CLAP_TRANSPORT_HAS_TEMPO,
+    CLAP_TRANSPORT_HAS_TIME_SIGNATURE, CLAP_TRANSPORT_IS_LOOP_ACTIVE, CLAP_TRANSPORT_IS_PLAYING,
+    CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL,
 };
 
 bitflags! {
@@ -36,6 +38,11 @@ pub struct TransportEvent {
     pub loop_end_seconds: i64,
     pub time_signature_numerator: i16,
     pub time_signature_denominator: i16,
+}
+
+unsafe impl<'a> Event<'a> for TransportEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT as u16;
+    type EventSpace = CoreEventSpace<'a>;
 }
 
 impl TransportEvent {
