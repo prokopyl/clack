@@ -23,7 +23,7 @@ pub fn it_works() {
     ));
     host.input_events_mut().fill_with(&vec![event; 32]);
 
-    host.process();
+    host.process().unwrap();
 
     // Check the gain was applied properly
     for channel_index in 0..1 {

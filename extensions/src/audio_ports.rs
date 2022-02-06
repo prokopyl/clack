@@ -9,27 +9,19 @@ pub struct PluginAudioPorts(
     PhantomData<*const clap_plugin_audio_ports>,
 );
 
-#[derive(Copy, Clone, Debug)]
-pub enum SampleSize {
-    F32,
-    F64,
-}
-
-impl SampleSize {
-    #[inline]
-    pub fn bit_size(self) -> u32 {
-        match self {
-            SampleSize::F32 => 32,
-            SampleSize::F64 => 64,
-        }
-    }
-}
-
 bitflags! {
     #[repr(C)]
     pub struct RescanType: u32 {
         const RESCAN_NAMES = CLAP_AUDIO_PORTS_RESCAN_NAMES;
         const RESCAN_ALL = CLAP_AUDIO_PORTS_RESCAN_ALL;
+    }
+}
+
+bitflags! {
+    #[repr(C)]
+    pub struct AudioPortFlags: u32 {
+        const CLAP_AUDIO_PORT_IS_MAIN = CLAP_AUDIO_PORT_IS_MAIN;
+        const CLAP_AUDIO_PORTS_PREFERS_64BITS = CLAP_AUDIO_PORTS_PREFERS_64BITS;
     }
 }
 
@@ -40,14 +32,26 @@ unsafe impl Extension for PluginAudioPorts {
 
 #[cfg(feature = "clack-plugin")]
 mod plugin {
-    use crate::audio_ports::{PluginAudioPorts, SampleSize};
+    use crate::audio_ports::{AudioPortFlags, PluginAudioPorts};
+    use crate::utils::write_to_array_buf;
     use clack_common::extensions::ExtensionImplementation;
     use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
     use clack_plugin::plugin::Plugin;
     use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
     use clap_sys::plugin::clap_plugin;
+    use std::ffi::CStr;
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
+    use std::ptr::addr_of_mut;
+
+    pub struct AudioPortInfoData<'a> {
+        pub id: u32, // TODO: ClapId
+        pub name: &'a str,
+        pub channel_count: u32,
+        pub flags: AudioPortFlags,
+        pub port_type: Option<&'static CStr>, // TODO: proper port types
+                                              // TODO: in_place_pair
+    }
 
     pub struct AudioPortInfoWriter<'a> {
         buf: &'a mut MaybeUninit<clap_audio_port_info>,
@@ -64,41 +68,29 @@ mod plugin {
         }
 
         #[inline]
-        #[allow(clippy::too_many_arguments)]
-        pub fn set(
-            &mut self,
-            id: u32,
-            name: &str,
-            channel_count: u32,
-            sample_size: SampleSize,
-            is_main: bool,
-            is_cv: bool,
-            in_place: bool,
-        ) {
-            /*
-            let buf = self.buf.as_mut_ptr();
-            unsafe { core::ptr::write(addr_of_mut!((*buf).id), id) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).channel_count), channel_count) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).channel_map), channel_map.to_raw()) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).sample_size), sample_size.bit_size()) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).is_main), is_main) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).is_cv), is_cv) };
-            unsafe { core::ptr::write(addr_of_mut!((*buf).in_place), in_place) };
+        pub fn set(&mut self, data: &AudioPortInfoData) {
+            use core::ptr::write;
 
-            let dst_name = unsafe {
-                &mut *(addr_of_mut!((*buf).name) as *mut _
-                    as *mut [MaybeUninit<u8>; CLAP_NAME_SIZE])
-            };
-            let src_name: &[MaybeUninit<u8>] = unsafe { core::mem::transmute(name.as_bytes()) };
-            let len = src_name.len().min(dst_name.len() - 1);
-            let dst_name = &mut dst_name[..len];
-            let src_name = &src_name[..len];
-            dst_name.copy_from_slice(src_name);
-            dst_name[len] = MaybeUninit::new(0);*/
+            let buf = self.buf.as_mut_ptr();
+
+            unsafe {
+                write(addr_of_mut!((*buf).id), data.id);
+                write_to_array_buf(addr_of_mut!((*buf).name), &data.name);
+
+                write(addr_of_mut!((*buf).flags), data.flags.bits);
+                write(addr_of_mut!((*buf).channel_count), data.channel_count);
+
+                write(
+                    addr_of_mut!((*buf).port_type),
+                    data.port_type
+                        .map(|s| s.as_ptr())
+                        .unwrap_or(::core::ptr::null()),
+                );
+
+                write(addr_of_mut!((*buf).in_place_pair), u32::MAX); // TODO
+            }
 
             self.is_set = true;
-
-            todo!()
         }
     }
 

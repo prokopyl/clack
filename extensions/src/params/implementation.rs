@@ -1,4 +1,5 @@
 use crate::params::info::ParamInfoData;
+use crate::utils::write_to_array_buf;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
@@ -7,22 +8,9 @@ use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
-use std::cmp::min;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
-
-#[inline]
-pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [i8; N], value: &str) {
-    let max_len = min(N - 1, value.len()); // Space for null byte
-    let value = &value.as_bytes()[..max_len];
-    // SAFETY: casting from i8 to u8 is safe
-    let value = ::core::slice::from_raw_parts(value.as_ptr() as *const i8, value.len());
-
-    let dst = dst.cast();
-    core::ptr::copy_nonoverlapping(value.as_ptr(), dst, max_len);
-    dst.add(max_len).write(0)
-}
 
 pub struct ParamInfoWriter<'a> {
     initialized: bool,
@@ -40,27 +28,18 @@ impl<'a> ParamInfoWriter<'a> {
 
     #[inline]
     pub fn set(&mut self, param: &ParamInfoData) {
-        unsafe {
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).id) as *mut u32).write(param.id);
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).flags) as *mut u32)
-                .write(param.flags.bits());
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).min_value) as *mut f64)
-                .write(param.min_value);
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).max_value) as *mut f64)
-                .write(param.max_value);
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).default_value) as *mut f64)
-                .write(param.default_value);
-            (core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).cookie) as *mut *mut c_void)
-                .write(param.cookie);
+        let buf = self.inner.as_mut_ptr();
 
-            write_to_array_buf(
-                core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).name),
-                &param.name,
-            );
-            write_to_array_buf(
-                core::ptr::addr_of_mut!((*self.inner.as_mut_ptr()).module),
-                &param.module,
-            );
+        unsafe {
+            (core::ptr::addr_of_mut!((*buf).id) as *mut u32).write(param.id);
+            (core::ptr::addr_of_mut!((*buf).flags) as *mut u32).write(param.flags.bits());
+            (core::ptr::addr_of_mut!((*buf).min_value) as *mut f64).write(param.min_value);
+            (core::ptr::addr_of_mut!((*buf).max_value) as *mut f64).write(param.max_value);
+            (core::ptr::addr_of_mut!((*buf).default_value) as *mut f64).write(param.default_value);
+            (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void).write(param.cookie);
+
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), &param.name);
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), &param.module);
         }
         self.initialized = true;
     }

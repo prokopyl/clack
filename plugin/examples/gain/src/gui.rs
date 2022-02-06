@@ -1,4 +1,4 @@
-use crate::{GainPluginMainThread, GainPluginShared, UiAtomics};
+use crate::{GainPluginMainThread, UiAtomics};
 use clack_extensions::gui::free_standing::implementation::PluginFreeStandingGui;
 use clack_extensions::{
     gui::attached::implementation::PluginAttachedGui, gui::attached::window::AttachableWindow,

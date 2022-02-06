@@ -2,6 +2,7 @@ use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::gui_free_standing::{clap_plugin_gui_free_standing, CLAP_EXT_GUI_FREE_STANDING};
 
 pub struct PluginFreeStandingGui {
+    #[cfg_attr(not(feature = "clack-host"), allow(unused))]
     inner: clap_plugin_gui_free_standing,
 }
 

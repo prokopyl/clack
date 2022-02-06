@@ -6,6 +6,7 @@ use clap_sys::ext::gui_x11::{clap_plugin_gui_x11, CLAP_EXT_GUI_X11};
 pub mod window;
 
 pub struct PluginGuiWin32 {
+    #[cfg_attr(not(feature = "clack-host"), allow(unused))]
     inner: clap_plugin_gui_win32,
 }
 
@@ -32,6 +33,7 @@ impl PluginGuiWin32 {
 }
 
 pub struct PluginGuiCocoa {
+    #[cfg_attr(not(feature = "clack-host"), allow(unused))]
     inner: clap_plugin_gui_cocoa,
 }
 
@@ -58,6 +60,7 @@ impl PluginGuiCocoa {
 }
 
 pub struct PluginGuiX11 {
+    #[cfg_attr(not(feature = "clack-host"), allow(unused))]
     inner: clap_plugin_gui_x11,
 }
 

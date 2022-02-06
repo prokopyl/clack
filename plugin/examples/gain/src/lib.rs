@@ -164,7 +164,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
         None
     }
 
-    fn flush(&mut self, input_events: &InputEvents, _output_events: &mut OutputEvents) {
+    fn flush(&mut self, _input_events: &InputEvents, _output_events: &mut OutputEvents) {
         // TODO
         /*let value_events = input_events.iter().filter_map(|e| match e.as_event()? {
             Event::ParamValue(v) => Some(v),

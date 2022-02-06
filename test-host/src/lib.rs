@@ -5,6 +5,8 @@ use clack_host::factory::PluginFactory;
 use clack_host::instance::processor::audio::{AudioBuffer, AudioPorts, ChannelBuffer};
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginAudioConfiguration;
+use clack_host::process::ProcessStatus;
+use clack_host::wrapper::HostError;
 use clack_host::{
     entry::PluginEntry,
     host::{HostInfo, PluginHost},
@@ -118,7 +120,7 @@ impl<'a> TestHost<'a> {
         self.processor = Some(processor)
     }
 
-    pub fn process(&mut self) {
+    pub fn process(&mut self) -> Result<ProcessStatus, HostError> {
         let mut processor = self.processor.take().unwrap().start_processing().unwrap();
 
         let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
@@ -142,7 +144,7 @@ impl<'a> TestHost<'a> {
         let mut events_in = InputEvents::from_buffer(&self.input_events);
         let mut events_out = OutputEvents::from_buffer(&mut self.output_events);
 
-        processor.process(
+        let result = processor.process(
             &input_channels,
             &mut output_channels,
             &mut events_in,
@@ -150,6 +152,8 @@ impl<'a> TestHost<'a> {
         );
 
         self.processor = Some(processor.stop_processing());
+
+        result
     }
 
     pub fn deactivate(&mut self) {

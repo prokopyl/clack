@@ -1,7 +1,6 @@
 use crate::host::PluginHoster;
 use crate::instance::processor::audio::AudioBuffers;
 use crate::plugin::{PluginAudioProcessor, PluginShared};
-use crate::wrapper::HostError::ProcessingFailed;
 use crate::wrapper::{HostError, HostWrapper};
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::process::ProcessStatus;

@@ -1,3 +1,4 @@
+use crate::utils::data_from_array_buf;
 use bitflags::bitflags;
 use clap_sys::ext::params::*;
 use std::ffi::c_void;
@@ -17,16 +18,6 @@ bitflags! {
         const IS_MODULATABLE = CLAP_PARAM_IS_MODULATABLE;
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
     }
-}
-
-fn data_from_array_buf<const N: usize>(data: &[i8; N]) -> &[u8] {
-    // SAFETY: casting from i8 to u8 is safe
-    let data = unsafe { ::core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
-
-    data.iter()
-        .position(|b| *b == 0)
-        .map(|pos| &data[..pos])
-        .unwrap_or(data)
 }
 
 #[repr(C)]
