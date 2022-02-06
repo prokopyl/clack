@@ -8,11 +8,15 @@ members = [
     "test-host"
 ]
 
+[patch.crates-io]
+glow = { git = "https://github.com/prokopyl/glow" }
+
 [patch."https://github.com/glowcoil/raw-gl-context"]
-raw-gl-context = { path = "/home/adrien/Projects/RustAudio/temp/raw-gl-context" }
+raw-gl-context = { git = "https://github.com/prokopyl/raw-gl-context" }
 
 [patch."https://github.com/geom3trik/VIZIA"]
-vizia = { path = "/home/adrien/Projects/RustAudio/temp/VIZIA" }
+vizia = { git = "https://github.com/prokopyl/VIZIA" }
+vizia_baseview = { git = "https://github.com/prokopyl/VIZIA" }
 
 [patch."https://github.com/RustAudio/baseview"]
-baseview = { path = "/home/adrien/Projects/RustAudio/temp/baseview" }
+baseview = { git = "https://github.com/prokopyl/baseview" }
