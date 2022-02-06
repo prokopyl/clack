@@ -21,34 +21,47 @@ unsafe impl<'a> Factory<'a> for PluginFactory<'a> {
 impl<'a> PluginFactory<'a> {
     #[inline]
     pub fn plugin_count(&self) -> usize {
-        // SAFETY: no special safety considerations
-        unsafe { (self.inner.get_plugin_count.unwrap())(&self.inner) as usize }
+        if let Some(get_plugin_count) = self.inner.get_plugin_count {
+            // SAFETY: no special safety considerations
+            unsafe { get_plugin_count(&self.inner) as usize }
+        } else {
+            0
+        }
     }
 
     #[inline]
     pub fn plugin_descriptor(&self, index: usize) -> Option<PluginDescriptor<'a>> {
-        // SAFETY: descriptor is guaranteed not to outlive the entry
-        unsafe { (self.inner.get_plugin_descriptor.unwrap())(&self.inner, index as u32).as_ref() }
-            .map(PluginDescriptor::from_raw)
+        if let Some(get_plugin_descriptor) = self.inner.get_plugin_descriptor {
+            // SAFETY: descriptor is guaranteed not to outlive the entry
+            unsafe { get_plugin_descriptor(&self.inner, index as u32).as_ref() }
+                .map(PluginDescriptor::from_raw)
+        } else {
+            None
+        }
     }
 
     pub(crate) unsafe fn instantiate(
         &self,
         plugin_id: &[u8],
         host: &clap_host,
-    ) -> Option<NonNull<clap_plugin>> {
-        let plugin_id = CString::new(plugin_id).ok()?;
-        let ptr = NonNull::new((self.inner.create_plugin.unwrap())(
-            &self.inner,
-            host,
-            plugin_id.as_ptr(),
-        ) as *mut clap_plugin)?
-        .as_ref();
+    ) -> Result<NonNull<clap_plugin>, HostError> {
+        let plugin_id = CString::new(plugin_id).map_err(|_| HostError::PluginIdNulError)?;
 
-        if !(ptr.init.unwrap())(ptr) {
-            return Err(HostError::InstantiationFailed).unwrap();
+        let plugin = if let Some(create_plugin) = self.inner.create_plugin {
+            NonNull::new(create_plugin(&self.inner, host, plugin_id.as_ptr()) as *mut clap_plugin)
+                .ok_or(HostError::PluginNotFound)?
+        } else {
+            return Err(HostError::InstantiationFailed);
+        };
+
+        if let Some(init) = plugin.as_ref().init {
+            if !init(plugin.as_ptr()) {
+                return Err(HostError::InstantiationFailed);
+            }
+        } else {
+            return Err(HostError::InstantiationFailed);
         }
 
-        Some(NonNull::new_unchecked(ptr as *const _ as *mut _))
+        Ok(plugin)
     }
 }

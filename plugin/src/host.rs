@@ -52,10 +52,13 @@ impl<'a> HostInfo<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
-        let ptr = unsafe {
-            (self.as_raw().get_extension.unwrap())(self.raw, E::IDENTIFIER.as_ptr() as *const _)
-        } as *mut _;
-        NonNull::new(ptr).map(|p| unsafe { E::from_extension_ptr(p) })
+        if let Some(get_extension) = self.as_raw().get_extension {
+            let ext =
+                unsafe { get_extension(self.raw, E::IDENTIFIER.as_ptr() as *const _) } as *mut _;
+            NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
+        } else {
+            None
+        }
     }
 
     /// # Safety
@@ -96,20 +99,26 @@ impl<'a> HostHandle<'a> {
 
     #[inline]
     pub fn request_restart(&self) {
-        // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_restart.unwrap())(self.raw) }
+        if let Some(request_restart) = self.as_raw().request_restart {
+            // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
+            unsafe { request_restart(self.raw) }
+        }
     }
 
     #[inline]
     pub fn request_process(&self) {
-        // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_process.unwrap())(self.raw) }
+        if let Some(request_process) = self.as_raw().request_restart {
+            // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
+            unsafe { request_process(self.raw) }
+        }
     }
 
     #[inline]
     pub fn request_callback(&self) {
-        // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-        unsafe { (self.as_raw().request_callback.unwrap())(self.raw) }
+        if let Some(request_callback) = self.as_raw().request_restart {
+            // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
+            unsafe { request_callback(self.raw) }
+        }
     }
 
     #[inline]

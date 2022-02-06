@@ -2,6 +2,7 @@ use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clack_common::stream::{InputStream, OutputStream};
 use clack_plugin::plugin::PluginError;
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
@@ -36,6 +37,8 @@ impl Display for StateError {
     }
 }
 
+impl Error for StateError {}
+
 #[cfg(feature = "clack-plugin")]
 mod plugin;
 #[cfg(feature = "clack-plugin")]
@@ -55,8 +58,14 @@ mod host {
             reader: &mut R,
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
-            let result = unsafe { (self.0.load.unwrap())(plugin.as_raw(), stream.as_raw_mut()) };
-            match result {
+
+            let success = if let Some(load) = self.0.load {
+                unsafe { load(plugin.as_raw(), stream.as_raw_mut()) }
+            } else {
+                false
+            };
+
+            match success {
                 true => Ok(()),
                 false => Err(StateError { saving: false }),
             }
@@ -68,7 +77,13 @@ mod host {
             writer: &mut W,
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
-            let result = unsafe { (self.0.save.unwrap())(plugin.as_raw(), stream.as_raw_mut()) };
+
+            if let Some(save) = self.0.save {
+                unsafe { save(plugin.as_raw(), stream.as_raw_mut()) }
+            } else {
+                false
+            };
+
             match result {
                 true => Ok(()),
                 false => Err(StateError { saving: true }),

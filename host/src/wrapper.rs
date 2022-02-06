@@ -89,8 +89,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
             entry
                 .get_factory::<PluginFactory>()
                 .ok_or(HostError::MissingPluginFactory)?
-                .instantiate(plugin_id, &mutable._host_descriptor)
-                .ok_or(HostError::PluginEntryNotFound)?
+                .instantiate(plugin_id, &mutable._host_descriptor)?
                 .as_mut()
         };
 
@@ -119,13 +118,16 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
         mutable.audio_processor = Some(UnsafeCell::new(audio_processor));
 
         let success = unsafe {
-            println!("{}", mutable._host_descriptor.clap_version.major);
-            ((*mutable.instance).activate.unwrap())(
-                mutable.instance,
-                configuration.sample_rate,
-                *configuration.frames_count_range.start(),
-                *configuration.frames_count_range.end(),
-            )
+            if let Some(activate) = (*mutable.instance).activate {
+                activate(
+                    mutable.instance,
+                    configuration.sample_rate,
+                    *configuration.frames_count_range.start(),
+                    *configuration.frames_count_range.end(),
+                )
+            } else {
+                false
+            }
         };
 
         if !success {
@@ -148,15 +150,19 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     }
 
     pub(crate) unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if (self.raw_instance().start_processing.unwrap())(self.instance) {
-            Ok(())
-        } else {
-            Err(HostError::StartProcessingFailed)
+        if let Some(start_processing) = self.raw_instance().start_processing {
+            if start_processing(self.instance) {
+                return Ok(());
+            }
         }
+
+        Err(HostError::StartProcessingFailed)
     }
 
     pub(crate) unsafe fn stop_processing(&self) {
-        (self.raw_instance().stop_processing.unwrap())(self.instance)
+        if let Some(stop_processing) = self.raw_instance().stop_processing {
+            stop_processing(self.instance)
+        }
     }
 
     /// Returns a raw, non-null pointer to the host's main thread ([`PluginHoster`](crate::host::PluginHoster))
@@ -247,7 +253,11 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 impl<'a, H: PluginHoster<'a>> Drop for HostWrapper<'a, H> {
     #[inline]
     fn drop(&mut self) {
-        unsafe { ((*self.instance).destroy.unwrap())(self.instance) }
+        unsafe {
+            if let Some(destroy) = (*self.instance).destroy {
+                destroy(self.instance)
+            }
+        }
     }
 }
 
@@ -258,8 +268,11 @@ pub enum HostError {
     DeactivatedPlugin,
     ActivationFailed,
     PluginEntryNotFound,
+    PluginNotFound,
     MissingPluginFactory,
     InstantiationFailed,
+    PluginIdNulError,
+    ProcessingFailed,
 }
 // TODO: impl error
 

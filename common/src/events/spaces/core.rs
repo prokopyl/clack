@@ -13,7 +13,7 @@ pub enum CoreEventSpace<'a> {
     Transport(&'a TransportEvent),
     Midi(&'a MidiEvent),
     Midi2(&'a Midi2Event),
-    MidiSysEx(&'a MidiSysexEvent<'a>),
+    MidiSysEx(&'a MidiSysExEvent<'a>),
 }
 
 unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
@@ -33,7 +33,7 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
             TransportEvent::TYPE_ID => Some(Transport(event.as_event_unchecked())),
             MidiEvent::TYPE_ID => Some(Midi(event.as_event_unchecked())),
             Midi2Event::TYPE_ID => Some(Midi2(event.as_event_unchecked())),
-            MidiSysexEvent::TYPE_ID => Some(MidiSysEx(event.as_event_unchecked())),
+            MidiSysExEvent::TYPE_ID => Some(MidiSysEx(event.as_event_unchecked())),
             _ => None,
         }
     }

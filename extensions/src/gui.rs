@@ -32,8 +32,12 @@ impl HostGui {
         width: u32,
         height: u32,
     ) -> Result<(), HostGuiError> {
-        let res =
-            unsafe { (self.inner.request_resize.unwrap())(host.shared().as_raw(), width, height) };
+        let res = if let Some(request_resize) = self.inner.request_resize {
+            unsafe { request_resize(host.shared().as_raw(), width, height) }
+        } else {
+            return Err(HostGuiError::ResizeError);
+        };
+
         if res {
             Ok(())
         } else {

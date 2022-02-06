@@ -59,7 +59,9 @@ mod plugin {
     impl Log {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
-            unsafe { (self.0.log.unwrap())(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
+            if let Some(log) = self.0.log {
+                unsafe { log(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
+            }
         }
     }
 }

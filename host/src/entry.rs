@@ -54,7 +54,9 @@ impl<'a> PluginEntry<'a> {
 
 impl<'a> Drop for PluginEntry<'a> {
     fn drop(&mut self) {
-        // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
-        unsafe { (self.inner.deinit.unwrap())() }
+        if let Some(deinit) = self.inner.deinit {
+            // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
+            unsafe { deinit() }
+        }
     }
 }

@@ -1,8 +1,10 @@
 use crate::host::PluginHoster;
 use crate::instance::processor::audio::AudioBuffers;
 use crate::plugin::{PluginAudioProcessor, PluginShared};
-use crate::wrapper::HostWrapper;
+use crate::wrapper::HostError::ProcessingFailed;
+use crate::wrapper::{HostError, HostWrapper};
 use clack_common::events::io::{InputEvents, OutputEvents};
+use clack_common::process::ProcessStatus;
 use clap_sys::events::{clap_event_header, clap_event_transport, CLAP_TRANSPORT_IS_PLAYING};
 use clap_sys::process::clap_process;
 use std::fmt::{Debug, Formatter};
@@ -22,7 +24,7 @@ impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
         audio_outputs: &mut AudioBuffers,
         events_input: &mut InputEvents,
         events_output: &mut OutputEvents,
-    ) {
+    ) -> Result<ProcessStatus, HostError> {
         let min_input_sample_count = audio_inputs.min_buffer_length;
         let min_output_sample_count = audio_outputs.min_buffer_length;
 
@@ -65,7 +67,14 @@ impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
 
         let instance = self.wrapper.raw_instance();
 
-        unsafe { (instance.process.unwrap())(instance, &process) };
+        if let Some(do_process) = instance.process {
+            ProcessStatus::from_raw(unsafe { do_process(instance, &process) })
+                .ok_or(())
+                .and_then(|r| r)
+                .map_err(|_| HostError::ProcessingFailed)
+        } else {
+            Err(HostError::ProcessingFailed)
+        }
     }
 
     #[inline]

@@ -111,7 +111,9 @@ impl<'a> OutputEvents<'a> {
     /// allocations as unlikely as possible.
     #[inline]
     pub fn push_back(&mut self, event: &UnknownEvent) {
-        unsafe { (self.inner.push_back.unwrap())(&self.inner, event.as_raw()) }
+        if let Some(push_back) = self.inner.push_back {
+            unsafe { push_back(&self.inner, event.as_raw()) }
+        }
     }
 }
 

@@ -14,7 +14,11 @@ unsafe impl Extension for PluginFreeStandingGui {
 impl PluginFreeStandingGui {
     #[inline]
     pub fn open(&self, plugin: &mut clack_host::plugin::PluginMainThread) -> bool {
-        unsafe { (self.inner.open.unwrap())(plugin.as_raw()) }
+        if let Some(open) = self.inner.open {
+            unsafe { open(plugin.as_raw()) }
+        } else {
+            false
+        }
     }
 }
 

@@ -47,17 +47,17 @@ impl Debug for MidiEvent {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct MidiSysexEvent<'buf> {
+pub struct MidiSysExEvent<'buf> {
     inner: clap_event_midi_sysex,
     _buffer_lifetime: PhantomData<&'buf [u8]>,
 }
 
-unsafe impl<'buf> Event<'buf> for MidiSysexEvent<'buf> {
+unsafe impl<'buf> Event<'buf> for MidiSysExEvent<'buf> {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI_SYSEX as u16;
     type EventSpace = CoreEventSpace<'buf>;
 }
 
-impl<'buf> MidiSysexEvent<'buf> {
+impl<'buf> MidiSysExEvent<'buf> {
     /// # Safety
     /// This function allows creating an event from an arbitrary lifetime.
     /// Users of this method must ensure that the sysex buffer is valid for requested lifetime
@@ -99,14 +99,14 @@ impl<'buf> MidiSysexEvent<'buf> {
     }
 }
 
-impl<'a> PartialEq for MidiSysexEvent<'a> {
+impl<'a> PartialEq for MidiSysExEvent<'a> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.port_index == other.inner.port_index && self.data() == other.data()
     }
 }
 
-impl<'a> Debug for MidiSysexEvent<'a> {
+impl<'a> Debug for MidiSysExEvent<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MidiSysexEvent")
             .field("port_index", &self.inner.port_index)

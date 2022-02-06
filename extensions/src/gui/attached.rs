@@ -23,7 +23,11 @@ impl PluginGuiWin32 {
         plugin: &mut clack_host::plugin::PluginMainThread,
         window_hwnd: *mut std::ffi::c_void,
     ) -> bool {
-        (self.inner.attach.unwrap())(plugin.as_raw(), window_hwnd)
+        if let Some(attach) = self.inner.attach {
+            attach(plugin.as_raw(), window_hwnd)
+        } else {
+            false
+        }
     }
 }
 
@@ -45,7 +49,11 @@ impl PluginGuiCocoa {
         plugin: &mut clack_host::plugin::PluginMainThread,
         ns_view: *mut std::ffi::c_void,
     ) -> bool {
-        (self.inner.attach.unwrap())(plugin.as_raw(), ns_view)
+        if let Some(attach) = self.inner.attach {
+            attach(plugin.as_raw(), ns_view)
+        } else {
+            false
+        }
     }
 }
 
@@ -68,13 +76,17 @@ impl PluginGuiX11 {
         display_name: Option<&std::ffi::CStr>,
         window_id: u64,
     ) -> bool {
-        (self.inner.attach.unwrap())(
-            plugin.as_raw(),
-            display_name
-                .map(|s| s.as_ptr())
-                .unwrap_or(::core::ptr::null()),
-            window_id,
-        )
+        if let Some(attach) = self.inner.attach {
+            attach(
+                plugin.as_raw(),
+                display_name
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(::core::ptr::null()),
+                window_id,
+            )
+        } else {
+            false
+        }
     }
 }
 

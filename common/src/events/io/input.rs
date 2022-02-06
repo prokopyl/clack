@@ -68,8 +68,12 @@ impl<'a> InputEvents<'a> {
 
     /// Returns the number of events in the list.
     #[inline]
-    pub fn len(&self) -> usize {
-        unsafe { (self.inner.size.unwrap())(&self.inner) as usize }
+    pub fn len(&self) -> u32 {
+        if let Some(size) = self.inner.size {
+            unsafe { size(&self.inner) }
+        } else {
+            0
+        }
     }
 
     /// Returns if there are no events in the list.
@@ -82,11 +86,15 @@ impl<'a> InputEvents<'a> {
     ///
     /// If `index` is out of bounds, `None` is returned.
     #[inline]
-    pub fn get(&self, index: usize) -> Option<&UnknownEvent<'a>> {
-        unsafe {
-            (self.inner.get.unwrap())(&self.inner, index as u32)
-                .as_ref()
-                .map(|e| UnknownEvent::from_raw(e))
+    pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+        if let Some(get) = self.inner.get {
+            unsafe {
+                get(&self.inner, index)
+                    .as_ref()
+                    .map(|e| UnknownEvent::from_raw(e))
+            }
+        } else {
+            None
         }
     }
 
@@ -123,14 +131,14 @@ impl<'a> Index<usize> for InputEvents<'a> {
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
-        self.get(index).expect(INDEX_ERROR)
+        self.get(index as u32).expect(INDEX_ERROR)
     }
 }
 
 /// Immutable [`EventList`] iterator.
 pub struct InputEventsIter<'a> {
     list: &'a InputEvents<'a>,
-    range: Range<usize>,
+    range: Range<u32>,
 }
 
 impl<'a, 'list> Iterator for InputEventsIter<'a> {
