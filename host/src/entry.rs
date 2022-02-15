@@ -2,7 +2,8 @@ pub use clack_common::entry::PluginEntryDescriptor;
 use clack_common::factory::Factory;
 use clap_sys::entry::clap_plugin_entry;
 use std::error::Error;
-use std::ffi::CString;
+use std::ffi::{CString, NulError};
+use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
 
 mod descriptor;
@@ -13,29 +14,28 @@ pub struct PluginEntry<'a> {
 }
 
 impl<'a> PluginEntry<'a> {
-    // TODO: handle errors properly
     /// # Safety
     /// Must only be called once for a given descriptor, else entry could be init'd multiple times
     pub unsafe fn from_raw(
         inner: &'a clap_plugin_entry,
         plugin_path: &str,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, PluginEntryError> {
         // TODO: check clap version
-        let path = CString::new(plugin_path)?; // TODO: OsStr?
+        let path = CString::new(plugin_path).map_err(PluginEntryError::NulDescriptorPath)?;
 
-        // TODO: clap-sys issue: this should return bool to indicate success/failure
-        (inner.init.unwrap())(path.as_ptr());
+        if !(inner.init.unwrap())(path.as_ptr()) {
+            return Err(PluginEntryError::EntryInitFailed);
+        }
 
         Ok(Self { inner })
     }
 
-    // TODO: handle errors properly
     /// # Safety
     /// Must only be called once for a given descriptor, else entry could be init'd multiple times
     pub unsafe fn from_descriptor(
         desc: &'a PluginEntryDescriptor,
         plugin_path: &str,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, PluginEntryError> {
         Self::from_raw(desc.as_raw(), plugin_path)
     }
 
@@ -57,6 +57,41 @@ impl<'a> Drop for PluginEntry<'a> {
         if let Some(deinit) = self.inner.deinit {
             // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
             unsafe { deinit() }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PluginEntryError {
+    EntryInitFailed,
+    NulDescriptorPath(NulError),
+    InvalidUtf8Path,
+    LibraryLoadingError(libloading::Error),
+}
+
+impl Error for PluginEntryError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            PluginEntryError::NulDescriptorPath(e) => Some(e),
+            PluginEntryError::LibraryLoadingError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl Display for PluginEntryError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PluginEntryError::EntryInitFailed => f.write_str("Plugin entry initialization failed"),
+            PluginEntryError::NulDescriptorPath(e) => {
+                write!(f, "Invalid plugin descriptor path: {}", e)
+            }
+            PluginEntryError::LibraryLoadingError(e) => {
+                write!(f, "Failed to load plugin descriptor library: {}", e)
+            }
+            PluginEntryError::InvalidUtf8Path => {
+                f.write_str("Plugin descriptor path contains invalid UTF-8")
+            }
         }
     }
 }

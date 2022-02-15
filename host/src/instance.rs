@@ -79,7 +79,7 @@ impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
     pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<'a, H>) {
         // SAFETY: we never clone the arcs, only compare them
         if unsafe { !Arc::ptr_eq(pin_get_ptr(&self.wrapper), pin_get_ptr(&processor.wrapper)) } {
-            panic!("") // TODO
+            panic!("Given plugin audio processor does not match the instance being deactivated")
         }
 
         ::core::mem::drop(processor);

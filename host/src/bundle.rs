@@ -1,7 +1,6 @@
-use crate::entry::PluginEntry;
+use crate::entry::{PluginEntry, PluginEntryError};
 use clap_sys::entry::clap_plugin_entry;
 use libloading::Library;
-use std::error::Error;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
@@ -11,20 +10,28 @@ pub struct PluginBundle {
 }
 
 impl PluginBundle {
-    // TODO: errors
-    pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, Box<dyn Error>> {
+    pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginEntryError> {
         let path = path.as_ref();
 
+        let library = unsafe { Library::new(path).map_err(PluginEntryError::LibraryLoadingError)? };
+
         Ok(Self {
-            library: unsafe { Library::new(path)? },
+            library,
             path: path.into(),
         })
     }
 
-    pub fn get_entry(&self) -> Result<PluginEntry, Box<dyn Error>> {
+    pub fn get_entry(&self) -> Result<PluginEntry, PluginEntryError> {
         const SYMBOL_NAME: &[u8] = b"clap_entry\0";
-        let symbol = unsafe { self.library.get::<*const clap_plugin_entry>(SYMBOL_NAME) }?;
-        Ok(unsafe { PluginEntry::from_raw(&**symbol, self.path.to_str().unwrap())? })
-        // TODO: OsStr unwrap
+        let symbol = unsafe { self.library.get::<*const clap_plugin_entry>(SYMBOL_NAME) }
+            .map_err(PluginEntryError::LibraryLoadingError)?;
+
+        let plugin_path = self
+            .path
+            .to_str()
+            .ok_or(PluginEntryError::InvalidUtf8Path)
+            .unwrap();
+
+        Ok(unsafe { PluginEntry::from_raw(&**symbol, plugin_path)? })
     }
 }
