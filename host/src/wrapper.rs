@@ -16,6 +16,7 @@ use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::Arc;
+use std::fmt;
 
 mod panic {
     #[cfg(not(test))]
@@ -262,7 +263,25 @@ pub enum HostError {
     PluginIdNulError,
     ProcessingFailed,
 }
-// TODO: impl error
+
+impl fmt::Display for HostError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::StartProcessingFailed => write!(f, "Could not start processing"),
+            Self::AlreadyActivatedPlugin => write!(f, "Plugin was already activated"),
+            Self::DeactivatedPlugin => write!(f, "Plugin is currently deactivated"),
+            Self::ActivationFailed => write!(f, "Unable to activate"),
+            Self::PluginEntryNotFound => write!(f, "No entry found for the specified plugin"),
+            Self::PluginNotFound => write!(f, "Specified plugin was not found"),
+            Self::MissingPluginFactory => write!(f, "No plugin factory was provided"),
+            Self::InstantiationFailed => write!(f, "Could not instantiate"),
+            Self::PluginIdNulError => write!(f, "Plugin ID was null"),
+            Self::ProcessingFailed => write!(f, "Could not process"),
+        }
+    }
+}
+
+impl std::error::Error for HostError {}
 
 unsafe extern "C" fn get_extension<'a, H: PluginHoster<'a>>(
     host: *const clap_host,

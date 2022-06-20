@@ -2,6 +2,7 @@ use crate::utils::data_from_array_buf;
 use bitflags::bitflags;
 use clap_sys::ext::params::*;
 use std::ffi::c_void;
+use std::str::Utf8Error;
 
 bitflags! {
     #[repr(C)]
@@ -74,4 +75,30 @@ pub struct ParamInfoData<'a> {
     pub min_value: f64,
     pub max_value: f64,
     pub default_value: f64,
+}
+
+impl<'a> TryFrom<&'a ParamInfo> for ParamInfoData<'a> {
+    type Error = Utf8Error;
+
+    fn try_from(info: &'a ParamInfo) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: info.id(),
+            flags: ParamInfoFlags { bits: info.flags() },
+            cookie: info.cookie(),
+            name: std::str::from_utf8(info.name())?,
+            module: std::str::from_utf8(info.module())?,
+            min_value: info.min_value(),
+            max_value: info.max_value(),
+            default_value: info.default_value(),
+        })
+    }
+}
+
+
+impl<'a> TryFrom<&'a mut ParamInfo> for ParamInfoData<'a> {
+    type Error = Utf8Error;
+
+    fn try_from(info: &'a mut ParamInfo) -> Result<Self, Self::Error> {
+        Self::try_from(info as &'a ParamInfo)
+    }
 }
