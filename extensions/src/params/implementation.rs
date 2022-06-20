@@ -258,12 +258,12 @@ where
 {
     const IMPLEMENTATION: &'static Self = &super::PluginParams(
         clap_plugin_params {
-            count: Some(count::<P>),
-            get_info: Some(get_info::<P>),
-            get_value: Some(get_value::<P>),
-            value_to_text: Some(value_to_text::<P>),
-            text_to_value: Some(text_to_value::<P>),
-            flush: Some(flush::<P>),
+            count: count::<P>,
+            get_info: get_info::<P>,
+            get_value: get_value::<P>,
+            value_to_text: value_to_text::<P>,
+            text_to_value: text_to_value::<P>,
+            flush: flush::<P>,
         },
         PhantomData,
     );

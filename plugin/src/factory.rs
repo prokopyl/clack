@@ -38,7 +38,7 @@ impl<'a> PluginFactories<'a> {
             return self;
         }
 
-        let uri = unsafe { CStr::from_bytes_with_nul_unchecked(F::IDENTIFIER) };
+        let uri = unsafe { CStr::from_ptr(F::IDENTIFIER) };
         if uri == self.requested {
             self.found = NonNull::new(F::IMPLEMENTATION as *const _ as *mut _)
         }

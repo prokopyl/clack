@@ -1,4 +1,5 @@
 use core::ffi::c_void;
+use std::os::raw::c_char;
 use std::ptr::NonNull;
 
 pub mod plugin;
@@ -11,7 +12,7 @@ pub unsafe trait Factory<'a>: Sized + 'a {
     /// The standard identifier for this factory.
     ///
     /// This MUST point to a C-style, null-terminated string.
-    const IDENTIFIER: &'static [u8];
+    const IDENTIFIER: *const c_char;
 
     /// Returns an instance of the factory from a given factory pointer.
     ///

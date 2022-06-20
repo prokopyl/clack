@@ -1,6 +1,7 @@
 use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::params::{clap_plugin_params, CLAP_EXT_PARAMS};
 use std::marker::PhantomData;
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct PluginParams(clap_plugin_params, PhantomData<*const clap_plugin_params>);
@@ -10,7 +11,7 @@ pub mod implementation;
 pub mod info;
 
 unsafe impl Extension for PluginParams {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_PARAMS;
+    const IDENTIFIER: *const c_char = CLAP_EXT_PARAMS;
     type ExtensionType = PluginExtension;
 }
 

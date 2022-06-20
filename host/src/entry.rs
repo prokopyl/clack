@@ -23,7 +23,7 @@ impl<'a> PluginEntry<'a> {
         // TODO: check clap version
         let path = CString::new(plugin_path).map_err(PluginEntryError::NulDescriptorPath)?;
 
-        if !(inner.init.unwrap())(path.as_ptr()) {
+        if !(inner.init)(path.as_ptr()) {
             return Err(PluginEntryError::EntryInitFailed);
         }
 
@@ -40,9 +40,7 @@ impl<'a> PluginEntry<'a> {
     }
 
     pub fn get_factory<F: Factory<'a>>(&self) -> Option<&'a F> {
-        let ptr =
-            unsafe { (self.as_raw().get_factory.unwrap())(F::IDENTIFIER.as_ptr() as *const _) }
-                as *mut _;
+        let ptr = unsafe { (self.as_raw().get_factory)(F::IDENTIFIER as *const _) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
     }
 
@@ -54,10 +52,8 @@ impl<'a> PluginEntry<'a> {
 
 impl<'a> Drop for PluginEntry<'a> {
     fn drop(&mut self) {
-        if let Some(deinit) = self.inner.deinit {
-            // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
-            unsafe { deinit() }
-        }
+        // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
+        unsafe { (self.inner.deinit)() }
     }
 }
 

@@ -5,15 +5,14 @@ use std::marker::PhantomData;
 
 /// An ordered list of timestamped events.
 ///
-/// `InputEvents`s are always ordered: an event at index `i` will always have a timestamp smaller than
+/// `OutputEvents`s are always ordered: an event at index `i` will always have a timestamp smaller than
 /// or equal to the timestamp of the next event at index `i + 1`.
 ///
-/// `InputEvents`s do not own the event data, they are only lightweight wrappers around a compatible
-/// event buffer (i.e. [`InputEventBuffer`]), see [`InputEvents::from_buffer`].
+/// `OutputEvents`s do not own the event data, they are only lightweight wrappers around a compatible
+/// event buffer (i.e. [`OutputEventBuffer`]), see [`OutputEvents::from_buffer`].
 ///
-/// Unlike [`Vec`s](std::vec::Vec) or slices, `EventList`s only support a couple of operations:
-/// retrieving an event from its index ([`get`](InputEvents::get)), and appending a new event to the
-/// list ([`append`](InputEvents::append)).
+/// Unlike [`Vec`s](std::vec::Vec) or slices, `OutputEvents`s only support appending a new event to
+/// the list ([`try_push`](OutputEvents::try_push)).
 ///
 /// This type also implements a few extra features based on these operations for convenience,
 /// such as [`Iterator`](core::iter::IntoIterator) or [`Extend`](core::iter::Extend).
@@ -27,8 +26,8 @@ use std::marker::PhantomData;
 /// let mut buf = EventBuffer::new();
 /// let mut output_events = OutputEvents::from_buffer(&mut buf);
 ///
-/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 0, 12, 0, 4.2));
-/// output_events.push_back(event.as_unknown());
+/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
+/// output_events.try_push(event.as_unknown());
 ///
 /// assert_eq!(1, buf.len());
 /// ```
@@ -39,13 +38,13 @@ pub struct OutputEvents<'a> {
 }
 
 impl<'a> OutputEvents<'a> {
-    /// Creates a mutable reference to an EventList from a given C FFI-compatible pointer.
+    /// Creates a mutable reference to an OutputEvents list from a given C FFI-compatible pointer.
     ///
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
     pub unsafe fn from_raw_mut(raw: &mut clap_output_events) -> &'a mut Self {
-        // SAFETY: EventList has the same layout and is repr(C)
+        // SAFETY: OutputEvents list has the same layout and is repr(C)
         &mut *(raw as *mut _ as *mut _)
     }
 
@@ -59,14 +58,14 @@ impl<'a> OutputEvents<'a> {
 
     /// Create a new event list by wrapping an event buffer implementation.
     ///
-    /// This buffer may have been used by a previous `EventList`, and will keep all events that
-    /// have been [`append`ed](EventList::append) into it. This allows to reuse event buffers
+    /// This buffer may have been used by a previous `OutputEvents`, and will keep all events that
+    /// have been [`push`ed](OutputEvents::try_push) into it. This allows to reuse event buffers
     /// between process trips.
     ///
     /// # Realtime Safety
     ///
     /// This is a very cheap, realtime-safe operation that does not change the given buffer in any
-    /// way. However, since users of the `EventList` may call `append` on it, the buffer should have
+    /// way. However, since users of the `OutputEvents` may call `append` on it, the buffer should have
     /// a reasonable amount of storage pre-allocated, as to not have to perform additional
     /// allocations on the audio thread.
     ///
@@ -104,12 +103,17 @@ impl<'a> OutputEvents<'a> {
     /// reasonable amount of space before forwarding the list to the plugin, in order to make
     /// allocations as unlikely as possible.
     #[inline]
-    pub fn push_back(&mut self, event: &UnknownEvent) {
-        if let Some(push_back) = self.inner.push_back {
-            unsafe { push_back(&self.inner, event.as_raw()) }
+    pub fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
+        if !unsafe { (self.inner.try_push)(&self.inner, event.as_raw()) } {
+            Err(TryPushError {})
+        } else {
+            Ok(())
         }
     }
 }
+
+#[non_exhaustive]
+pub struct TryPushError {}
 
 impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     #[inline]
@@ -121,8 +125,9 @@ impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
 impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
     #[inline]
     fn extend<T: IntoIterator<Item = &'b UnknownEvent<'a>>>(&mut self, iter: T) {
+        #[allow(unused_must_use)]
         for event in iter {
-            self.push_back(event)
+            self.try_push(event);
         }
     }
 }

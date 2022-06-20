@@ -107,6 +107,27 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         }
     }
 
+    /// # Safety
+    /// Caller must ensure this method is only called on main thread and has exclusivity
+    pub(crate) unsafe fn reset(self: Pin<&mut Self>) -> Result<(), PluginWrapperError> {
+        if self.audio_processor.is_some() {
+            return Err(PluginWrapperError::ActivatedPlugin);
+        }
+
+        let _shared = &*(self.shared() as *const _);
+        let _host = self.host;
+        // SAFETY: we only update the fields, we don't move the struct
+        let pinned_self = Pin::get_unchecked_mut(self);
+
+        if let Some(processor) = &mut pinned_self.audio_processor {
+            if let Some(processor_inner) = processor.get().as_mut() {
+                P::reset(processor_inner, pinned_self.main_thread.get_mut());
+            }
+        }
+
+        Ok(())
+    }
+
     /// Returns a reference to a plugin's [`Shared`](crate::plugin::Plugin::Shared) struct.
     ///
     /// This is always safe to call in any context, since the `Shared` struct is required to
@@ -322,6 +343,10 @@ pub enum PluginWrapperError {
     Panic,
     /// A given [`PluginError`](crate::plugin::PluginError) was raised during a function call.
     Plugin(PluginError),
+    /// Bad UTF-8.
+    StringEncoding(std::str::Utf8Error),
+    /// Plugin returned a malformed C string.
+    InvalidCString(std::ffi::NulError),
     /// A generic or custom error of a given severity.
     Any(clap_log_severity, Box<dyn Error>),
 }
@@ -341,12 +366,12 @@ impl PluginWrapperError {
     /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING as i32);
     /// ```
     pub fn severity(&self) -> clap_log_severity {
-        (match self {
+        match self {
             PluginWrapperError::Plugin(_) => CLAP_LOG_ERROR,
             PluginWrapperError::Panic => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginWrapperError::Any(s, _) => *s as u32,
+            PluginWrapperError::Any(s, _) => *s,
             _ => CLAP_LOG_HOST_MISBEHAVING,
-        }) as i32
+        }
     }
 
     /// Returns a closure that maps an error to a [`PluginWrapperError::Any`] error of a given
@@ -397,6 +422,20 @@ impl Display for PluginWrapperError {
             PluginWrapperError::ActivatedPlugin => f.write_str("Plugin was already activated"),
             PluginWrapperError::DeactivatedPlugin => {
                 f.write_str("Plugin was not activated before calling a audio-thread method")
+            }
+            PluginWrapperError::StringEncoding(e) => {
+                write!(
+                    f,
+                    "Encountered string containing invalid UTF-8 at position {}.",
+                    e.valid_up_to()
+                )
+            }
+            PluginWrapperError::InvalidCString(e) => {
+                write!(
+                    f,
+                    "Encountered string containing a NUL byte at position {}.",
+                    e.nul_position()
+                )
             }
             PluginWrapperError::Plugin(e) => std::fmt::Display::fmt(&e, f),
             PluginWrapperError::Any(_, e) => std::fmt::Display::fmt(e, f),

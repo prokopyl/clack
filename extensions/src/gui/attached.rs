@@ -1,17 +1,19 @@
 use clack_common::extensions::{Extension, PluginExtension};
-use clap_sys::ext::gui_cocoa::{clap_plugin_gui_cocoa, CLAP_EXT_GUI_COCOA};
-use clap_sys::ext::gui_win32::{clap_plugin_gui_win32, CLAP_EXT_GUI_WIN32};
-use clap_sys::ext::gui_x11::{clap_plugin_gui_x11, CLAP_EXT_GUI_X11};
+use clap_sys::ext::gui::{
+    clap_hwnd, clap_nsview, clap_xwnd, CLAP_WINDOW_API_COCOA, CLAP_WINDOW_API_WIN32,
+    CLAP_WINDOW_API_X11,
+};
+use std::os::raw::c_char;
 
 pub mod window;
 
 pub struct PluginGuiWin32 {
     #[cfg_attr(not(feature = "clack-host"), allow(unused))]
-    inner: clap_plugin_gui_win32,
+    inner: clap_hwnd,
 }
 
 unsafe impl Extension for PluginGuiWin32 {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_WIN32;
+    const IDENTIFIER: *const i8 = CLAP_WINDOW_API_WIN32;
     type ExtensionType = PluginExtension;
 }
 
@@ -24,21 +26,17 @@ impl PluginGuiWin32 {
         plugin: &mut clack_host::plugin::PluginMainThread,
         window_hwnd: *mut std::ffi::c_void,
     ) -> bool {
-        if let Some(attach) = self.inner.attach {
-            attach(plugin.as_raw(), window_hwnd)
-        } else {
-            false
-        }
+        Self::attach(self, plugin, window_hwnd)
     }
 }
 
 pub struct PluginGuiCocoa {
     #[cfg_attr(not(feature = "clack-host"), allow(unused))]
-    inner: clap_plugin_gui_cocoa,
+    inner: clap_nsview,
 }
 
 unsafe impl Extension for PluginGuiCocoa {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_COCOA;
+    const IDENTIFIER: *const c_char = CLAP_WINDOW_API_COCOA;
     type ExtensionType = PluginExtension;
 }
 
@@ -51,21 +49,17 @@ impl PluginGuiCocoa {
         plugin: &mut clack_host::plugin::PluginMainThread,
         ns_view: *mut std::ffi::c_void,
     ) -> bool {
-        if let Some(attach) = self.inner.attach {
-            attach(plugin.as_raw(), ns_view)
-        } else {
-            false
-        }
+        Self::attach(self, plugin, ns_view)
     }
 }
 
 pub struct PluginGuiX11 {
     #[cfg_attr(not(feature = "clack-host"), allow(unused))]
-    inner: clap_plugin_gui_x11,
+    inner: clap_xwnd,
 }
 
 unsafe impl Extension for PluginGuiX11 {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI_X11;
+    const IDENTIFIER: *const c_char = CLAP_WINDOW_API_X11;
     type ExtensionType = PluginExtension;
 }
 
@@ -79,32 +73,27 @@ impl PluginGuiX11 {
         display_name: Option<&std::ffi::CStr>,
         window_id: ::std::os::raw::c_ulong,
     ) -> bool {
-        if let Some(attach) = self.inner.attach {
-            attach(
-                plugin.as_raw(),
-                display_name
-                    .map(|s| s.as_ptr())
-                    .unwrap_or(::core::ptr::null()),
-                window_id,
-            )
-        } else {
-            false
-        }
+        Self::attach(self, plugin, display_name, window_id)
     }
 }
 
 #[cfg(feature = "clack-plugin")]
 pub mod implementation {
-    use crate::gui::attached::window::{AttachableWindow, CocoaWindow, Win32Window, X11Window};
+    #[cfg(feature = "clack-host")]
+    use crate::gui::attached::window::{CocoaWindow, Win32Window, X11Window};
+    #[cfg(feature = "clack-host")]
+    use clack_plugin::plugin::wrapper::PluginWrapper;
+    #[cfg(feature = "clack-host")]
+    use clap_sys::{
+        ext::gui::{clap_hwnd, clap_nsview, clap_xwnd},
+        plugin::clap_plugin,
+    };
+
+    use crate::gui::attached::window::AttachableWindow;
     use crate::gui::attached::{PluginGuiCocoa, PluginGuiWin32, PluginGuiX11};
     use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
     use clack_plugin::plugin::{Plugin, PluginError};
-    use clap_sys::ext::gui_cocoa::clap_plugin_gui_cocoa;
-    use clap_sys::ext::gui_win32::{clap_hwnd, clap_plugin_gui_win32};
-    use clap_sys::ext::gui_x11::clap_plugin_gui_x11;
-    use clap_sys::plugin::clap_plugin;
-    use std::ffi::{c_void, CStr};
+    use std::ffi::CStr;
 
     pub trait PluginAttachedGui {
         fn attach(
@@ -119,9 +108,7 @@ pub mod implementation {
         P::MainThread: PluginAttachedGui,
     {
         const IMPLEMENTATION: &'static Self = &PluginGuiWin32 {
-            inner: clap_plugin_gui_win32 {
-                attach: Some(attach_win32::<P>),
-            },
+            inner: std::ptr::null_mut(),
         };
     }
 
@@ -130,9 +117,7 @@ pub mod implementation {
         P::MainThread: PluginAttachedGui,
     {
         const IMPLEMENTATION: &'static Self = &PluginGuiCocoa {
-            inner: clap_plugin_gui_cocoa {
-                attach: Some(attach_cocoa::<P>),
-            },
+            inner: std::ptr::null_mut(),
         };
     }
 
@@ -140,13 +125,10 @@ pub mod implementation {
     where
         P::MainThread: PluginAttachedGui,
     {
-        const IMPLEMENTATION: &'static Self = &PluginGuiX11 {
-            inner: clap_plugin_gui_x11 {
-                attach: Some(attach_x11::<P>),
-            },
-        };
+        const IMPLEMENTATION: &'static Self = &PluginGuiX11 { inner: 0 };
     }
 
+    #[cfg(feature = "clack-host")]
     unsafe extern "C" fn attach_win32<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         window: clap_hwnd,
@@ -164,9 +146,10 @@ pub mod implementation {
         .is_some()
     }
 
+    #[cfg(feature = "clack-host")]
     unsafe extern "C" fn attach_cocoa<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
-        ns_view: *mut c_void,
+        ns_view: clap_nsview,
     ) -> bool
     where
         P::MainThread: PluginAttachedGui,
@@ -181,10 +164,11 @@ pub mod implementation {
         .is_some()
     }
 
+    #[cfg(feature = "clack-host")]
     unsafe extern "C" fn attach_x11<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         display_name: *const std::os::raw::c_char,
-        window: ::std::os::raw::c_ulong,
+        window: clap_xwnd,
     ) -> bool
     where
         P::MainThread: PluginAttachedGui,

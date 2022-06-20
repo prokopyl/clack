@@ -1,12 +1,12 @@
 //! Audio-processing events and related utilities.
 //!
 //! Events notify a plugin's Audio Processor of anything that may change its audio output, such as
-//! note [on](crate::events::Event::NoteOn)/[off](crate::events::Event::NoteOff) events,
-//! [parameter changes](crate::events::Event::ParamValue), [MIDI events](crate::events::Event::Midi),
-//! and more.
+//! note on/off events, parameter changes, MIDI events, and more.
 //!
-//! All events in CLAP are sample-accurate time-stamped events ([`TimestampedEvent`](crate::events::TimestampedEvent)).
-//! They are provided to the plugin's audio processor alongside the audio buffers through [`EventList`s](crate::events::EventList)
+//! All events in CLAP are sample-accurate time-stamped events ([`Event`]).
+//! They are provided to the plugin's audio processor alongside the audio buffers through
+//! [`InputEventBuffer`](io::InputEventBuffer)s and read from
+//! [`OutputEventBuffer`](io::OutputEventBuffer)s
 //! (see the plugin's `process` method).
 
 use crate::events::spaces::*;

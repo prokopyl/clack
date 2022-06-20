@@ -18,9 +18,9 @@ pub mod implementation {
     {
         const IMPLEMENTATION: &'static Self = &clack_common::factory::plugin::PluginFactory {
             inner: clap_plugin_factory {
-                get_plugin_count: Some(get_plugin_count::<F>),
-                get_plugin_descriptor: Some(get_plugin_descriptor::<F>),
-                create_plugin: Some(create_plugin::<F>),
+                get_plugin_count: get_plugin_count::<F>,
+                get_plugin_descriptor: get_plugin_descriptor::<F>,
+                create_plugin: create_plugin::<F>,
             },
         };
     }

@@ -40,7 +40,7 @@ impl<'a, 'b, H: PluginHoster<'a>> HostExtensions<'a, H> {
             return self;
         }
 
-        let uri = CStr::from_bytes_with_nul(E::IDENTIFIER).unwrap();
+        let uri = unsafe { CStr::from_ptr(E::IDENTIFIER) };
         if uri == self.requested {
             self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }

@@ -15,15 +15,15 @@ pub trait OutputEventBuffer: Sized {
 pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
     clap_input_events {
         ctx: buffer as *const I as *mut I as *mut _,
-        size: Some(size::<I>),
-        get: Some(get::<I>),
+        size: size::<I>,
+        get: get::<I>,
     }
 }
 
 pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
     clap_output_events {
         ctx: buffer as *mut _ as *mut _,
-        push_back: Some(push_back::<I>),
+        try_push: try_push::<I>,
     }
 }
 
@@ -43,14 +43,15 @@ unsafe extern "C" fn get<I: InputEventBuffer>(
     .unwrap_or_else(|_| ::core::ptr::null())
 }
 
-unsafe extern "C" fn push_back<O: OutputEventBuffer>(
+unsafe extern "C" fn try_push<O: OutputEventBuffer>(
     list: *const clap_output_events,
     event: *const clap_event_header,
-) {
-    let _ = handle_panic(|| {
+) -> bool {
+    handle_panic(|| {
         O::push_back(
             &mut *((*list).ctx as *const _ as *mut O),
             UnknownEvent::from_raw(&*event),
         )
-    });
+    })
+    .is_ok()
 }

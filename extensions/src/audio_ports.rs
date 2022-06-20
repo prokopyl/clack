@@ -13,7 +13,11 @@ bitflags! {
     #[repr(C)]
     pub struct RescanType: u32 {
         const RESCAN_NAMES = CLAP_AUDIO_PORTS_RESCAN_NAMES;
-        const RESCAN_ALL = CLAP_AUDIO_PORTS_RESCAN_ALL;
+        const RESCAN_FLAGS = CLAP_AUDIO_PORTS_RESCAN_FLAGS;
+        const RESCAN_CHANNEL_COUNT = CLAP_AUDIO_PORTS_RESCAN_CHANNEL_COUNT;
+        const RESCAN_PORT_TYPE = CLAP_AUDIO_PORTS_RESCAN_PORT_TYPE;
+        const RESCAN_IN_PLACE_PAIR = CLAP_AUDIO_PORTS_RESCAN_IN_PLACE_PAIR;
+        const RESCAN_LIST = CLAP_AUDIO_PORTS_RESCAN_LIST;
     }
 }
 
@@ -21,12 +25,12 @@ bitflags! {
     #[repr(C)]
     pub struct AudioPortFlags: u32 {
         const CLAP_AUDIO_PORT_IS_MAIN = CLAP_AUDIO_PORT_IS_MAIN;
-        const CLAP_AUDIO_PORTS_PREFERS_64BITS = CLAP_AUDIO_PORTS_PREFERS_64BITS;
+        const CLAP_AUDIO_PORT_PREFERS_64BITS = CLAP_AUDIO_PORT_PREFERS_64BITS;
     }
 }
 
 unsafe impl Extension for PluginAudioPorts {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIER: *const i8 = CLAP_EXT_AUDIO_PORTS;
     type ExtensionType = PluginExtension;
 }
 
@@ -105,8 +109,8 @@ mod plugin {
     {
         const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
             clap_plugin_audio_ports {
-                count: Some(count::<P>),
-                get: Some(get::<P>),
+                count: count::<P>,
+                get: get::<P>,
             },
             PhantomData,
         );

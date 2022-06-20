@@ -15,7 +15,7 @@
 //!
 //!   This type handles all DSP in one of the host's audio threads, of which there may be
 //! multiple, if the host uses a thread pool for example.
-//!   
+//!
 //!   The host is free to [`Send`] the [`Plugin`] type between any of its audio threads, but any
 //!   operation of this class is guaranteed to be exclusive (`&mut`) to a single audio thread.
 //!
@@ -238,6 +238,9 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     /// any other de-initialization the plugin may deem necessary.
     #[inline]
     fn deactivate(self, _main_thread: &mut Self::MainThread) {}
+
+    #[inline]
+    fn reset(&mut self, _main_thread: &mut Self::MainThread) {}
 
     #[inline]
     fn start_processing(&mut self) -> Result<(), PluginError> {

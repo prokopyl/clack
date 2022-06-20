@@ -5,12 +5,13 @@ use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
 
 unsafe impl Extension for PluginState {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
+    const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
     type ExtensionType = PluginExtension;
 }
 
@@ -18,7 +19,7 @@ unsafe impl Extension for PluginState {
 pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
 unsafe impl Extension for HostState {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
+    const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
     type ExtensionType = HostExtension;
 }
 

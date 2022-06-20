@@ -63,10 +63,10 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
             vendor: ::core::ptr::null_mut(),
             url: ::core::ptr::null_mut(),
             version: ::core::ptr::null_mut(),
-            get_extension: Some(get_extension::<H>),
-            request_restart: Some(request_restart::<H>),
-            request_process: Some(request_process::<H>),
-            request_callback: Some(request_callback::<H>),
+            get_extension: get_extension::<H>,
+            request_restart: request_restart::<H>,
+            request_process: request_process::<H>,
+            request_callback: request_callback::<H>,
         };
 
         host_info.info().write_to_raw(&mut host_descriptor);
@@ -118,16 +118,12 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
         mutable.audio_processor = Some(UnsafeCell::new(audio_processor));
 
         let success = unsafe {
-            if let Some(activate) = (*mutable.instance).activate {
-                activate(
-                    mutable.instance,
-                    configuration.sample_rate,
-                    *configuration.frames_count_range.start(),
-                    *configuration.frames_count_range.end(),
-                )
-            } else {
-                false
-            }
+            ((*mutable.instance).activate)(
+                mutable.instance,
+                configuration.sample_rate,
+                *configuration.frames_count_range.start(),
+                *configuration.frames_count_range.end(),
+            )
         };
 
         if !success {
@@ -150,19 +146,15 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     }
 
     pub(crate) unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if let Some(start_processing) = self.raw_instance().start_processing {
-            if start_processing(self.instance) {
-                return Ok(());
-            }
+        if (self.raw_instance().start_processing)(self.instance) {
+            return Ok(());
         }
 
         Err(HostError::StartProcessingFailed)
     }
 
     pub(crate) unsafe fn stop_processing(&self) {
-        if let Some(stop_processing) = self.raw_instance().stop_processing {
-            stop_processing(self.instance)
-        }
+        (self.raw_instance().stop_processing)(self.instance)
     }
 
     /// Returns a raw, non-null pointer to the host's main thread ([`PluginHoster`](crate::host::PluginHoster))
@@ -253,11 +245,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 impl<'a, H: PluginHoster<'a>> Drop for HostWrapper<'a, H> {
     #[inline]
     fn drop(&mut self) {
-        unsafe {
-            if let Some(destroy) = (*self.instance).destroy {
-                destroy(self.instance)
-            }
-        }
+        unsafe { ((*self.instance).destroy)(self.instance) }
     }
 }
 

@@ -2,13 +2,18 @@ use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clack_plugin::host::HostMainThreadHandle;
 use clap_sys::ext::gui::{clap_host_gui, clap_plugin_gui, CLAP_EXT_GUI};
 use std::fmt::{Display, Formatter};
+use std::os::raw::c_char;
+
+/// Provide hints to host about resizing behavior
+pub use clap_sys::ext::gui::clap_gui_resize_hints;
+/// Handle to parent (host) window
+pub use clap_sys::ext::gui::clap_window;
 
 #[cfg(feature = "gui-attached")]
 pub mod attached;
-#[cfg(feature = "gui-free-standing")]
-pub mod free_standing;
 
-pub mod implementation;
+mod implementation;
+pub use implementation::PluginGui as PluginGuiImpl;
 
 #[repr(C)]
 pub struct PluginGui {
@@ -16,7 +21,7 @@ pub struct PluginGui {
 }
 
 unsafe impl Extension for PluginGui {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI;
+    const IDENTIFIER: *const c_char = CLAP_EXT_GUI;
     type ExtensionType = PluginExtension;
 }
 
@@ -32,13 +37,7 @@ impl HostGui {
         width: u32,
         height: u32,
     ) -> Result<(), HostGuiError> {
-        let res = if let Some(request_resize) = self.inner.request_resize {
-            unsafe { request_resize(host.shared().as_raw(), width, height) }
-        } else {
-            return Err(HostGuiError::ResizeError);
-        };
-
-        if res {
+        if unsafe { (self.inner.request_resize)(host.shared().as_raw(), width, height) } {
             Ok(())
         } else {
             Err(HostGuiError::ResizeError)
@@ -47,7 +46,7 @@ impl HostGui {
 }
 
 unsafe impl Extension for HostGui {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_GUI;
+    const IDENTIFIER: *const c_char = CLAP_EXT_GUI;
     type ExtensionType = HostExtension;
 }
 
