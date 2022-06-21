@@ -1,7 +1,13 @@
+use crate::utils::data_from_array_buf;
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::ext::audio_ports::*;
+use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::ptr::NonNull;
+use std::str::Utf8Error;
+
+pub use clap_sys::ext::audio_ports::{CLAP_PORT_MONO, CLAP_PORT_STEREO};
 
 #[repr(C)]
 pub struct PluginAudioPorts(
@@ -25,7 +31,9 @@ bitflags! {
     #[repr(C)]
     pub struct AudioPortFlags: u32 {
         const CLAP_AUDIO_PORT_IS_MAIN = CLAP_AUDIO_PORT_IS_MAIN;
+        const CLAP_AUDIO_PORT_SUPPORTS_64BITS = CLAP_AUDIO_PORT_SUPPORTS_64BITS;
         const CLAP_AUDIO_PORT_PREFERS_64BITS = CLAP_AUDIO_PORT_PREFERS_64BITS;
+        const CLAP_AUDIO_PORT_REQUIRES_COMMON_SAMPLE_SIZE = CLAP_AUDIO_PORT_REQUIRES_COMMON_SAMPLE_SIZE;
     }
 }
 
@@ -34,28 +42,102 @@ unsafe impl Extension for PluginAudioPorts {
     type ExtensionType = PluginExtension;
 }
 
+pub struct AudioPortInfoData<'a> {
+    pub id: u32, // TODO: ClapId
+    pub name: &'a str,
+    pub channel_count: u32,
+    pub flags: AudioPortFlags,
+    pub port_type: Option<&'static CStr>, // TODO: proper port types
+                                          // TODO: in_place_pair
+}
+
+impl<'a> TryFrom<&'a clap_audio_port_info> for AudioPortInfoData<'a> {
+    type Error = Utf8Error;
+
+    fn try_from(other: &'a clap_audio_port_info) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: other.id,
+            name: std::str::from_utf8(data_from_array_buf(&other.name))?,
+            channel_count: other.channel_count,
+            flags: AudioPortFlags { bits: other.flags },
+            port_type: NonNull::new(other.port_type as *mut _)
+                .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) }),
+        })
+    }
+}
+
+#[cfg(feature = "clack-host")]
+mod host {
+    use clap_sys::ext::audio_ports::*;
+    use std::mem::MaybeUninit;
+
+    use super::*;
+    use clack_host::host::PluginHoster;
+    use clack_host::instance::PluginInstance;
+
+    impl PluginAudioPorts {
+        pub fn count_inputs<'a, H: PluginHoster<'a>>(&self, plugin: &PluginInstance<'a, H>) -> u32 {
+            unsafe { (self.0.count)(plugin.raw_instance(), true) }
+        }
+
+        pub fn count_outputs<'a, H: PluginHoster<'a>>(
+            &self,
+            plugin: &PluginInstance<'a, H>,
+        ) -> u32 {
+            unsafe { (self.0.count)(plugin.raw_instance(), false) }
+        }
+
+        fn get<'a, H: PluginHoster<'a>>(
+            &self,
+            plugin: &PluginInstance<'a, H>,
+            index: u32,
+            is_input: bool,
+        ) -> Option<clap_audio_port_info> {
+            let mut info_data: MaybeUninit<clap_audio_port_info> = MaybeUninit::uninit();
+            if unsafe {
+                (self.0.get)(
+                    plugin.raw_instance(),
+                    index,
+                    is_input,
+                    info_data.as_mut_ptr(),
+                )
+            } {
+                Some(unsafe { info_data.assume_init() })
+            } else {
+                None
+            }
+        }
+
+        pub fn get_input<'a, H: PluginHoster<'a>>(
+            &self,
+            plugin: &PluginInstance<'a, H>,
+            index: u32,
+        ) -> Option<clap_audio_port_info> {
+            self.get(plugin, index, true)
+        }
+
+        pub fn get_output<'a, H: PluginHoster<'a>>(
+            &self,
+            plugin: &PluginInstance<'a, H>,
+            index: u32,
+        ) -> Option<clap_audio_port_info> {
+            self.get(plugin, index, false)
+        }
+    }
+}
+
 #[cfg(feature = "clack-plugin")]
 mod plugin {
-    use crate::audio_ports::{AudioPortFlags, PluginAudioPorts};
+    use crate::audio_ports::{AudioPortInfoData, PluginAudioPorts};
     use crate::utils::write_to_array_buf;
     use clack_common::extensions::ExtensionImplementation;
     use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
     use clack_plugin::plugin::Plugin;
     use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
     use clap_sys::plugin::clap_plugin;
-    use std::ffi::CStr;
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
     use std::ptr::addr_of_mut;
-
-    pub struct AudioPortInfoData<'a> {
-        pub id: u32, // TODO: ClapId
-        pub name: &'a str,
-        pub channel_count: u32,
-        pub flags: AudioPortFlags,
-        pub port_type: Option<&'static CStr>, // TODO: proper port types
-                                              // TODO: in_place_pair
-    }
 
     pub struct AudioPortInfoWriter<'a> {
         buf: &'a mut MaybeUninit<clap_audio_port_info>,
