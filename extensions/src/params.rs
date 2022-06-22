@@ -38,11 +38,11 @@ mod host {
             info: &'b mut MaybeUninit<ParamInfo>,
         ) -> Option<&'b mut ParamInfo> {
             let valid = unsafe {
-                    (self.0.get_info)(
-                        plugin.raw_instance(),
-                        param_index,
-                        info.as_mut_ptr() as *mut _,
-                    )
+                (self.0.get_info)(
+                    plugin.raw_instance(),
+                    param_index,
+                    info.as_mut_ptr() as *mut _,
+                )
             };
 
             if valid {
@@ -58,7 +58,8 @@ mod host {
             param_id: u32,
         ) -> Option<f64> {
             let mut value = MaybeUninit::uninit();
-            let valid = unsafe { (self.0.get_value)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
+            let valid =
+                unsafe { (self.0.get_value)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
 
             if valid {
                 unsafe { Some(value.assume_init()) }
@@ -75,13 +76,13 @@ mod host {
             buffer: &'b mut [std::mem::MaybeUninit<u8>],
         ) -> Option<&'b mut [u8]> {
             let valid = unsafe {
-                    (self.0.value_to_text)(
-                        plugin.raw_instance(),
-                        param_id,
-                        value,
-                        buffer.as_mut_ptr() as *mut _,
-                        buffer.len() as u32,
-                    )
+                (self.0.value_to_text)(
+                    plugin.raw_instance(),
+                    param_id,
+                    value,
+                    buffer.as_mut_ptr() as *mut _,
+                    buffer.len() as u32,
+                )
             };
 
             if valid {
@@ -104,12 +105,12 @@ mod host {
             let mut value = MaybeUninit::uninit();
 
             let valid = unsafe {
-                    (self.0.text_to_value)(
-                        plugin.raw_instance(),
-                        param_id,
-                        display.as_ptr(),
-                        value.as_mut_ptr(),
-                    )
+                (self.0.text_to_value)(
+                    plugin.raw_instance(),
+                    param_id,
+                    display.as_ptr(),
+                    value.as_mut_ptr(),
+                )
             };
 
             if valid {
@@ -130,14 +131,14 @@ mod host {
                 return false;
             }
 
-                unsafe {
-                    (self.0.flush)(
-                        plugin.raw_instance(),
-                        input_event_list.as_raw(),
-                        output_event_list.as_raw_mut(),
-                    )
-                };
-                true
+            unsafe {
+                (self.0.flush)(
+                    plugin.raw_instance(),
+                    input_event_list.as_raw(),
+                    output_event_list.as_raw_mut(),
+                )
+            };
+            true
         }
 
         pub fn flush_active<'a, H: PluginHoster<'a>>(
@@ -146,14 +147,14 @@ mod host {
             input_event_list: &InputEvents,
             output_event_list: &mut OutputEvents,
         ) {
-                // SAFETY: flush is already guaranteed by the types to be called on an active, non-processing plugin
-                unsafe {
-                    (self.0.flush)(
-                        plugin.audio_processor_plugin_data().as_raw(),
-                        input_event_list.as_raw(),
-                        output_event_list.as_raw_mut(),
-                    )
-                }
+            // SAFETY: flush is already guaranteed by the types to be called on an active, non-processing plugin
+            unsafe {
+                (self.0.flush)(
+                    plugin.audio_processor_plugin_data().as_raw(),
+                    input_event_list.as_raw(),
+                    output_event_list.as_raw_mut(),
+                )
+            }
         }
     }
 

@@ -10,13 +10,13 @@ use clap_sys::plugin::clap_plugin;
 use clap_sys::version::CLAP_VERSION;
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CStr};
+use std::fmt;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::Arc;
-use std::fmt;
 
 mod panic {
     #[cfg(not(test))]

@@ -94,7 +94,6 @@ impl<'a> TryFrom<&'a ParamInfo> for ParamInfoData<'a> {
     }
 }
 
-
 impl<'a> TryFrom<&'a mut ParamInfo> for ParamInfoData<'a> {
     type Error = Utf8Error;
 
