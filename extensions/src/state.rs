@@ -60,15 +60,10 @@ mod host {
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
 
-            let success = if let Some(load) = self.0.load {
-                unsafe { load(plugin.as_raw(), stream.as_raw_mut()) }
+            if unsafe { (self.0.load)(plugin.as_raw(), stream.as_raw_mut()) } {
+                Ok(())
             } else {
-                false
-            };
-
-            match success {
-                true => Ok(()),
-                false => Err(StateError { saving: false }),
+                Err(StateError { saving: false })
             }
         }
 
@@ -79,15 +74,10 @@ mod host {
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
 
-            let result = if let Some(save) = self.0.save {
-                unsafe { save(plugin.as_raw(), stream.as_raw_mut()) }
+            if unsafe { (self.0.save)(plugin.as_raw(), stream.as_raw_mut()) } {
+                Ok(())
             } else {
-                false
-            };
-
-            match result {
-                true => Ok(()),
-                false => Err(StateError { saving: true }),
+                Err(StateError { saving: true })
             }
         }
     }

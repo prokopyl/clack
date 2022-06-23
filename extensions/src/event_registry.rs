@@ -1,6 +1,7 @@
 use clack_common::extensions::{Extension, HostExtension};
 use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct HostEventRegistry {
@@ -8,7 +9,7 @@ pub struct HostEventRegistry {
 }
 
 unsafe impl Extension for HostEventRegistry {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_EVENT_REGISTRY;
+    const IDENTIFIER: *const c_char = CLAP_EXT_EVENT_REGISTRY;
     type ExtensionType = HostExtension;
 }
 
@@ -24,7 +25,7 @@ const _: () = {
         ) -> Option<EventSpaceId<S>> {
             let mut out = u16::MAX;
             let success =
-                unsafe { (self.inner.query?)(host.shared().as_raw(), S::NAME.as_ptr(), &mut out) };
+                unsafe { (self.inner.query)(host.shared().as_raw(), S::NAME.as_ptr(), &mut out) };
 
             if !success {
                 return None;
@@ -62,9 +63,7 @@ const _: () = {
         for HostEventRegistry
     {
         const IMPLEMENTATION: &'static Self = &HostEventRegistry {
-            inner: clap_host_event_registry {
-                query: Some(query::<H>),
-            },
+            inner: clap_host_event_registry { query: query::<H> },
         };
     }
 

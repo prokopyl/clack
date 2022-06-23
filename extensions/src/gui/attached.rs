@@ -21,12 +21,16 @@ unsafe impl Extension for PluginGuiWin32 {
 impl PluginGuiWin32 {
     /// # Safety
     /// The window_hwnd pointer must be valid
-    pub unsafe fn attach(
-        &self,
+    pub unsafe fn attach<'a, P>(
+        &mut self,
         plugin: &mut clack_host::plugin::PluginMainThread,
         window_hwnd: *mut std::ffi::c_void,
-    ) -> bool {
-        Self::attach(self, plugin, window_hwnd)
+    ) -> bool
+    where
+        P: clack_plugin::plugin::Plugin<'a>,
+        P::MainThread: implementation::PluginAttachedGui,
+    {
+        implementation::attach_win32::<P>(plugin.as_raw(), window_hwnd)
     }
 }
 
@@ -44,12 +48,16 @@ unsafe impl Extension for PluginGuiCocoa {
 impl PluginGuiCocoa {
     /// # Safety
     /// The ns_view pointer must be valid
-    pub unsafe fn attach(
-        &self,
+    pub unsafe fn attach<'a, P>(
+        &mut self,
         plugin: &mut clack_host::plugin::PluginMainThread,
         ns_view: *mut std::ffi::c_void,
-    ) -> bool {
-        Self::attach(self, plugin, ns_view)
+    ) -> bool
+    where
+        P: clack_plugin::plugin::Plugin<'a>,
+        P::MainThread: implementation::PluginAttachedGui,
+    {
+        implementation::attach_cocoa::<P>(plugin.as_raw(), ns_view)
     }
 }
 
@@ -67,13 +75,23 @@ unsafe impl Extension for PluginGuiX11 {
 impl PluginGuiX11 {
     /// # Safety
     /// The window_id pointer must be valid
-    pub unsafe fn attach(
-        &self,
+    pub unsafe fn attach<'a, P>(
+        &mut self,
         plugin: &mut clack_host::plugin::PluginMainThread,
         display_name: Option<&std::ffi::CStr>,
         window_id: ::std::os::raw::c_ulong,
-    ) -> bool {
-        Self::attach(self, plugin, display_name, window_id)
+    ) -> bool
+    where
+        P: clack_plugin::plugin::Plugin<'a>,
+        P::MainThread: implementation::PluginAttachedGui,
+    {
+        implementation::attach_x11::<P>(
+            plugin.as_raw(),
+            display_name
+                .map(std::ffi::CStr::as_ptr)
+                .unwrap_or_else(std::ptr::null),
+            window_id,
+        )
     }
 }
 
@@ -129,7 +147,7 @@ pub mod implementation {
     }
 
     #[cfg(feature = "clack-host")]
-    unsafe extern "C" fn attach_win32<'a, P: Plugin<'a>>(
+    pub(super) unsafe extern "C" fn attach_win32<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         window: clap_hwnd,
     ) -> bool
@@ -147,7 +165,7 @@ pub mod implementation {
     }
 
     #[cfg(feature = "clack-host")]
-    unsafe extern "C" fn attach_cocoa<'a, P: Plugin<'a>>(
+    pub(super) unsafe extern "C" fn attach_cocoa<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         ns_view: clap_nsview,
     ) -> bool
@@ -165,7 +183,7 @@ pub mod implementation {
     }
 
     #[cfg(feature = "clack-host")]
-    unsafe extern "C" fn attach_x11<'a, P: Plugin<'a>>(
+    pub(super) unsafe extern "C" fn attach_x11<'a, P: Plugin<'a>>(
         plugin: *const clap_plugin,
         display_name: *const std::os::raw::c_char,
         window: clap_xwnd,
