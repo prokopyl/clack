@@ -9,6 +9,15 @@ use std::os::raw::c_char;
 
 type PluginResult = Result<(), PluginError>;
 
+pub struct GuiApiType<'a>(pub &'a CStr);
+
+impl GuiApiType<'static> {
+    pub const WIN32: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") });
+    pub const COCOA: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") });
+    pub const X11: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") });
+    pub const WAYLAND: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
+}
+
 /// Implement this trait for your plugin's GUI handler.
 ///
 /// ### Typical call sequence
@@ -26,13 +35,13 @@ type PluginResult = Result<(), PluginError>;
 #[allow(unused)]
 pub trait PluginGui {
     /// Indicate whether a particular API is supported.
-    fn is_api_supported(&self, api: &str, is_floating: bool) -> PluginResult;
+    fn is_api_supported(&self, api: GuiApiType, is_floating: bool) -> PluginResult;
 
-    /// Provide a hint to the host if the plugin prefers to use a different API (and/or float state).
+    /// Provide a hint to the host if the plugin prefers to use an API (and/or float state).
     ///
-    /// This is __only a hint__ however, and the host can continue using the API passed in and/or
-    /// situate the plugin in the indicated float/embed state despite having called this.
-    fn get_preferred_api(&self, api: &str, is_floating: bool) -> Result<(&str, bool), PluginError>;
+    /// This is __only a hint__ however, and the host can still use the API of its choice and/or
+    /// situate the plugin in floating or embedded state despite having called this.
+    fn get_preferred_api(&self) -> Result<(&str, bool), PluginError>;
 
     /// Create and allocate all resources needed for the GUI
     ///
@@ -40,7 +49,7 @@ pub trait PluginGui {
     /// its window to stay above the parent window via [`Self::set_transient`].
     ///
     /// If `is_floating` is false, the plugin must embed its window in the parent (host).
-    fn create(&mut self, is_floating: bool) -> PluginResult;
+    fn create(&mut self, api: GuiApiType, is_floating: bool) -> PluginResult;
 
     /// Free all resources associated with the GUI
     fn destroy(&mut self);
@@ -134,18 +143,11 @@ unsafe extern "C" fn is_api_supported<'a, P: Plugin<'a>>(
 where
     P::MainThread: PluginGui,
 {
-    if plugin.is_null() {
-        return false;
-    }
-
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        let api_str = CStr::from_ptr(api)
-            .to_str()
-            .map_err(PluginWrapperError::StringEncoding)?;
         plugin
             .main_thread()
             .as_ref()
-            .is_api_supported(&api_str, is_floating)
+            .is_api_supported(GuiApiType(&CStr::from_ptr(api)), is_floating)
             .map_err(PluginWrapperError::Plugin)
     })
     .is_some()
@@ -163,13 +165,10 @@ where
         if api.is_null() || (*api).is_null() {
             return Err(PluginWrapperError::NulPtr("API name was null"));
         }
-        let api_str = CStr::from_ptr(*api)
-            .to_str()
-            .map_err(PluginWrapperError::StringEncoding)?;
         let (preferred_api, wants_to_float) = plugin
             .main_thread()
             .as_ref()
-            .get_preferred_api(api_str, *is_floating)
+            .get_preferred_api()
             .map_err(PluginWrapperError::Plugin)?;
 
         *api = CString::new(preferred_api)
@@ -184,7 +183,7 @@ where
 
 unsafe extern "C" fn create<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
-    _: *const c_char,
+    api: *const c_char,
     is_floating: bool,
 ) -> bool
 where
@@ -194,7 +193,7 @@ where
         plugin
             .main_thread()
             .as_mut()
-            .create(is_floating)
+            .create(GuiApiType(&CStr::from_ptr(api)), is_floating)
             .map_err(PluginWrapperError::Plugin)
     })
     .is_some()

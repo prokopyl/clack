@@ -9,11 +9,9 @@ pub use clap_sys::ext::gui::clap_gui_resize_hints;
 /// Handle to parent (host) window
 pub use clap_sys::ext::gui::clap_window;
 
-#[cfg(feature = "gui-attached")]
-pub mod attached;
-
 mod implementation;
 pub use implementation::PluginGui as PluginGuiImpl;
+pub use implementation::GuiApiType;
 
 #[repr(C)]
 pub struct PluginGui {

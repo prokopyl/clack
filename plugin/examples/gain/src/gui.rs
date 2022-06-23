@@ -1,10 +1,6 @@
 use crate::{GainPluginMainThread, UiAtomics};
-use clack_extensions::{
-    gui::attached::implementation::PluginAttachedGui, gui::attached::window::AttachableWindow,
-    gui::UiSize,
-};
+use clack_extensions::gui::UiSize;
 use clack_plugin::plugin::PluginError;
-use std::ffi::CStr;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use vizia::*;
@@ -67,42 +63,16 @@ fn new_gui(cx: &mut Context, ui_atomics: Arc<UiAtomics>) {
     });
 }
 
-impl<'a> PluginAttachedGui for GainPluginMainThread<'a> {
-    fn attach(
-        &mut self,
-        window: AttachableWindow,
-        display_name: Option<&CStr>,
-    ) -> Result<(), PluginError> {
-        let title = display_name
-            .map(|t| t.to_string_lossy())
-            .unwrap_or_else(|| "Some default title I dunno".into());
-        let ui_atomics = self.shared.from_ui.clone();
-
-        let window = Application::new(WindowDescription::new().with_title(&title), move |cx| {
-            new_gui(cx, ui_atomics.clone())
-        })
-        .open_parented(&window);
-
-        self.open_window = Some(window);
-
-        Ok(())
-    }
-}
-
 impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
     fn is_api_supported(
         &self,
-        _api: &str,
+        _api: clack_extensions::gui::GuiApiType,
         _is_floating: bool,
     ) -> Result<(), clack_plugin::prelude::PluginError> {
         Ok(())
     }
 
-    fn get_preferred_api(
-        &self,
-        _api: &str,
-        _is_floating: bool,
-    ) -> Result<(&str, bool), clack_plugin::prelude::PluginError> {
+    fn get_preferred_api(&self) -> Result<(&str, bool), clack_plugin::prelude::PluginError> {
         Err(PluginError::Custom(Box::new({
             #[derive(Debug)]
             struct GetApiError;
@@ -123,7 +93,7 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
         Ok(())
     }
 
-    fn create(&mut self, _is_floating: bool) -> Result<(), PluginError> {
+    fn create(&mut self, _api: clack_extensions::gui::GuiApiType, _is_floating: bool) -> Result<(), PluginError> {
         Ok(())
     }
 

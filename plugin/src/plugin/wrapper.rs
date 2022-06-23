@@ -110,12 +110,6 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     /// # Safety
     /// Caller must ensure this method is only called on main thread and has exclusivity
     pub(crate) unsafe fn reset(self: Pin<&mut Self>) -> Result<(), PluginWrapperError> {
-        if self.audio_processor.is_some() {
-            return Err(PluginWrapperError::ActivatedPlugin);
-        }
-
-        let _shared = &*(self.shared() as *const _);
-        let _host = self.host;
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = Pin::get_unchecked_mut(self);
 
