@@ -13,6 +13,9 @@ mod implementation;
 pub use implementation::GuiApiType;
 pub use implementation::PluginGui as PluginGuiImpl;
 
+mod window;
+pub use window::Window;
+
 #[repr(C)]
 pub struct PluginGui {
     inner: clap_plugin_gui,

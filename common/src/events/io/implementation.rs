@@ -40,7 +40,7 @@ unsafe extern "C" fn get<I: InputEventBuffer>(
             .map(|e| e.as_raw() as *const _)
             .unwrap_or_else(::core::ptr::null)
     })
-    .unwrap_or_else(|_| ::core::ptr::null())
+    .unwrap_or(::core::ptr::null())
 }
 
 unsafe extern "C" fn try_push<O: OutputEventBuffer>(

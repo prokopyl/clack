@@ -29,6 +29,7 @@ unsafe impl<'a> Event<'a> for ParamValueEvent {
 }
 
 impl ParamValueEvent {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn new(
         header: EventHeader<Self>,
@@ -130,6 +131,7 @@ unsafe impl<'a> Event<'a> for ParamModEvent {
 
 impl ParamModEvent {
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         header: EventHeader<Self>,
         cookie: *mut c_void,

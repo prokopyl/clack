@@ -7,7 +7,7 @@ use std::sync::Arc;
 use clack_plugin::{plugin::PluginDescriptor, prelude::*};
 
 use baseview::WindowHandle;
-use clack_extensions::gui::PluginGui;
+use clack_extensions::gui::{PluginGui, Window};
 
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -96,6 +96,8 @@ pub struct GainPluginMainThread<'a> {
     shared: &'a GainPluginShared,
 
     open_window: Option<WindowHandle>,
+    is_floating: bool,
+    related_window: Option<Window>,
 }
 
 impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
@@ -107,6 +109,8 @@ impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
             rusting: 0,
             shared,
             open_window: None,
+            is_floating: false,
+            related_window: None,
         })
     }
 }

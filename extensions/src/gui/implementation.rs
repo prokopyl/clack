@@ -1,4 +1,4 @@
-use crate::gui::UiSize;
+use crate::gui::{UiSize, Window};
 use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
 use clack_plugin::plugin::{Plugin, PluginError};
@@ -9,7 +9,22 @@ use std::os::raw::c_char;
 
 type PluginResult = Result<(), PluginError>;
 
+#[derive(Copy, Clone, Eq)]
 pub struct GuiApiType<'a>(pub &'a CStr);
+
+impl<'a> PartialEq for GuiApiType<'a> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bytes().eq(other.0.to_bytes())
+    }
+}
+
+impl<'a> GuiApiType<'a> {
+    #[inline]
+    pub(crate) unsafe fn from_ptr(ptr: *const c_char) -> Self {
+        Self(CStr::from_ptr(ptr))
+    }
+}
 
 impl GuiApiType<'static> {
     pub const WIN32: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") });
@@ -87,12 +102,12 @@ pub trait PluginGui {
     fn set_size(&mut self, size: UiSize) -> PluginResult;
 
     /// Embed UI into the given parent window
-    fn set_parent(&mut self, window: &clap_window) -> PluginResult;
+    fn set_parent(&mut self, window: Window) -> PluginResult;
 
     /// Receive instruction to stay above the given window
     ///
     /// Only applies to floating windows.
-    fn set_transient(&mut self, window: &clap_window) -> PluginResult {
+    fn set_transient(&mut self, window: Window) -> PluginResult {
         Ok(())
     }
 
@@ -147,7 +162,7 @@ where
         plugin
             .main_thread()
             .as_ref()
-            .is_api_supported(GuiApiType(&CStr::from_ptr(api)), is_floating)
+            .is_api_supported(GuiApiType::from_ptr(api), is_floating)
             .map_err(PluginWrapperError::Plugin)
     })
     .is_some()
@@ -193,7 +208,7 @@ where
         plugin
             .main_thread()
             .as_mut()
-            .create(GuiApiType(&CStr::from_ptr(api)), is_floating)
+            .create(GuiApiType::from_ptr(api), is_floating)
             .map_err(PluginWrapperError::Plugin)
     })
     .is_some()
@@ -319,13 +334,16 @@ where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
+        let window = window.as_ref().ok_or(PluginWrapperError::NulPtr(
+            "Null pointer provided for parent window.",
+        ))?;
+
         plugin
             .main_thread()
             .as_mut()
-            .set_parent(window.as_ref().ok_or(PluginWrapperError::NulPtr(
-                "Null pointer provided for parent window.",
-            ))?)
-            .map_err(PluginWrapperError::Plugin)
+            .set_parent(Window::from_raw(*window))?;
+
+        Ok(())
     })
     .is_some()
 }
@@ -338,13 +356,16 @@ where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
+        let window = window.as_ref().ok_or(PluginWrapperError::NulPtr(
+            "Null pointer provided for transient window.",
+        ))?;
+
         plugin
             .main_thread()
             .as_mut()
-            .set_transient(window.as_ref().ok_or(PluginWrapperError::NulPtr(
-                "Null pointer provided for transient window.",
-            ))?)
-            .map_err(PluginWrapperError::Plugin)
+            .set_transient(Window::from_raw(*window))?;
+
+        Ok(())
     })
     .is_some()
 }
@@ -356,11 +377,13 @@ unsafe extern "C" fn suggest_title<'a, P: Plugin<'a>>(
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().suggest_title(
-            CStr::from_ptr(title)
-                .to_str()
-                .map_err(PluginWrapperError::StringEncoding)?,
-        ))
+        let title = CStr::from_ptr(title)
+            .to_str()
+            .map_err(PluginWrapperError::StringEncoding)?;
+
+        plugin.main_thread().as_mut().suggest_title(title);
+
+        Ok(())
     });
 }
 
@@ -369,11 +392,9 @@ where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        plugin
-            .main_thread()
-            .as_mut()
-            .show()
-            .map_err(PluginWrapperError::Plugin)
+        plugin.main_thread().as_mut().show()?;
+
+        Ok(())
     })
     .is_some()
 }
@@ -383,11 +404,9 @@ where
     P::MainThread: PluginGui,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        plugin
-            .main_thread()
-            .as_mut()
-            .hide()
-            .map_err(PluginWrapperError::Plugin)
+        plugin.main_thread().as_mut().hide()?;
+
+        Ok(())
     })
     .is_some()
 }

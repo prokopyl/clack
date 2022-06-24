@@ -66,7 +66,7 @@ impl<'a> InputStream<'a> {
 
 impl<'a> Read for InputStream<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let ret = unsafe { read::<&[u8]>(&mut self.0, buf.as_mut_ptr().cast(), buf.len() as u64) };
+        let ret = unsafe { read::<&[u8]>(&self.0, buf.as_mut_ptr().cast(), buf.len() as u64) };
         match ret {
             i if i >= 0 => Ok(i as usize),
             code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),
@@ -111,7 +111,7 @@ impl<'a> OutputStream<'a> {
 
 impl<'a> Write for OutputStream<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let ret = unsafe { write::<&mut [u8]>(&mut self.0, buf.as_ptr().cast(), buf.len() as u64) };
+        let ret = unsafe { write::<&mut [u8]>(&self.0, buf.as_ptr().cast(), buf.len() as u64) };
 
         match ret {
             i if i >= 0 => Ok(i as usize),

@@ -45,7 +45,7 @@ unsafe extern "C" fn get_factory<E: PluginEntry>(
         E::declare_factories(&mut builder);
         builder.found()
     })
-    .unwrap_or_else(|_| ::core::ptr::null())
+    .unwrap_or(::core::ptr::null())
 }
 
 pub struct SinglePluginEntry<'a, P: Plugin<'a>>(PhantomData<&'a P>);
