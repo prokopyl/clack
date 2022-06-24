@@ -2,20 +2,26 @@ use crate::utils::data_from_array_buf;
 use bitflags::bitflags;
 use clap_sys::ext::params::*;
 use std::ffi::c_void;
+use std::str::Utf8Error;
 
 bitflags! {
     #[repr(C)]
     pub struct ParamInfoFlags: u32 {
-        const IS_STEPPED = CLAP_PARAM_IS_STEPPED;
-        const IS_PER_NOTE = CLAP_PARAM_IS_PER_NOTE;
-        const IS_PER_CHANNEL = CLAP_PARAM_IS_PER_CHANNEL;
-        const IS_PER_PORT = CLAP_PARAM_IS_PER_PORT;
-        const IS_PERIODIC = CLAP_PARAM_IS_PERIODIC;
+        const IS_AUTOMATABLE = CLAP_PARAM_IS_AUTOMATABLE;
+        const IS_AUTOMATABLE_PER_CHANNEL = CLAP_PARAM_IS_AUTOMATABLE_PER_CHANNEL;
+        const IS_AUTOMATABLE_PER_KEY = CLAP_PARAM_IS_AUTOMATABLE_PER_KEY;
+        const IS_AUTOMATABLE_PER_NOTE_ID = CLAP_PARAM_IS_AUTOMATABLE_PER_NOTE_ID;
+        const IS_AUTOMATABLE_PER_PORT = CLAP_PARAM_IS_AUTOMATABLE_PER_PORT;
+        const IS_BYPASS = CLAP_PARAM_IS_BYPASS;
         const IS_HIDDEN = CLAP_PARAM_IS_HIDDEN;
-        // TODO: check if this works
-        const IS_BYPASS = (1 << 6); // Can't use native setting since it is | with stepped
-        const IS_READONLY = CLAP_PARAM_IS_READONLY;
         const IS_MODULATABLE = CLAP_PARAM_IS_MODULATABLE;
+        const IS_MODULATABLE_PER_CHANNEL = CLAP_PARAM_IS_MODULATABLE_PER_CHANNEL;
+        const IS_MODULATABLE_PER_KEY = CLAP_PARAM_IS_MODULATABLE_PER_KEY;
+        const IS_MODULATABLE_PER_NOTE_ID = CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID;
+        const IS_MODULATABLE_PER_PORT = CLAP_PARAM_IS_MODULATABLE_PER_PORT;
+        const IS_PERIODIC = CLAP_PARAM_IS_PERIODIC;
+        const IS_READONLY = CLAP_PARAM_IS_READONLY;
+        const IS_STEPPED = CLAP_PARAM_IS_STEPPED;
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
     }
 }
@@ -69,4 +75,29 @@ pub struct ParamInfoData<'a> {
     pub min_value: f64,
     pub max_value: f64,
     pub default_value: f64,
+}
+
+impl<'a> TryFrom<&'a ParamInfo> for ParamInfoData<'a> {
+    type Error = Utf8Error;
+
+    fn try_from(info: &'a ParamInfo) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: info.id(),
+            flags: ParamInfoFlags { bits: info.flags() },
+            cookie: info.cookie(),
+            name: std::str::from_utf8(info.name())?,
+            module: std::str::from_utf8(info.module())?,
+            min_value: info.min_value(),
+            max_value: info.max_value(),
+            default_value: info.default_value(),
+        })
+    }
+}
+
+impl<'a> TryFrom<&'a mut ParamInfo> for ParamInfoData<'a> {
+    type Error = Utf8Error;
+
+    fn try_from(info: &'a mut ParamInfo) -> Result<Self, Self::Error> {
+        Self::try_from(info as &'a ParamInfo)
+    }
 }

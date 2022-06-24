@@ -47,7 +47,7 @@ impl<'a> Audio<'a> {
     pub unsafe fn output_unchecked(&self, index: usize) -> Option<AudioBufferMut> {
         self.outputs
             .get(index)
-            .map(|buf| unsafe { AudioBufferMut::from_raw(buf, self.frames_count) })
+            .map(|buf| AudioBufferMut::from_raw(buf, self.frames_count))
     }
 
     fn zip_channels<'b, T: Sized>(

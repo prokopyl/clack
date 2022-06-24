@@ -1,10 +1,11 @@
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
 use std::cmp::Ordering;
+use std::fmt;
 use std::marker::PhantomData;
 
 #[repr(C)]
-#[derive(Copy, Clone, Eq, Debug)]
+#[derive(Copy, Clone)]
 pub struct EventHeader<E = ()> {
     inner: clap_event_header,
     _event: PhantomData<E>,
@@ -102,16 +103,17 @@ use crate::events::spaces::CoreEventSpace;
 use crate::events::spaces::EventSpaceId;
 use crate::events::Event;
 use clap_sys::events::{
-    CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST, CLAP_EVENT_IS_LIVE, CLAP_EVENT_SHOULD_RECORD,
+    CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_GESTURE_BEGIN,
+    CLAP_EVENT_PARAM_GESTURE_END,
 };
 
 bitflags! {
     #[repr(C)]
     pub struct EventFlags: u32 {
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
-        const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
-        const END_ADJUST = CLAP_EVENT_END_ADJUST;
-        const SHOULD_RECORD = CLAP_EVENT_SHOULD_RECORD;
+        const BEGIN_ADJUST = CLAP_EVENT_PARAM_GESTURE_BEGIN as u32;
+        const END_ADJUST = CLAP_EVENT_PARAM_GESTURE_END as u32;
+        const DONT_RECORD = CLAP_EVENT_DONT_RECORD;
     }
 }
 
@@ -119,6 +121,22 @@ impl<E> PartialEq for EventHeader<E> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.time == other.inner.time
+    }
+}
+
+impl<E> Eq for EventHeader<E> {}
+
+impl<E> fmt::Debug for EventHeader<E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "EventHeader {{{},{},{},{},{}}}",
+            self.inner.size,
+            self.inner.time,
+            self.inner.space_id,
+            self.inner.type_,
+            self.inner.flags
+        )
     }
 }
 

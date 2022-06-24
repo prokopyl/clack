@@ -55,7 +55,7 @@ impl<'a> PluginDescriptor<'a> {
     #[inline]
     pub fn features(&self) -> impl Iterator<Item = &'a CStr> {
         FeaturesIter {
-            current: self.descriptor.features,
+            current: self.descriptor.features as *mut _,
             _lifetime: PhantomData,
         }
     }

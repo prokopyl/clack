@@ -117,7 +117,7 @@ impl AudioPorts {
                 descriptor.data32 = ::core::ptr::null_mut();
             } else {
                 descriptor.data64 = ::core::ptr::null_mut();
-                descriptor.data32 = buffers.as_mut_ptr();
+                descriptor.data32 = buffers.as_ptr() as *const *const _;
             }
         }
 

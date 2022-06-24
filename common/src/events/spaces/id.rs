@@ -1,6 +1,6 @@
 use crate::events::spaces::core::CoreEventSpace;
 use crate::events::EventSpace;
-use clap_sys::ext::event_registry::CLAP_CORE_EVENT_SPACE_ID;
+use clap_sys::events::CLAP_CORE_EVENT_SPACE_ID;
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -30,7 +30,7 @@ impl<S> EventSpaceId<S> {
     /// # Safety
     ///
     /// The caller *must* ensure the event type is properly associated to the event space `S`.
-    /// The caller must also ensure the ID is not equal to [`INVALID_ID`].
+    /// The caller must also ensure the ID is not equal to [`Self::INVALID_ID`].
     #[inline]
     pub const unsafe fn new_unchecked(id: u16) -> Self {
         Self {

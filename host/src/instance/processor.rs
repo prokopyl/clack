@@ -66,14 +66,10 @@ impl<'a, H: PluginHoster<'a>> StartedPluginAudioProcessor<'a, H> {
 
         let instance = self.wrapper.raw_instance();
 
-        if let Some(do_process) = instance.process {
-            ProcessStatus::from_raw(unsafe { do_process(instance, &process) })
-                .ok_or(())
-                .and_then(|r| r)
-                .map_err(|_| HostError::ProcessingFailed)
-        } else {
-            Err(HostError::ProcessingFailed)
-        }
+        ProcessStatus::from_raw(unsafe { (instance.process)(instance, &process) })
+            .ok_or(())
+            .and_then(|r| r)
+            .map_err(|_| HostError::ProcessingFailed)
     }
 
     #[inline]

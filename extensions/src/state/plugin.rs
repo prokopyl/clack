@@ -9,9 +9,7 @@ use clap_sys::stream::{clap_istream, clap_ostream};
 impl HostState {
     #[inline]
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
-        if let Some(mark_dirty) = self.0.mark_dirty {
-            unsafe { mark_dirty(host.shared().as_raw()) }
-        }
+        unsafe { (self.0.mark_dirty)(host.shared().as_raw()) }
     }
 }
 
@@ -26,8 +24,8 @@ where
 {
     const IMPLEMENTATION: &'static Self = &super::PluginState(
         clap_plugin_state {
-            save: Some(save::<P>),
-            load: Some(load::<P>),
+            save: save::<P>,
+            load: load::<P>,
         },
         PhantomData,
     );
@@ -35,13 +33,13 @@ where
 
 unsafe extern "C" fn load<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
-    stream: *mut clap_istream,
+    stream: *const clap_istream,
 ) -> bool
 where
     P::MainThread: PluginStateImplementation,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
-        let input = InputStream::from_raw_mut(&mut *stream);
+        let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
         p.main_thread().as_mut().load(input)?;
         Ok(())
     })
@@ -50,13 +48,13 @@ where
 
 unsafe extern "C" fn save<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
-    stream: *mut clap_ostream,
+    stream: *const clap_ostream,
 ) -> bool
 where
     P::MainThread: PluginStateImplementation,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
-        let output = OutputStream::from_raw_mut(&mut *stream);
+        let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));
         p.main_thread().as_mut().save(output)?;
         Ok(())
     })

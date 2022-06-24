@@ -5,12 +5,13 @@ use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
 
 unsafe impl Extension for PluginState {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
+    const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
     type ExtensionType = PluginExtension;
 }
 
@@ -18,7 +19,7 @@ unsafe impl Extension for PluginState {
 pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
 unsafe impl Extension for HostState {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
+    const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
     type ExtensionType = HostExtension;
 }
 
@@ -59,15 +60,10 @@ mod host {
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
 
-            let success = if let Some(load) = self.0.load {
-                unsafe { load(plugin.as_raw(), stream.as_raw_mut()) }
+            if unsafe { (self.0.load)(plugin.as_raw(), stream.as_raw_mut()) } {
+                Ok(())
             } else {
-                false
-            };
-
-            match success {
-                true => Ok(()),
-                false => Err(StateError { saving: false }),
+                Err(StateError { saving: false })
             }
         }
 
@@ -78,15 +74,10 @@ mod host {
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
 
-            let result = if let Some(save) = self.0.save {
-                unsafe { save(plugin.as_raw(), stream.as_raw_mut()) }
+            if unsafe { (self.0.save)(plugin.as_raw(), stream.as_raw_mut()) } {
+                Ok(())
             } else {
-                false
-            };
-
-            match result {
-                true => Ok(()),
-                false => Err(StateError { saving: true }),
+                Err(StateError { saving: true })
             }
         }
     }

@@ -41,7 +41,7 @@ impl<'a> InputStream<'a> {
         Self(
             clap_istream {
                 ctx: reader as *mut R as *mut _,
-                read: Some(read::<R>),
+                read: read::<R>,
             },
             PhantomData,
         )
@@ -66,11 +66,7 @@ impl<'a> InputStream<'a> {
 
 impl<'a> Read for InputStream<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let ret = if let Some(read) = self.0.read {
-            unsafe { read(&mut self.0, buf.as_mut_ptr().cast(), buf.len() as u64) }
-        } else {
-            return Ok(0);
-        };
+        let ret = unsafe { read::<&[u8]>(&mut self.0, buf.as_mut_ptr().cast(), buf.len() as u64) };
         match ret {
             i if i >= 0 => Ok(i as usize),
             code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),
@@ -90,7 +86,7 @@ impl<'a> OutputStream<'a> {
         Self(
             clap_ostream {
                 ctx: reader as *mut W as *mut _,
-                write: Some(write::<W>),
+                write: write::<W>,
             },
             PhantomData,
         )
@@ -115,11 +111,7 @@ impl<'a> OutputStream<'a> {
 
 impl<'a> Write for OutputStream<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let ret = if let Some(write) = self.0.write {
-            unsafe { write(&mut self.0, buf.as_ptr().cast(), buf.len() as u64) }
-        } else {
-            return Ok(0);
-        };
+        let ret = unsafe { write::<&mut [u8]>(&mut self.0, buf.as_ptr().cast(), buf.len() as u64) };
 
         match ret {
             i if i >= 0 => Ok(i as usize),
@@ -134,7 +126,7 @@ impl<'a> Write for OutputStream<'a> {
 }
 
 unsafe extern "C" fn read<R: Read + Sized>(
-    istream: *mut clap_istream,
+    istream: *const clap_istream,
     buffer: *mut c_void,
     size: u64,
 ) -> i64 {
@@ -148,7 +140,7 @@ unsafe extern "C" fn read<R: Read + Sized>(
 }
 
 unsafe extern "C" fn write<W: Write + Sized>(
-    ostream: *mut clap_ostream,
+    ostream: *const clap_ostream,
     buffer: *const c_void,
     size: u64,
 ) -> i64 {

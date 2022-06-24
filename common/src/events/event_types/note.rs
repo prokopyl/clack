@@ -51,6 +51,7 @@ impl<E> NoteEvent<E> {
     #[inline]
     pub fn new(
         header: EventHeader<E>,
+        note_id: i32,
         port_index: i16,
         key: i16,
         channel: i16,
@@ -59,6 +60,7 @@ impl<E> NoteEvent<E> {
         Self {
             inner: clap_event_note {
                 header: header.into_raw(),
+                note_id,
                 port_index,
                 key,
                 channel,

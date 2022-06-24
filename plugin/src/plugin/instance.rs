@@ -19,15 +19,16 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         clap_plugin {
             desc: &P::DESCRIPTOR.0,
             plugin_data: Box::into_raw(Box::new(self)).cast(),
-            init: Some(Self::init),
-            destroy: Some(Self::destroy),
-            activate: Some(Self::activate),
-            deactivate: Some(Self::deactivate),
-            start_processing: Some(Self::start_processing),
-            stop_processing: Some(Self::stop_processing),
-            process: Some(Self::process),
-            get_extension: Some(Self::get_extension),
-            on_main_thread: Some(Self::on_main_thread),
+            init: Self::init,
+            destroy: Self::destroy,
+            activate: Self::activate,
+            deactivate: Self::deactivate,
+            reset: Self::reset,
+            start_processing: Self::start_processing,
+            stop_processing: Self::stop_processing,
+            process: Self::process,
+            get_extension: Self::get_extension,
+            on_main_thread: Self::on_main_thread,
         }
     }
 
@@ -83,6 +84,10 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
 
     unsafe extern "C" fn deactivate(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.deactivate());
+    }
+
+    unsafe extern "C" fn reset(plugin: *const clap_plugin) {
+        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.reset());
     }
 
     unsafe extern "C" fn start_processing(plugin: *const clap_plugin) -> bool {

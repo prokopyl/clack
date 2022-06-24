@@ -10,8 +10,7 @@ use std::ops::{Index, Range};
 /// or equal to the timestamp of the next event at index `i + 1`.
 ///
 /// `InputEvents`s do not own the event data, they are only lightweight wrappers around a compatible
-/// event buffer (i.e. [`InputEventBuffer`]), see [`InputEvents::from_buffer`], and [`EventBuffer`]
-/// as the default implementation.
+/// event buffer (i.e. [`InputEventBuffer`]), see [`InputEvents::from_buffer`] as the default implementation.
 ///
 /// Unlike [`Vec`s](std::vec::Vec) or slices, `InputEvents`s only support retrieving an event from
 /// its index ([`get`](InputEvents::get)). It also implements a few extra features for convenience,
@@ -24,7 +23,7 @@ use std::ops::{Index, Range};
 /// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
 ///
 /// let mut buf = EventBuffer::new();
-/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 0, 12, 0, 4.2));
+/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
 /// buf.push_back(event.as_unknown());
 /// assert_eq!(1, buf.len());
 ///
@@ -40,7 +39,7 @@ pub struct InputEvents<'a> {
 }
 
 impl<'a> InputEvents<'a> {
-    /// Creates a shared reference to an EventList from a given C FFI-compatible pointer.
+    /// Creates a shared reference to an InputEvents list from a given C FFI-compatible pointer.
     ///
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
@@ -68,11 +67,7 @@ impl<'a> InputEvents<'a> {
     /// Returns the number of events in the list.
     #[inline]
     pub fn len(&self) -> u32 {
-        if let Some(size) = self.inner.size {
-            unsafe { size(&self.inner) }
-        } else {
-            0
-        }
+        unsafe { (self.inner.size)(&self.inner) }
     }
 
     /// Returns if there are no events in the list.
@@ -86,14 +81,10 @@ impl<'a> InputEvents<'a> {
     /// If `index` is out of bounds, `None` is returned.
     #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
-        if let Some(get) = self.inner.get {
-            unsafe {
-                get(&self.inner, index)
-                    .as_ref()
-                    .map(|e| UnknownEvent::from_raw(e))
-            }
-        } else {
-            None
+        unsafe {
+            (self.inner.get)(&self.inner, index)
+                .as_ref()
+                .map(|e| UnknownEvent::from_raw(e))
         }
     }
 
@@ -123,7 +114,7 @@ impl<'a, I: InputEventBuffer> From<&'a mut I> for InputEvents<'a> {
     }
 }
 
-const INDEX_ERROR: &str = "Indexed EventList out of bounds";
+const INDEX_ERROR: &str = "Indexed InputEvents list out of bounds";
 
 impl<'a> Index<usize> for InputEvents<'a> {
     type Output = UnknownEvent<'a>;
@@ -134,7 +125,7 @@ impl<'a> Index<usize> for InputEvents<'a> {
     }
 }
 
-/// Immutable [`EventList`] iterator.
+/// Immutable [`InputEvents`] iterator.
 pub struct InputEventsIter<'a> {
     list: &'a InputEvents<'a>,
     range: Range<u32>,

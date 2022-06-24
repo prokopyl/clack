@@ -7,7 +7,6 @@ use std::sync::Arc;
 use clack_plugin::{plugin::PluginDescriptor, prelude::*};
 
 use baseview::WindowHandle;
-use clack_extensions::gui::attached::PluginGuiX11;
 use clack_extensions::gui::PluginGui;
 
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -61,10 +60,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
-        builder
-            .register::<PluginParams>()
-            .register::<PluginGui>()
-            .register::<PluginGuiX11>();
+        builder.register::<PluginParams>().register::<PluginGui>();
     }
 }
 
@@ -96,6 +92,7 @@ impl<'a> PluginShared<'a> for GainPluginShared {
 
 pub struct GainPluginMainThread<'a> {
     rusting: u32,
+    #[allow(unused)]
     shared: &'a GainPluginShared,
 
     open_window: Option<WindowHandle>,

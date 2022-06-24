@@ -12,7 +12,7 @@ impl ProcessStatus {
     pub fn from_raw(raw: clap_process_status) -> Option<Result<Self, ()>> {
         use ProcessStatus::*;
 
-        match raw as u32 {
+        match raw as i32 {
             CLAP_PROCESS_CONTINUE => Some(Ok(Continue)),
             CLAP_PROCESS_CONTINUE_IF_NOT_QUIET => Some(Ok(ContinueIfNotQuiet)),
             CLAP_PROCESS_SLEEP => Some(Ok(Sleep)),

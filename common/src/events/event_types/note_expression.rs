@@ -4,7 +4,7 @@ use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
 #[non_exhaustive]
-#[repr(u32)]
+#[repr(i32)]
 #[derive(Copy, Clone)]
 pub enum NoteExpressionType {
     Volume = CLAP_NOTE_EXPRESSION_VOLUME,
@@ -12,24 +12,20 @@ pub enum NoteExpressionType {
     Tuning = CLAP_NOTE_EXPRESSION_TUNING,
     Vibrato = CLAP_NOTE_EXPRESSION_VIBRATO,
     Brightness = CLAP_NOTE_EXPRESSION_BRIGHTNESS,
-    Breath = CLAP_NOTE_EXPRESSION_BREATH,
     Pressure = CLAP_NOTE_EXPRESSION_PRESSURE,
-    Timbre = CLAP_NOTE_EXPRESSION_TIMBRE,
 }
 
 impl NoteExpressionType {
     #[inline]
     pub fn from_raw(raw: clap_note_expression) -> Option<Self> {
         use NoteExpressionType::*;
-        match raw as u32 {
+        match raw as i32 {
             CLAP_NOTE_EXPRESSION_VOLUME => Some(Volume),
             CLAP_NOTE_EXPRESSION_PAN => Some(Pan),
             CLAP_NOTE_EXPRESSION_TUNING => Some(Tuning),
             CLAP_NOTE_EXPRESSION_VIBRATO => Some(Vibrato),
             CLAP_NOTE_EXPRESSION_BRIGHTNESS => Some(Brightness),
-            CLAP_NOTE_EXPRESSION_BREATH => Some(Breath),
             CLAP_NOTE_EXPRESSION_PRESSURE => Some(Pressure),
-            CLAP_NOTE_EXPRESSION_TIMBRE => Some(Timbre),
             _ => None,
         }
     }

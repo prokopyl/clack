@@ -1,4 +1,4 @@
-use clap_sys::ext::gui_win32::clap_hwnd;
+use clap_sys::ext::gui::clap_hwnd;
 use raw_window_handle::{
     AppKitHandle, HasRawWindowHandle, RawWindowHandle, Win32Handle, XlibHandle,
 };

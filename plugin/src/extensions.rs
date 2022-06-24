@@ -21,7 +21,7 @@
 //! pub struct PluginState(clap_plugin_state);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: &'static [u8] = CLAP_EXT_STATE;
+//!     const IDENTIFIER: *const i8 = CLAP_EXT_STATE;
 //!     type ExtensionType = PluginExtension;
 //! }
 //!
@@ -45,12 +45,12 @@
 //!     P::MainThread: PluginStateImplementation,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
-//!         # save: Some(save),
+//!         # save: save,
 //!         // For the sake of this example, we are only implementing the load() method.
-//!         load: Some(load::<P>),
+//!         load: load::<P>,
 //!     });
 //! }
-//! # unsafe extern "C" fn save(_: *const clap_plugin, _: *mut clap_sys::stream::clap_ostream) -> bool {
+//! # unsafe extern "C" fn save(_: *const clap_plugin, _: *const clap_sys::stream::clap_ostream) -> bool {
 //! #    unimplemented!()
 //! # }
 //!
@@ -61,13 +61,13 @@
 //!
 //! unsafe extern "C" fn load<'a, P: Plugin<'a>>(
 //!     plugin: *const clap_plugin,
-//!     stream: *mut clap_istream,
+//!     stream: *const clap_istream,
 //! ) -> bool
 //! where
 //!     P::MainThread: PluginStateImplementation,
 //! {
 //!     PluginWrapper::<P>::handle(plugin, |p| {
-//!         let input = InputStream::from_raw_mut(&mut *stream);
+//!         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
 //!         // Retrieve the plugin's main thread struct, and call load() on it
 //!         p.main_thread().as_mut().load(input)?;
 //!         Ok(())
@@ -122,7 +122,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
             return self;
         }
 
-        let uri = CStr::from_bytes_with_nul(E::IDENTIFIER).unwrap(); // TODO
+        let uri = unsafe { CStr::from_ptr(E::IDENTIFIER) };
         if uri == self.requested {
             self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }

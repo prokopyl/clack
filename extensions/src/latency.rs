@@ -1,6 +1,7 @@
 use clack_common::extensions::*;
 use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct PluginLatency {
@@ -8,7 +9,7 @@ pub struct PluginLatency {
 }
 
 unsafe impl Extension for PluginLatency {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_LATENCY;
+    const IDENTIFIER: *const c_char = CLAP_EXT_LATENCY;
     type ExtensionType = PluginExtension;
 }
 
@@ -18,7 +19,7 @@ pub struct HostLatency {
 }
 
 unsafe impl Extension for HostLatency {
-    const IDENTIFIER: &'static [u8] = CLAP_EXT_LATENCY;
+    const IDENTIFIER: *const c_char = CLAP_EXT_LATENCY;
     type ExtensionType = HostExtension;
 }
 
@@ -31,11 +32,7 @@ const _: () = {
     impl PluginLatency {
         #[inline]
         pub fn get(&self, plugin: &mut PluginMainThread) -> u32 {
-            if let Some(get) = self.inner.get {
-                unsafe { get(plugin.as_raw()) }
-            } else {
-                0
-            }
+            unsafe { (self.inner.get)(plugin.as_raw()) }
         }
     }
 
@@ -46,7 +43,7 @@ const _: () = {
     impl<'a, H: PluginHoster<'a> + HostLatencyImpl> ExtensionImplementation<H> for HostLatency {
         const IMPLEMENTATION: &'static Self = &HostLatency {
             inner: clap_host_latency {
-                changed: Some(changed::<H>),
+                changed: changed::<H>,
             },
         };
     }
@@ -71,9 +68,7 @@ const _: () = {
     impl HostLatency {
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
-            if let Some(changed) = self.inner.changed {
-                unsafe { changed(host.shared().as_raw()) }
-            }
+            unsafe { (self.inner.changed)(host.shared().as_raw()) }
         }
     }
 
@@ -86,9 +81,7 @@ const _: () = {
         P::MainThread: PluginLatencyImpl,
     {
         const IMPLEMENTATION: &'static Self = &PluginLatency {
-            inner: clap_plugin_latency {
-                get: Some(get::<P>),
-            },
+            inner: clap_plugin_latency { get: get::<P> },
         };
     }
 

@@ -2,8 +2,9 @@ use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
 use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_param_mod, clap_event_param_value, CLAP_EVENT_BEGIN_ADJUST, CLAP_EVENT_END_ADJUST,
-    CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_MOD, CLAP_EVENT_PARAM_VALUE, CLAP_EVENT_SHOULD_RECORD,
+    clap_event_param_mod, clap_event_param_value, CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE,
+    CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
+    CLAP_EVENT_PARAM_VALUE,
 };
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
@@ -12,9 +13,9 @@ bitflags! {
     #[repr(C)]
     pub struct ParamEventFlags: u32 {
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
-        const BEGIN_ADJUST = CLAP_EVENT_BEGIN_ADJUST;
-        const END_ADJUST = CLAP_EVENT_END_ADJUST;
-        const SHOULD_RECORD = CLAP_EVENT_SHOULD_RECORD;
+        const BEGIN_ADJUST = CLAP_EVENT_PARAM_GESTURE_BEGIN as u32;
+        const END_ADJUST = CLAP_EVENT_PARAM_GESTURE_END as u32;
+        const DONT_RECORD = CLAP_EVENT_DONT_RECORD;
     }
 }
 
@@ -32,6 +33,7 @@ impl ParamValueEvent {
     pub fn new(
         header: EventHeader<Self>,
         cookie: *mut c_void,
+        note_id: i32,
         param_id: u32,
         port_index: i16,
         channel: i16,
@@ -42,6 +44,7 @@ impl ParamValueEvent {
             inner: clap_event_param_value {
                 header: header.into_raw(),
                 cookie,
+                note_id,
                 param_id,
                 port_index,
                 key,
@@ -96,7 +99,7 @@ impl PartialEq for ParamValueEvent {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
-            && self.inner.header == other.inner.header
+            && self.inner.header.time == other.inner.header.time
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
             && self.inner.param_id == other.inner.param_id
@@ -130,6 +133,7 @@ impl ParamModEvent {
     pub fn new(
         header: EventHeader<Self>,
         cookie: *mut c_void,
+        note_id: i32,
         param_id: u32,
         port_index: i16,
         channel: i16,
@@ -140,6 +144,7 @@ impl ParamModEvent {
             inner: clap_event_param_mod {
                 header: header.into_raw(),
                 cookie,
+                note_id,
                 param_id,
                 port_index,
                 key,
@@ -194,7 +199,7 @@ impl PartialEq for ParamModEvent {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
-            && self.inner.header == other.inner.header
+            && self.inner.header.time == other.inner.header.time
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
             && self.inner.param_id == other.inner.param_id
