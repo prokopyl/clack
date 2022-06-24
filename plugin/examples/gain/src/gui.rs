@@ -93,7 +93,11 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
         Ok(())
     }
 
-    fn create(&mut self, _api: clack_extensions::gui::GuiApiType, _is_floating: bool) -> Result<(), PluginError> {
+    fn create(
+        &mut self,
+        _api: clack_extensions::gui::GuiApiType,
+        _is_floating: bool,
+    ) -> Result<(), PluginError> {
         Ok(())
     }
 

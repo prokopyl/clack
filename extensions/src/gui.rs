@@ -10,8 +10,8 @@ pub use clap_sys::ext::gui::clap_gui_resize_hints;
 pub use clap_sys::ext::gui::clap_window;
 
 mod implementation;
-pub use implementation::PluginGui as PluginGuiImpl;
 pub use implementation::GuiApiType;
+pub use implementation::PluginGui as PluginGuiImpl;
 
 #[repr(C)]
 pub struct PluginGui {
