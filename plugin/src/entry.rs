@@ -3,12 +3,12 @@ use crate::factory::PluginFactories;
 use crate::host::HostInfo;
 use crate::plugin::wrapper::panic::catch_unwind;
 use crate::plugin::{Plugin, PluginDescriptor, PluginInstance};
-pub use clack_common::entry::PluginEntryDescriptor;
 use clack_common::factory::plugin::PluginFactory;
-use clap_sys::entry::clap_plugin_entry;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
+
+pub use clack_common::entry::*;
 
 pub trait PluginEntry: Sized {
     #[inline]
@@ -20,12 +20,12 @@ pub trait PluginEntry: Sized {
 
     fn declare_factories(builder: &mut PluginFactories);
 
-    const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor::new(clap_plugin_entry {
+    const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor {
         clap_version: CLAP_VERSION,
         init: init::<Self>,
         deinit: de_init::<Self>,
         get_factory: get_factory::<Self>,
-    });
+    };
 }
 
 unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const ::std::os::raw::c_char) -> bool {

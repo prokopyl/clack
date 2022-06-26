@@ -14,5 +14,7 @@ pub mod log;
 pub mod params;
 #[cfg(feature = "state")]
 pub mod state;
+#[cfg(feature = "thread-check")]
+pub mod thread_check;
 
 pub(crate) mod utils;

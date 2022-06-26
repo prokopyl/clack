@@ -26,12 +26,12 @@ unsafe impl Extension for HostLatency {
 #[cfg(feature = "clack-host")]
 const _: () = {
     use clack_host::host::PluginHoster;
-    use clack_host::plugin::PluginMainThread;
+    use clack_host::plugin::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
 
     impl PluginLatency {
         #[inline]
-        pub fn get(&self, plugin: &mut PluginMainThread) -> u32 {
+        pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
             unsafe { (self.inner.get)(plugin.as_raw()) }
         }
     }

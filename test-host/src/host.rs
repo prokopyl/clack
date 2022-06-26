@@ -4,7 +4,7 @@ pub struct TestHostMainThread;
 pub struct TestHostShared;
 pub struct TestHostAudioProcessor;
 
-impl SharedHoster for TestHostShared {
+impl<'a> SharedHoster<'a> for TestHostShared {
     fn request_restart(&self) {
         unimplemented!()
     }

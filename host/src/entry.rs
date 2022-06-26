@@ -1,10 +1,11 @@
-pub use clack_common::entry::PluginEntryDescriptor;
 use clack_common::factory::Factory;
 use clap_sys::entry::clap_plugin_entry;
 use std::error::Error;
 use std::ffi::{CString, NulError};
 use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
+
+pub use clack_common::entry::*;
 
 mod descriptor;
 pub use descriptor::PluginDescriptor;
@@ -17,7 +18,7 @@ impl<'a> PluginEntry<'a> {
     /// # Safety
     /// Must only be called once for a given descriptor, else entry could be init'd multiple times
     pub unsafe fn from_raw(
-        inner: &'a clap_plugin_entry,
+        inner: &'a PluginEntryDescriptor,
         plugin_path: &str,
     ) -> Result<Self, PluginEntryError> {
         // TODO: check clap version
@@ -30,15 +31,6 @@ impl<'a> PluginEntry<'a> {
         Ok(Self { inner })
     }
 
-    /// # Safety
-    /// Must only be called once for a given descriptor, else entry could be init'd multiple times
-    pub unsafe fn from_descriptor(
-        desc: &'a PluginEntryDescriptor,
-        plugin_path: &str,
-    ) -> Result<Self, PluginEntryError> {
-        Self::from_raw(desc.as_raw(), plugin_path)
-    }
-
     pub fn get_factory<F: Factory<'a>>(&self) -> Option<&'a F> {
         let ptr = unsafe { (self.as_raw().get_factory)(F::IDENTIFIER as *const _) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
@@ -47,6 +39,11 @@ impl<'a> PluginEntry<'a> {
     #[inline]
     pub(crate) fn as_raw(&self) -> &clap_plugin_entry {
         self.inner
+    }
+
+    #[inline]
+    pub fn version(&self) -> ClapVersion {
+        self.inner.clap_version
     }
 }
 

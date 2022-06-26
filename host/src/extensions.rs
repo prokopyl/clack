@@ -15,7 +15,7 @@ pub struct HostExtensions<'a, H> {
     plugin_type: PhantomData<H>,
 }
 
-impl<'a, 'b, H: PluginHoster<'a>> HostExtensions<'a, H> {
+impl<'a, 'b, H: PluginHoster<'b>> HostExtensions<'a, H> {
     #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {
@@ -33,7 +33,7 @@ impl<'a, 'b, H: PluginHoster<'a>> HostExtensions<'a, H> {
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.
-    pub fn register<E: ExtensionImplementation<H, ExtensionType = PluginExtension>>(
+    pub fn register<E: ExtensionImplementation<H, ExtensionType = HostExtension>>(
         &mut self,
     ) -> &mut Self {
         if self.found.is_some() {

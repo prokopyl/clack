@@ -11,6 +11,7 @@ unsafe fn cstr_to_str<'a>(ptr: *const ::std::os::raw::c_char) -> Option<&'a CStr
         return None;
     }
 
+    // TODO: check for potential malformed data by checking against a maximum size
     Some(CStr::from_ptr(ptr))
 }
 

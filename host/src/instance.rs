@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::entry::PluginEntry;
 use crate::instance::processor::StoppedPluginAudioProcessor;
-use crate::plugin::{PluginMainThread, PluginShared};
+use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 use crate::wrapper::{HostError, HostWrapper};
 
 pub struct PluginAudioConfiguration {
@@ -94,6 +94,12 @@ impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
     }
 
     #[inline]
+    pub fn call_on_main_thread_callback(&mut self) {
+        // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing
+        unsafe { self.wrapper.on_main_thread() }
+    }
+
+    #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
         self.wrapper.raw_instance()
     }
@@ -119,18 +125,18 @@ impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
 
     #[inline]
     pub fn main_thread_host_data_mut(&mut self) -> &mut H {
-        // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
+        // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.wrapper.main_thread().as_mut() }
     }
 
     #[inline]
-    pub fn shared_plugin_data(&mut self) -> PluginShared {
-        PluginShared::new((self.wrapper.raw_instance() as *const _) as *mut _)
+    pub fn shared_plugin_data(&self) -> PluginSharedHandle {
+        PluginSharedHandle::new((self.wrapper.raw_instance() as *const _) as *mut _)
     }
 
     #[inline]
-    pub fn main_thread_plugin_data(&mut self) -> PluginMainThread {
-        PluginMainThread::new((self.wrapper.raw_instance() as *const _) as *mut _)
+    pub fn main_thread_plugin_data(&self) -> PluginMainThreadHandle {
+        PluginMainThreadHandle::new((self.wrapper.raw_instance() as *const _) as *mut _)
     }
 }

@@ -159,6 +159,11 @@ impl<'a> HostMainThreadHandle<'a> {
     pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
         self.shared().extension()
     }
+
+    #[inline]
+    pub fn as_raw(&self) -> &'a clap_host {
+        unsafe { &*self.raw }
+    }
 }
 
 impl<'a> From<HostMainThreadHandle<'a>> for HostHandle<'a> {
@@ -186,6 +191,11 @@ impl<'a> HostAudioThreadHandle<'a> {
     #[inline]
     pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
         self.shared().extension()
+    }
+
+    #[inline]
+    pub fn as_raw(&self) -> &'a clap_host {
+        unsafe { &*self.raw }
     }
 }
 

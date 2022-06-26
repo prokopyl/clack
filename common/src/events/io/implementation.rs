@@ -9,7 +9,7 @@ pub trait InputEventBuffer: Sized {
 }
 
 pub trait OutputEventBuffer: Sized {
-    fn push_back(&mut self, event: &UnknownEvent);
+    fn try_push(&mut self, event: &UnknownEvent) -> bool;
 }
 
 pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
@@ -48,10 +48,10 @@ unsafe extern "C" fn try_push<O: OutputEventBuffer>(
     event: *const clap_event_header,
 ) -> bool {
     handle_panic(|| {
-        O::push_back(
+        O::try_push(
             &mut *((*list).ctx as *const _ as *mut O),
             UnknownEvent::from_raw(&*event),
         )
     })
-    .is_ok()
+    .unwrap_or(false)
 }

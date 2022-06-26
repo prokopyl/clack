@@ -46,6 +46,11 @@ impl LogSeverity {
 #[repr(C)]
 pub struct Log(clap_host_log);
 
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for Log {}
+unsafe impl Sync for Log {}
+
 unsafe impl Extension for Log {
     const IDENTIFIER: *const c_char = CLAP_EXT_LOG;
     type ExtensionType = HostExtension;

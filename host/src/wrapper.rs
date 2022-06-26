@@ -3,7 +3,7 @@ use crate::extensions::HostExtensions;
 use crate::factory::PluginFactory;
 use crate::host::{HostShared, PluginHoster, SharedHoster};
 use crate::instance::PluginAudioConfiguration;
-use crate::plugin::{PluginMainThread, PluginShared};
+use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 use clap_sys::entry::clap_plugin_entry;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
@@ -41,9 +41,13 @@ pub struct HostWrapper<'a, H: PluginHoster<'a>> {
     _host_info: Arc<HostShared>,
     _host_descriptor: clap_host,
 
-    instance: *mut clap_sys::plugin::clap_plugin,
+    instance: *mut clap_plugin,
     _lifetime: PhantomData<&'a clap_plugin_entry>,
 }
+
+// SAFETY: The only non-thread-safe method on this type are unsafe
+unsafe impl<'a, H: PluginHoster<'a>> Send for HostWrapper<'a, H> {}
+unsafe impl<'a, H: PluginHoster<'a>> Sync for HostWrapper<'a, H> {}
 
 impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     pub(crate) fn new<FH, FS>(
@@ -96,10 +100,10 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 
         mutable
             .shared
-            .instantiated(PluginShared::new(mutable.instance));
+            .instantiated(PluginSharedHandle::new(mutable.instance));
         unsafe { mutable.main_thread.assume_init_mut() }
             .get_mut()
-            .instantiated(PluginMainThread::new(mutable.instance));
+            .instantiated(PluginMainThreadHandle::new(mutable.instance));
 
         unsafe { Ok(Pin::new_unchecked(wrapper)) }
     }
@@ -156,6 +160,10 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 
     pub(crate) unsafe fn stop_processing(&self) {
         (self.raw_instance().stop_processing)(self.instance)
+    }
+
+    pub(crate) unsafe fn on_main_thread(&self) {
+        (self.raw_instance().on_main_thread)(self.instance)
     }
 
     /// Returns a raw, non-null pointer to the host's main thread ([`PluginHoster`](crate::host::PluginHoster))
@@ -262,6 +270,9 @@ pub enum HostError {
     InstantiationFailed,
     PluginIdNulError,
     ProcessingFailed,
+    ProcessorHandlePoisoned,
+    ProcessingStopped,
+    ProcessingStarted,
 }
 
 impl fmt::Display for HostError {
@@ -277,6 +288,9 @@ impl fmt::Display for HostError {
             Self::InstantiationFailed => write!(f, "Could not instantiate"),
             Self::PluginIdNulError => write!(f, "Plugin ID was null"),
             Self::ProcessingFailed => write!(f, "Could not process"),
+            Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
+            Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
+            Self::ProcessingStarted => write!(f, "Audio Processor is currently started"),
         }
     }
 }

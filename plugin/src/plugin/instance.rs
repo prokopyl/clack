@@ -42,7 +42,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         let data = &mut *((*plugin).plugin_data as *mut PluginInstanceImpl<'a, P>);
         if data.plugin_data.is_some() {
             eprintln!("Plugin is already initialized");
-            return false;
+            return true; // TODO: revert
         }
 
         data.plugin_data = Some(match PluginWrapper::new(data.host.to_main_thread()) {

@@ -113,16 +113,7 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
     }
 
     fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
-        let title = "Some default title I dunno";
-        let ui_atomics = self.shared.from_ui.clone();
-
-        let window = Application::new(WindowDescription::new().with_title(title), move |cx| {
-            new_gui(cx, ui_atomics.clone())
-        })
-        .open_parented(&window);
-
-        self.open_window = Some(window);
-
+        self.related_window = Some(window);
         Ok(())
     }
 

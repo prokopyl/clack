@@ -1,7 +1,7 @@
 mod info;
 
 use crate::extensions::HostExtensions;
-use crate::plugin::{PluginMainThread, PluginShared};
+use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 pub use info::HostInfo;
 use std::sync::Arc;
 
@@ -39,9 +39,9 @@ impl PluginHost {
 pub trait AudioProcessorHoster: Send {}
 
 #[allow(unused)] // For default impls
-pub trait SharedHoster: Send + Sync {
+pub trait SharedHoster<'a>: Send + Sync {
     #[inline]
-    fn instantiated(&mut self, instance: PluginShared) {}
+    fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {}
 
     fn request_restart(&self);
     fn request_process(&self);
@@ -52,11 +52,11 @@ pub trait SharedHoster: Send + Sync {
 #[allow(unused)] // For default impls
 pub trait PluginHoster<'a>: Sized + 'a {
     type AudioProcessor: AudioProcessorHoster + 'a;
-    type Shared: SharedHoster + 'a;
+    type Shared: SharedHoster<'a> + 'a;
 
     #[inline]
     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {}
 
     #[inline]
-    fn instantiated(&mut self, instance: PluginMainThread) {}
+    fn instantiated(&mut self, instance: PluginMainThreadHandle) {}
 }

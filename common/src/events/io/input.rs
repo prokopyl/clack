@@ -24,7 +24,7 @@ use std::ops::{Index, Range};
 ///
 /// let mut buf = EventBuffer::new();
 /// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
-/// buf.push_back(event.as_unknown());
+/// buf.try_push(event.as_unknown());
 /// assert_eq!(1, buf.len());
 ///
 /// let mut input_events = InputEvents::from_buffer(&mut buf);

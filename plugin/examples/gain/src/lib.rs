@@ -2,6 +2,7 @@
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
+use std::ffi::CStr;
 use std::sync::Arc;
 
 use clack_plugin::{plugin::PluginDescriptor, prelude::*};
@@ -9,6 +10,11 @@ use clack_plugin::{plugin::PluginDescriptor, prelude::*};
 use baseview::WindowHandle;
 use clack_extensions::gui::{PluginGui, Window};
 
+use clack_extensions::audio_ports::{
+    AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, PluginAudioPorts,
+    PluginAudioPortsImplementation, STEREO_PORT_TYPE,
+};
+use clack_plugin::process::audio::channels::AudioBufferType;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 mod gui;
@@ -43,12 +49,33 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         _events: ProcessEvents,
     ) -> Result<ProcessStatus, PluginError> {
         // Only handle f32 samples for simplicity
-        let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
+        let io = if let Some(io) = audio.zip(0, 0) {
+            io
+        } else {
+            return Ok(ProcessStatus::ContinueIfNotQuiet);
+        };
+
+        match io {
+            AudioBufferType::F32(io) => {
+                // Supports safe in_place processing
+                for (input, output) in io {
+                    output.set(input.get() * 2.0)
+                }
+            }
+            AudioBufferType::F64(io) => {
+                // Supports safe in_place processing
+                for (input, output) in io {
+                    output.set(input.get() * 2.0)
+                }
+            }
+        }
+
+        /*let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
 
         // Supports safe in_place processing
         for (input, output) in io {
             output.set(input.get() * 2.0)
-        }
+        }*/
 
         let new_gain = self.shared.from_ui.gain.load(Ordering::Relaxed);
         if new_gain != self.latest_gain_value {
@@ -60,7 +87,10 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
-        builder.register::<PluginParams>().register::<PluginGui>();
+        builder
+            .register::<PluginParams>()
+            .register::<PluginAudioPorts>()
+            .register::<PluginGui>();
     }
 }
 
@@ -70,6 +100,25 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin<'a> {
         _input_parameter_changes: &InputEvents,
         _output_parameter_changes: &mut OutputEvents,
     ) {
+    }
+}
+
+impl<'a> PluginAudioPortsImplementation for GainPluginMainThread<'a> {
+    fn count(&self, _is_input: bool) -> usize {
+        1
+    }
+
+    fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
+        if index == 0 {
+            writer.set(&AudioPortInfoData {
+                id: 0,
+                name: CStr::from_bytes_with_nul(b"main\0").unwrap(),
+                channel_count: 2,
+                flags: AudioPortFlags::IS_MAIN,
+                port_type: Some(STEREO_PORT_TYPE),
+                in_place_pair: 0,
+            });
+        }
     }
 }
 

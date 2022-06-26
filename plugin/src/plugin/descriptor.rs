@@ -19,7 +19,7 @@ impl PluginDescriptor {
             version: EMPTY.as_ptr() as *const i8,
             description: EMPTY.as_ptr() as *const i8,
             support_url: EMPTY.as_ptr() as *const i8,
-            features: (EMPTY.as_ptr() as *const _ as *mut _), // FIXME: this will probably crash
+            features: core::ptr::null(), // TODO: check with real features, there seems to be a crash somewhere
         })
     }
 
@@ -33,5 +33,7 @@ const fn check_cstr(bytes: &[u8]) -> &CStr {
     if bytes[bytes.len() - 1] != b'\0' {
         panic!("Invalid C String: string is not null-terminated")
     }
-    unsafe { ::core::mem::transmute(bytes) }
+
+    // SAFETY: we checked
+    unsafe { CStr::from_bytes_with_nul_unchecked(bytes) }
 }

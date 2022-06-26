@@ -1,5 +1,7 @@
 use super::{Log, LogSeverity};
 use clack_common::extensions::ExtensionImplementation;
+use clack_host::host::PluginHoster;
+use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use std::borrow::Cow::Owned;
@@ -10,39 +12,43 @@ pub trait HostLog {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<H: HostLog> ExtensionImplementation<H> for Log {
+impl<'a, H: PluginHoster<'a>> ExtensionImplementation<H> for Log
+where
+    H::Shared: HostLog,
+{
     const IMPLEMENTATION: &'static Self = &Log(clap_host_log { log: log::<H> });
 }
 
-unsafe extern "C" fn log<H: HostLog>(
+unsafe extern "C" fn log<'a, H: PluginHoster<'a>>(
     host: *const clap_host,
     severity: clap_log_severity,
     msg: *const c_char,
-) {
-    let host = &*((*host).host_data as *const H);
-    let msg = CStr::from_ptr(msg);
-    let msg = msg.to_string_lossy();
-    let log_severity = LogSeverity::from_raw(severity);
+) where
+    H::Shared: HostLog,
+{
+    let _res = HostWrapper::<H>::handle(host, |host| {
+        let host = host.shared();
+        let msg = CStr::from_ptr(msg).to_string_lossy();
+        let log_severity = LogSeverity::from_raw(severity);
 
-    H::log(
-        host,
-        log_severity.unwrap_or(LogSeverity::Warning),
-        msg.as_ref(),
-    );
+        host.log(log_severity.unwrap_or(LogSeverity::Warning), msg.as_ref());
 
-    if let Owned(_) = msg {
-        H::log(
-            host,
-            LogSeverity::PluginMisbehaving,
-            "Plugin logged invalid UTF-8 data. Some characters may be invalid.",
-        );
-    }
+        if let Owned(_) = msg {
+            host.log(
+                LogSeverity::PluginMisbehaving,
+                "Plugin logged invalid UTF-8 data. Some characters may be invalid.",
+            );
+        }
 
-    if log_severity.is_none() {
-        H::log(
-            host,
-            LogSeverity::PluginMisbehaving,
-            &format!("Plugin logged with unknown log level: {}", severity),
-        );
-    }
+        if log_severity.is_none() {
+            host.log(
+                LogSeverity::PluginMisbehaving,
+                &format!("Plugin logged with unknown log level: {}", severity),
+            );
+        }
+
+        Ok(())
+    });
+
+    // TODO: perhaps write straight into STDERR if log error handler failed/panicked
 }

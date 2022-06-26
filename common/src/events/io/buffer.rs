@@ -66,7 +66,7 @@ impl EventBuffer {
 
     pub fn fill_with<'a, E: Event<'a>>(&mut self, events: impl IntoIterator<Item = &'a E>) {
         for e in events {
-            self.push_back(e.as_unknown())
+            self.try_push(e.as_unknown()); // TODO: handle failure?
         }
     }
 
@@ -110,7 +110,7 @@ impl InputEventBuffer for EventBuffer {
 }
 
 impl OutputEventBuffer for EventBuffer {
-    fn push_back(&mut self, event: &UnknownEvent) {
+    fn try_push(&mut self, event: &UnknownEvent) -> bool {
         let index = self.headers.len();
         let event_bytes = event.as_bytes();
         let bytes = self.allocate_mut(event_bytes.len());
@@ -118,6 +118,8 @@ impl OutputEventBuffer for EventBuffer {
         // PANIC: bytes is guaranteed by allocate_mut to be just the right size
         bytes.copy_from_slice(event_bytes);
         self.indexes.push(index as u32);
+
+        true
     }
 }
 

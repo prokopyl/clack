@@ -3,6 +3,7 @@ use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::host::HostMainThreadHandle;
 use clack_plugin::plugin::wrapper::PluginWrapper;
 use clack_plugin::plugin::Plugin;
+use clack_plugin::prelude::PluginError;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::stream::{clap_istream, clap_ostream};
 

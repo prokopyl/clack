@@ -1,15 +1,16 @@
 use crate::params::info::ParamInfoData;
+use crate::params::{HostParams, ParamClearFlags, ParamRescanFlags};
 use crate::utils::write_to_array_buf;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::extensions::ExtensionImplementation;
 use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
 use clack_plugin::plugin::Plugin;
+use clack_plugin::prelude::{HostHandle, HostMainThreadHandle};
 use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
 use std::ffi::{c_void, CStr};
-use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 pub struct ParamInfoWriter<'a> {
@@ -38,8 +39,11 @@ impl<'a> ParamInfoWriter<'a> {
             (core::ptr::addr_of_mut!((*buf).default_value) as *mut f64).write(param.default_value);
             (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void).write(param.cookie);
 
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name);
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), param.module);
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name.as_bytes());
+            write_to_array_buf(
+                core::ptr::addr_of_mut!((*buf).module),
+                param.module.as_bytes(),
+            );
         }
         self.initialized = true;
     }
@@ -256,15 +260,29 @@ impl<'a, P: PluginParamsImpl<'a>> ExtensionImplementation<P> for super::PluginPa
 where
     P::MainThread: PluginMainThreadParams<'a>,
 {
-    const IMPLEMENTATION: &'static Self = &super::PluginParams(
-        clap_plugin_params {
-            count: count::<P>,
-            get_info: get_info::<P>,
-            get_value: get_value::<P>,
-            value_to_text: value_to_text::<P>,
-            text_to_value: text_to_value::<P>,
-            flush: flush::<P>,
-        },
-        PhantomData,
-    );
+    const IMPLEMENTATION: &'static Self = &super::PluginParams(clap_plugin_params {
+        count: count::<P>,
+        get_info: get_info::<P>,
+        get_value: get_value::<P>,
+        value_to_text: value_to_text::<P>,
+        text_to_value: text_to_value::<P>,
+        flush: flush::<P>,
+    });
+}
+
+impl HostParams {
+    #[inline]
+    pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
+        unsafe { (self.0.rescan)(host.as_raw(), flags.bits) }
+    }
+
+    #[inline]
+    pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
+        unsafe { (self.0.clear)(host.as_raw(), param_id, flags.bits) }
+    }
+
+    #[inline]
+    pub fn request_flush(&self, host: &HostHandle) {
+        unsafe { (self.0.request_flush)(host.as_raw()) }
+    }
 }

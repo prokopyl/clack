@@ -6,6 +6,7 @@ pub enum ProcessStatus {
     Continue = CLAP_PROCESS_CONTINUE as i32,
     ContinueIfNotQuiet = CLAP_PROCESS_CONTINUE_IF_NOT_QUIET as i32,
     Sleep = CLAP_PROCESS_SLEEP as i32,
+    Tail = CLAP_PROCESS_TAIL as i32,
 }
 
 impl ProcessStatus {
@@ -16,6 +17,7 @@ impl ProcessStatus {
             CLAP_PROCESS_CONTINUE => Some(Ok(Continue)),
             CLAP_PROCESS_CONTINUE_IF_NOT_QUIET => Some(Ok(ContinueIfNotQuiet)),
             CLAP_PROCESS_SLEEP => Some(Ok(Sleep)),
+            CLAP_PROCESS_TAIL => Some(Ok(Tail)),
             CLAP_PROCESS_ERROR => Some(Err(())),
             _ => None,
         }

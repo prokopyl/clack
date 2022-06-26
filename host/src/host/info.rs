@@ -2,6 +2,7 @@ use clap_sys::host::clap_host;
 use std::ffi::{CStr, CString, NulError};
 use std::pin::Pin;
 
+#[derive(Debug, Clone)]
 pub struct HostInfo {
     name: Pin<Box<CStr>>,
     vendor: Pin<Box<CStr>>,

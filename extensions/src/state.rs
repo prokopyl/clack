@@ -1,6 +1,5 @@
 use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clack_common::stream::{InputStream, OutputStream};
-use clack_plugin::plugin::PluginError;
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -49,13 +48,13 @@ pub use plugin::*;
 mod host {
     use super::*;
     use clack_common::stream::{InputStream, OutputStream};
-    use clack_host::plugin::PluginMainThread;
+    use clack_host::plugin::PluginMainThreadHandle;
     use std::io::{Read, Write};
 
     impl PluginState {
         pub fn load<R: Read>(
             &self,
-            plugin: PluginMainThread,
+            plugin: PluginMainThreadHandle,
             reader: &mut R,
         ) -> Result<(), StateError> {
             let mut stream = InputStream::from_reader(reader);
@@ -69,7 +68,7 @@ mod host {
 
         pub fn save<W: Write>(
             &self,
-            plugin: PluginMainThread,
+            plugin: PluginMainThreadHandle,
             writer: &mut W,
         ) -> Result<(), StateError> {
             let mut stream = OutputStream::from_writer(writer);
