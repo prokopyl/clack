@@ -34,7 +34,7 @@ pub trait HostAudioPortsImplementation {
     fn rescan(&mut self, flag: RescanType);
 }
 
-impl<'a, H: PluginHoster<'a>> ExtensionImplementation<H> for HostAudioPorts
+impl<'a, H: 'a + for<'h> PluginHoster<'h>> ExtensionImplementation<H> for HostAudioPorts
 where
     H: HostAudioPortsImplementation,
 {
@@ -47,7 +47,7 @@ where
     );
 }
 
-unsafe extern "C" fn is_rescan_flag_supported<'a, H: PluginHoster<'a>>(
+unsafe extern "C" fn is_rescan_flag_supported<H: for<'a> PluginHoster<'a>>(
     host: *const clap_host,
     flag: u32,
 ) -> bool
@@ -63,7 +63,7 @@ where
     .unwrap_or(false)
 }
 
-unsafe extern "C" fn rescan<'a, H: PluginHoster<'a>>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: for<'a> PluginHoster<'a>>(host: *const clap_host, flag: u32)
 where
     H: HostAudioPortsImplementation,
 {

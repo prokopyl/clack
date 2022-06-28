@@ -7,3 +7,4 @@ edition = "2021"
 clap-sys = "0.2.0"
 clack-common = { path = "../common" }
 libloading = "0.7.2"
+selfie = { path = "../../selfie" }

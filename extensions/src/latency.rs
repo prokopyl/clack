@@ -40,7 +40,7 @@ const _: () = {
         fn changed(&mut self);
     }
 
-    impl<'a, H: PluginHoster<'a> + HostLatencyImpl> ExtensionImplementation<H> for HostLatency {
+    impl<H: for<'a> PluginHoster<'a> + HostLatencyImpl> ExtensionImplementation<H> for HostLatency {
         const IMPLEMENTATION: &'static Self = &HostLatency {
             inner: clap_host_latency {
                 changed: changed::<H>,
@@ -48,7 +48,7 @@ const _: () = {
         };
     }
 
-    unsafe extern "C" fn changed<'a, H: PluginHoster<'a> + HostLatencyImpl>(
+    unsafe extern "C" fn changed<H: for<'a> PluginHoster<'a> + HostLatencyImpl>(
         host: *const clap_host,
     ) {
         HostWrapper::<H>::handle(host, |host| {

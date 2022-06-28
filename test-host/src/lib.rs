@@ -14,15 +14,22 @@ use clack_host::{
     host::{HostInfo, PluginHost},
     instance::PluginInstance,
 };
+use selfie::refs::RefType;
+use selfie::Selfie;
 use std::vec::IntoIter;
 
 mod host;
 
-pub struct TestHost<'a> {
-    entry: PluginEntry<'a>,
-    plugin: PluginInstance<'a, TestHostMainThread>,
-    descriptor: PluginDescriptor<'a>,
-    processor: Option<StoppedPluginAudioProcessor<'a, TestHostMainThread>>,
+struct PluginDescriptorRef;
+
+impl<'a> RefType<'a> for PluginDescriptorRef {
+    type Ref = PluginDescriptor<'a>;
+}
+
+pub struct TestHost {
+    entry_and_descriptor: Selfie<'static, Box<PluginEntry>, PluginDescriptorRef>,
+    plugin: PluginInstance<TestHostMainThread>,
+    processor: Option<StoppedPluginAudioProcessor<TestHostMainThread>>,
 
     input_buffers: [Vec<f32>; 2],
     output_buffers: [Vec<f32>; 2],
@@ -31,34 +38,37 @@ pub struct TestHost<'a> {
     output_events: EventBuffer,
 }
 
-impl<'a> TestHost<'a> {
-    pub fn instantiate(entry: &'a PluginEntryDescriptor) -> Self {
+impl TestHost {
+    pub fn instantiate(entry: &'static PluginEntryDescriptor) -> Self {
         // Initialize host with basic info
         let host = PluginHost::new(HostInfo::new("test", "", "", "").unwrap());
 
         // Get plugin entry from the exported static
         // SAFETY: only called this once here
         let entry = unsafe { PluginEntry::from_raw(entry, "") }.unwrap();
-        let descriptor = entry
-            .get_factory::<PluginFactory>()
-            .unwrap()
-            .plugin_descriptor(0)
-            .unwrap();
+
+        let entry_and_descriptor: Selfie<_, PluginDescriptorRef> =
+            Selfie::new(Box::pin(entry), |entry| {
+                entry
+                    .get_factory::<PluginFactory>()
+                    .unwrap()
+                    .plugin_descriptor(0)
+                    .unwrap()
+            });
 
         // Instantiate the desired plugin
         let plugin = PluginInstance::new(
-            || TestHostShared,
+            |_| TestHostShared,
             |_| TestHostMainThread,
-            &entry,
-            descriptor.id().unwrap().to_bytes(),
+            entry_and_descriptor.owned(),
+            entry_and_descriptor.referential().id().unwrap().to_bytes(),
             &host,
         )
         .unwrap();
 
         Self {
             plugin,
-            entry,
-            descriptor,
+            entry_and_descriptor,
             processor: None,
             input_buffers: [vec![0f32; 32], vec![0f32; 32]],
             output_buffers: [vec![0f32; 32], vec![0f32; 32]],
@@ -68,12 +78,12 @@ impl<'a> TestHost<'a> {
         }
     }
 
-    pub fn descriptor(&self) -> &PluginDescriptor {
-        &self.descriptor
+    pub fn descriptor(&self) -> PluginDescriptor {
+        self.entry_and_descriptor.referential()
     }
 
     pub fn entry(&self) -> &PluginEntry {
-        &self.entry
+        self.entry_and_descriptor.owned()
     }
 
     pub fn inputs(&self) -> &[Vec<f32>; 2] {
@@ -117,7 +127,7 @@ impl<'a> TestHost<'a> {
 
         let processor = self
             .plugin
-            .activate(TestHostAudioProcessor, configuration)
+            .activate(|_, _| TestHostAudioProcessor, configuration)
             .unwrap();
 
         self.processor = Some(processor)
@@ -167,7 +177,7 @@ impl<'a> TestHost<'a> {
     }
 
     #[inline]
-    pub fn plugin(&self) -> &PluginInstance<'a, TestHostMainThread> {
+    pub fn plugin(&self) -> &PluginInstance<TestHostMainThread> {
         &self.plugin
     }
 

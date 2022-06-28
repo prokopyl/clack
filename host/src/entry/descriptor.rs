@@ -2,6 +2,7 @@ use clap_sys::plugin::clap_plugin_descriptor;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
+#[derive(Copy, Clone)]
 pub struct PluginDescriptor<'a> {
     descriptor: &'a clap_plugin_descriptor,
 }

@@ -13,7 +13,7 @@ pub mod implementation {
         fn create_plugin(host_info: HostInfo<'a>, plugin_id: &[u8]) -> Option<PluginInstance<'a>>;
     }
 
-    impl<'a, F: PluginFactory<'a>> FactoryImplementation<'a, F>
+    impl<'a, F: PluginFactory<'a>> FactoryImplementation<F>
         for clack_common::factory::plugin::PluginFactory
     {
         const IMPLEMENTATION: &'static Self = &clack_common::factory::plugin::PluginFactory {

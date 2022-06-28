@@ -12,19 +12,19 @@ pub trait HostLog {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<'a, H: PluginHoster<'a>> ExtensionImplementation<H> for Log
+impl<H: for<'a> PluginHoster<'a>> ExtensionImplementation<H> for Log
 where
-    H::Shared: HostLog,
+    for<'a> <H as PluginHoster<'a>>::Shared: HostLog,
 {
     const IMPLEMENTATION: &'static Self = &Log(clap_host_log { log: log::<H> });
 }
 
-unsafe extern "C" fn log<'a, H: PluginHoster<'a>>(
+unsafe extern "C" fn log<H: for<'a> PluginHoster<'a>>(
     host: *const clap_host,
     severity: clap_log_severity,
     msg: *const c_char,
 ) where
-    H::Shared: HostLog,
+    for<'a> <H as PluginHoster<'a>>::Shared: HostLog,
 {
     let _res = HostWrapper::<H>::handle(host, |host| {
         let host = host.shared();

@@ -14,8 +14,8 @@ pub struct PluginAudioConfiguration {
     pub frames_count_range: RangeInclusive<u32>,
 }
 
-pub struct PluginInstance<'a, H: PluginHoster<'a>> {
-    wrapper: Pin<Arc<HostWrapper<'a, H>>>,
+pub struct PluginInstance<H: for<'a> PluginHoster<'a>> {
+    wrapper: Pin<Arc<HostWrapper<H>>>,
 }
 
 pub mod processor;
@@ -46,28 +46,34 @@ pub(crate) fn arc_get_pin_mut<T>(pin: &mut Pin<Arc<T>>) -> Option<Pin<&mut T>> {
     unsafe { Some(Pin::new_unchecked(inner)) }
 }
 
-impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
+impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         hoster: FH,
-        entry: &PluginEntry<'a>,
+        entry: &PluginEntry,
         plugin_id: &[u8],
         host: &PluginHost,
     ) -> Result<Self, HostError>
     where
-        FS: FnOnce() -> H::Shared,
-        FH: FnOnce(&'a H::Shared) -> H,
+        FS: for<'b> FnOnce(&'b ()) -> <H as PluginHoster<'b>>::Shared,
+        FH: for<'b> FnOnce(&'b <H as PluginHoster<'b>>::Shared) -> H,
     {
         let wrapper = HostWrapper::new(hoster, shared, entry, plugin_id, host.shared().clone())?;
 
         Ok(Self { wrapper })
     }
 
-    pub fn activate(
+    pub fn activate<FA>(
         &mut self,
-        audio_processor: H::AudioProcessor,
+        audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<StoppedPluginAudioProcessor<'a, H>, HostError> {
+    ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
+    where
+        FA: for<'a> FnOnce(
+            &'a <H as PluginHoster<'a>>::Shared,
+            &mut H,
+        ) -> <H as PluginHoster<'a>>::AudioProcessor,
+    {
         let wrapper =
             arc_get_pin_mut(&mut self.wrapper).ok_or(HostError::AlreadyActivatedPlugin)?;
 
@@ -76,13 +82,13 @@ impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
         Ok(StoppedPluginAudioProcessor::new(self.wrapper.clone()))
     }
 
-    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<'a, H>) {
+    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<H>) {
         // SAFETY: we never clone the arcs, only compare them
         if unsafe { !Arc::ptr_eq(pin_get_ptr(&self.wrapper), pin_get_ptr(&processor.wrapper)) } {
             panic!("Given plugin audio processor does not match the instance being deactivated")
         }
 
-        ::core::mem::drop(processor);
+        drop(processor);
 
         // PANIC: we dropped the only processor produced, and checked if it matched
         let wrapper = arc_get_pin_mut(&mut self.wrapper)
@@ -112,7 +118,7 @@ impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &H::Shared {
+    pub fn shared_host_data(&self) -> &<H as PluginHoster>::Shared {
         self.wrapper.shared()
     }
 

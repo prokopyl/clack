@@ -5,21 +5,19 @@ use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use std::ffi::CString;
-use std::marker::PhantomData;
 use std::os::raw::c_char;
 use std::ptr::NonNull;
 
 #[repr(C)]
-pub struct PluginFactory<'a> {
+pub struct PluginFactory {
     inner: clap_plugin_factory,
-    _lifetime: PhantomData<&'a clap_plugin_factory>,
 }
 
-unsafe impl<'a> Factory<'a> for PluginFactory<'a> {
+unsafe impl Factory for PluginFactory {
     const IDENTIFIER: *const c_char = CLAP_PLUGIN_FACTORY_ID;
 }
 
-impl<'a> PluginFactory<'a> {
+impl PluginFactory {
     #[inline]
     pub fn plugin_count(&self) -> usize {
         // SAFETY: no special safety considerations
@@ -27,7 +25,7 @@ impl<'a> PluginFactory<'a> {
     }
 
     #[inline]
-    pub fn plugin_descriptor(&self, index: usize) -> Option<PluginDescriptor<'a>> {
+    pub fn plugin_descriptor(&self, index: usize) -> Option<PluginDescriptor> {
         // SAFETY: descriptor is guaranteed not to outlive the entry
         unsafe { (self.inner.get_plugin_descriptor)(&self.inner, index as u32).as_ref() }
             .map(PluginDescriptor::from_raw)

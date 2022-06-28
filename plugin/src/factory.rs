@@ -6,7 +6,7 @@ use std::ptr::NonNull;
 pub mod plugin;
 
 /// Provides an implementation of this factory for a given type `I`.
-pub trait FactoryImplementation<'a, I>: Factory<'a> + 'static {
+pub trait FactoryImplementation<I>: Factory + 'static {
     /// The implementation of the factory.
     const IMPLEMENTATION: &'static Self;
 }
@@ -29,11 +29,11 @@ impl<'a> PluginFactories<'a> {
     pub(crate) fn found(&self) -> *const c_void {
         self.found
             .map(|p| p.as_ptr())
-            .unwrap_or(::core::ptr::null_mut())
+            .unwrap_or(core::ptr::null_mut())
     }
 
     /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<'p, F: FactoryImplementation<'p, I>, I>(&mut self) -> &mut Self {
+    pub fn register<F: FactoryImplementation<I>, I>(&mut self) -> &mut Self {
         if self.found.is_some() {
             return self;
         }

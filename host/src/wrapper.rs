@@ -1,18 +1,20 @@
+use crate::bundle::PluginBundleHandle;
 use crate::entry::PluginEntry;
 use crate::extensions::HostExtensions;
 use crate::factory::PluginFactory;
 use crate::host::{HostShared, PluginHoster, SharedHoster};
 use crate::instance::PluginAudioConfiguration;
 use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
-use clap_sys::entry::clap_plugin_entry;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::version::CLAP_VERSION;
-use std::cell::UnsafeCell;
+use selfie::Selfie;
+use std::cell::{Cell, UnsafeCell};
 use std::ffi::{c_void, CStr};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
+use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -33,41 +35,66 @@ mod panic {
     }
 }
 
-pub struct HostWrapper<'a, H: PluginHoster<'a>> {
-    shared: H::Shared,
+// Self-referential lifetimes on the cheap
+struct HosterWrapper<'a, H: PluginHoster<'a>> {
+    shared: <H as PluginHoster<'a>>::Shared,
     main_thread: MaybeUninit<UnsafeCell<H>>,
-    audio_processor: Option<UnsafeCell<H::AudioProcessor>>,
+    audio_processor: Option<UnsafeCell<<H as PluginHoster<'a>>::AudioProcessor>>,
+}
 
+struct HosterWrapperToken<H>(PhantomData<H>);
+
+impl<'a, H: PluginHoster<'a>> selfie::refs::RefType<'a> for HosterWrapperToken<H> {
+    type Ref = HosterWrapper<'a, H>;
+}
+
+struct PluginInstance(Cell<*mut clap_plugin>);
+// impl Unpin for PluginInstance {}
+
+impl Deref for PluginInstance {
+    type Target = clap_plugin;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.0.get() }
+    }
+}
+
+pub struct HostWrapper<H: for<'a> PluginHoster<'a>> {
+    hoster: Selfie<'static, &'static (), HosterWrapperToken<H>>,
+    /*shared: <H as PluginHoster<'static>>::Shared,
+    main_thread: MaybeUninit<UnsafeCell<H>>,
+    audio_processor: Option<UnsafeCell<<H as PluginHoster<'static>>::AudioProcessor>>,*/
     _host_info: Arc<HostShared>,
     _host_descriptor: clap_host,
 
     instance: *mut clap_plugin,
-    _lifetime: PhantomData<&'a clap_plugin_entry>,
+    _bundle: PluginBundleHandle,
 }
 
 // SAFETY: The only non-thread-safe method on this type are unsafe
-unsafe impl<'a, H: PluginHoster<'a>> Send for HostWrapper<'a, H> {}
-unsafe impl<'a, H: PluginHoster<'a>> Sync for HostWrapper<'a, H> {}
+unsafe impl<'a, H: 'a + for<'h> PluginHoster<'h>> Send for HostWrapper<H> {}
+unsafe impl<'a, H: 'a + for<'h> PluginHoster<'h>> Sync for HostWrapper<H> {}
 
-impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
+impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     pub(crate) fn new<FH, FS>(
         main_thread: FH,
         shared: FS,
-        entry: &PluginEntry<'a>,
+        entry: &PluginEntry,
         plugin_id: &[u8],
         host_info: Arc<HostShared>,
     ) -> Result<Pin<Arc<Self>>, HostError>
     where
-        FS: FnOnce() -> H::Shared,
-        FH: FnOnce(&'a H::Shared) -> H,
+        FS: for<'s> FnOnce(&'s ()) -> <H as PluginHoster<'s>>::Shared,
+        FH: for<'s> FnOnce(&'s <H as PluginHoster<'s>>::Shared) -> H,
     {
         let mut host_descriptor = clap_host {
             clap_version: CLAP_VERSION,
-            host_data: ::core::ptr::null_mut(),
-            name: ::core::ptr::null_mut(),
-            vendor: ::core::ptr::null_mut(),
-            url: ::core::ptr::null_mut(),
-            version: ::core::ptr::null_mut(),
+            host_data: core::ptr::null_mut(),
+            name: core::ptr::null_mut(),
+            vendor: core::ptr::null_mut(),
+            url: core::ptr::null_mut(),
+            version: core::ptr::null_mut(),
             get_extension: get_extension::<H>,
             request_restart: request_restart::<H>,
             request_process: request_process::<H>,
@@ -76,20 +103,24 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 
         host_info.info().write_to_raw(&mut host_descriptor);
 
+        let hoster = Selfie::new(Pin::new(&()), |_| HosterWrapper {
+            shared: shared(&()),
+            main_thread: MaybeUninit::uninit(),
+            audio_processor: None,
+        });
+
         let mut wrapper = Arc::new(Self {
             _host_info: host_info,
             _host_descriptor: host_descriptor,
-            shared: shared(),
-            main_thread: MaybeUninit::uninit(),
-            instance: ::core::ptr::null_mut(),
-            audio_processor: None,
-            _lifetime: PhantomData,
+            hoster,
+            instance: core::ptr::null_mut(),
+            _bundle: entry.bundle.clone(),
         });
 
         let mutable = Arc::get_mut(&mut wrapper).unwrap();
         mutable._host_descriptor.host_data = mutable as *mut _ as *mut _;
-        let shared = unsafe { &*(&mutable.shared as *const _) };
-        mutable.main_thread = MaybeUninit::new(UnsafeCell::new(main_thread(shared)));
+        let shared = unsafe { &*(&mutable.hoster().shared as *const _) };
+        mutable.hoster_mut().main_thread = MaybeUninit::new(UnsafeCell::new(main_thread(shared)));
         mutable.instance = unsafe {
             entry
                 .get_factory::<PluginFactory>()
@@ -98,29 +129,54 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
                 .as_mut()
         };
 
+        let instance = mutable.instance;
+
         mutable
+            .hoster_mut()
             .shared
-            .instantiated(PluginSharedHandle::new(mutable.instance));
-        unsafe { mutable.main_thread.assume_init_mut() }
+            .instantiated(PluginSharedHandle::new(instance));
+
+        unsafe { mutable.hoster_mut().main_thread.assume_init_mut() }
             .get_mut()
-            .instantiated(PluginMainThreadHandle::new(mutable.instance));
+            .instantiated(PluginMainThreadHandle::new(instance));
 
         unsafe { Ok(Pin::new_unchecked(wrapper)) }
     }
 
-    pub(crate) fn activate(
+    #[inline]
+    fn hoster(&self) -> &HosterWrapper<H> {
+        self.hoster
+            .with_referential(|h| unsafe { &*(h as *const _) })
+    }
+
+    #[inline]
+    fn hoster_mut(&mut self) -> &mut HosterWrapper<H> {
+        self.hoster
+            .with_referential_mut(|h| unsafe { &mut *(h as *mut _) })
+    }
+
+    pub(crate) fn activate<FA>(
         self: Pin<&mut Self>,
-        audio_processor: H::AudioProcessor,
+        audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<(), HostError> {
-        if self.audio_processor.is_some() {
+    ) -> Result<(), HostError>
+    where
+        FA: for<'a> FnOnce(
+            &'a <H as PluginHoster<'a>>::Shared,
+            &mut H,
+        ) -> <H as PluginHoster<'a>>::AudioProcessor,
+    {
+        if self.hoster().audio_processor.is_some() {
             return Err(HostError::AlreadyActivatedPlugin);
         }
 
         // SAFETY: we are never moving out anything but the audio processor
         let mutable = unsafe { Pin::get_unchecked_mut(self) };
+        let hoster_mut = mutable.hoster_mut();
+        let shared = unsafe { &*(&hoster_mut.shared as *const _) };
+        let main_thread = unsafe { hoster_mut.main_thread.assume_init_mut().get_mut() };
 
-        mutable.audio_processor = Some(UnsafeCell::new(audio_processor));
+        hoster_mut.audio_processor = Some(UnsafeCell::new(audio_processor(shared, main_thread)));
 
         let success = unsafe {
             ((*mutable.instance).activate)(
@@ -132,7 +188,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
         };
 
         if !success {
-            mutable.audio_processor = None;
+            mutable.hoster_mut().audio_processor = None;
             return Err(HostError::ActivationFailed);
         }
 
@@ -143,7 +199,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
         // SAFETY: we are never moving out anything but the audio processor
         let unpinned = unsafe { Pin::get_unchecked_mut(self) };
 
-        if unpinned.audio_processor.take().is_some() {
+        if unpinned.hoster_mut().audio_processor.take().is_some() {
             Ok(())
         } else {
             Err(HostError::DeactivatedPlugin)
@@ -176,7 +232,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<H> {
-        NonNull::new_unchecked(self.main_thread.assume_init_ref().get())
+        NonNull::new_unchecked(self.hoster().main_thread.assume_init_ref().get())
     }
 
     /// Returns a raw, non-null pointer to the host's ([`AudioProcessor`](crate::host::PluginHoster::AudioProcessor))
@@ -188,16 +244,19 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
     /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn audio_processor(&self) -> Result<NonNull<H::AudioProcessor>, HostError> {
-        self.audio_processor
+    pub unsafe fn audio_processor(
+        &self,
+    ) -> Result<NonNull<<H as PluginHoster>::AudioProcessor>, HostError> {
+        self.hoster()
+            .audio_processor
             .as_ref()
             .map(|p| NonNull::new_unchecked(p.get()))
             .ok_or(HostError::DeactivatedPlugin)
     }
 
     #[inline]
-    pub fn shared(&self) -> &H::Shared {
-        &self.shared
+    pub fn shared(&self) -> &<H as PluginHoster>::Shared {
+        &self.hoster().shared
     }
 
     #[inline]
@@ -219,7 +278,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
     /// checks only exist to help debugging.
     pub unsafe fn handle<T, F>(host: *const clap_host, handler: F) -> Option<T>
     where
-        F: FnOnce(&HostWrapper<'a, H>) -> Result<T, HostWrapperError>,
+        F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
     {
         match Self::handle_panic(host, handler) {
             Ok(value) => Some(value),
@@ -233,7 +292,7 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
 
     unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
     where
-        F: FnOnce(&HostWrapper<'a, H>) -> Result<T, HostWrapperError>,
+        F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
     {
         let plugin = Self::from_raw(host)?;
 
@@ -241,17 +300,17 @@ impl<'a, H: PluginHoster<'a>> HostWrapper<'a, H> {
             .map_err(|_| HostWrapperError::Panic)?
     }
 
-    unsafe fn from_raw(raw: *const clap_host) -> Result<&'a Self, HostWrapperError> {
+    unsafe fn from_raw<'a>(raw: *const clap_host) -> Result<&'a Self, HostWrapperError> {
         raw.as_ref()
             .ok_or(HostWrapperError::NullHostInstance)?
             .host_data
-            .cast::<HostWrapper<'a, H>>()
+            .cast::<HostWrapper<H>>()
             .as_ref()
             .ok_or(HostWrapperError::NullHostData)
     }
 }
 
-impl<'a, H: PluginHoster<'a>> Drop for HostWrapper<'a, H> {
+impl<'a, H: for<'h> PluginHoster<'h>> Drop for HostWrapper<H> {
     #[inline]
     fn drop(&mut self) {
         unsafe { ((*self.instance).destroy)(self.instance) }
@@ -297,7 +356,7 @@ impl fmt::Display for HostError {
 
 impl std::error::Error for HostError {}
 
-unsafe extern "C" fn get_extension<'a, H: PluginHoster<'a>>(
+unsafe extern "C" fn get_extension<H: for<'a> PluginHoster<'a>>(
     host: *const clap_host,
     identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
@@ -311,21 +370,21 @@ unsafe extern "C" fn get_extension<'a, H: PluginHoster<'a>>(
     builder.found()
 }
 
-unsafe extern "C" fn request_restart<'a, H: PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_restart<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_restart();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_process<'a, H: PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_process<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_process();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_callback<'a, H: PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_callback<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_callback();
         Ok(())

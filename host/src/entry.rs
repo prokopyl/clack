@@ -8,17 +8,31 @@ use std::ptr::NonNull;
 pub use clack_common::entry::*;
 
 mod descriptor;
+use crate::bundle::PluginBundleHandle;
 pub use descriptor::PluginDescriptor;
 
-pub struct PluginEntry<'a> {
-    inner: &'a clap_plugin_entry,
+#[derive(Clone)]
+pub struct PluginEntry {
+    inner: &'static clap_plugin_entry,
+    pub(crate) bundle: PluginBundleHandle,
 }
 
-impl<'a> PluginEntry<'a> {
+impl PluginEntry {
     /// # Safety
     /// Must only be called once for a given descriptor, else entry could be init'd multiple times
+    #[inline]
     pub unsafe fn from_raw(
-        inner: &'a PluginEntryDescriptor,
+        inner: &'static PluginEntryDescriptor,
+        plugin_path: &str,
+    ) -> Result<Self, PluginEntryError> {
+        Self::from_raw_bundle(inner, PluginBundleHandle::empty(), plugin_path)
+    }
+
+    /// # Safety
+    /// Must only be called once for a given descriptor, else entry could be init'd multiple times
+    pub(crate) unsafe fn from_raw_bundle(
+        inner: &'static PluginEntryDescriptor,
+        bundle: PluginBundleHandle,
         plugin_path: &str,
     ) -> Result<Self, PluginEntryError> {
         // TODO: check clap version
@@ -28,10 +42,10 @@ impl<'a> PluginEntry<'a> {
             return Err(PluginEntryError::EntryInitFailed);
         }
 
-        Ok(Self { inner })
+        Ok(Self { inner, bundle })
     }
 
-    pub fn get_factory<F: Factory<'a>>(&self) -> Option<&'a F> {
+    pub fn get_factory<F: Factory>(&self) -> Option<&F> {
         let ptr = unsafe { (self.as_raw().get_factory)(F::IDENTIFIER as *const _) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
     }
@@ -47,7 +61,7 @@ impl<'a> PluginEntry<'a> {
     }
 }
 
-impl<'a> Drop for PluginEntry<'a> {
+impl Drop for PluginEntry {
     fn drop(&mut self) {
         // SAFETY: init() is guaranteed to have been called previously, and deinit() can only be called once.
         unsafe { (self.inner.deinit)() }
