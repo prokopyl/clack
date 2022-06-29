@@ -4,6 +4,7 @@
 //! implementation examples.
 
 use core::ffi::c_void;
+use std::os::raw::c_char;
 use std::ptr::NonNull;
 
 /// A marker struct that represents extensions implemented by the plugin side.
@@ -46,7 +47,7 @@ pub unsafe trait Extension: Sized + 'static {
     /// The standard identifier for this extension.
     ///
     /// This MUST point to a C-style, null-terminated string.
-    const IDENTIFIER: *const i8;
+    const IDENTIFIER: *const c_char;
     /// Whether this is a host extension or a plugin extension
     type ExtensionType: ExtensionType;
 

@@ -1,6 +1,7 @@
 use clap_sys::plugin::clap_plugin_descriptor;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::CStr;
+use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct PluginDescriptor(pub(crate) clap_plugin_descriptor);
@@ -12,13 +13,13 @@ impl PluginDescriptor {
         PluginDescriptor(clap_plugin_descriptor {
             clap_version: CLAP_VERSION,
             id: check_cstr(id).as_ptr(),
-            name: EMPTY.as_ptr() as *const i8,
-            vendor: EMPTY.as_ptr() as *const i8,
-            url: EMPTY.as_ptr() as *const i8,
-            manual_url: EMPTY.as_ptr() as *const i8,
-            version: EMPTY.as_ptr() as *const i8,
-            description: EMPTY.as_ptr() as *const i8,
-            support_url: EMPTY.as_ptr() as *const i8,
+            name: EMPTY.as_ptr() as *const c_char,
+            vendor: EMPTY.as_ptr() as *const c_char,
+            url: EMPTY.as_ptr() as *const c_char,
+            manual_url: EMPTY.as_ptr() as *const c_char,
+            version: EMPTY.as_ptr() as *const c_char,
+            description: EMPTY.as_ptr() as *const c_char,
+            support_url: EMPTY.as_ptr() as *const c_char,
             features: core::ptr::null(), // TODO: check with real features, there seems to be a crash somewhere
         })
     }
