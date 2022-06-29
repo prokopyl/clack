@@ -13,6 +13,7 @@
 //! information.
 //!
 //! ```
+//! # use std::os::raw::c_char;
 //! use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
 //! use clack_common::extensions::{Extension, ExtensionImplementation, PluginExtension};
 //!
@@ -21,7 +22,7 @@
 //! pub struct PluginState(clap_plugin_state);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: *const i8 = CLAP_EXT_STATE;
+//!     const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
 //!     type ExtensionType = PluginExtension;
 //! }
 //!

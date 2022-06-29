@@ -1,7 +1,8 @@
 use std::cmp::min;
 use std::ffi::CStr;
+use std::os::raw::c_char;
 
-pub fn data_from_array_buf<const N: usize>(data: &[i8; N]) -> &[u8] {
+pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe
     let data = unsafe { ::core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
 
@@ -12,11 +13,11 @@ pub fn data_from_array_buf<const N: usize>(data: &[i8; N]) -> &[u8] {
 }
 
 #[inline]
-pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [i8; N], value: &[u8]) {
+pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
     let max_len = min(N - 1, value.len()); // Space for null byte
     let value = &value[..max_len];
     // SAFETY: casting from i8 to u8 is safe
-    let value = ::core::slice::from_raw_parts(value.as_ptr() as *const i8, value.len());
+    let value = ::core::slice::from_raw_parts(value.as_ptr() as *const c_char, value.len());
 
     let dst = dst.cast();
     core::ptr::copy_nonoverlapping(value.as_ptr(), dst, max_len);

@@ -5,6 +5,7 @@ use clap_sys::ext::audio_ports::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
+use std::os::raw::c_char;
 use std::ptr::NonNull;
 
 pub use clap_sys::ext::audio_ports::{CLAP_PORT_MONO, CLAP_PORT_STEREO};
@@ -52,12 +53,12 @@ bitflags! {
 }
 
 unsafe impl Extension for PluginAudioPorts {
-    const IDENTIFIER: *const i8 = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIER: *const c_char = CLAP_EXT_AUDIO_PORTS;
     type ExtensionType = PluginExtension;
 }
 
 unsafe impl Extension for HostAudioPorts {
-    const IDENTIFIER: *const i8 = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIER: *const c_char = CLAP_EXT_AUDIO_PORTS;
     type ExtensionType = HostExtension;
 }
 
