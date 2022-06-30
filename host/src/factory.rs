@@ -1,4 +1,4 @@
-use crate::entry::PluginDescriptor;
+use crate::plugin_descriptor::PluginDescriptor;
 use crate::wrapper::HostError;
 pub use clack_common::factory::*;
 use clap_sys::host::clap_host;

@@ -1,5 +1,5 @@
 use crate::host::{TestHostAudioProcessor, TestHostMainThread, TestHostShared};
-use clack_host::entry::{PluginDescriptor, PluginEntryDescriptor};
+use clack_host::bundle::{PluginBundle, PluginEntryDescriptor};
 use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
 use clack_host::factory::PluginFactory;
 use clack_host::instance::processor::audio::{
@@ -7,10 +7,10 @@ use clack_host::instance::processor::audio::{
 };
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginAudioConfiguration;
+use clack_host::plugin_descriptor::PluginDescriptor;
 use clack_host::process::ProcessStatus;
 use clack_host::wrapper::HostError;
 use clack_host::{
-    entry::PluginEntry,
     host::{HostInfo, PluginHost},
     instance::PluginInstance,
 };
@@ -27,7 +27,7 @@ impl<'a> RefType<'a> for PluginDescriptorRef {
 }
 
 pub struct TestHost {
-    entry_and_descriptor: Selfie<'static, Box<PluginEntry>, PluginDescriptorRef>,
+    entry_and_descriptor: Selfie<'static, Box<PluginBundle>, PluginDescriptorRef>,
     plugin: PluginInstance<TestHostMainThread>,
     processor: Option<StoppedPluginAudioProcessor<TestHostMainThread>>,
 
@@ -45,7 +45,7 @@ impl TestHost {
 
         // Get plugin entry from the exported static
         // SAFETY: only called this once here
-        let entry = unsafe { PluginEntry::from_raw(entry, "") }.unwrap();
+        let entry = unsafe { PluginBundle::load_from_raw(entry, "") }.unwrap();
 
         let entry_and_descriptor: Selfie<_, PluginDescriptorRef> =
             Selfie::new(Box::pin(entry), |entry| {
@@ -82,7 +82,7 @@ impl TestHost {
         self.entry_and_descriptor.referential()
     }
 
-    pub fn entry(&self) -> &PluginEntry {
+    pub fn bundle(&self) -> &PluginBundle {
         self.entry_and_descriptor.owned()
     }
 

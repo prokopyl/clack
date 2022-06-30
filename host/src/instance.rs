@@ -1,10 +1,10 @@
+use crate::bundle::PluginBundle;
 use crate::host::{PluginHost, PluginHoster};
 use clap_sys::plugin::clap_plugin;
 use std::ops::RangeInclusive;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::entry::PluginEntry;
 use crate::instance::processor::StoppedPluginAudioProcessor;
 use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 use crate::wrapper::{HostError, HostWrapper};
@@ -50,7 +50,7 @@ impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         hoster: FH,
-        entry: &PluginEntry,
+        bundle: &PluginBundle,
         plugin_id: &[u8],
         host: &PluginHost,
     ) -> Result<Self, HostError>
@@ -58,7 +58,7 @@ impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
         FS: for<'b> FnOnce(&'b ()) -> <H as PluginHoster<'b>>::Shared,
         FH: for<'b> FnOnce(&'b <H as PluginHoster<'b>>::Shared) -> H,
     {
-        let wrapper = HostWrapper::new(hoster, shared, entry, plugin_id, host.shared().clone())?;
+        let wrapper = HostWrapper::new(hoster, shared, bundle, plugin_id, host.shared().clone())?;
 
         Ok(Self { wrapper })
     }

@@ -8,7 +8,7 @@ use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
 
-pub use clack_common::entry::*;
+pub use clack_common::bundle::*;
 
 pub trait PluginEntry: Sized {
     #[inline]

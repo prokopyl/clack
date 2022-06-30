@@ -1,5 +1,4 @@
-use crate::bundle::PluginBundleHandle;
-use crate::entry::PluginEntry;
+use crate::bundle::PluginBundle;
 use crate::extensions::HostExtensions;
 use crate::factory::PluginFactory;
 use crate::host::{HostShared, PluginHoster, SharedHoster};
@@ -60,7 +59,15 @@ impl Deref for PluginInstance {
     }
 }
 
+// Referential structure:
+// clap_host references global host data (name etc.), as well as main_thread and audio_processor
+// the plugin instance references clap_host
+// shared optionally references the plugin instance
+// main_thread and audio_processor reference both shared and optionally the plugin instance
+// all other fields just need to be kept around at a stable location
+
 pub struct HostWrapper<H: for<'a> PluginHoster<'a>> {
+    // FIXME: this is awful
     hoster: Selfie<'static, &'static (), HosterWrapperToken<H>>,
     /*shared: <H as PluginHoster<'static>>::Shared,
     main_thread: MaybeUninit<UnsafeCell<H>>,
@@ -69,7 +76,7 @@ pub struct HostWrapper<H: for<'a> PluginHoster<'a>> {
     _host_descriptor: clap_host,
 
     instance: *mut clap_plugin,
-    _bundle: PluginBundleHandle,
+    _bundle: PluginBundle,
 }
 
 // SAFETY: The only non-thread-safe method on this type are unsafe
@@ -80,7 +87,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     pub(crate) fn new<FH, FS>(
         main_thread: FH,
         shared: FS,
-        entry: &PluginEntry,
+        entry: &PluginBundle,
         plugin_id: &[u8],
         host_info: Arc<HostShared>,
     ) -> Result<Pin<Arc<Self>>, HostError>
@@ -114,7 +121,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
             _host_descriptor: host_descriptor,
             hoster,
             instance: core::ptr::null_mut(),
-            _bundle: entry.bundle.clone(),
+            _bundle: entry.clone(),
         });
 
         let mutable = Arc::get_mut(&mut wrapper).unwrap();
@@ -199,11 +206,14 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
         // SAFETY: we are never moving out anything but the audio processor
         let unpinned = unsafe { Pin::get_unchecked_mut(self) };
 
-        if unpinned.hoster_mut().audio_processor.take().is_some() {
-            Ok(())
-        } else {
-            Err(HostError::DeactivatedPlugin)
+        if unpinned.hoster_mut().audio_processor.is_none() {
+            return Err(HostError::DeactivatedPlugin);
         }
+
+        unsafe { ((*unpinned.instance).deactivate)(unpinned.instance) };
+
+        let _ = unpinned.hoster_mut().audio_processor.take();
+        Ok(())
     }
 
     pub(crate) unsafe fn start_processing(&self) -> Result<(), HostError> {
@@ -313,6 +323,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
 impl<'a, H: for<'h> PluginHoster<'h>> Drop for HostWrapper<H> {
     #[inline]
     fn drop(&mut self) {
+        // ((*self.instance).destroy) == core::ptr::null();
         unsafe { ((*self.instance).destroy)(self.instance) }
     }
 }
