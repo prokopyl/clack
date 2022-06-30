@@ -6,7 +6,6 @@ pub mod factory;
 pub mod host;
 pub mod instance;
 pub mod plugin;
-pub mod plugin_descriptor;
 pub mod wrapper;
 
 pub use clack_common::events;

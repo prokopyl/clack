@@ -13,5 +13,6 @@ pub mod factory;
 pub mod ports;
 pub mod process;
 pub mod stream;
+pub mod version;
 
 pub(crate) mod utils;
