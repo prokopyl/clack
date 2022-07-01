@@ -34,6 +34,9 @@ mod panic {
     }
 }
 
+mod data;
+use data::*;
+
 // Self-referential lifetimes on the cheap
 struct HosterWrapper<'a, H: PluginHoster<'a>> {
     shared: <H as PluginHoster<'a>>::Shared,
