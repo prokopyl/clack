@@ -2,7 +2,7 @@ use super::*;
 use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::extensions::ExtensionImplementation;
-use clack_host::host::PluginHoster;
+use clack_host::host::Host;
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginInstance;
 use clack_host::wrapper::HostWrapper;
@@ -11,11 +11,11 @@ use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 impl PluginParams {
-    pub fn count<H: for<'a> PluginHoster<'a>>(&self, plugin: &PluginInstance<H>) -> u32 {
+    pub fn count<H: for<'a> Host<'a>>(&self, plugin: &PluginInstance<H>) -> u32 {
         unsafe { (self.0.count)(plugin.raw_instance()) }
     }
 
-    pub fn get_info<'b, H: for<'a> PluginHoster<'a>>(
+    pub fn get_info<'b, H: for<'a> Host<'a>>(
         &self,
         plugin: &PluginInstance<H>,
         param_index: u32,
@@ -36,7 +36,7 @@ impl PluginParams {
         }
     }
 
-    pub fn get_value<H: for<'a> PluginHoster<'a>>(
+    pub fn get_value<H: for<'a> Host<'a>>(
         &self,
         plugin: &PluginInstance<H>,
         param_id: u32,
@@ -52,7 +52,7 @@ impl PluginParams {
         }
     }
 
-    pub fn value_to_text<'b, H: for<'a> PluginHoster<'a>>(
+    pub fn value_to_text<'b, H: for<'a> Host<'a>>(
         &self,
         plugin: &PluginInstance<H>,
         param_id: u32,
@@ -80,7 +80,7 @@ impl PluginParams {
         }
     }
 
-    pub fn text_to_value<H: for<'a> PluginHoster<'a>>(
+    pub fn text_to_value<H: for<'a> Host<'a>>(
         &self,
         plugin: &PluginInstance<H>,
         param_id: u32,
@@ -105,7 +105,7 @@ impl PluginParams {
     }
 
     // TODO: return a proper error
-    pub fn flush_inactive<H: for<'a> PluginHoster<'a>>(
+    pub fn flush_inactive<H: for<'a> Host<'a>>(
         &self,
         plugin: &mut PluginInstance<H>,
         input_event_list: &InputEvents,
@@ -125,7 +125,7 @@ impl PluginParams {
         true
     }
 
-    pub fn flush_active<H: for<'a> PluginHoster<'a>>(
+    pub fn flush_active<H: for<'a> Host<'a>>(
         &self,
         plugin: &mut StoppedPluginAudioProcessor<H>, // TODO: separate handle type
         input_event_list: &InputEvents,
@@ -156,10 +156,10 @@ pub trait HostParamsImplementationMainThread {
     fn clear(&mut self, param_id: u32, flags: ParamClearFlags);
 }
 
-impl<H: for<'a> PluginHoster<'a>> ExtensionImplementation<H> for HostParams
+impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostParams
 where
-    for<'a> <H as PluginHoster<'a>>::Shared: HostParamsImplementation,
-    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
+    for<'a> <H as Host<'a>>::Shared: HostParamsImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     const IMPLEMENTATION: &'static Self = &HostParams(clap_host_params {
         rescan: rescan::<H>,
@@ -168,11 +168,11 @@ where
     });
 }
 
-unsafe extern "C" fn rescan<H: for<'a> PluginHoster<'a>>(
+unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(
     host: *const clap_host,
     flags: clap_param_rescan_flags,
 ) where
-    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
+    for<'a> <H as Host<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -183,12 +183,12 @@ unsafe extern "C" fn rescan<H: for<'a> PluginHoster<'a>>(
     });
 }
 
-unsafe extern "C" fn clear<H: for<'a> PluginHoster<'a>>(
+unsafe extern "C" fn clear<H: for<'a> Host<'a>>(
     host: *const clap_host,
     param_id: u32,
     flags: clap_param_clear_flags,
 ) where
-    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
+    for<'a> <H as Host<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -199,9 +199,9 @@ unsafe extern "C" fn clear<H: for<'a> PluginHoster<'a>>(
     });
 }
 
-unsafe extern "C" fn request_flush<H: for<'a> PluginHoster<'a>>(host: *const clap_host)
+unsafe extern "C" fn request_flush<H: for<'a> Host<'a>>(host: *const clap_host)
 where
-    for<'a> <H as PluginHoster<'a>>::Shared: HostParamsImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostParamsImplementation,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().request_flush();

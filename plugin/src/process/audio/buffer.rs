@@ -31,7 +31,7 @@ impl<'a> AudioBuffer<'a> {
         unsafe {
             if buffer_is_f32(self.inner) {
                 AudioBufferType::F32(TAudioChannels {
-                    data: ::core::slice::from_raw_parts(
+                    data: core::slice::from_raw_parts(
                         self.inner.data32 as *const _,
                         self.inner.channel_count as usize,
                     ),
@@ -39,7 +39,7 @@ impl<'a> AudioBuffer<'a> {
                 })
             } else {
                 AudioBufferType::F64(TAudioChannels {
-                    data: ::core::slice::from_raw_parts(
+                    data: core::slice::from_raw_parts(
                         self.inner.data64 as *const _,
                         self.inner.channel_count as usize,
                     ),
@@ -96,7 +96,7 @@ impl<'a> AudioBufferMut<'a> {
         unsafe {
             if buffer_is_f32(self.inner) {
                 AudioBufferType::F32(TAudioChannelsMut {
-                    data: ::core::slice::from_raw_parts(
+                    data: core::slice::from_raw_parts(
                         self.inner.data32 as *const _,
                         self.inner.channel_count as usize,
                     ),
@@ -104,7 +104,7 @@ impl<'a> AudioBufferMut<'a> {
                 })
             } else {
                 AudioBufferType::F64(TAudioChannelsMut {
-                    data: ::core::slice::from_raw_parts(
+                    data: core::slice::from_raw_parts(
                         self.inner.data64 as *const _,
                         self.inner.channel_count as usize,
                     ),

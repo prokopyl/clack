@@ -1,4 +1,4 @@
-use crate::host::PluginHoster;
+use crate::host::Host;
 use selfie::refs::RefType;
 use selfie::Selfie;
 use std::cell::UnsafeCell;
@@ -7,21 +7,16 @@ use std::ptr::NonNull;
 
 pub struct HostData<'plugin, H>
 where
-    H: for<'shared> PluginHoster<'shared>,
+    H: for<'shared> Host<'shared>,
 {
-    inner: Selfie<
-        'plugin,
-        Box<UnsafeCell<<H as PluginHoster<'plugin>>::Shared>>,
-        ReferentialHostDataRef<H>,
-    >,
+    inner:
+        Selfie<'plugin, Box<UnsafeCell<<H as Host<'plugin>>::Shared>>, ReferentialHostDataRef<H>>,
 }
 
-impl<'a, H: for<'b> PluginHoster<'b>> HostData<'a, H> {
-    pub fn new<FH>(shared: <H as PluginHoster<'a>>::Shared, main_thread: FH) -> Self
+impl<'a, H: for<'b> Host<'b>> HostData<'a, H> {
+    pub fn new<FH>(shared: <H as Host<'a>>::Shared, main_thread: FH) -> Self
     where
-        FH: for<'s> FnOnce(
-            &'s <H as PluginHoster<'s>>::Shared,
-        ) -> <H as PluginHoster<'s>>::MainThread,
+        FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
     {
         Self {
             inner: Selfie::new(Box::pin(UnsafeCell::new(shared)), |s| {
@@ -32,23 +27,18 @@ impl<'a, H: for<'b> PluginHoster<'b>> HostData<'a, H> {
     }
 
     #[inline]
-    pub fn shared(&self) -> &<H as PluginHoster<'a>>::Shared {
-        unsafe { &*self.inner.owned().get() }
-    }
-
-    #[inline]
-    pub fn shared_raw(&self) -> NonNull<<H as PluginHoster<'a>>::Shared> {
+    pub fn shared(&self) -> NonNull<<H as Host<'a>>::Shared> {
         // SAFETY: Pointer is from the UnsafeCell, which cannot be null
         unsafe { NonNull::new_unchecked(self.inner.owned().get()) }
     }
 
     #[inline]
-    pub fn main_thread(&self) -> NonNull<<H as PluginHoster>::MainThread> {
+    pub fn main_thread(&self) -> NonNull<<H as Host>::MainThread> {
         self.inner.with_referential(|d| d.main_thread())
     }
 
     #[inline]
-    pub fn audio_processor(&self) -> Option<NonNull<<H as PluginHoster>::AudioProcessor>> {
+    pub fn audio_processor(&self) -> Option<NonNull<<H as Host>::AudioProcessor>> {
         self.inner.with_referential(|d| d.audio_processor())
     }
 
@@ -61,14 +51,14 @@ impl<'a, H: for<'b> PluginHoster<'b>> HostData<'a, H> {
     pub fn activate<FA>(&self, audio_processor: FA)
     where
         FA: for<'s> FnOnce(
-            &'s <H as PluginHoster<'s>>::Shared,
-            &mut <H as PluginHoster<'s>>::MainThread,
-        ) -> <H as PluginHoster<'s>>::AudioProcessor,
+            &'s <H as Host<'s>>::Shared,
+            &mut <H as Host<'s>>::MainThread,
+        ) -> <H as Host<'s>>::AudioProcessor,
     {
         self.inner.with_referential(|d| unsafe {
             // SAFETY: TODO
             d.set_audio_processor(Some(audio_processor(
-                self.shared_raw().cast().as_ref(),
+                self.shared().cast().as_ref(),
                 self.main_thread().as_mut(),
             )))
         })
@@ -81,12 +71,13 @@ impl<'a, H: for<'b> PluginHoster<'b>> HostData<'a, H> {
     }
 }
 
-struct ReferentialHostData<'shared, H: PluginHoster<'shared>> {
+// TODO: move UnsafeCells up
+struct ReferentialHostData<'shared, H: Host<'shared>> {
     main_thread: UnsafeCell<H::MainThread>,
     audio_processor: UnsafeCell<Option<H::AudioProcessor>>,
 }
 
-impl<'shared, H: PluginHoster<'shared>> ReferentialHostData<'shared, H> {
+impl<'shared, H: Host<'shared>> ReferentialHostData<'shared, H> {
     #[inline]
     fn new(main_thread: H::MainThread) -> Self {
         Self {
@@ -106,7 +97,7 @@ impl<'shared, H: PluginHoster<'shared>> ReferentialHostData<'shared, H> {
         // SAFETY: &self guarantees at least shared access to the outer Option
         let data = unsafe { &*self.audio_processor.get() };
 
-        data.as_ref().map(|a| NonNull::from(a))
+        data.as_ref().map(NonNull::from)
     }
 
     #[inline]
@@ -117,12 +108,12 @@ impl<'shared, H: PluginHoster<'shared>> ReferentialHostData<'shared, H> {
 
 struct ReferentialHostDataRef<H>(PhantomData<H>);
 
-impl<'shared, H: PluginHoster<'shared>> RefType<'shared> for ReferentialHostDataRef<H> {
+impl<'shared, H: Host<'shared>> RefType<'shared> for ReferentialHostDataRef<H> {
     type Ref = ReferentialHostData<'shared, H>;
 }
 
 pub struct HostDataRef<H>(PhantomData<H>);
 
-impl<'plugin, H: for<'a> PluginHoster<'a>> RefType<'plugin> for HostDataRef<H> {
+impl<'plugin, H: for<'a> Host<'a>> RefType<'plugin> for HostDataRef<H> {
     type Ref = HostData<'plugin, H>;
 }

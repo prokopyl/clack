@@ -1,45 +1,43 @@
 use crate::bundle::PluginBundle;
-use crate::host::{PluginHost, PluginHoster};
+use crate::host::{Host, HostInfo};
 use clap_sys::plugin::clap_plugin;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
+use crate::host::HostError;
 use crate::instance::processor::StoppedPluginAudioProcessor;
 use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 use crate::wrapper::instance::PluginInstanceInner;
-use crate::wrapper::HostError;
 
 pub struct PluginAudioConfiguration {
     pub sample_rate: f64,
     pub frames_count_range: RangeInclusive<u32>,
 }
 
-pub struct PluginInstance<H: for<'a> PluginHoster<'a>> {
+pub struct PluginInstance<H: for<'a> Host<'a>> {
     inner: Arc<PluginInstanceInner<H>>,
 }
 
 pub mod processor;
 
-impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
+impl<H: for<'b> Host<'b>> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
         bundle: &PluginBundle,
         plugin_id: &[u8],
-        host: &PluginHost,
+        host: &HostInfo,
     ) -> Result<Self, HostError>
     where
-        FS: for<'b> FnOnce(&'b ()) -> <H as PluginHoster<'b>>::Shared,
-        FH: for<'b> FnOnce(
-            &'b <H as PluginHoster<'b>>::Shared,
-        ) -> <H as PluginHoster<'b>>::MainThread,
+        FS: for<'b> FnOnce(&'b ()) -> <H as Host<'b>>::Shared,
+        FH: for<'b> FnOnce(&'b <H as Host<'b>>::Shared) -> <H as Host<'b>>::MainThread,
     {
         let inner = PluginInstanceInner::<H>::instantiate(
             shared,
             main_thread,
             bundle,
             plugin_id,
-            host.shared().clone(),
+            host.clone(),
         )?;
 
         Ok(Self { inner })
@@ -52,9 +50,9 @@ impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
     ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
     where
         FA: for<'a> FnOnce(
-            &'a <H as PluginHoster<'a>>::Shared,
-            &mut <H as PluginHoster<'a>>::MainThread,
-        ) -> <H as PluginHoster<'a>>::AudioProcessor,
+            &'a <H as Host<'a>>::Shared,
+            &mut <H as Host<'a>>::MainThread,
+        ) -> <H as Host<'a>>::AudioProcessor,
     {
         let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
 
@@ -97,19 +95,19 @@ impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as PluginHoster>::Shared {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared {
         self.inner.wrapper().shared()
     }
 
     #[inline]
-    pub fn main_thread_host_data(&self) -> &<H as PluginHoster>::MainThread {
+    pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.wrapper().main_thread().as_ref() }
     }
 
     #[inline]
-    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as PluginHoster>::MainThread {
+    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.wrapper().main_thread().as_mut() }
@@ -126,7 +124,7 @@ impl<H: for<'b> PluginHoster<'b>> PluginInstance<H> {
     }
 }
 
-impl<H: for<'h> PluginHoster<'h>> Drop for PluginInstance<H> {
+impl<H: for<'h> Host<'h>> Drop for PluginInstance<H> {
     #[inline]
     fn drop(&mut self) {
         unsafe { ((*self.inner.raw_instance()).destroy)(self.inner.raw_instance()) }

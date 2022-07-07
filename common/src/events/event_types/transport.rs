@@ -48,12 +48,12 @@ unsafe impl<'a> Event<'a> for TransportEvent {
 impl TransportEvent {
     pub fn from_raw(raw: clap_event_transport) -> Self {
         // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { ::core::mem::transmute(raw) }
+        unsafe { core::mem::transmute(raw) }
     }
 
     #[inline]
     pub fn into_raw(self) -> clap_event_transport {
         // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { ::core::mem::transmute(self) }
+        unsafe { core::mem::transmute(self) }
     }
 }

@@ -2,17 +2,14 @@ use crate::host::{TestHostAudioProcessor, TestHostImpl, TestHostMainThread, Test
 use clack_host::bundle::{PluginBundle, PluginDescriptor, PluginEntryDescriptor};
 use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
 use clack_host::factory::PluginFactory;
+use clack_host::host::HostError;
 use clack_host::instance::processor::audio::{
     AudioPortBuffer, AudioPortBufferType, AudioPorts, ChannelBuffer,
 };
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginAudioConfiguration;
 use clack_host::process::ProcessStatus;
-use clack_host::wrapper::HostError;
-use clack_host::{
-    host::{HostInfo, PluginHost},
-    instance::PluginInstance,
-};
+use clack_host::{host::HostInfo, instance::PluginInstance};
 use selfie::refs::RefType;
 use selfie::Selfie;
 use std::vec::IntoIter;
@@ -40,7 +37,7 @@ pub struct TestHost {
 impl TestHost {
     pub fn instantiate(entry: &'static PluginEntryDescriptor) -> Self {
         // Initialize host with basic info
-        let host = PluginHost::new(HostInfo::new("test", "", "", "").unwrap());
+        let info = HostInfo::new("test", "", "", "").unwrap();
 
         // Get plugin entry from the exported static
         // SAFETY: only called this once here
@@ -61,7 +58,7 @@ impl TestHost {
             |_| TestHostMainThread,
             entry_and_descriptor.owned(),
             entry_and_descriptor.referential().id().unwrap().to_bytes(),
-            &host,
+            &info,
         )
         .unwrap();
 

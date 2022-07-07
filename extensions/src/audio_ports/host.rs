@@ -1,6 +1,6 @@
 use super::*;
 use clack_common::extensions::ExtensionImplementation;
-use clack_host::host::PluginHoster;
+use clack_host::host::Host;
 use clack_host::plugin::PluginMainThreadHandle;
 use clack_host::wrapper::HostWrapper;
 use clap_sys::host::clap_host;
@@ -34,9 +34,9 @@ pub trait HostAudioPortsImplementation {
     fn rescan(&mut self, flag: RescanType);
 }
 
-impl<H: for<'h> PluginHoster<'h>> ExtensionImplementation<H> for HostAudioPorts
+impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostAudioPorts
 where
-    for<'h> <H as PluginHoster<'h>>::MainThread: HostAudioPortsImplementation,
+    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsImplementation,
 {
     const IMPLEMENTATION: &'static Self = &HostAudioPorts(
         clap_host_audio_ports {
@@ -47,12 +47,12 @@ where
     );
 }
 
-unsafe extern "C" fn is_rescan_flag_supported<H: for<'a> PluginHoster<'a>>(
+unsafe extern "C" fn is_rescan_flag_supported<H: for<'a> Host<'a>>(
     host: *const clap_host,
     flag: u32,
 ) -> bool
 where
-    for<'a> <H as PluginHoster<'a>>::MainThread: HostAudioPortsImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImplementation,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -63,9 +63,9 @@ where
     .unwrap_or(false)
 }
 
-unsafe extern "C" fn rescan<H: for<'a> PluginHoster<'a>>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as PluginHoster<'a>>::MainThread: HostAudioPortsImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImplementation,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

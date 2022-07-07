@@ -1,22 +1,21 @@
 use crate::extensions::HostExtensions;
-use crate::host::{HostShared, PluginHoster, SharedHoster};
+use crate::host::{Host, HostInfo, HostShared};
 use crate::wrapper::HostWrapper;
 use clack_common::version::ClapVersion;
 use clap_sys::host::clap_host;
 use selfie::refs::RefType;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 pub struct RawHostDescriptor<'a> {
     raw: clap_host,
-    _shared: Arc<HostShared>,
+    _host_info: HostInfo,
     _wrapper: PhantomData<&'a ()>,
 }
 
 impl<'a> RawHostDescriptor<'a> {
-    pub(crate) fn new<H: for<'h> PluginHoster<'h>>(
-        host_shared: Arc<HostShared>,
+    pub(crate) fn new<H: for<'h> Host<'h>>(
+        host_info: HostInfo,
         wrapper: &'a HostWrapper<H>,
     ) -> Self {
         let mut raw = clap_host {
@@ -32,11 +31,11 @@ impl<'a> RawHostDescriptor<'a> {
             request_callback: request_callback::<H>,
         };
 
-        host_shared.info().write_to_raw(&mut raw);
+        host_info.write_to_raw(&mut raw);
 
         Self {
             raw,
-            _shared: host_shared,
+            _host_info: host_info,
             _wrapper: PhantomData,
         }
     }
@@ -53,7 +52,7 @@ impl<'a> RefType<'a> for RawHostDescriptorRef {
     type Ref = RawHostDescriptor<'a>;
 }
 
-unsafe extern "C" fn get_extension<H: for<'a> PluginHoster<'a>>(
+unsafe extern "C" fn get_extension<H: for<'a> Host<'a>>(
     host: *const clap_host,
     identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
@@ -67,21 +66,21 @@ unsafe extern "C" fn get_extension<H: for<'a> PluginHoster<'a>>(
     builder.found()
 }
 
-unsafe extern "C" fn request_restart<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_restart<H: for<'a> Host<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_restart();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_process<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_process<H: for<'a> Host<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_process();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_callback<H: for<'a> PluginHoster<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_callback<H: for<'a> Host<'a>>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_callback();
         Ok(())

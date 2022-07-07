@@ -1,8 +1,6 @@
 use clack_host::bundle::PluginBundle;
 use clack_host::factory::PluginFactory;
-use clack_host::host::{
-    AudioProcessorHoster, HostInfo, MainThreadHoster, PluginHost, PluginHoster, SharedHoster,
-};
+use clack_host::host::{Host, HostAudioProcessor, HostInfo, HostMainThread, HostShared};
 use clack_host::instance::{PluginAudioConfiguration, PluginInstance};
 
 #[test]
@@ -33,8 +31,8 @@ pub fn it_works_2() {
 
     struct MyHost;
 
-    impl<'a> AudioProcessorHoster for AH {}
-    impl<'a> SharedHoster<'a> for SH {
+    impl<'a> HostAudioProcessor<'a> for AH {}
+    impl<'a> HostShared<'a> for SH {
         fn request_restart(&self) {
             todo!()
         }
@@ -48,9 +46,9 @@ pub fn it_works_2() {
         }
     }
 
-    impl<'a> MainThreadHoster<'a> for MH {}
+    impl<'a> HostMainThread<'a> for MH {}
 
-    impl<'a> PluginHoster<'a> for MyHost {
+    impl<'a> Host<'a> for MyHost {
         type AudioProcessor = AH;
         type Shared = SH;
         type MainThread = MH;
@@ -59,10 +57,9 @@ pub fn it_works_2() {
     let plugin =
         Box::new(PluginBundle::load("/home/adrien/.clap/clack_example_gain_debug.clap").unwrap());
     let plugin = Box::leak(plugin);
-    let host = PluginHost::new(
-        HostInfo::new("clapjack", "jaxter184", "net.jaxter184.clapjack", "0.0.1").unwrap(),
-    );
-    let mut instance = PluginInstance::<MyHost>::new(|_| SH, |_| MH, &plugin, &[], &host).unwrap();
+    let info = HostInfo::new("clapjack", "jaxter184", "net.jaxter184.clapjack", "0.0.1").unwrap();
+    let mut instance =
+        PluginInstance::<MyHost>::new(|_| SH, |_| MH, plugin, b"gain", &info).unwrap();
     let config = PluginAudioConfiguration {
         sample_rate: 44100.0,
         frames_count_range: 16..=2048,

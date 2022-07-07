@@ -1,7 +1,7 @@
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::wrapper::PluginWrapper;
-use crate::plugin::{wrapper, AudioConfiguration, Plugin, PluginMainThread};
+use crate::plugin::{AudioConfiguration, Plugin, PluginMainThread};
 use crate::process::Process;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
@@ -129,7 +129,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         let identifier = CStr::from_ptr(identifier);
         let mut builder = PluginExtensions::new(identifier);
 
-        wrapper::PluginWrapper::<P>::handle(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             P::declare_extensions(&mut builder, p.shared());
             Ok(())
         });
@@ -137,7 +137,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
     }
 
     unsafe extern "C" fn on_main_thread(plugin: *const clap_plugin) {
-        wrapper::PluginWrapper::<P>::handle(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             p.main_thread().as_mut().on_main_thread();
             Ok(())
         });

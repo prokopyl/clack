@@ -131,7 +131,7 @@ unsafe extern "C" fn read<R: Read + Sized>(
     size: u64,
 ) -> i64 {
     let reader = &mut *((*istream).ctx as *mut R);
-    let buffer = ::core::slice::from_raw_parts_mut(buffer as *mut u8, size as usize);
+    let buffer = core::slice::from_raw_parts_mut(buffer as *mut u8, size as usize);
 
     match handle_interrupted(|| reader.read(buffer)) {
         Ok(read) => read as i64,
@@ -145,7 +145,7 @@ unsafe extern "C" fn write<W: Write + Sized>(
     size: u64,
 ) -> i64 {
     let writer = &mut *((*ostream).ctx as *mut W);
-    let buffer = ::core::slice::from_raw_parts(buffer as *mut u8, size as usize);
+    let buffer = core::slice::from_raw_parts(buffer as *mut u8, size as usize);
 
     match handle_interrupted(|| writer.write(buffer)) {
         Ok(written) => written as i64,

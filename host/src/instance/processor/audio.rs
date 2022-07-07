@@ -57,8 +57,8 @@ impl AudioPorts {
             self.buffer_configs.resize(
                 new_size,
                 clap_audio_buffer {
-                    data32: ::core::ptr::null_mut(),
-                    data64: ::core::ptr::null_mut(),
+                    data32: core::ptr::null_mut(),
+                    data64: core::ptr::null_mut(),
                     channel_count: 0,
                     latency: 0,
                     constant_mask: 0,
@@ -127,9 +127,9 @@ impl AudioPorts {
 
             if is_f64 {
                 descriptor.data64 = buffers.as_ptr().cast();
-                descriptor.data32 = ::core::ptr::null();
+                descriptor.data32 = core::ptr::null();
             } else {
-                descriptor.data64 = ::core::ptr::null();
+                descriptor.data64 = core::ptr::null();
                 descriptor.data32 = buffers.as_ptr() as *const *const _;
             }
         }

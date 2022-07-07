@@ -28,7 +28,7 @@ pub trait PluginEntry: Sized {
     };
 }
 
-unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const ::std::os::raw::c_char) -> bool {
+unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const std::os::raw::c_char) -> bool {
     catch_unwind(|| E::init(CStr::from_ptr(plugin_path))).unwrap_or(false)
 }
 
@@ -45,7 +45,7 @@ unsafe extern "C" fn get_factory<E: PluginEntry>(
         E::declare_factories(&mut builder);
         builder.found()
     })
-    .unwrap_or(::core::ptr::null())
+    .unwrap_or(core::ptr::null())
 }
 
 pub struct SinglePluginEntry<'a, P: Plugin<'a>>(PhantomData<&'a P>);

@@ -6,7 +6,7 @@ use std::fmt::Formatter;
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum LogError {
     NulError(NulError),
-    FmtError(::core::fmt::Error),
+    FmtError(core::fmt::Error),
 }
 
 impl From<NulError> for LogError {
@@ -16,9 +16,9 @@ impl From<NulError> for LogError {
     }
 }
 
-impl From<::core::fmt::Error> for LogError {
+impl From<core::fmt::Error> for LogError {
     #[inline]
-    fn from(e: ::core::fmt::Error) -> Self {
+    fn from(e: core::fmt::Error) -> Self {
         LogError::FmtError(e)
     }
 }

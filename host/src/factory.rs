@@ -1,5 +1,5 @@
 use crate::bundle::PluginDescriptor;
-use crate::wrapper::HostError;
+use crate::host::HostError;
 pub use clack_common::factory::*;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;

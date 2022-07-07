@@ -1,13 +1,8 @@
-use crate::host::{MainThreadHoster, PluginHoster, SharedHoster};
+use crate::host::{Host, HostError, HostMainThread, HostShared};
 use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use selfie::Selfie;
-use std::cell::{Cell, UnsafeCell};
-use std::fmt;
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -35,65 +30,19 @@ pub(crate) mod descriptor;
 pub(crate) mod data;
 use data::*;
 
-// Self-referential lifetimes on the cheap
-struct HosterWrapper<'a, H: PluginHoster<'a>> {
-    shared: <H as PluginHoster<'a>>::Shared,
-    main_thread: MaybeUninit<UnsafeCell<<H as PluginHoster<'a>>::MainThread>>,
-    audio_processor: Option<UnsafeCell<<H as PluginHoster<'a>>::AudioProcessor>>,
-}
-
-struct HosterWrapperToken<H>(PhantomData<H>);
-
-impl<'a, H: PluginHoster<'a>> selfie::refs::RefType<'a> for HosterWrapperToken<H> {
-    type Ref = HosterWrapper<'a, H>;
-}
-
-struct PluginInstance(Cell<*mut clap_plugin>);
-// impl Unpin for PluginInstance {}
-
-impl Deref for PluginInstance {
-    type Target = clap_plugin;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0.get() }
-    }
-}
-
-// Referential structure:
-// instance -> clap_host -> host_shared & main_thread & audio_processor -> shared -> Option<instance>
-
-// shared optionally references the plugin instance
-// main_thread and audio_processor reference both shared and optionally the plugin instance
-// clap_host references global host data (name etc.), as well as main_thread and audio_processor
-// the plugin instance references clap_host
-// all other fields just need to be kept around at a stable location
-
-pub struct HostWrapper<H: for<'a> PluginHoster<'a>> {
+pub struct HostWrapper<H: for<'a> Host<'a>> {
     data: Selfie<'static, RawPluginInstanceRef, HostDataRef<H>>,
-    // FIXME: this is awful
-    //hoster: Selfie<'static, &'static (), HosterWrapperToken<H>>,
-    /*shared: <H as PluginHoster<'static>>::Shared,
-    main_thread: MaybeUninit<UnsafeCell<H>>,
-    audio_processor: Option<UnsafeCell<<H as PluginHoster<'static>>::AudioProcessor>>,*/
-    /*_host_info: Arc<HostShared>,
-    _host_descriptor: clap_host,
-
-    instance: *mut clap_plugin,
-    _bundle: PluginBundle,*/
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: for<'h> PluginHoster<'h>> Send for HostWrapper<H> {}
-unsafe impl<H: for<'h> PluginHoster<'h>> Sync for HostWrapper<H> {}
+unsafe impl<H: for<'h> Host<'h>> Send for HostWrapper<H> {}
+unsafe impl<H: for<'h> Host<'h>> Sync for HostWrapper<H> {}
 
-impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
+impl<H: for<'h> Host<'h>> HostWrapper<H> {
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Self
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as PluginHoster<'s>>::Shared,
-        FH: for<'s> FnOnce(
-            &'s <H as PluginHoster<'s>>::Shared,
-        ) -> <H as PluginHoster<'s>>::MainThread,
+        FS: for<'s> FnOnce(&'s ()) -> <H as Host<'s>>::Shared,
+        FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
     {
         let instance_ptr = Pin::new(RawPluginInstanceRef::default());
 
@@ -107,7 +56,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     pub(crate) fn instantiated(&self, instance: *mut clap_plugin) {
         self.data.with_referential(|d| {
             // SAFETY: TODO?
-            unsafe { d.shared_raw().as_mut() }.instantiated(PluginSharedHandle::new(instance));
+            unsafe { d.shared().as_mut() }.instantiated(PluginSharedHandle::new(instance));
             unsafe { d.main_thread().as_mut() }.instantiated(PluginMainThreadHandle::new(instance));
         });
     }
@@ -116,9 +65,9 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     pub(crate) unsafe fn activate<FA>(&self, audio_processor: FA)
     where
         FA: for<'a> FnOnce(
-            &'a <H as PluginHoster<'a>>::Shared,
-            &mut <H as PluginHoster<'a>>::MainThread,
-        ) -> <H as PluginHoster<'a>>::AudioProcessor,
+            &'a <H as Host<'a>>::Shared,
+            &mut <H as Host<'a>>::MainThread,
+        ) -> <H as Host<'a>>::AudioProcessor,
     {
         self.data.with_referential(|d| d.activate(audio_processor))
     }
@@ -142,7 +91,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
     /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as PluginHoster>::MainThread> {
+    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread> {
         self.data.with_referential(|d| d.main_thread().cast())
     }
 
@@ -157,7 +106,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     #[inline]
     pub unsafe fn audio_processor(
         &self,
-    ) -> Result<NonNull<<H as PluginHoster>::AudioProcessor>, HostError> {
+    ) -> Result<NonNull<<H as Host>::AudioProcessor>, HostError> {
         self.data.with_referential(|d| {
             d.audio_processor()
                 .map(|a| a.cast())
@@ -166,10 +115,10 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     }
 
     #[inline]
-    pub fn shared(&self) -> &<H as PluginHoster>::Shared {
+    pub fn shared(&self) -> &<H as Host>::Shared {
         // SAFETY: TODO
         self.data
-            .with_referential(|d| unsafe { d.shared_raw().cast().as_ref() })
+            .with_referential(|d| unsafe { d.shared().cast().as_ref() })
     }
 
     /// TODO: docs
@@ -181,7 +130,7 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
     ///
     /// The `host` pointer must also point to a valid instance of `clap_host`, as created by
     /// the CLAP Host. While this function does a couple of simple safety checks, only a few common
-    /// cases are actually covered (i.e. null checks), and those **must not** be relied upon: those
+    /// cases are actually covered (i.e. null checks), and those **must not** be relied upon for safety: those
     /// checks only exist to help debugging.
     pub unsafe fn handle<T, F>(host: *const clap_host, handler: F) -> Option<T>
     where
@@ -216,53 +165,6 @@ impl<H: for<'h> PluginHoster<'h>> HostWrapper<H> {
             .ok_or(HostWrapperError::NullHostData)
     }
 }
-/*
-impl<'a, H: for<'h> PluginHoster<'h>> Drop for HostWrapper<H> {
-    #[inline]
-    fn drop(&mut self) {
-        // ((*self.instance).destroy) == core::ptr::null();
-        unsafe { ((*self.instance).destroy)(self.instance) }
-    }
-}*/
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum HostError {
-    StartProcessingFailed,
-    AlreadyActivatedPlugin,
-    DeactivatedPlugin,
-    ActivationFailed,
-    PluginEntryNotFound,
-    PluginNotFound,
-    MissingPluginFactory,
-    InstantiationFailed,
-    PluginIdNulError,
-    ProcessingFailed,
-    ProcessorHandlePoisoned,
-    ProcessingStopped,
-    ProcessingStarted,
-}
-
-impl fmt::Display for HostError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::StartProcessingFailed => write!(f, "Could not start processing"),
-            Self::AlreadyActivatedPlugin => write!(f, "Plugin was already activated"),
-            Self::DeactivatedPlugin => write!(f, "Plugin is currently deactivated"),
-            Self::ActivationFailed => write!(f, "Unable to activate"),
-            Self::PluginEntryNotFound => write!(f, "No entry found for the specified plugin"),
-            Self::PluginNotFound => write!(f, "Specified plugin was not found"),
-            Self::MissingPluginFactory => write!(f, "No plugin factory was provided"),
-            Self::InstantiationFailed => write!(f, "Could not instantiate"),
-            Self::PluginIdNulError => write!(f, "Plugin ID was null"),
-            Self::ProcessingFailed => write!(f, "Could not process"),
-            Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
-            Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
-            Self::ProcessingStarted => write!(f, "Audio Processor is currently started"),
-        }
-    }
-}
-
-impl std::error::Error for HostError {}
 
 pub enum HostWrapperError {
     NullHostInstance,

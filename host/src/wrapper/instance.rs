@@ -1,6 +1,6 @@
 use crate::bundle::PluginBundle;
 use crate::factory::PluginFactory;
-use crate::host::{HostShared, PluginHoster};
+use crate::host::{Host, HostInfo};
 use crate::instance::PluginAudioConfiguration;
 use crate::wrapper::descriptor::{RawHostDescriptor, RawHostDescriptorRef};
 use crate::wrapper::{HostError, HostWrapper};
@@ -33,25 +33,23 @@ impl Deref for RawPluginInstanceRef {
 // SAFETY: this derefs to nothing
 unsafe impl StableDeref for RawPluginInstanceRef {}
 
-pub struct PluginInstanceInner<H: for<'a> PluginHoster<'a>> {
+pub struct PluginInstanceInner<H: for<'a> Host<'a>> {
     host_descriptor: Selfie<'static, Box<HostWrapper<H>>, Pin<Box<RawHostDescriptorRef>>>,
     instance: *mut clap_plugin,
     _plugin_bundle: PluginBundle, // Keep the DLL/.SO alive while plugin is instantiated
 }
 
-impl<H: for<'a> PluginHoster<'a>> PluginInstanceInner<H> {
+impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
         entry: &PluginBundle,
         plugin_id: &[u8],
-        host_info: Arc<HostShared>,
+        host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as PluginHoster<'s>>::Shared,
-        FH: for<'s> FnOnce(
-            &'s <H as PluginHoster<'s>>::Shared,
-        ) -> <H as PluginHoster<'s>>::MainThread,
+        FS: for<'s> FnOnce(&'s ()) -> <H as Host<'s>>::Shared,
+        FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
     {
         let host_wrapper = Box::pin(HostWrapper::new(shared, main_thread));
         let host_descriptor = Selfie::new(host_wrapper, |w| {
@@ -95,9 +93,9 @@ impl<H: for<'a> PluginHoster<'a>> PluginInstanceInner<H> {
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
-            &'a <H as PluginHoster<'a>>::Shared,
-            &mut <H as PluginHoster<'a>>::MainThread,
-        ) -> <H as PluginHoster<'a>>::AudioProcessor,
+            &'a <H as Host<'a>>::Shared,
+            &mut <H as Host<'a>>::MainThread,
+        ) -> <H as Host<'a>>::AudioProcessor,
     {
         if self.wrapper().is_active() {
             return Err(HostError::AlreadyActivatedPlugin);

@@ -69,7 +69,7 @@ impl ParamInfo {
 pub struct ParamInfoData<'a> {
     pub id: u32,
     pub flags: ParamInfoFlags,
-    pub cookie: *mut ::core::ffi::c_void,
+    pub cookie: *mut c_void,
     pub name: &'a str,
     pub module: &'a str,
     pub min_value: f64,

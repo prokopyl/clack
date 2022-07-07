@@ -46,7 +46,7 @@
 //!     P::MainThread: PluginStateImplementation,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
-//!         # save: save,
+//!         # save,
 //!         // For the sake of this example, we are only implementing the load() method.
 //!         load: load::<P>,
 //!     });
@@ -112,7 +112,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
     pub(crate) fn found(&self) -> *const c_void {
         self.found
             .map(|p| p.as_ptr())
-            .unwrap_or(::core::ptr::null_mut())
+            .unwrap_or(core::ptr::null_mut())
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.

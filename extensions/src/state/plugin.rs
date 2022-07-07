@@ -19,11 +19,11 @@ pub trait PluginStateImplementation {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
 }
 
-impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for super::PluginState
+impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
 where
     P::MainThread: PluginStateImplementation,
 {
-    const IMPLEMENTATION: &'static Self = &super::PluginState(
+    const IMPLEMENTATION: &'static Self = &PluginState(
         clap_plugin_state {
             save: save::<P>,
             load: load::<P>,

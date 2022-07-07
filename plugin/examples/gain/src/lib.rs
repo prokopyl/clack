@@ -182,7 +182,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
             min_value: 0.0,
             max_value: 1000.0,
             flags: ParamInfoFlags::IS_STEPPED,
-            cookie: ::core::ptr::null_mut(),
+            cookie: core::ptr::null_mut(),
         })
     }
 
@@ -199,7 +199,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
         param_id: u32,
         value: f64,
         writer: &mut ParamDisplayWriter,
-    ) -> ::core::fmt::Result {
+    ) -> core::fmt::Result {
         use ::core::fmt::Write;
         println!("Format param {}, value {}", param_id, value);
 

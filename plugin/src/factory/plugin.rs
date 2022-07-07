@@ -36,7 +36,7 @@ pub mod implementation {
         index: u32,
     ) -> *const clap_plugin_descriptor {
         match E::plugin_descriptor(index) {
-            None => ::core::ptr::null(),
+            None => core::ptr::null(),
             Some(d) => &d.0,
         }
     }
@@ -51,13 +51,13 @@ pub mod implementation {
             clap_host
         } else {
             eprintln!("[ERROR] Null clap_host pointer was provided to entry::create_plugin.");
-            return ::core::ptr::null();
+            return core::ptr::null();
         };
 
         let host_info = HostInfo::from_raw(clap_host);
 
         match E::create_plugin(host_info, plugin_id) {
-            None => ::core::ptr::null(),
+            None => core::ptr::null(),
             Some(instance) => instance.into_owned_ptr(),
         }
     }

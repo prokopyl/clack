@@ -25,7 +25,7 @@ unsafe impl Extension for HostLatency {
 
 #[cfg(feature = "clack-host")]
 const _: () = {
-    use clack_host::host::PluginHoster;
+    use clack_host::host::Host;
     use clack_host::plugin::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
 
@@ -40,9 +40,9 @@ const _: () = {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> PluginHoster<'a>> ExtensionImplementation<H> for HostLatency
+    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLatency
     where
-        for<'a> <H as PluginHoster<'a>>::MainThread: HostLatencyImpl,
+        for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostLatency {
             inner: clap_host_latency {
@@ -51,9 +51,9 @@ const _: () = {
         };
     }
 
-    unsafe extern "C" fn changed<H: for<'a> PluginHoster<'a>>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
     where
-        for<'a> <H as PluginHoster<'a>>::MainThread: HostLatencyImpl,
+        for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();

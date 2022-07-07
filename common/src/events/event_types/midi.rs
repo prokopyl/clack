@@ -90,7 +90,7 @@ impl<'buf> MidiSysExEvent<'buf> {
     #[inline]
     pub fn data(&self) -> &'buf [u8] {
         // SAFETY: this struct ensures the buffer is valid and for the required lifetime
-        unsafe { ::core::slice::from_raw_parts(self.inner.buffer, self.inner.size as usize) }
+        unsafe { core::slice::from_raw_parts(self.inner.buffer, self.inner.size as usize) }
     }
 
     #[inline]
