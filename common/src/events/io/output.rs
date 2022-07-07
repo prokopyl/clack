@@ -1,6 +1,7 @@
 use crate::events::io::implementation::{raw_output_events, OutputEventBuffer};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_output_events;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
@@ -122,6 +123,8 @@ impl Display for TryPushError {
         f.write_str("Failed to push event into output event buffer")
     }
 }
+
+impl Error for TryPushError {}
 
 impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     #[inline]
