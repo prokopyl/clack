@@ -59,19 +59,23 @@ const _: () = {
         }
     }
 
-    impl<H: for<'a> PluginHoster<'a> + HostEventRegistryImpl> ExtensionImplementation<H>
-        for HostEventRegistry
+    impl<H: for<'a> PluginHoster<'a>> ExtensionImplementation<H> for HostEventRegistry
+    where
+        for<'a> <H as PluginHoster<'a>>::MainThread: HostEventRegistryImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostEventRegistry {
             inner: clap_host_event_registry { query: query::<H> },
         };
     }
 
-    unsafe extern "C" fn query<H: for<'a> PluginHoster<'a> + HostEventRegistryImpl>(
+    unsafe extern "C" fn query<H: for<'a> PluginHoster<'a>>(
         host: *const clap_host,
         space_name: *const c_char,
         space_id: *mut u16,
-    ) -> bool {
+    ) -> bool
+    where
+        for<'a> <H as PluginHoster<'a>>::MainThread: HostEventRegistryImpl,
+    {
         HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 

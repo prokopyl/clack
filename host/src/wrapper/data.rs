@@ -1,64 +1,118 @@
 use crate::host::PluginHoster;
-use clap_sys::plugin::clap_plugin;
 use selfie::refs::RefType;
 use selfie::Selfie;
-use stable_deref_trait::StableDeref;
+use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::ptr::NonNull;
 
-pub struct ClapInstance(Option<NonNull<clap_plugin>>);
-
-impl Deref for ClapInstance {
-    type Target = ();
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &()
-    }
-}
-
-// SAFETY: ClapInstance really doesn't deref to anything
-unsafe impl StableDeref for ClapInstance {}
-
-pub struct HostData<'plugin, H: for<'shared> PluginHoster<'shared>> {
-    inner: Selfie<'plugin, Box<<H as PluginHoster<'plugin>>::Shared>, ReferentialHostDataRef<H>>,
+pub struct HostData<'plugin, H>
+where
+    H: for<'shared> PluginHoster<'shared>,
+{
+    inner: Selfie<
+        'plugin,
+        Box<UnsafeCell<<H as PluginHoster<'plugin>>::Shared>>,
+        ReferentialHostDataRef<H>,
+    >,
 }
 
 impl<'a, H: for<'b> PluginHoster<'b>> HostData<'a, H> {
     pub fn new<FH>(shared: <H as PluginHoster<'a>>::Shared, main_thread: FH) -> Self
     where
-        FH: for<'s> FnOnce(&'s <H as PluginHoster<'a>>::Shared) -> H,
+        FH: for<'s> FnOnce(
+            &'s <H as PluginHoster<'s>>::Shared,
+        ) -> <H as PluginHoster<'s>>::MainThread,
     {
         Self {
-            inner: Selfie::new(Box::pin(shared), |s| ReferentialHostData {
-                main_thread: main_thread(s),
-                audio_processor: None,
+            inner: Selfie::new(Box::pin(UnsafeCell::new(shared)), |s| {
+                // SAFETY: TODO
+                ReferentialHostData::new(main_thread(unsafe { &*s.get().cast() }))
             }),
         }
     }
 
     #[inline]
     pub fn shared(&self) -> &<H as PluginHoster<'a>>::Shared {
-        self.inner.owned()
+        unsafe { &*self.inner.owned().get() }
     }
 
     #[inline]
-    pub fn main_thread(&self) -> NonNull<H> {
-        self.inner
-            .with_referential(|d| NonNull::from(&d.main_thread))
+    pub fn shared_raw(&self) -> NonNull<<H as PluginHoster<'a>>::Shared> {
+        // SAFETY: Pointer is from the UnsafeCell, which cannot be null
+        unsafe { NonNull::new_unchecked(self.inner.owned().get()) }
     }
 
     #[inline]
-    pub fn audio_processor(&self) -> Option<NonNull<<H as PluginHoster<'a>>::AudioProcessor>> {
+    pub fn main_thread(&self) -> NonNull<<H as PluginHoster>::MainThread> {
+        self.inner.with_referential(|d| d.main_thread())
+    }
+
+    #[inline]
+    pub fn audio_processor(&self) -> Option<NonNull<<H as PluginHoster>::AudioProcessor>> {
+        self.inner.with_referential(|d| d.audio_processor())
+    }
+
+    #[inline]
+    pub fn is_active(&self) -> bool {
+        self.audio_processor().is_some()
+    }
+
+    #[inline]
+    pub fn activate<FA>(&self, audio_processor: FA)
+    where
+        FA: for<'s> FnOnce(
+            &'s <H as PluginHoster<'s>>::Shared,
+            &mut <H as PluginHoster<'s>>::MainThread,
+        ) -> <H as PluginHoster<'s>>::AudioProcessor,
+    {
+        self.inner.with_referential(|d| unsafe {
+            // SAFETY: TODO
+            d.set_audio_processor(Some(audio_processor(
+                self.shared_raw().cast().as_ref(),
+                self.main_thread().as_mut(),
+            )))
+        })
+    }
+
+    #[inline]
+    pub fn deactivate(&self) {
         self.inner
-            .with_referential(|d| d.audio_processor.as_ref().map(|a| NonNull::from(a).cast()))
+            .with_referential(|d| unsafe { d.set_audio_processor(None) })
     }
 }
 
 struct ReferentialHostData<'shared, H: PluginHoster<'shared>> {
-    main_thread: H,
-    audio_processor: Option<H::AudioProcessor>,
+    main_thread: UnsafeCell<H::MainThread>,
+    audio_processor: UnsafeCell<Option<H::AudioProcessor>>,
+}
+
+impl<'shared, H: PluginHoster<'shared>> ReferentialHostData<'shared, H> {
+    #[inline]
+    fn new(main_thread: H::MainThread) -> Self {
+        Self {
+            main_thread: UnsafeCell::new(main_thread),
+            audio_processor: UnsafeCell::new(None),
+        }
+    }
+
+    #[inline]
+    fn main_thread(&self) -> NonNull<H::MainThread> {
+        // SAFETY: the pointer comes from UnsafeCell, it cannot be null
+        unsafe { NonNull::new_unchecked(self.main_thread.get()) }
+    }
+
+    #[inline]
+    fn audio_processor(&self) -> Option<NonNull<H::AudioProcessor>> {
+        // SAFETY: &self guarantees at least shared access to the outer Option
+        let data = unsafe { &*self.audio_processor.get() };
+
+        data.as_ref().map(|a| NonNull::from(a))
+    }
+
+    #[inline]
+    unsafe fn set_audio_processor(&self, audio_processor: Option<H::AudioProcessor>) {
+        *&mut *self.audio_processor.get() = audio_processor
+    }
 }
 
 struct ReferentialHostDataRef<H>(PhantomData<H>);
@@ -67,12 +121,8 @@ impl<'shared, H: PluginHoster<'shared>> RefType<'shared> for ReferentialHostData
     type Ref = ReferentialHostData<'shared, H>;
 }
 
-struct HostDataRef<H>(PhantomData<H>);
+pub struct HostDataRef<H>(PhantomData<H>);
 
-impl<'plugin, H: 'plugin + for<'a> PluginHoster<'a>> RefType<'plugin> for HostDataRef<H> {
+impl<'plugin, H: for<'a> PluginHoster<'a>> RefType<'plugin> for HostDataRef<H> {
     type Ref = HostData<'plugin, H>;
-}
-
-pub struct InstanceWithHostData<H: for<'a> PluginHoster<'a>> {
-    inner: Selfie<'static, ClapInstance, HostDataRef<H>>,
 }

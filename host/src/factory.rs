@@ -44,6 +44,8 @@ impl PluginFactory {
         .ok_or(HostError::PluginNotFound)?;
 
         if !(plugin.as_ref().init)(plugin.as_ptr()) {
+            (plugin.as_ref().destroy)(plugin.as_ptr());
+
             return Err(HostError::InstantiationFailed);
         }
 

@@ -1,6 +1,8 @@
 use clack_host::bundle::PluginBundle;
 use clack_host::factory::PluginFactory;
-use clack_host::host::{AudioProcessorHoster, HostInfo, PluginHost, PluginHoster, SharedHoster};
+use clack_host::host::{
+    AudioProcessorHoster, HostInfo, MainThreadHoster, PluginHost, PluginHoster, SharedHoster,
+};
 use clack_host::instance::{PluginAudioConfiguration, PluginInstance};
 
 #[test]
@@ -25,9 +27,11 @@ pub fn it_works() {
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
 pub fn it_works_2() {
-    struct PH;
+    struct MH;
     struct SH;
     struct AH;
+
+    struct MyHost;
 
     impl<'a> AudioProcessorHoster for AH {}
     impl<'a> SharedHoster<'a> for SH {
@@ -44,9 +48,12 @@ pub fn it_works_2() {
         }
     }
 
-    impl<'a> PluginHoster<'a> for PH {
+    impl<'a> MainThreadHoster<'a> for MH {}
+
+    impl<'a> PluginHoster<'a> for MyHost {
         type AudioProcessor = AH;
         type Shared = SH;
+        type MainThread = MH;
     }
 
     let plugin =
@@ -55,11 +62,11 @@ pub fn it_works_2() {
     let host = PluginHost::new(
         HostInfo::new("clapjack", "jaxter184", "net.jaxter184.clapjack", "0.0.1").unwrap(),
     );
-    /*let mut instance = PluginInstance::new(|_| SH, |_| PH, &entry, &[], &host).unwrap();
+    let mut instance = PluginInstance::<MyHost>::new(|_| SH, |_| MH, &plugin, &[], &host).unwrap();
     let config = PluginAudioConfiguration {
         sample_rate: 44100.0,
         frames_count_range: 16..=2048,
     };
     let stopped = instance.activate(|_, _| AH, config).unwrap();
-    let _processor = stopped.start_processing().unwrap();*/
+    let _processor = stopped.start_processing().unwrap();
 }

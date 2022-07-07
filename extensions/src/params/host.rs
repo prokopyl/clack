@@ -159,7 +159,7 @@ pub trait HostParamsImplementationMainThread {
 impl<H: for<'a> PluginHoster<'a>> ExtensionImplementation<H> for HostParams
 where
     for<'a> <H as PluginHoster<'a>>::Shared: HostParamsImplementation,
-    H: HostParamsImplementationMainThread,
+    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     const IMPLEMENTATION: &'static Self = &HostParams(clap_host_params {
         rescan: rescan::<H>,
@@ -172,7 +172,7 @@ unsafe extern "C" fn rescan<H: for<'a> PluginHoster<'a>>(
     host: *const clap_host,
     flags: clap_param_rescan_flags,
 ) where
-    H: HostParamsImplementationMainThread,
+    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -188,7 +188,7 @@ unsafe extern "C" fn clear<H: for<'a> PluginHoster<'a>>(
     param_id: u32,
     flags: clap_param_clear_flags,
 ) where
-    H: HostParamsImplementationMainThread,
+    for<'a> <H as PluginHoster<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

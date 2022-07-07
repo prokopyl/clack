@@ -1,8 +1,9 @@
-use clack_host::host::{AudioProcessorHoster, PluginHoster, SharedHoster};
+use clack_host::host::{AudioProcessorHoster, MainThreadHoster, PluginHoster, SharedHoster};
 
 pub struct TestHostMainThread;
 pub struct TestHostShared;
 pub struct TestHostAudioProcessor;
+pub struct TestHostImpl;
 
 impl<'a> SharedHoster<'a> for TestHostShared {
     fn request_restart(&self) {
@@ -20,7 +21,10 @@ impl<'a> SharedHoster<'a> for TestHostShared {
 
 impl AudioProcessorHoster for TestHostAudioProcessor {}
 
-impl<'a> PluginHoster<'a> for TestHostMainThread {
+impl<'a> MainThreadHoster<'a> for TestHostMainThread {}
+
+impl<'a> PluginHoster<'a> for TestHostImpl {
     type AudioProcessor = TestHostAudioProcessor;
     type Shared = TestHostShared;
+    type MainThread = TestHostMainThread;
 }

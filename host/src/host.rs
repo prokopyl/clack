@@ -17,6 +17,8 @@ impl HostShared {
     }
 }
 
+// TODO: rename
+#[derive(Clone)]
 pub struct PluginHost {
     inner: Arc<HostShared>,
 }
@@ -38,9 +40,15 @@ impl PluginHost {
 // TODO: bikeshed
 pub trait AudioProcessorHoster: Send {}
 
-#[allow(unused)] // For default impls
+pub trait MainThreadHoster<'a>: Send + 'a {
+    #[inline]
+    #[allow(unused)]
+    fn instantiated(&mut self, instance: PluginMainThreadHandle) {}
+}
+
 pub trait SharedHoster<'a>: Send + Sync {
     #[inline]
+    #[allow(unused)]
     fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {}
 
     fn request_restart(&self);
@@ -48,15 +56,13 @@ pub trait SharedHoster<'a>: Send + Sync {
     fn request_callback(&self);
 }
 
-// TODO
-#[allow(unused)] // For default impls
-pub trait PluginHoster<'a>: Sized + 'a {
+// TODO: rename
+pub trait PluginHoster<'a>: Sized + 'static {
     type AudioProcessor: AudioProcessorHoster + 'a;
     type Shared: SharedHoster<'a> + 'a;
+    type MainThread: MainThreadHoster<'a> + 'a;
 
     #[inline]
+    #[allow(unused)]
     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {}
-
-    #[inline]
-    fn instantiated(&mut self, instance: PluginMainThreadHandle) {}
 }

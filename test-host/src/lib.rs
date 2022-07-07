@@ -1,4 +1,4 @@
-use crate::host::{TestHostAudioProcessor, TestHostMainThread, TestHostShared};
+use crate::host::{TestHostAudioProcessor, TestHostImpl, TestHostMainThread, TestHostShared};
 use clack_host::bundle::{PluginBundle, PluginDescriptor, PluginEntryDescriptor};
 use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
 use clack_host::factory::PluginFactory;
@@ -27,8 +27,8 @@ impl<'a> RefType<'a> for PluginDescriptorRef {
 
 pub struct TestHost {
     entry_and_descriptor: Selfie<'static, Box<PluginBundle>, PluginDescriptorRef>,
-    plugin: PluginInstance<TestHostMainThread>,
-    processor: Option<StoppedPluginAudioProcessor<TestHostMainThread>>,
+    plugin: PluginInstance<TestHostImpl>,
+    processor: Option<StoppedPluginAudioProcessor<TestHostImpl>>,
 
     input_buffers: [Vec<f32>; 2],
     output_buffers: [Vec<f32>; 2],
@@ -176,7 +176,7 @@ impl TestHost {
     }
 
     #[inline]
-    pub fn plugin(&self) -> &PluginInstance<TestHostMainThread> {
+    pub fn plugin(&self) -> &PluginInstance<TestHostImpl> {
         &self.plugin
     }
 
