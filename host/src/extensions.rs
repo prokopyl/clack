@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 ///
 /// Host can declare the different extensions they support by using the
 /// [`register`](HostExtensions::register) method on this struct, during a call to
-/// [`declare_extensions`](crate::host::PluginHoster::declare_extensions).
+/// [`declare_extensions`](crate::host::Host::declare_extensions).
 pub struct HostExtensions<'a, H: ?Sized> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,

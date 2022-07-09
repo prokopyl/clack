@@ -18,6 +18,7 @@ use std::ops::{Index, Range};
 ///
 /// # Example
 ///```
+/// # #[cfg(not(miri))] const _: () = { // TODO: MIRI does not support C-style inheritance casts
 /// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
 /// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
@@ -31,6 +32,7 @@ use std::ops::{Index, Range};
 ///
 /// assert_eq!(1, input_events.len());
 /// assert_eq!(&event, input_events[0].as_event().unwrap());
+/// # };
 /// ```
 #[repr(C)]
 pub struct InputEvents<'a> {
@@ -131,7 +133,7 @@ pub struct InputEventsIter<'a> {
     range: Range<u32>,
 }
 
-impl<'a, 'list> Iterator for InputEventsIter<'a> {
+impl<'a> Iterator for InputEventsIter<'a> {
     type Item = &'a UnknownEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {

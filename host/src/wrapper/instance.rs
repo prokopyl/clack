@@ -86,6 +86,11 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         unsafe { &*self.instance }
     }
 
+    #[inline]
+    pub fn raw_instance_mut(&mut self) -> &mut clap_plugin {
+        unsafe { &mut *self.instance }
+    }
+
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,
@@ -150,5 +155,12 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     #[inline]
     pub unsafe fn on_main_thread(&self) {
         ((*self.instance).on_main_thread)(self.instance)
+    }
+}
+
+impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
+    #[inline]
+    fn drop(&mut self) {
+        unsafe { ((*self.raw_instance()).destroy)(self.raw_instance_mut() as *mut _) }
     }
 }

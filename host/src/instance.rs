@@ -123,10 +123,3 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         PluginMainThreadHandle::new((self.inner.raw_instance() as *const _) as *mut _)
     }
 }
-
-impl<H: for<'h> Host<'h>> Drop for PluginInstance<H> {
-    #[inline]
-    fn drop(&mut self) {
-        unsafe { ((*self.inner.raw_instance()).destroy)(self.inner.raw_instance()) }
-    }
-}

@@ -82,7 +82,7 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
         self.data.with_referential(|d| d.is_active())
     }
 
-    /// Returns a raw, non-null pointer to the host's main thread ([`PluginHoster`](crate::host::PluginHoster))
+    /// Returns a raw, non-null pointer to the host's main thread ([`MainThread`](crate::host::Host::MainThread))
     /// struct.
     ///
     /// # Safety
@@ -95,7 +95,7 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
         self.data.with_referential(|d| d.main_thread().cast())
     }
 
-    /// Returns a raw, non-null pointer to the host's ([`AudioProcessor`](crate::host::PluginHoster::AudioProcessor))
+    /// Returns a raw, non-null pointer to the host's ([`AudioProcessor`](crate::host::Host::AudioProcessor))
     /// struct.
     ///
     /// # Safety
