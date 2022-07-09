@@ -19,7 +19,7 @@ pub const fn check_cstr(bytes: &[u8]) -> &CStr {
     if bytes[bytes.len() - 1] != b'\0' {
         panic!("Invalid C String: string is not null-terminated")
     }
-    unsafe { ::core::mem::transmute(bytes) }
+    unsafe { core::mem::transmute(bytes) }
 }
 
 #[inline]

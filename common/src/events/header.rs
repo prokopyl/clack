@@ -70,7 +70,7 @@ impl<'a, E: Event<'a>> EventHeader<E> {
     ) -> Self {
         Self {
             inner: clap_event_header {
-                size: ::core::mem::size_of::<E>() as u32,
+                size: core::mem::size_of::<E>() as u32,
                 time,
                 space_id: space_id.id(),
                 type_: E::TYPE_ID,

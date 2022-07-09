@@ -8,7 +8,7 @@ pub mod plugin;
 ///
 /// # Safety
 /// // TODO
-pub unsafe trait Factory<'a>: Sized + 'a {
+pub unsafe trait Factory: Sized {
     /// The standard identifier for this factory.
     ///
     /// This MUST point to a C-style, null-terminated string.
@@ -22,7 +22,7 @@ pub unsafe trait Factory<'a>: Sized + 'a {
     /// Callers must ensure the factory pointer points to the correct type, and also be valid for
     /// the duration of `'a`.
     #[inline]
-    unsafe fn from_factory_ptr(ptr: NonNull<c_void>) -> &'a Self {
+    unsafe fn from_factory_ptr<'a>(ptr: NonNull<c_void>) -> &'a Self {
         ptr.cast().as_ref()
     }
 }

@@ -16,7 +16,7 @@ pub struct EventBuffer {
 
 #[inline]
 pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
-    let type_size = ::core::mem::size_of::<T>();
+    let type_size = core::mem::size_of::<T>();
     if type_size == 0 {
         0
     } else {

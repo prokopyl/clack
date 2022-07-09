@@ -2,11 +2,12 @@ use clap_sys::plugin::clap_plugin_descriptor;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
+#[derive(Copy, Clone)]
 pub struct PluginDescriptor<'a> {
     descriptor: &'a clap_plugin_descriptor,
 }
 
-unsafe fn cstr_to_str<'a>(ptr: *const ::std::os::raw::c_char) -> Option<&'a CStr> {
+unsafe fn cstr_to_str<'a>(ptr: *const std::os::raw::c_char) -> Option<&'a CStr> {
     if ptr.is_null() {
         return None;
     }
@@ -63,7 +64,7 @@ impl<'a> PluginDescriptor<'a> {
 }
 
 struct FeaturesIter<'a> {
-    current: *mut *const ::std::os::raw::c_char,
+    current: *mut *const std::os::raw::c_char,
     _lifetime: PhantomData<&'a CStr>,
 }
 

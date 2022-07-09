@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 "clack-host" = { path = "../host" }
 "clack-extensions" = { path = "../extensions", features = ["audio-ports", "params", "state", "clack-plugin"] }
+selfie = "0.0.1"

@@ -86,7 +86,7 @@ impl<'a> UnknownEvent<'a> {
         let raw = self.header.as_raw();
         if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
-            || raw.size != ::core::mem::size_of::<E>() as u32
+            || raw.size != core::mem::size_of::<E>() as u32
         {
             return None;
         }
@@ -132,7 +132,7 @@ impl<'a> UnknownEvent<'a> {
         // SAFETY: any data can be safely transmuted to a slice of bytes. This type also ensures
         // the size field is correct
         unsafe {
-            ::core::slice::from_raw_parts(self as *const _ as *const _, self.header.size() as usize)
+            core::slice::from_raw_parts(self as *const _ as *const _, self.header.size() as usize)
         }
     }
 

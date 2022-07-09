@@ -1,142 +1,133 @@
-use crate::host::{PluginHost, PluginHoster};
+use crate::bundle::PluginBundle;
+use crate::host::{Host, HostInfo};
 use clap_sys::plugin::clap_plugin;
 use std::ops::RangeInclusive;
-use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::entry::PluginEntry;
+use crate::host::HostError;
 use crate::instance::processor::StoppedPluginAudioProcessor;
 use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
-use crate::wrapper::{HostError, HostWrapper};
+use crate::wrapper::instance::PluginInstanceInner;
 
 pub struct PluginAudioConfiguration {
     pub sample_rate: f64,
     pub frames_count_range: RangeInclusive<u32>,
 }
 
-pub struct PluginInstance<'a, H: PluginHoster<'a>> {
-    wrapper: Pin<Arc<HostWrapper<'a, H>>>,
+pub struct PluginInstance<H: for<'a> Host<'a>> {
+    inner: Arc<PluginInstanceInner<H>>,
 }
 
 pub mod processor;
 
-#[inline]
-unsafe fn pin_get_ptr<P>(pin: &Pin<P>) -> &P {
-    // SAFETY: Pin is repr(transparent). The caller is responsible to ensure the pointer isn't cloned
-    // outside of a Pin.
-    &*(pin as *const _ as *const P)
-}
-
-#[inline]
-unsafe fn pin_get_ptr_unchecked_mut<P>(pin: &mut Pin<P>) -> &mut P {
-    // SAFETY: Pin is repr(transparent). The caller is responsible to ensure the data will never be
-    // moved, similar to Pin::get_unchecked_mut
-    &mut *(pin as *mut _ as *mut P)
-}
-
-#[inline]
-pub(crate) fn arc_get_pin_mut<T>(pin: &mut Pin<Arc<T>>) -> Option<Pin<&mut T>> {
-    // SAFETY: Arc::get_mut does not move anything
-    let arc = unsafe { pin_get_ptr_unchecked_mut(pin) };
-    let inner = Arc::get_mut(arc)?;
-
-    // SAFETY: By using get_mut we guaranteed this is the only reference to it.
-    // The &mut Pin<Arc<T>> argument guarantees this data was pinned, and the temporary Arc reference
-    // is never exposed.
-    unsafe { Some(Pin::new_unchecked(inner)) }
-}
-
-impl<'a, H: PluginHoster<'a>> PluginInstance<'a, H> {
+impl<H: for<'b> Host<'b>> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
-        hoster: FH,
-        entry: &PluginEntry<'a>,
+        main_thread: FH,
+        bundle: &PluginBundle,
         plugin_id: &[u8],
-        host: &PluginHost,
+        host: &HostInfo,
     ) -> Result<Self, HostError>
     where
-        FS: FnOnce() -> H::Shared,
-        FH: FnOnce(&'a H::Shared) -> H,
+        FS: for<'b> FnOnce(&'b ()) -> <H as Host<'b>>::Shared,
+        FH: for<'b> FnOnce(&'b <H as Host<'b>>::Shared) -> <H as Host<'b>>::MainThread,
     {
-        let wrapper = HostWrapper::new(hoster, shared, entry, plugin_id, host.shared().clone())?;
+        let inner = PluginInstanceInner::<H>::instantiate(
+            shared,
+            main_thread,
+            bundle,
+            plugin_id,
+            host.clone(),
+        )?;
 
-        Ok(Self { wrapper })
+        Ok(Self { inner })
     }
 
-    pub fn activate(
+    pub fn activate<FA>(
         &mut self,
-        audio_processor: H::AudioProcessor,
+        audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<StoppedPluginAudioProcessor<'a, H>, HostError> {
-        let wrapper =
-            arc_get_pin_mut(&mut self.wrapper).ok_or(HostError::AlreadyActivatedPlugin)?;
+    ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
+    where
+        FA: for<'a> FnOnce(
+            &'a <H as Host<'a>>::Shared,
+            &mut <H as Host<'a>>::MainThread,
+        ) -> <H as Host<'a>>::AudioProcessor,
+    {
+        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
 
         wrapper.activate(audio_processor, configuration)?;
 
-        Ok(StoppedPluginAudioProcessor::new(self.wrapper.clone()))
+        Ok(StoppedPluginAudioProcessor::new(self.inner.clone()))
     }
 
-    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<'a, H>) {
+    #[inline]
+    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<H>) {
+        self.deactivate_with(processor, |_, _| ())
+    }
+
+    pub fn deactivate_with<T, D>(&mut self, processor: StoppedPluginAudioProcessor<H>, drop_with: D)
+    where
+        D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
+    {
         // SAFETY: we never clone the arcs, only compare them
-        if unsafe { !Arc::ptr_eq(pin_get_ptr(&self.wrapper), pin_get_ptr(&processor.wrapper)) } {
+        if !Arc::ptr_eq(&self.inner, &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
         }
 
-        ::core::mem::drop(processor);
+        drop(processor);
 
         // PANIC: we dropped the only processor produced, and checked if it matched
-        let wrapper = arc_get_pin_mut(&mut self.wrapper)
+        let wrapper = Arc::get_mut(&mut self.inner)
             .ok_or(HostError::AlreadyActivatedPlugin)
             .unwrap();
 
         // PANIC: we dropped the only processor produced, and checked if it matched
-        wrapper.deactivate().unwrap();
+        wrapper.deactivate_with(drop_with).unwrap();
     }
 
     #[inline]
     pub fn call_on_main_thread_callback(&mut self) {
         // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing
-        unsafe { self.wrapper.on_main_thread() }
+        unsafe { self.inner.on_main_thread() }
     }
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
-        self.wrapper.raw_instance()
+        self.inner.raw_instance()
     }
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        // SAFETY: the arc is never cloned
-        let wrapper = unsafe { pin_get_ptr(&self.wrapper) };
-        Arc::strong_count(wrapper) > 1
+        Arc::strong_count(&self.inner) > 1
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &H::Shared {
-        self.wrapper.shared()
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared {
+        self.inner.wrapper().shared()
     }
 
     #[inline]
-    pub fn main_thread_host_data(&self) -> &H {
+    pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.wrapper.main_thread().as_ref() }
+        unsafe { self.inner.wrapper().main_thread().as_ref() }
     }
 
     #[inline]
-    pub fn main_thread_host_data_mut(&mut self) -> &mut H {
+    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.wrapper.main_thread().as_mut() }
+        unsafe { self.inner.wrapper().main_thread().as_mut() }
     }
 
     #[inline]
     pub fn shared_plugin_data(&self) -> PluginSharedHandle {
-        PluginSharedHandle::new((self.wrapper.raw_instance() as *const _) as *mut _)
+        PluginSharedHandle::new((self.inner.raw_instance() as *const _) as *mut _)
     }
 
     #[inline]
     pub fn main_thread_plugin_data(&self) -> PluginMainThreadHandle {
-        PluginMainThreadHandle::new((self.wrapper.raw_instance() as *const _) as *mut _)
+        PluginMainThreadHandle::new((self.inner.raw_instance() as *const _) as *mut _)
     }
 }

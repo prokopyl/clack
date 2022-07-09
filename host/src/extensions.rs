@@ -1,4 +1,4 @@
-use crate::host::PluginHoster;
+use crate::host::Host;
 pub use clack_common::extensions::*;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
@@ -8,14 +8,14 @@ use std::ptr::NonNull;
 ///
 /// Host can declare the different extensions they support by using the
 /// [`register`](HostExtensions::register) method on this struct, during a call to
-/// [`declare_extensions`](crate::host::PluginHoster::declare_extensions).
-pub struct HostExtensions<'a, H> {
+/// [`declare_extensions`](crate::host::Host::declare_extensions).
+pub struct HostExtensions<'a, H: ?Sized> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
     plugin_type: PhantomData<H>,
 }
 
-impl<'a, 'b, H: PluginHoster<'b>> HostExtensions<'a, H> {
+impl<'a, 'b, H: Host<'b>> HostExtensions<'a, H> {
     #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {
@@ -29,7 +29,7 @@ impl<'a, 'b, H: PluginHoster<'b>> HostExtensions<'a, H> {
     pub(crate) fn found(&self) -> *const c_void {
         self.found
             .map(|p| p.as_ptr())
-            .unwrap_or(::core::ptr::null_mut())
+            .unwrap_or(core::ptr::null_mut())
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.

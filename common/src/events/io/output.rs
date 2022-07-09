@@ -1,6 +1,8 @@
 use crate::events::io::implementation::{raw_output_events, OutputEventBuffer};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_output_events;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 /// An ordered list of timestamped events.
@@ -19,6 +21,7 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///```
+/// # #[cfg(not(miri))] let _: () = { // TODO: MIRI does not support C-style inheritance casts
 /// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
 /// use clack_common::events::io::{EventBuffer, OutputEvents};
@@ -27,9 +30,10 @@ use std::marker::PhantomData;
 /// let mut output_events = OutputEvents::from_buffer(&mut buf);
 ///
 /// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
-/// output_events.try_push(event.as_unknown());
+/// output_events.try_push(event.as_unknown()).unwrap();
 ///
 /// assert_eq!(1, buf.len());
+/// # };
 /// ```
 #[repr(C)]
 pub struct OutputEvents<'a> {
@@ -113,7 +117,16 @@ impl<'a> OutputEvents<'a> {
 }
 
 #[non_exhaustive]
-pub struct TryPushError {}
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+pub struct TryPushError;
+
+impl Display for TryPushError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Failed to push event into output event buffer")
+    }
+}
+
+impl Error for TryPushError {}
 
 impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     #[inline]

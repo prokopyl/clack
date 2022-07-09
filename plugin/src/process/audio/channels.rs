@@ -76,7 +76,7 @@ impl<'a, S> TAudioChannels<'a, S> {
         unsafe {
             self.data
                 .get(channel_index as usize)
-                .map(|data| ::core::slice::from_raw_parts(*data, self.frames_count as usize))
+                .map(|data| core::slice::from_raw_parts(*data, self.frames_count as usize))
         }
     }
 
@@ -118,7 +118,7 @@ impl<'a, S> TAudioChannelsMut<'a, S> {
     pub fn get_channel_data_mut(&mut self, channel_index: usize) -> Option<&'a mut [S]> {
         unsafe {
             self.data.get(channel_index).map(|data| {
-                ::core::slice::from_raw_parts_mut(*data as *mut _, self.frames_count as usize)
+                core::slice::from_raw_parts_mut(*data as *mut _, self.frames_count as usize)
             })
         }
     }
@@ -141,7 +141,7 @@ impl<'a, S> TAudioChannelsMut<'a, S> {
 }
 
 pub struct TAudioChannelsIter<'a, T> {
-    data: ::core::slice::Iter<'a, *const T>,
+    data: core::slice::Iter<'a, *const T>,
     frames_count: u32,
 }
 
@@ -152,12 +152,12 @@ impl<'a, T> Iterator for TAudioChannelsIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.data
             .next()
-            .map(|ptr| unsafe { ::core::slice::from_raw_parts(*ptr, self.frames_count as usize) })
+            .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) })
     }
 }
 
 pub struct TAudioChannelsIterMut<'a, T> {
-    data: ::core::slice::Iter<'a, *const T>,
+    data: core::slice::Iter<'a, *const T>,
     frames_count: u32,
 }
 
@@ -167,7 +167,7 @@ impl<'a, T> Iterator for TAudioChannelsIterMut<'a, T> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.data.next().map(|ptr| unsafe {
-            ::core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
+            core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
         })
     }
 }

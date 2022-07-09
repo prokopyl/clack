@@ -16,11 +16,11 @@ impl<'a> Audio<'a> {
         unsafe {
             Audio {
                 frames_count: process.frames_count,
-                inputs: ::core::slice::from_raw_parts(
+                inputs: core::slice::from_raw_parts(
                     process.audio_inputs,
                     process.audio_inputs_count as usize,
                 ),
-                outputs: ::core::slice::from_raw_parts(
+                outputs: core::slice::from_raw_parts(
                     process.audio_outputs,
                     process.audio_outputs_count as usize,
                 ),

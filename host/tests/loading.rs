@@ -11,9 +11,8 @@ pub fn it_works() {
         std::env::consts::DLL_SUFFIX
     );
     let bundle = PluginBundle::load(&bundle_path).unwrap();
-    let entry = bundle.get_entry().unwrap();
 
-    let desc = entry
+    let desc = bundle
         .get_factory::<PluginFactory>()
         .unwrap()
         .plugin_descriptor(0)

@@ -40,7 +40,7 @@ const _: () = {
 const _: () = {
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
     use clack_common::extensions::ExtensionImplementation;
-    use clack_host::host::PluginHoster;
+    use clack_host::host::Host;
     use clap_sys::host::clap_host;
     use std::ffi::CStr;
 
@@ -59,19 +59,23 @@ const _: () = {
         }
     }
 
-    impl<'a, H: PluginHoster<'a> + HostEventRegistryImpl> ExtensionImplementation<H>
-        for HostEventRegistry
+    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostEventRegistry
+    where
+        for<'a> <H as Host<'a>>::MainThread: HostEventRegistryImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostEventRegistry {
             inner: clap_host_event_registry { query: query::<H> },
         };
     }
 
-    unsafe extern "C" fn query<'a, H: PluginHoster<'a> + HostEventRegistryImpl>(
+    unsafe extern "C" fn query<H: for<'a> Host<'a>>(
         host: *const clap_host,
-        space_name: *const ::std::os::raw::c_char,
+        space_name: *const c_char,
         space_id: *mut u16,
-    ) -> bool {
+    ) -> bool
+    where
+        for<'a> <H as Host<'a>>::MainThread: HostEventRegistryImpl,
+    {
         HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 

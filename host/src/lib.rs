@@ -1,7 +1,8 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 
+extern crate core;
+
 pub mod bundle;
-pub mod entry;
 pub mod extensions;
 pub mod factory;
 pub mod host;
