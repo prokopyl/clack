@@ -119,8 +119,15 @@ impl<'a> OutputEvents<'a> {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 pub struct TryPushError;
+
+impl TryPushError {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {}
+    }
+}
 
 impl Display for TryPushError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
