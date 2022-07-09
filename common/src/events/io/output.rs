@@ -21,7 +21,7 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///```
-/// # #[cfg(not(miri))] const _: () = { // TODO: MIRI does not support C-style inheritance casts
+/// # #[cfg(not(miri))] let _: () = { // TODO: MIRI does not support C-style inheritance casts
 /// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
 /// use clack_common::events::io::{EventBuffer, OutputEvents};
