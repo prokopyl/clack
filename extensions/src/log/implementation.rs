@@ -28,9 +28,9 @@ unsafe extern "C" fn log<H: for<'a> Host<'a>>(
 ) where
     for<'a> <H as Host<'a>>::Shared: HostLog,
 {
-    let _res = HostWrapper::<H>::handle(host, |host| {
+    let msg = CStr::from_ptr(msg).to_string_lossy();
+    let res = HostWrapper::<H>::handle(host, |host| {
         let host = host.shared();
-        let msg = CStr::from_ptr(msg).to_string_lossy();
         let log_severity = LogSeverity::from_raw(severity);
 
         host.log(log_severity.unwrap_or(LogSeverity::Warning), msg.as_ref());
@@ -52,5 +52,7 @@ unsafe extern "C" fn log<H: for<'a> Host<'a>>(
         Ok(())
     });
 
-    // TODO: perhaps write straight into STDERR if log error handler failed/panicked
+    if res.is_none() {
+        eprintln!("[ERROR] Log handler failed when writing message: {}", msg)
+    }
 }

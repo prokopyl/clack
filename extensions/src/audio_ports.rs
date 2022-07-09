@@ -56,10 +56,20 @@ unsafe impl Extension for PluginAudioPorts {
     type ExtensionType = PluginExtension;
 }
 
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for PluginAudioPorts {}
+unsafe impl Sync for PluginAudioPorts {}
+
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionType = HostExtension;
 }
+
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for HostAudioPorts {}
+unsafe impl Sync for HostAudioPorts {}
 
 #[derive(Clone)]
 pub struct AudioPortInfoBuffer {

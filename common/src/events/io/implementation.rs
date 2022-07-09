@@ -1,3 +1,4 @@
+use crate::events::io::TryPushError;
 use crate::events::UnknownEvent;
 use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
@@ -9,7 +10,7 @@ pub trait InputEventBuffer: Sized {
 }
 
 pub trait OutputEventBuffer: Sized {
-    fn try_push(&mut self, event: &UnknownEvent) -> bool; // TODO: use result for failure
+    fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError>;
 }
 
 pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
@@ -52,6 +53,7 @@ unsafe extern "C" fn try_push<O: OutputEventBuffer>(
             &mut *((*list).ctx as *const _ as *mut O),
             UnknownEvent::from_raw(&*event),
         )
+        .is_ok()
     })
     .unwrap_or(false)
 }

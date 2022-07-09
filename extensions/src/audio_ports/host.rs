@@ -19,7 +19,6 @@ impl PluginAudioPorts {
         index: u32,
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,
-        // TODO: handle errors
     ) -> Option<AudioPortInfoData<'b>> {
         let success =
             unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };

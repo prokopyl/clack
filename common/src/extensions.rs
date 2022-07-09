@@ -43,7 +43,7 @@ mod private {
 /// to a shared reference to the Extension type. This implies the type implementing this trait
 /// must be `#[repr(C)]` and ABI-compatible with the CLAP extension struct, unless the
 /// [`Extension::from_extension_ptr`] method is overridden and implemented manually.
-pub unsafe trait Extension: Sized + 'static {
+pub unsafe trait Extension: Sized + Send + Sync + 'static {
     /// The standard identifier for this extension.
     const IDENTIFIER: &'static CStr;
     /// Whether this is a host extension or a plugin extension

@@ -1,9 +1,8 @@
-use crate::factory::plugin::implementation;
+use crate::factory::plugin::{PluginFactory, PluginFactoryImpl};
 use crate::factory::PluginFactories;
 use crate::host::HostInfo;
 use crate::plugin::wrapper::panic::catch_unwind;
 use crate::plugin::{Plugin, PluginDescriptor, PluginInstance};
-use clack_common::factory::plugin::PluginFactory;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
@@ -57,7 +56,7 @@ impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
     }
 }
 
-impl<'a, P: Plugin<'a>> implementation::PluginFactory<'a> for SinglePluginEntry<'a, P> {
+impl<'a, P: Plugin<'a>> PluginFactoryImpl<'a> for SinglePluginEntry<'a, P> {
     #[inline]
     fn plugin_count() -> u32 {
         1

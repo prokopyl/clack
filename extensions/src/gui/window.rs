@@ -3,6 +3,7 @@ use clap_sys::ext::gui::clap_window;
 use raw_window_handle::{
     AppKitHandle, HasRawWindowHandle, RawWindowHandle, Win32Handle, XlibHandle,
 };
+use std::ffi::c_void;
 
 pub struct Window {
     raw: clap_window,
@@ -17,6 +18,12 @@ impl Window {
     #[inline]
     pub fn api_type(&self) -> GuiApiType {
         unsafe { GuiApiType::from_ptr(self.raw.api) }
+    }
+
+    #[inline]
+    pub fn raw_ptr(&self) -> *mut c_void {
+        // SAFETY: it's all always representable as a pointer
+        unsafe { self.raw.specific.ptr }
     }
 }
 
@@ -37,7 +44,7 @@ unsafe impl HasRawWindowHandle for Window {
             handle.window = unsafe { self.raw.specific.x11 };
             RawWindowHandle::Xlib(handle)
         } else {
-            todo!()
+            panic!("Unknown GUI API type: {:?}", api_type)
         }
     }
 }

@@ -5,6 +5,7 @@ use clack_plugin::plugin::{Plugin, PluginError};
 use clap_sys::ext::gui::{clap_gui_resize_hints, clap_plugin_gui, clap_window};
 use clap_sys::plugin::clap_plugin;
 use std::ffi::{CStr, CString};
+use std::fmt::{Debug, Formatter};
 use std::os::raw::c_char;
 
 type PluginResult = Result<(), PluginError>;
@@ -31,6 +32,15 @@ impl GuiApiType<'static> {
     pub const COCOA: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") });
     pub const X11: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") });
     pub const WAYLAND: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
+}
+
+impl<'a> Debug for GuiApiType<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.0.to_str() {
+            Ok(s) => f.write_str(s),
+            Err(_) => self.0.to_bytes().fmt(f),
+        }
+    }
 }
 
 /// Implement this trait for your plugin's GUI handler.
