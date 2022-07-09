@@ -82,6 +82,11 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
+    pub fn set_port_index(&mut self, port_index: i16) {
+        self.inner.port_index = port_index;
+    }
+
+    #[inline]
     pub fn key(&self) -> i16 {
         self.inner.key
     }

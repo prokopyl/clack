@@ -17,7 +17,8 @@ pub enum CoreEventSpace<'a> {
 }
 
 unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
-    const NAME: &'static CStr = crate::utils::check_cstr(b"\0");
+    // SAFETY: null byte is there
+    const NAME: &'static CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
 
     unsafe fn from_unknown(event: &'a UnknownEvent<'a>) -> Option<Self> {
         use CoreEventSpace::*;

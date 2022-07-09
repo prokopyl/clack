@@ -63,7 +63,15 @@ impl EventHeader<()> {
 
 impl<'a, E: Event<'a>> EventHeader<E> {
     #[inline]
-    pub fn new_for_space(
+    pub const fn new_core(time: u32, flags: EventFlags) -> Self
+    where
+        E: Event<'a, EventSpace = CoreEventSpace<'a>>,
+    {
+        Self::new_for_space(EventSpaceId::core(), time, flags)
+    }
+
+    #[inline]
+    pub const fn new_for_space(
         space_id: EventSpaceId<E::EventSpace>,
         time: u32,
         flags: EventFlags,

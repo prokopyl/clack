@@ -1,7 +1,7 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
 use clap_sys::events::{
-    clap_event_midi, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
+    clap_event_midi, clap_event_midi2, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
     CLAP_EVENT_MIDI_SYSEX,
 };
 use std::fmt::{Debug, Formatter};
@@ -26,6 +26,16 @@ impl MidiEvent {
     #[inline]
     pub fn into_raw(self) -> clap_event_midi {
         self.inner
+    }
+
+    #[inline]
+    pub fn port_index(&self) -> u16 {
+        self.inner.port_index
+    }
+
+    #[inline]
+    pub fn set_port_index(&mut self, port_index: u16) {
+        self.inner.port_index = port_index;
     }
 }
 
@@ -88,6 +98,11 @@ impl<'buf> MidiSysExEvent<'buf> {
     }
 
     #[inline]
+    pub fn set_port_index(&mut self, port_index: u16) {
+        self.inner.port_index = port_index;
+    }
+
+    #[inline]
     pub fn data(&self) -> &'buf [u8] {
         // SAFETY: this struct ensures the buffer is valid and for the required lifetime
         unsafe { core::slice::from_raw_parts(self.inner.buffer, self.inner.size as usize) }
@@ -117,7 +132,7 @@ impl<'a> Debug for MidiSysExEvent<'a> {
 
 #[derive(Copy, Clone)]
 pub struct Midi2Event {
-    inner: clap_event_midi,
+    inner: clap_event_midi2,
 }
 
 unsafe impl<'a> Event<'a> for Midi2Event {
@@ -127,12 +142,22 @@ unsafe impl<'a> Event<'a> for Midi2Event {
 
 impl Midi2Event {
     #[inline]
-    pub fn from_raw(raw: clap_event_midi) -> Self {
+    pub fn from_raw(raw: clap_event_midi2) -> Self {
         Self { inner: raw }
     }
 
     #[inline]
-    pub fn into_raw(self) -> clap_event_midi {
+    pub fn port_index(&self) -> u16 {
+        self.inner.port_index
+    }
+
+    #[inline]
+    pub fn set_port_index(&mut self, port_index: u16) {
+        self.inner.port_index = port_index;
+    }
+
+    #[inline]
+    pub fn into_raw(self) -> clap_event_midi2 {
         self.inner
     }
 }

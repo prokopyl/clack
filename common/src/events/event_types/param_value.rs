@@ -19,6 +19,7 @@ bitflags! {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct ParamValueEvent {
     inner: clap_event_param_value,
 }
@@ -71,6 +72,11 @@ impl ParamValueEvent {
     }
 
     #[inline]
+    pub fn set_port_index(&mut self, port_index: i16) {
+        self.inner.port_index = port_index;
+    }
+
+    #[inline]
     pub fn key(&self) -> i16 {
         self.inner.key
     }
@@ -120,6 +126,7 @@ impl Debug for ParamValueEvent {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct ParamModEvent {
     inner: clap_event_param_mod,
 }
@@ -169,6 +176,11 @@ impl ParamModEvent {
     #[inline]
     pub fn port_index(&self) -> i16 {
         self.inner.port_index
+    }
+
+    #[inline]
+    pub fn set_port_index(&mut self, port_index: i16) {
+        self.inner.port_index = port_index;
     }
 
     #[inline]
