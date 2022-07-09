@@ -73,8 +73,14 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     }
 
     #[inline]
-    pub(crate) unsafe fn deactivate(&self) {
-        self.data.with_referential(|d| d.deactivate())
+    pub(crate) unsafe fn deactivate<T>(
+        &self,
+        drop: impl for<'s> FnOnce(
+            <H as Host<'s>>::AudioProcessor,
+            &mut <H as Host<'s>>::MainThread,
+        ) -> T,
+    ) -> T {
+        self.data.with_referential(|d| d.deactivate(drop))
     }
 
     #[inline]

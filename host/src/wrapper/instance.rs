@@ -118,24 +118,28 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         };
 
         if !success {
-            unsafe { self.wrapper().deactivate() };
+            unsafe { self.wrapper().deactivate(|_, _| ()) };
             return Err(HostError::ActivationFailed);
         }
 
         Ok(())
     }
 
-    // TODO: better deactivate API (allow taking)
     #[inline]
-    pub fn deactivate(&mut self) -> Result<(), HostError> {
+    pub fn deactivate_with<T>(
+        &mut self,
+        drop: impl for<'s> FnOnce(
+            <H as Host<'s>>::AudioProcessor,
+            &mut <H as Host<'s>>::MainThread,
+        ) -> T,
+    ) -> Result<T, HostError> {
         if !self.wrapper().is_active() {
             return Err(HostError::DeactivatedPlugin);
         }
 
         unsafe { ((*self.instance).deactivate)(self.instance) };
 
-        unsafe { self.wrapper().deactivate() };
-        Ok(())
+        Ok(unsafe { self.wrapper().deactivate(drop) })
     }
 
     #[inline]

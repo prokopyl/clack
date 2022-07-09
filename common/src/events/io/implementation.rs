@@ -9,7 +9,7 @@ pub trait InputEventBuffer: Sized {
 }
 
 pub trait OutputEventBuffer: Sized {
-    fn try_push(&mut self, event: &UnknownEvent) -> bool;
+    fn try_push(&mut self, event: &UnknownEvent) -> bool; // TODO: use result for failure
 }
 
 pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {

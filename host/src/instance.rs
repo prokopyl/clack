@@ -61,7 +61,15 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         Ok(StoppedPluginAudioProcessor::new(self.inner.clone()))
     }
 
+    #[inline]
     pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<H>) {
+        self.deactivate_with(processor, |_, _| ())
+    }
+
+    pub fn deactivate_with<T, D>(&mut self, processor: StoppedPluginAudioProcessor<H>, drop_with: D)
+    where
+        D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
+    {
         // SAFETY: we never clone the arcs, only compare them
         if !Arc::ptr_eq(&self.inner, &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
@@ -75,7 +83,7 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
             .unwrap();
 
         // PANIC: we dropped the only processor produced, and checked if it matched
-        wrapper.deactivate().unwrap();
+        wrapper.deactivate_with(drop_with).unwrap();
     }
 
     #[inline]

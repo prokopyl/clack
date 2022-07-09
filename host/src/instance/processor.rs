@@ -195,7 +195,7 @@ impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
             audio_inputs_count: audio_inputs.buffers.len() as u32,
             audio_outputs_count: audio_outputs.buffers.len() as u32,
             in_events: events_input.as_raw(),
-            out_events: events_output.as_raw_mut(),
+            out_events: events_output.as_raw_mut() as *mut _,
         };
 
         let instance = self.inner.raw_instance();

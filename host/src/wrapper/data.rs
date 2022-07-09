@@ -57,17 +57,30 @@ impl<'a, H: for<'b> Host<'b>> HostData<'a, H> {
     {
         self.inner.with_referential(|d| unsafe {
             // SAFETY: TODO
-            d.set_audio_processor(Some(audio_processor(
+            let previous = d.replace_audio_processor(Some(audio_processor(
                 self.shared().cast().as_ref(),
                 self.main_thread().as_mut(),
-            )))
+            )));
+
+            if previous.is_some() {
+                panic!("Tried to enable an already enabled audio processor")
+            }
         })
     }
 
     #[inline]
-    pub fn deactivate(&self) {
-        self.inner
-            .with_referential(|d| unsafe { d.set_audio_processor(None) })
+    pub fn deactivate<T>(
+        &self,
+        drop: impl for<'s> FnOnce(
+            <H as Host<'s>>::AudioProcessor,
+            &mut <H as Host<'s>>::MainThread,
+        ) -> T,
+    ) -> T {
+        self.inner.with_referential(|d| unsafe {
+            let main_thread = &mut *d.main_thread.get();
+            // PANIC: should be checked by caller
+            drop(d.replace_audio_processor(None).unwrap(), main_thread)
+        })
     }
 }
 
@@ -101,8 +114,11 @@ impl<'shared, H: Host<'shared>> ReferentialHostData<'shared, H> {
     }
 
     #[inline]
-    unsafe fn set_audio_processor(&self, audio_processor: Option<H::AudioProcessor>) {
-        *&mut *self.audio_processor.get() = audio_processor
+    unsafe fn replace_audio_processor(
+        &self,
+        audio_processor: Option<H::AudioProcessor>,
+    ) -> Option<H::AudioProcessor> {
+        core::mem::replace(&mut *self.audio_processor.get(), audio_processor)
     }
 }
 
