@@ -11,31 +11,39 @@ use clap_sys::events::{
 bitflags! {
     #[repr(C)]
     pub struct TransportEventFlags: u32 {
-        const CLAP_TRANSPORT_HAS_TEMPO = CLAP_TRANSPORT_HAS_TEMPO;
-        const CLAP_TRANSPORT_HAS_BEATS_TIMELINE = CLAP_TRANSPORT_HAS_BEATS_TIMELINE;
-        const CLAP_TRANSPORT_HAS_SECONDS_TIMELINE = CLAP_TRANSPORT_HAS_SECONDS_TIMELINE;
-        const CLAP_TRANSPORT_HAS_TIME_SIGNATURE = CLAP_TRANSPORT_HAS_TIME_SIGNATURE;
-        const CLAP_TRANSPORT_IS_PLAYING = CLAP_TRANSPORT_IS_PLAYING;
-        const CLAP_TRANSPORT_IS_RECORDING = CLAP_TRANSPORT_IS_RECORDING;
-        const CLAP_TRANSPORT_IS_LOOP_ACTIVE = CLAP_TRANSPORT_IS_LOOP_ACTIVE;
-        const CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL = CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL;
+        const HAS_TEMPO = CLAP_TRANSPORT_HAS_TEMPO;
+        const HAS_BEATS_TIMELINE = CLAP_TRANSPORT_HAS_BEATS_TIMELINE;
+        const HAS_SECONDS_TIMELINE = CLAP_TRANSPORT_HAS_SECONDS_TIMELINE;
+        const HAS_TIME_SIGNATURE = CLAP_TRANSPORT_HAS_TIME_SIGNATURE;
+        const IS_PLAYING = CLAP_TRANSPORT_IS_PLAYING;
+        const IS_RECORDING = CLAP_TRANSPORT_IS_RECORDING;
+        const IS_LOOP_ACTIVE = CLAP_TRANSPORT_IS_LOOP_ACTIVE;
+        const IS_WITHIN_PRE_ROLL = CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL;
     }
 }
 
+// TODO: split into TransportInfo?
 #[repr(C)]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug)]
 pub struct TransportEvent {
     pub header: EventHeader<TransportEvent>,
+
+    pub flags: TransportEventFlags,
+
     pub song_pos_beats: i64,
     pub song_pos_seconds: i64,
+
     pub tempo: f64,
     pub tempo_inc: f64,
-    pub bar_start: i64,
-    pub bar_number: i32,
+
     pub loop_start_beats: i64,
     pub loop_end_beats: i64,
     pub loop_start_seconds: i64,
     pub loop_end_seconds: i64,
+
+    pub bar_start: i64,
+    pub bar_number: i32,
+
     pub time_signature_numerator: i16,
     pub time_signature_denominator: i16,
 }

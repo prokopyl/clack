@@ -21,7 +21,7 @@ pub enum LogSeverity {
 }
 
 impl LogSeverity {
-    pub(crate) fn from_raw(raw: clap_log_severity) -> Option<Self> {
+    pub fn from_raw(raw: clap_log_severity) -> Option<Self> {
         use clap_sys::ext::log::*;
         use LogSeverity::*;
 
@@ -38,7 +38,7 @@ impl LogSeverity {
     }
 
     #[inline]
-    pub(crate) fn to_raw(self) -> clap_log_severity {
+    pub fn to_raw(self) -> clap_log_severity {
         self as _
     }
 }

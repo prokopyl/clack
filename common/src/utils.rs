@@ -19,3 +19,6 @@ pub(crate) fn handle_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
 ) -> std::thread::Result<R> {
     panic::catch_unwind(f)
 }
+
+mod fixed_point;
+pub use fixed_point::*;

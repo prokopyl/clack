@@ -2,9 +2,9 @@ use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
 use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_param_mod, clap_event_param_value, CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE,
-    CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
-    CLAP_EVENT_PARAM_VALUE,
+    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value, CLAP_EVENT_DONT_RECORD,
+    CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END,
+    CLAP_EVENT_PARAM_MOD, CLAP_EVENT_PARAM_VALUE,
 };
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
@@ -20,6 +20,7 @@ bitflags! {
 }
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct ParamValueEvent {
     inner: clap_event_param_value,
 }
@@ -230,5 +231,61 @@ impl Debug for ParamModEvent {
             .field("param_id", &self.inner.param_id)
             .field("amount", &self.inner.amount)
             .finish()
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ParamGestureBeginEvent {
+    inner: clap_event_param_gesture,
+}
+
+unsafe impl<'a> Event<'a> for ParamGestureBeginEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_BEGIN as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+impl ParamGestureBeginEvent {
+    #[inline]
+    pub const fn new(header: EventHeader<Self>, param_id: u32) -> Self {
+        Self {
+            inner: clap_event_param_gesture {
+                header: header.into_raw(),
+                param_id,
+            },
+        }
+    }
+
+    #[inline]
+    pub const fn param_id(&self) -> u32 {
+        self.inner.param_id
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ParamGestureEndEvent {
+    inner: clap_event_param_gesture,
+}
+
+unsafe impl<'a> Event<'a> for ParamGestureEndEvent {
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_END as u16;
+    type EventSpace = CoreEventSpace<'a>;
+}
+
+impl ParamGestureEndEvent {
+    #[inline]
+    pub const fn new(header: EventHeader<Self>, param_id: u32) -> Self {
+        Self {
+            inner: clap_event_param_gesture {
+                header: header.into_raw(),
+                param_id,
+            },
+        }
+    }
+
+    #[inline]
+    pub const fn param_id(&self) -> u32 {
+        self.inner.param_id
     }
 }

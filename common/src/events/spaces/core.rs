@@ -10,6 +10,8 @@ pub enum CoreEventSpace<'a> {
     NoteExpression(&'a NoteExpressionEvent),
     ParamValue(&'a ParamValueEvent),
     ParamMod(&'a ParamModEvent),
+    ParamGestureBegin(&'a ParamGestureBeginEvent),
+    ParamGestureEnd(&'a ParamGestureEndEvent),
     Transport(&'a TransportEvent),
     Midi(&'a MidiEvent),
     Midi2(&'a Midi2Event),
@@ -53,6 +55,8 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
             CoreEventSpace::Midi(e) => e.as_unknown(),
             CoreEventSpace::Midi2(e) => e.as_unknown(),
             CoreEventSpace::MidiSysEx(e) => e.as_unknown(),
+            CoreEventSpace::ParamGestureBegin(e) => e.as_unknown(),
+            CoreEventSpace::ParamGestureEnd(e) => e.as_unknown(),
         }
     }
 }

@@ -103,6 +103,16 @@ impl EventBuffer {
     }
 }
 
+impl<'a> IntoIterator for &'a EventBuffer {
+    type Item = &'a UnknownEvent<'a>;
+    type IntoIter = EventBufferIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl InputEventBuffer for EventBuffer {
     #[inline]
     fn len(&self) -> u32 {

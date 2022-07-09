@@ -14,4 +14,5 @@ pub use clack_common::events;
 pub use clack_common::ports;
 pub use clack_common::process;
 pub use clack_common::stream;
+pub use clack_common::utils;
 pub use clack_common::version;
