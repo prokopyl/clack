@@ -15,6 +15,9 @@ pub enum HostError {
     ProcessorHandlePoisoned,
     ProcessingStopped,
     ProcessingStarted,
+    NullFactoryCreatePluginFunction,
+    NullProcessFunction,
+    NullActivateFunction,
 }
 
 impl fmt::Display for HostError {
@@ -33,6 +36,11 @@ impl fmt::Display for HostError {
             Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
             Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
             Self::ProcessingStarted => write!(f, "Audio Processor is currently started"),
+            Self::NullProcessFunction => write!(f, "Plugin's process function is null"),
+            Self::NullActivateFunction => write!(f, "Plugin's activate function is null"),
+            Self::NullFactoryCreatePluginFunction => {
+                write!(f, "Plugin Factory's create_plugin function is null")
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 use clack_common::extensions::{Extension, HostExtension};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
-use std::os::raw::c_char;
+use std::ffi::CStr;
 
 #[repr(C)]
 pub struct ThreadCheck(clap_host_thread_check);
@@ -11,7 +11,7 @@ unsafe impl Send for ThreadCheck {}
 unsafe impl Sync for ThreadCheck {}
 
 unsafe impl Extension for ThreadCheck {
-    const IDENTIFIER: *const c_char = CLAP_EXT_THREAD_CHECK;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
     type ExtensionType = HostExtension;
 }
 
@@ -22,13 +22,13 @@ mod plugin {
 
     impl ThreadCheck {
         #[inline]
-        pub fn is_main_thread(&self, host: &HostHandle) -> bool {
-            unsafe { (self.0.is_main_thread)(host.as_raw()) }
+        pub fn is_main_thread(&self, host: &HostHandle) -> Option<bool> {
+            Some(unsafe { (self.0.is_main_thread?)(host.as_raw()) })
         }
 
         #[inline]
-        pub fn is_audio_thread(&self, host: &HostHandle) -> bool {
-            unsafe { (self.0.is_main_thread)(host.as_raw()) }
+        pub fn is_audio_thread(&self, host: &HostHandle) -> Option<bool> {
+            Some(unsafe { (self.0.is_audio_thread?)(host.as_raw()) })
         }
     }
 }
@@ -52,8 +52,8 @@ pub mod host {
         for<'a> <H as Host<'a>>::Shared: ThreadCheckImplementation,
     {
         const IMPLEMENTATION: &'static Self = &ThreadCheck(clap_host_thread_check {
-            is_main_thread: is_main_thread::<H>,
-            is_audio_thread: is_audio_thread::<H>,
+            is_main_thread: Some(is_main_thread::<H>),
+            is_audio_thread: Some(is_audio_thread::<H>),
         });
     }
 

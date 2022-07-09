@@ -12,7 +12,10 @@ use std::mem::MaybeUninit;
 
 impl PluginParams {
     pub fn count<H: for<'a> Host<'a>>(&self, plugin: &PluginInstance<H>) -> u32 {
-        unsafe { (self.0.count)(plugin.raw_instance()) }
+        match self.0.count {
+            None => 0,
+            Some(count) => unsafe { count(plugin.raw_instance()) },
+        }
     }
 
     pub fn get_info<'b, H: for<'a> Host<'a>>(
@@ -22,7 +25,7 @@ impl PluginParams {
         info: &'b mut MaybeUninit<ParamInfo>,
     ) -> Option<&'b mut ParamInfo> {
         let valid = unsafe {
-            (self.0.get_info)(
+            (self.0.get_info?)(
                 plugin.raw_instance(),
                 param_index,
                 info.as_mut_ptr() as *mut _,
@@ -43,7 +46,7 @@ impl PluginParams {
     ) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
         let valid =
-            unsafe { (self.0.get_value)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
+            unsafe { (self.0.get_value?)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
 
         if valid {
             unsafe { Some(value.assume_init()) }
@@ -60,7 +63,7 @@ impl PluginParams {
         buffer: &'b mut [MaybeUninit<u8>],
     ) -> Option<&'b mut [u8]> {
         let valid = unsafe {
-            (self.0.value_to_text)(
+            (self.0.value_to_text?)(
                 plugin.raw_instance(),
                 param_id,
                 value,
@@ -89,7 +92,7 @@ impl PluginParams {
         let mut value = MaybeUninit::uninit();
 
         let valid = unsafe {
-            (self.0.text_to_value)(
+            (self.0.text_to_value?)(
                 plugin.raw_instance(),
                 param_id,
                 display.as_ptr(),
@@ -111,12 +114,14 @@ impl PluginParams {
         input_event_list: &InputEvents,
         output_event_list: &mut OutputEvents,
     ) {
-        unsafe {
-            (self.0.flush)(
-                plugin.as_raw(),
-                input_event_list.as_raw(),
-                output_event_list.as_raw_mut(),
-            )
+        if let Some(flush) = self.0.flush {
+            unsafe {
+                flush(
+                    plugin.as_raw(),
+                    input_event_list.as_raw(),
+                    output_event_list.as_raw_mut(),
+                )
+            }
         }
     }
 
@@ -127,12 +132,14 @@ impl PluginParams {
         input_event_list: &InputEvents,
         output_event_list: &mut OutputEvents,
     ) {
-        unsafe {
-            (self.0.flush)(
-                plugin.as_raw(),
-                input_event_list.as_raw(),
-                output_event_list.as_raw_mut(),
-            )
+        if let Some(flush) = self.0.flush {
+            unsafe {
+                flush(
+                    plugin.as_raw(),
+                    input_event_list.as_raw(),
+                    output_event_list.as_raw_mut(),
+                )
+            }
         }
     }
 }
@@ -157,9 +164,9 @@ where
     for<'a> <H as Host<'a>>::MainThread: HostParamsImplementationMainThread,
 {
     const IMPLEMENTATION: &'static Self = &HostParams(clap_host_params {
-        rescan: rescan::<H>,
-        clear: clear::<H>,
-        request_flush: request_flush::<H>,
+        rescan: Some(rescan::<H>),
+        clear: Some(clear::<H>),
+        request_flush: Some(request_flush::<H>),
     });
 }
 

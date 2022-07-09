@@ -200,10 +200,12 @@ impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
 
         let instance = self.inner.raw_instance();
 
-        ProcessStatus::from_raw(unsafe { (instance.process)(instance, &process) })
-            .ok_or(())
-            .and_then(|r| r)
-            .map_err(|_| HostError::ProcessingFailed)
+        ProcessStatus::from_raw(unsafe {
+            (instance.process.ok_or(HostError::NullProcessFunction)?)(instance, &process)
+        })
+        .ok_or(())
+        .and_then(|r| r)
+        .map_err(|_| HostError::ProcessingFailed)
     }
 
     #[inline]

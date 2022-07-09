@@ -58,7 +58,7 @@ impl PluginBundle {
     }
 
     pub fn get_factory<F: Factory>(&self) -> Option<&F> {
-        let ptr = unsafe { (self.raw_entry().get_factory)(F::IDENTIFIER as *const _) } as *mut _;
+        let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
     }
 

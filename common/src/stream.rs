@@ -41,7 +41,7 @@ impl<'a> InputStream<'a> {
         Self(
             clap_istream {
                 ctx: reader as *mut R as *mut _,
-                read: read::<R>,
+                read: Some(read::<R>),
             },
             PhantomData,
         )
@@ -86,7 +86,7 @@ impl<'a> OutputStream<'a> {
         Self(
             clap_ostream {
                 ctx: reader as *mut W as *mut _,
-                write: write::<W>,
+                write: Some(write::<W>),
             },
             PhantomData,
         )

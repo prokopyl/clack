@@ -108,7 +108,9 @@ impl<'a> OutputEvents<'a> {
     /// allocations as unlikely as possible.
     #[inline]
     pub fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
-        if !unsafe { (self.inner.try_push)(&self.inner, event.as_raw()) } {
+        let try_push = self.inner.try_push.ok_or(TryPushError)?;
+
+        if !unsafe { try_push(&self.inner, event.as_raw()) } {
             Err(TryPushError {})
         } else {
             Ok(())

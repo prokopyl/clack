@@ -25,10 +25,10 @@ impl<'a> RawHostDescriptor<'a> {
             vendor: core::ptr::null_mut(),
             url: core::ptr::null_mut(),
             version: core::ptr::null_mut(),
-            get_extension: get_extension::<H>,
-            request_restart: request_restart::<H>,
-            request_process: request_process::<H>,
-            request_callback: request_callback::<H>,
+            get_extension: Some(get_extension::<H>),
+            request_restart: Some(request_restart::<H>),
+            request_process: Some(request_process::<H>),
+            request_callback: Some(request_callback::<H>),
         };
 
         host_info.write_to_raw(&mut raw);

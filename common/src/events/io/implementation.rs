@@ -15,15 +15,15 @@ pub trait OutputEventBuffer: Sized {
 pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
     clap_input_events {
         ctx: buffer as *const I as *mut I as *mut _,
-        size: size::<I>,
-        get: get::<I>,
+        size: Some(size::<I>),
+        get: Some(get::<I>),
     }
 }
 
 pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
     clap_output_events {
         ctx: buffer as *mut _ as *mut _,
-        try_push: try_push::<I>,
+        try_push: Some(try_push::<I>),
     }
 }
 

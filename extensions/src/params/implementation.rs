@@ -261,28 +261,34 @@ where
     P::MainThread: PluginMainThreadParams<'a>,
 {
     const IMPLEMENTATION: &'static Self = &super::PluginParams(clap_plugin_params {
-        count: count::<P>,
-        get_info: get_info::<P>,
-        get_value: get_value::<P>,
-        value_to_text: value_to_text::<P>,
-        text_to_value: text_to_value::<P>,
-        flush: flush::<P>,
+        count: Some(count::<P>),
+        get_info: Some(get_info::<P>),
+        get_value: Some(get_value::<P>),
+        value_to_text: Some(value_to_text::<P>),
+        text_to_value: Some(text_to_value::<P>),
+        flush: Some(flush::<P>),
     });
 }
 
 impl HostParams {
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
-        unsafe { (self.0.rescan)(host.as_raw(), flags.bits) }
+        if let Some(rescan) = self.0.rescan {
+            unsafe { rescan(host.as_raw(), flags.bits) }
+        }
     }
 
     #[inline]
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
-        unsafe { (self.0.clear)(host.as_raw(), param_id, flags.bits) }
+        if let Some(clear) = self.0.clear {
+            unsafe { clear(host.as_raw(), param_id, flags.bits) }
+        }
     }
 
     #[inline]
     pub fn request_flush(&self, host: &HostHandle) {
-        unsafe { (self.0.request_flush)(host.as_raw()) }
+        if let Some(request_flush) = self.0.request_flush {
+            unsafe { request_flush(host.as_raw()) }
+        }
     }
 }

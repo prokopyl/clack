@@ -69,7 +69,10 @@ impl<'a> InputEvents<'a> {
     /// Returns the number of events in the list.
     #[inline]
     pub fn len(&self) -> u32 {
-        unsafe { (self.inner.size)(&self.inner) }
+        match self.inner.size {
+            None => 0,
+            Some(s) => unsafe { s(&self.inner) },
+        }
     }
 
     /// Returns if there are no events in the list.
@@ -84,7 +87,7 @@ impl<'a> InputEvents<'a> {
     #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
         unsafe {
-            (self.inner.get)(&self.inner, index)
+            (self.inner.get?)(&self.inner, index)
                 .as_ref()
                 .map(|e| UnknownEvent::from_raw(e))
         }

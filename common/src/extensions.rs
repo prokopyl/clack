@@ -4,7 +4,7 @@
 //! implementation examples.
 
 use core::ffi::c_void;
-use std::os::raw::c_char;
+use std::ffi::CStr;
 use std::ptr::NonNull;
 
 /// A marker struct that represents extensions implemented by the plugin side.
@@ -45,9 +45,7 @@ mod private {
 /// [`Extension::from_extension_ptr`] method is overridden and implemented manually.
 pub unsafe trait Extension: Sized + 'static {
     /// The standard identifier for this extension.
-    ///
-    /// This MUST point to a C-style, null-terminated string.
-    const IDENTIFIER: *const c_char;
+    const IDENTIFIER: &'static CStr;
     /// Whether this is a host extension or a plugin extension
     type ExtensionType: ExtensionType;
 

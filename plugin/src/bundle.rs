@@ -22,9 +22,9 @@ pub trait PluginEntry: Sized {
 
     const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor {
         clap_version: CLAP_VERSION,
-        init: init::<Self>,
-        deinit: de_init::<Self>,
-        get_factory: get_factory::<Self>,
+        init: Some(init::<Self>),
+        deinit: Some(de_init::<Self>),
+        get_factory: Some(get_factory::<Self>),
     };
 }
 

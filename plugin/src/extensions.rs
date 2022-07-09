@@ -13,7 +13,7 @@
 //! information.
 //!
 //! ```
-//! # use std::os::raw::c_char;
+//! use std::ffi::CStr;
 //! use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
 //! use clack_common::extensions::{Extension, ExtensionImplementation, PluginExtension};
 //!
@@ -22,7 +22,7 @@
 //! pub struct PluginState(clap_plugin_state);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: *const c_char = CLAP_EXT_STATE;
+//!     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
 //!     type ExtensionType = PluginExtension;
 //! }
 //!
@@ -46,9 +46,9 @@
 //!     P::MainThread: PluginStateImplementation,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
-//!         # save,
+//!         # save: Some(save),
 //!         // For the sake of this example, we are only implementing the load() method.
-//!         load: load::<P>,
+//!         load: Some(load::<P>),
 //!     });
 //! }
 //! # unsafe extern "C" fn save(_: *const clap_plugin, _: *const clap_sys::stream::clap_ostream) -> bool {
@@ -123,8 +123,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
             return self;
         }
 
-        let uri = unsafe { CStr::from_ptr(E::IDENTIFIER) };
-        if uri == self.requested {
+        if E::IDENTIFIER == self.requested {
             self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }
 

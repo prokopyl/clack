@@ -69,8 +69,10 @@ impl<'a> LoadedEntry<'a> {
 
         let path = CString::new(path).map_err(PluginBundleError::NulDescriptorPath)?;
 
-        if !(entry.init)(path.as_ptr()) {
-            return Err(PluginBundleError::EntryInitFailed);
+        if let Some(init) = entry.init {
+            if !init(path.as_ptr()) {
+                return Err(PluginBundleError::EntryInitFailed);
+            }
         }
 
         Ok(Self { entry })
@@ -84,7 +86,9 @@ impl<'a> LoadedEntry<'a> {
 
 impl<'a> Drop for LoadedEntry<'a> {
     fn drop(&mut self) {
-        unsafe { (self.entry.deinit)() }
+        if let Some(deinit) = self.entry.deinit {
+            unsafe { deinit() }
+        }
     }
 }
 

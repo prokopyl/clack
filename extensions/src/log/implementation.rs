@@ -16,7 +16,9 @@ impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for Log
 where
     for<'a> <H as Host<'a>>::Shared: HostLog,
 {
-    const IMPLEMENTATION: &'static Self = &Log(clap_host_log { log: log::<H> });
+    const IMPLEMENTATION: &'static Self = &Log(clap_host_log {
+        log: Some(log::<H>),
+    });
 }
 
 unsafe extern "C" fn log<H: for<'a> Host<'a>>(

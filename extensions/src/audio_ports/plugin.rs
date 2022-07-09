@@ -62,8 +62,8 @@ where
 {
     const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
         clap_plugin_audio_ports {
-            count: count::<P>,
-            get: get::<P>,
+            count: Some(count::<P>),
+            get: Some(get::<P>),
         },
         PhantomData,
     );
@@ -105,11 +105,16 @@ where
 impl HostAudioPorts {
     #[inline]
     pub fn is_rescan_flag_supported(&self, host: &HostMainThreadHandle, flag: RescanType) -> bool {
-        unsafe { (self.0.is_rescan_flag_supported)(host.as_raw(), flag.bits) }
+        match self.0.is_rescan_flag_supported {
+            None => false,
+            Some(supported) => unsafe { supported(host.as_raw(), flag.bits) },
+        }
     }
 
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: RescanType) {
-        unsafe { (self.0.rescan)(host.as_raw(), flag.bits) }
+        if let Some(rescan) = self.0.rescan {
+            unsafe { rescan(host.as_raw(), flag.bits) }
+        }
     }
 }

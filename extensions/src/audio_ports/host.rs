@@ -7,7 +7,10 @@ use clap_sys::host::clap_host;
 
 impl PluginAudioPorts {
     pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
-        unsafe { (self.0.count)(plugin.as_raw(), is_input) }
+        match self.0.count {
+            None => 0,
+            Some(count) => unsafe { count(plugin.as_raw(), is_input) },
+        }
     }
 
     pub fn get<'b>(
@@ -19,7 +22,7 @@ impl PluginAudioPorts {
         // TODO: handle errors
     ) -> Option<AudioPortInfoData<'b>> {
         let success =
-            unsafe { (self.0.get)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
+            unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
             unsafe { AudioPortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }.ok()
@@ -40,8 +43,8 @@ where
 {
     const IMPLEMENTATION: &'static Self = &HostAudioPorts(
         clap_host_audio_ports {
-            is_rescan_flag_supported: is_rescan_flag_supported::<H>,
-            rescan: rescan::<H>,
+            is_rescan_flag_supported: Some(is_rescan_flag_supported::<H>),
+            rescan: Some(rescan::<H>),
         },
         PhantomData,
     );

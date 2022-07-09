@@ -1,7 +1,7 @@
 use clack_common::extensions::*;
 use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
-use std::os::raw::c_char;
+use std::ffi::CStr;
 
 #[repr(C)]
 pub struct PluginLatency {
@@ -9,7 +9,7 @@ pub struct PluginLatency {
 }
 
 unsafe impl Extension for PluginLatency {
-    const IDENTIFIER: *const c_char = CLAP_EXT_LATENCY;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionType = PluginExtension;
 }
 
@@ -19,7 +19,7 @@ pub struct HostLatency {
 }
 
 unsafe impl Extension for HostLatency {
-    const IDENTIFIER: *const c_char = CLAP_EXT_LATENCY;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionType = HostExtension;
 }
 
@@ -32,7 +32,10 @@ const _: () = {
     impl PluginLatency {
         #[inline]
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
-            unsafe { (self.inner.get)(plugin.as_raw()) }
+            match self.inner.get {
+                None => 0,
+                Some(get) => unsafe { get(plugin.as_raw()) },
+            }
         }
     }
 
@@ -46,7 +49,7 @@ const _: () = {
     {
         const IMPLEMENTATION: &'static Self = &HostLatency {
             inner: clap_host_latency {
-                changed: changed::<H>,
+                changed: Some(changed::<H>),
             },
         };
     }
@@ -72,7 +75,9 @@ const _: () = {
     impl HostLatency {
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
-            unsafe { (self.inner.changed)(host.shared().as_raw()) }
+            if let Some(changed) = self.inner.changed {
+                unsafe { changed(host.shared().as_raw()) }
+            }
         }
     }
 
@@ -85,7 +90,9 @@ const _: () = {
         P::MainThread: PluginLatencyImpl,
     {
         const IMPLEMENTATION: &'static Self = &PluginLatency {
-            inner: clap_plugin_latency { get: get::<P> },
+            inner: clap_plugin_latency {
+                get: Some(get::<P>),
+            },
         };
     }
 

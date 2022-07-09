@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clap_sys::ext::params::*;
-use std::os::raw::c_char;
+use std::ffi::CStr;
 
 #[repr(C)]
 pub struct PluginParams(clap_plugin_params);
@@ -24,12 +24,12 @@ pub mod implementation;
 pub mod info;
 
 unsafe impl Extension for PluginParams {
-    const IDENTIFIER: *const c_char = CLAP_EXT_PARAMS;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionType = PluginExtension;
 }
 
 unsafe impl Extension for HostParams {
-    const IDENTIFIER: *const c_char = CLAP_EXT_PARAMS;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionType = HostExtension;
 }
 

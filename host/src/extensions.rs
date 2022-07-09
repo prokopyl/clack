@@ -40,8 +40,7 @@ impl<'a, 'b, H: Host<'b>> HostExtensions<'a, H> {
             return self;
         }
 
-        let uri = unsafe { CStr::from_ptr(E::IDENTIFIER) };
-        if uri == self.requested {
+        if E::IDENTIFIER == self.requested {
             self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
         }
 

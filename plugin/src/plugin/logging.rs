@@ -1,13 +1,17 @@
 use crate::plugin::wrapper::PluginWrapperError;
 use crate::plugin::{Plugin, PluginInstanceImpl};
-use clap_sys::ext::log::{clap_host_log, CLAP_EXT_LOG};
+use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
+use std::os::raw::c_char;
 use std::{error::Error, ffi::CString, fmt::Display, fmt::Write};
+
+pub type ClapLoggingFn =
+    unsafe extern "C" fn(host: *const clap_host, severity: clap_log_severity, msg: *const c_char);
 
 unsafe fn get_logger<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
-) -> Option<(&'a clap_host, &'a clap_host_log)> {
+) -> Option<(&'a clap_host, ClapLoggingFn)> {
     let host = plugin
         .as_ref()?
         .plugin_data
@@ -16,8 +20,8 @@ unsafe fn get_logger<'a, P: Plugin<'a>>(
         .host()
         .as_raw();
 
-    let log = (host.get_extension)(host, CLAP_EXT_LOG as *const _) as *mut clap_host_log;
-    Some((host, log.as_ref()?))
+    let log = (host.get_extension?)(host, CLAP_EXT_LOG.as_ptr()) as *mut clap_host_log;
+    Some((host, log.as_ref()?.log?))
 }
 
 fn log_display<D: Display>(message: &D) -> Result<CString, Box<dyn Error>> {
@@ -30,7 +34,7 @@ pub unsafe fn plugin_log<'a, P: Plugin<'a>>(plugin: *const clap_plugin, e: &Plug
     if let Some((host, logger)) = get_logger::<P>(plugin) {
         match log_display(e) {
             Ok(cstr) => {
-                (logger.log)(host, e.severity(), cstr.as_ptr());
+                logger(host, e.severity(), cstr.as_ptr());
                 return;
             }
             Err(e) => eprintln!(

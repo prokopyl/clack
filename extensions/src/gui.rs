@@ -1,8 +1,8 @@
 use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clack_plugin::host::HostMainThreadHandle;
 use clap_sys::ext::gui::{clap_host_gui, clap_plugin_gui, CLAP_EXT_GUI};
+use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
-use std::os::raw::c_char;
 
 /// Provide hints to host about resizing behavior
 pub use clap_sys::ext::gui::clap_gui_resize_hints;
@@ -22,7 +22,7 @@ pub struct PluginGui {
 }
 
 unsafe impl Extension for PluginGui {
-    const IDENTIFIER: *const c_char = CLAP_EXT_GUI;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionType = PluginExtension;
 }
 
@@ -38,7 +38,13 @@ impl HostGui {
         width: u32,
         height: u32,
     ) -> Result<(), HostGuiError> {
-        if unsafe { (self.inner.request_resize)(host.shared().as_raw(), width, height) } {
+        if unsafe {
+            (self.inner.request_resize.ok_or(HostGuiError::ResizeError)?)(
+                host.shared().as_raw(),
+                width,
+                height,
+            )
+        } {
             Ok(())
         } else {
             Err(HostGuiError::ResizeError)
@@ -47,7 +53,7 @@ impl HostGui {
 }
 
 unsafe impl Extension for HostGui {
-    const IDENTIFIER: *const c_char = CLAP_EXT_GUI;
+    const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionType = HostExtension;
 }
 

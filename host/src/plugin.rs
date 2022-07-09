@@ -55,7 +55,7 @@ impl<'a> PluginSharedHandle<'a> {
 
     pub fn get_extension<E: Extension<ExtensionType = PluginExtension>>(&self) -> Option<&'a E> {
         let ext =
-            unsafe { ((*self.raw).get_extension)(self.raw, E::IDENTIFIER as *const _) } as *mut _;
+            unsafe { ((*self.raw).get_extension?)(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
     }
 }

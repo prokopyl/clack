@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap-sys = "0.2.0"
+clap-sys = "0.3.0"
 clack-common = { path = "../common" }
 libloading = "0.7.2"
 selfie = { git = "https://github.com/prokopyl/selfie" }

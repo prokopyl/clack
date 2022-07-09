@@ -1,5 +1,5 @@
 use core::ffi::c_void;
-use std::os::raw::c_char;
+use std::ffi::CStr;
 use std::ptr::NonNull;
 
 pub mod plugin;
@@ -10,9 +10,7 @@ pub mod plugin;
 /// // TODO
 pub unsafe trait Factory: Sized {
     /// The standard identifier for this factory.
-    ///
-    /// This MUST point to a C-style, null-terminated string.
-    const IDENTIFIER: *const c_char;
+    const IDENTIFIER: &'static CStr;
 
     /// Returns an instance of the factory from a given factory pointer.
     ///

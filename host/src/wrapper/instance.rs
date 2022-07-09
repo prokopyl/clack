@@ -114,7 +114,9 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         };
 
         let success = unsafe {
-            ((*self.instance).activate)(
+            ((*self.instance)
+                .activate
+                .ok_or(HostError::NullActivateFunction)?)(
                 self.instance,
                 configuration.sample_rate,
                 *configuration.frames_count_range.start(),
@@ -142,35 +144,49 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
             return Err(HostError::DeactivatedPlugin);
         }
 
-        unsafe { ((*self.instance).deactivate)(self.instance) };
+        if let Some(deactivate) = unsafe { *self.instance }.deactivate {
+            unsafe { deactivate(self.instance) };
+        }
 
         Ok(unsafe { self.wrapper().deactivate(drop) })
     }
 
     #[inline]
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if ((*self.instance).start_processing)(self.instance) {
-            return Ok(());
-        }
+        if let Some(start_processing) = (*self.instance).start_processing {
+            if start_processing(self.instance) {
+                return Ok(());
+            }
 
-        Err(HostError::StartProcessingFailed)
+            Err(HostError::StartProcessingFailed)
+        } else {
+            Ok(())
+        }
     }
 
     #[inline]
     pub unsafe fn stop_processing(&self) {
-        ((*self.instance).stop_processing)(self.instance)
+        if let Some(stop_processing) = (*self.instance).stop_processing {
+            stop_processing(self.instance)
+        }
     }
 
     #[inline]
     pub unsafe fn on_main_thread(&self) {
-        ((*self.instance).on_main_thread)(self.instance)
+        if let Some(on_main_thread) = (*self.instance).on_main_thread {
+            on_main_thread(self.instance)
+        }
     }
 }
 
 impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
-        unsafe { ((*self.raw_instance()).destroy)(self.raw_instance_mut() as *mut _) }
+        unsafe {
+            if let Some(destroy) = (*self.instance).destroy {
+                destroy(self.raw_instance_mut() as *mut _)
+            }
+        }
     }
 }
 
