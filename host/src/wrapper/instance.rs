@@ -2,6 +2,7 @@ use crate::bundle::PluginBundle;
 use crate::factory::PluginFactory;
 use crate::host::{Host, HostInfo};
 use crate::instance::PluginAudioConfiguration;
+use crate::plugin::PluginAudioProcessorHandle;
 use crate::wrapper::descriptor::{RawHostDescriptor, RawHostDescriptorRef};
 use crate::wrapper::{HostError, HostWrapper};
 use clap_sys::plugin::clap_plugin;
@@ -98,6 +99,7 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
+            PluginAudioProcessorHandle<'a>,
             &'a <H as Host<'a>>::Shared,
             &mut <H as Host<'a>>::MainThread,
         ) -> <H as Host<'a>>::AudioProcessor,
@@ -106,7 +108,10 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
             return Err(HostError::AlreadyActivatedPlugin);
         }
 
-        unsafe { self.wrapper().activate(audio_processor) };
+        unsafe {
+            self.wrapper()
+                .activate(audio_processor, self.raw_instance())
+        };
 
         let success = unsafe {
             ((*self.instance).activate)(
@@ -168,3 +173,7 @@ impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
         unsafe { ((*self.raw_instance()).destroy)(self.raw_instance_mut() as *mut _) }
     }
 }
+
+// SAFETY: The only non-thread-safe methods on this type are unsafe
+unsafe impl<H: for<'h> Host<'h>> Send for PluginInstanceInner<H> {}
+unsafe impl<H: for<'h> Host<'h>> Sync for PluginInstanceInner<H> {}

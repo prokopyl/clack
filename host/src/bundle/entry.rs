@@ -49,6 +49,10 @@ impl Deref for PluginEntryLibrary {
 
 unsafe impl StableDeref for PluginEntryLibrary {}
 
+// SAFETY: Entries and factories are all thread-safe by the CLAP spec
+unsafe impl Send for PluginEntryLibrary {}
+unsafe impl Sync for PluginEntryLibrary {}
+
 pub struct LoadedEntry<'a> {
     entry: &'a clap_plugin_entry,
 }

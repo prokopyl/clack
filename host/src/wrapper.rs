@@ -1,5 +1,5 @@
 use crate::host::{Host, HostError, HostMainThread, HostShared};
-use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
+use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use selfie::Selfie;
@@ -62,14 +62,16 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     }
 
     #[inline]
-    pub(crate) unsafe fn activate<FA>(&self, audio_processor: FA)
+    pub(crate) unsafe fn activate<FA>(&self, audio_processor: FA, instance: &clap_plugin)
     where
         FA: for<'a> FnOnce(
+            PluginAudioProcessorHandle<'a>,
             &'a <H as Host<'a>>::Shared,
             &mut <H as Host<'a>>::MainThread,
         ) -> <H as Host<'a>>::AudioProcessor,
     {
-        self.data.with_referential(|d| d.activate(audio_processor))
+        self.data
+            .with_referential(|d| d.activate(audio_processor, instance))
     }
 
     #[inline]

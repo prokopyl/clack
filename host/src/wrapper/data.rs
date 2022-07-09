@@ -1,4 +1,6 @@
 use crate::host::Host;
+use crate::plugin::PluginAudioProcessorHandle;
+use clap_sys::plugin::clap_plugin;
 use selfie::refs::RefType;
 use selfie::Selfie;
 use std::cell::UnsafeCell;
@@ -48,9 +50,10 @@ impl<'a, H: for<'b> Host<'b>> HostData<'a, H> {
     }
 
     #[inline]
-    pub fn activate<FA>(&self, audio_processor: FA)
+    pub fn activate<FA>(&self, audio_processor: FA, instance: &clap_plugin)
     where
         FA: for<'s> FnOnce(
+            PluginAudioProcessorHandle<'s>,
             &'s <H as Host<'s>>::Shared,
             &mut <H as Host<'s>>::MainThread,
         ) -> <H as Host<'s>>::AudioProcessor,
@@ -58,6 +61,7 @@ impl<'a, H: for<'b> Host<'b>> HostData<'a, H> {
         self.inner.with_referential(|d| unsafe {
             // SAFETY: TODO
             let previous = d.replace_audio_processor(Some(audio_processor(
+                PluginAudioProcessorHandle::new(instance as *const _ as *mut _),
                 self.shared().cast().as_ref(),
                 self.main_thread().as_mut(),
             )));

@@ -12,7 +12,7 @@ pub trait HostAudioProcessor<'a>: Send + 'a {}
 pub trait HostMainThread<'a>: 'a {
     #[inline]
     #[allow(unused)]
-    fn instantiated(&mut self, instance: PluginMainThreadHandle) {}
+    fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) {}
 }
 
 pub trait HostShared<'a>: Send + Sync {
@@ -34,3 +34,8 @@ pub trait Host<'a>: 'static {
     #[allow(unused)]
     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {}
 }
+
+// QoL implementations
+
+impl<'a> HostAudioProcessor<'a> for () {}
+impl<'a> HostMainThread<'a> for () {}

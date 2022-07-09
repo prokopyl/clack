@@ -1,5 +1,6 @@
 use super::*;
 use clack_common::extensions::ExtensionImplementation;
+use clack_common::stream::{InputStream, OutputStream};
 use clack_plugin::host::HostMainThreadHandle;
 use clack_plugin::plugin::wrapper::PluginWrapper;
 use clack_plugin::plugin::Plugin;

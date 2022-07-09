@@ -3,8 +3,8 @@ use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::extensions::ExtensionImplementation;
 use clack_host::host::Host;
-use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginInstance;
+use clack_host::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle};
 use clack_host::wrapper::HostWrapper;
 use clap_sys::host::clap_host;
 use std::ffi::CStr;
@@ -104,37 +104,32 @@ impl PluginParams {
         }
     }
 
-    // TODO: return a proper error
-    pub fn flush_inactive<H: for<'a> Host<'a>>(
+    // TODO: find a way to enforce !active | !processing ?
+    pub fn flush(
         &self,
-        plugin: &mut PluginInstance<H>,
-        input_event_list: &InputEvents,
-        output_event_list: &mut OutputEvents,
-    ) -> bool {
-        if plugin.is_active() {
-            return false;
-        }
-
-        unsafe {
-            (self.0.flush)(
-                plugin.raw_instance(),
-                input_event_list.as_raw(),
-                output_event_list.as_raw_mut(),
-            )
-        };
-        true
-    }
-
-    pub fn flush_active<H: for<'a> Host<'a>>(
-        &self,
-        plugin: &mut StoppedPluginAudioProcessor<H>, // TODO: separate handle type
+        plugin: &mut PluginMainThreadHandle,
         input_event_list: &InputEvents,
         output_event_list: &mut OutputEvents,
     ) {
-        // SAFETY: flush is already guaranteed by the types to be called on an active, non-processing plugin
         unsafe {
             (self.0.flush)(
-                plugin.audio_processor_plugin_data().as_raw(),
+                plugin.as_raw(),
+                input_event_list.as_raw(),
+                output_event_list.as_raw_mut(),
+            )
+        }
+    }
+
+    // TODO: find a way to enforce !active | !processing ?
+    pub fn flush_active(
+        &self,
+        plugin: &mut PluginAudioProcessorHandle,
+        input_event_list: &InputEvents,
+        output_event_list: &mut OutputEvents,
+    ) {
+        unsafe {
+            (self.0.flush)(
+                plugin.as_raw(),
                 input_event_list.as_raw(),
                 output_event_list.as_raw_mut(),
             )

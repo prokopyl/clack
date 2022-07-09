@@ -1,5 +1,4 @@
 use clack_common::extensions::{Extension, HostExtension, PluginExtension};
-use clack_common::stream::{InputStream, OutputStream};
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::fmt::{Display, Formatter};

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::host::HostError;
 use crate::instance::processor::StoppedPluginAudioProcessor;
-use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
+use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
 use crate::wrapper::instance::PluginInstanceInner;
 
 pub struct PluginAudioConfiguration {
@@ -50,6 +50,7 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
     ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
     where
         FA: for<'a> FnOnce(
+            PluginAudioProcessorHandle<'a>,
             &'a <H as Host<'a>>::Shared,
             &mut <H as Host<'a>>::MainThread,
         ) -> <H as Host<'a>>::AudioProcessor,
