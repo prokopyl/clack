@@ -65,15 +65,20 @@ impl EventBuffer {
         }
     }
 
-    pub fn try_push_all<'a, E: Event<'a>>(
-        &mut self,
-        events: impl IntoIterator<Item = &'a E>,
-    ) -> Result<(), TryPushError> {
+    pub fn push_all<'a, E: Event<'a>>(&mut self, events: impl IntoIterator<Item = &'a E>) {
         for e in events {
-            self.try_push(e.as_unknown())?;
+            self.push(e.as_unknown());
         }
+    }
 
-        Ok(())
+    pub fn push(&mut self, event: &UnknownEvent) {
+        let index = self.headers.len();
+        let event_bytes = event.as_bytes();
+        let bytes = self.allocate_mut(event_bytes.len());
+
+        // PANIC: bytes is guaranteed by allocate_mut to be just the right size
+        bytes.copy_from_slice(event_bytes);
+        self.indexes.push(index as u32);
     }
 
     fn allocate_mut(&mut self, byte_size: usize) -> &mut [u8] {
@@ -117,13 +122,7 @@ impl InputEventBuffer for EventBuffer {
 
 impl OutputEventBuffer for EventBuffer {
     fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
-        let index = self.headers.len();
-        let event_bytes = event.as_bytes();
-        let bytes = self.allocate_mut(event_bytes.len());
-
-        // PANIC: bytes is guaranteed by allocate_mut to be just the right size
-        bytes.copy_from_slice(event_bytes);
-        self.indexes.push(index as u32);
+        self.push(event);
 
         Ok(())
     }
