@@ -17,5 +17,5 @@ pub fn it_works() {
         .unwrap()
         .plugin_descriptor(0)
         .unwrap();
-    assert_eq!(desc.id().unwrap().to_bytes(), b"gain");
+    assert_eq!(desc.id().unwrap().to_bytes(), b"org.rust-audio.clack.gain");
 }
