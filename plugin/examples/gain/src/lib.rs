@@ -1,11 +1,12 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![deny(unsafe_code)]
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use clack_plugin::{plugin::PluginDescriptor, prelude::*};
+use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
 
 use baseview::WindowHandle;
 use clack_extensions::gui::{PluginGui, Window};
@@ -14,6 +15,7 @@ use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, PluginAudioPorts,
     PluginAudioPortsImplementation, STEREO_PORT_TYPE,
 };
+use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::channels::AudioBufferType;
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -28,7 +30,16 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     type Shared = GainPluginShared;
     type MainThread = GainPluginMainThread<'a>;
 
-    const DESCRIPTOR: &'static PluginDescriptor = &PluginDescriptor::new(b"gain\0");
+    fn get_descriptor() -> Box<dyn PluginDescriptor> {
+        use clack_plugin::plugin::descriptor::features::*;
+
+        Box::new(StaticPluginDescriptor {
+            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.gain\0").unwrap(),
+            name: CStr::from_bytes_with_nul(b"Clack Gain Example\0").unwrap(),
+            features: Some(&[SYNTHESIZER, STEREO]),
+            ..Default::default()
+        })
+    }
 
     fn activate(
         _host: HostAudioThreadHandle<'a>,
@@ -230,5 +241,6 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
 }
 
 #[allow(non_upper_case_globals)]
+#[allow(unsafe_code)]
 #[no_mangle]
 pub static clap_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;

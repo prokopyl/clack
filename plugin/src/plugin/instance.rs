@@ -1,5 +1,6 @@
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
+use crate::plugin::descriptor::RawPluginDescriptor;
 use crate::plugin::wrapper::PluginWrapper;
 use crate::plugin::{AudioConfiguration, Plugin, PluginMainThread};
 use crate::process::Process;
@@ -15,9 +16,9 @@ pub(crate) struct PluginInstanceImpl<'a, P: Plugin<'a>> {
 }
 
 impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
-    fn get_plugin_desc(self) -> clap_plugin {
+    fn get_plugin_desc(self, desc: &'static RawPluginDescriptor) -> clap_plugin {
         clap_plugin {
-            desc: &P::DESCRIPTOR.0,
+            desc,
             plugin_data: Box::into_raw(Box::new(self)).cast(),
             init: Some(Self::init),
             destroy: Some(Self::destroy),
@@ -155,7 +156,10 @@ impl<'a> PluginInstance<'a> {
         Box::into_raw(self.inner)
     }
 
-    pub fn new<P: Plugin<'a>>(host_info: HostInfo<'a>) -> PluginInstance<'a> {
+    pub fn new<P: Plugin<'a>>(
+        host_info: HostInfo<'a>,
+        descriptor: &'static RawPluginDescriptor,
+    ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
         let data = PluginInstanceImpl::<'a, P> {
@@ -163,7 +167,7 @@ impl<'a> PluginInstance<'a> {
             plugin_data: None,
         };
         Self {
-            inner: Box::new(PluginInstanceImpl::<P>::get_plugin_desc(data)),
+            inner: Box::new(PluginInstanceImpl::<P>::get_plugin_desc(data, descriptor)),
             lifetime: PhantomData,
         }
     }

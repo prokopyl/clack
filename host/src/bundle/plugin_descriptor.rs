@@ -74,8 +74,13 @@ impl<'a> Iterator for FeaturesIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         // SAFETY: list is guaranteed to be null-terminated
         let current = unsafe { self.current.as_ref() }?;
+        if current.is_null() {
+            return None;
+        }
+
+        // SAFETY: we just checked the current element was non-null
         let cstr = unsafe { CStr::from_ptr(*current) };
-        // SAFETY: we just checked the current element was non-null, so there must be another element next
+        // SAFETY: The current element is non-null, so there must be another element next
         self.current = unsafe { self.current.add(1) };
         Some(cstr)
     }

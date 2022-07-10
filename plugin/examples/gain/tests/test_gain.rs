@@ -7,7 +7,44 @@ use gain::clap_entry;
 pub fn it_works() {
     // Initialize host
     let mut host = TestHost::instantiate(&clap_entry);
-    assert_eq!(host.descriptor().id().unwrap().to_bytes(), b"gain");
+    assert_eq!(
+        host.descriptor().id().unwrap().to_bytes(),
+        b"org.rust-audio.clack.gain"
+    );
+    assert_eq!(
+        host.descriptor().name().unwrap().to_bytes(),
+        b"Clack Gain Example"
+    );
+
+    assert!(host.descriptor().vendor().unwrap().to_bytes().is_empty());
+    assert!(host.descriptor().url().unwrap().to_bytes().is_empty());
+    assert!(host
+        .descriptor()
+        .manual_url()
+        .unwrap()
+        .to_bytes()
+        .is_empty());
+    assert!(host
+        .descriptor()
+        .support_url()
+        .unwrap()
+        .to_bytes()
+        .is_empty());
+    assert!(host
+        .descriptor()
+        .description()
+        .unwrap()
+        .to_bytes()
+        .is_empty());
+    assert!(host.descriptor().version().unwrap().to_bytes().is_empty());
+
+    assert_eq!(
+        host.descriptor()
+            .features()
+            .map(|s| s.to_bytes())
+            .collect::<Vec<_>>(),
+        &[&b"synthesizer"[..], &b"stereo"[..]]
+    );
 
     let plugin = host.plugin();
     let ports_ext = plugin

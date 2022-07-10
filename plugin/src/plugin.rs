@@ -53,13 +53,13 @@ use crate::process::events::ProcessEvents;
 use crate::process::Process;
 use clack_common::process::ProcessStatus;
 
-mod descriptor;
+pub mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 pub mod wrapper;
 
-pub use descriptor::*;
+use crate::plugin::descriptor::PluginDescriptor;
 pub use error::PluginError;
 pub use instance::*;
 
@@ -170,12 +170,12 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     /// See the [module documentation](crate::plugin) for more information on the thread model.
     type MainThread: PluginMainThread<'a, Self::Shared>;
 
-    /// A static reference to the plugin's descriptor.
+    /// Creates a new Plugin Descriptor.
     ///
     /// This contains read-only data about the plugin, such as it's name, stable identifier, and more.
     ///
-    /// See the [`PluginDescriptor`]'s documentation for more information.
-    const DESCRIPTOR: &'static PluginDescriptor;
+    /// See the [`PluginDescriptor`] trait's documentation for more information.
+    fn get_descriptor() -> Box<dyn PluginDescriptor>;
 
     /// Creates and activates the audio processor.
     ///
