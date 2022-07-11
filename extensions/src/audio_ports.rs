@@ -24,10 +24,8 @@ pub struct HostAudioPorts(
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AudioPortType(pub &'static CStr);
 
-pub const MONO_PORT_TYPE: AudioPortType =
-    AudioPortType(unsafe { CStr::from_bytes_with_nul_unchecked(b"mono\0") });
-pub const STEREO_PORT_TYPE: AudioPortType =
-    AudioPortType(unsafe { CStr::from_bytes_with_nul_unchecked(b"stereo\0") });
+pub const MONO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_MONO);
+pub const STEREO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_STEREO);
 
 bitflags! {
     #[repr(C)]

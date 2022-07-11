@@ -10,6 +10,8 @@ pub mod gui;
 pub mod latency;
 #[cfg(feature = "log")]
 pub mod log;
+#[cfg(feature = "note-ports")]
+pub mod note_ports;
 #[cfg(feature = "params")]
 pub mod params;
 #[cfg(feature = "state")]
