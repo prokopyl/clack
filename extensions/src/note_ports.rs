@@ -36,7 +36,7 @@ impl NoteDialects {
 }
 
 #[repr(u32)]
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum NoteDialect {
     Clap = CLAP_NOTE_DIALECT_CLAP,
     Midi = CLAP_NOTE_DIALECT_MIDI,
