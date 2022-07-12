@@ -17,6 +17,7 @@ use clack_extensions::audio_ports::{
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::channels::AudioBufferType;
+use clack_plugin::utils::Cookie;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 mod gui;
@@ -193,7 +194,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
             min_value: 0.0,
             max_value: 1000.0,
             flags: ParamInfoFlags::IS_STEPPED,
-            cookie: core::ptr::null_mut(),
+            cookie: Cookie::empty(),
         })
     }
 

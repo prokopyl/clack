@@ -1,12 +1,12 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
+use crate::utils::Cookie;
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_param_gesture, clap_event_param_mod, clap_event_param_value, CLAP_EVENT_DONT_RECORD,
     CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END,
     CLAP_EVENT_PARAM_MOD, CLAP_EVENT_PARAM_VALUE,
 };
-use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
 
 bitflags! {
@@ -35,7 +35,7 @@ impl ParamValueEvent {
     #[inline]
     pub fn new(
         header: EventHeader<Self>,
-        cookie: *mut c_void,
+        cookie: Cookie,
         note_id: i32,
         param_id: u32,
         port_index: i16,
@@ -46,7 +46,7 @@ impl ParamValueEvent {
         Self {
             inner: clap_event_param_value {
                 header: header.into_raw(),
-                cookie,
+                cookie: cookie.as_raw(),
                 note_id,
                 param_id,
                 port_index,
@@ -58,8 +58,8 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn cookie(&self) -> *const c_void {
-        self.inner.cookie
+    pub fn cookie(&self) -> Cookie {
+        Cookie::from_raw(self.inner.cookie)
     }
 
     #[inline]
@@ -142,7 +142,7 @@ impl ParamModEvent {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         header: EventHeader<Self>,
-        cookie: *mut c_void,
+        cookie: Cookie,
         note_id: i32,
         param_id: u32,
         port_index: i16,
@@ -153,7 +153,7 @@ impl ParamModEvent {
         Self {
             inner: clap_event_param_mod {
                 header: header.into_raw(),
-                cookie,
+                cookie: cookie.as_raw(),
                 note_id,
                 param_id,
                 port_index,
@@ -165,8 +165,8 @@ impl ParamModEvent {
     }
 
     #[inline]
-    pub fn cookie(&self) -> *const c_void {
-        self.inner.cookie
+    pub fn cookie(&self) -> Cookie {
+        Cookie::from_raw(self.inner.cookie)
     }
 
     #[inline]

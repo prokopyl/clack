@@ -1,7 +1,7 @@
 use crate::utils::data_from_array_buf;
 use bitflags::bitflags;
+use clack_common::utils::Cookie;
 use clap_sys::ext::params::*;
-use std::ffi::c_void;
 use std::str::Utf8Error;
 
 bitflags! {
@@ -53,8 +53,8 @@ impl ParamInfo {
         self.inner.default_value
     }
     #[inline]
-    pub fn cookie(&self) -> *mut c_void {
-        self.inner.cookie
+    pub fn cookie(&self) -> Cookie {
+        Cookie::from_raw(self.inner.cookie)
     }
     #[inline]
     pub fn module(&self) -> &[u8] {
@@ -69,7 +69,7 @@ impl ParamInfo {
 pub struct ParamInfoData<'a> {
     pub id: u32,
     pub flags: ParamInfoFlags,
-    pub cookie: *mut c_void,
+    pub cookie: Cookie,
     pub name: &'a str,
     pub module: &'a str,
     pub min_value: f64,
