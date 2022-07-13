@@ -4,6 +4,7 @@ use core::fmt;
 pub enum HostError {
     StartProcessingFailed,
     AlreadyActivatedPlugin,
+    StillActivatedPlugin,
     DeactivatedPlugin,
     ActivationFailed,
     PluginEntryNotFound,
@@ -25,6 +26,10 @@ impl fmt::Display for HostError {
         match self {
             Self::StartProcessingFailed => write!(f, "Could not start processing"),
             Self::AlreadyActivatedPlugin => write!(f, "Plugin was already activated"),
+            Self::StillActivatedPlugin => write!(
+                f,
+                "Attempted to deactivate Plugin which still has an active AudioProcessor"
+            ),
             Self::DeactivatedPlugin => write!(f, "Plugin is currently deactivated"),
             Self::ActivationFailed => write!(f, "Unable to activate"),
             Self::PluginEntryNotFound => write!(f, "No entry found for the specified plugin"),

@@ -67,11 +67,19 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         self.deactivate_with(processor, |_, _| ())
     }
 
-    pub fn deactivate_with<T, D>(&mut self, processor: StoppedPluginAudioProcessor<H>, drop_with: D)
+    #[inline]
+    pub fn try_deactivate(&mut self) -> Result<(), HostError> {
+        self.try_deactivate_with(|_, _| ())
+    }
+
+    pub fn deactivate_with<T, D>(
+        &mut self,
+        processor: StoppedPluginAudioProcessor<H>,
+        drop_with: D,
+    ) -> T
     where
         D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
     {
-        // SAFETY: we never clone the arcs, only compare them
         if !Arc::ptr_eq(&self.inner, &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
         }
@@ -79,12 +87,16 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         drop(processor);
 
         // PANIC: we dropped the only processor produced, and checked if it matched
-        let wrapper = Arc::get_mut(&mut self.inner)
-            .ok_or(HostError::AlreadyActivatedPlugin)
-            .unwrap();
+        self.try_deactivate_with(drop_with).unwrap()
+    }
 
-        // PANIC: we dropped the only processor produced, and checked if it matched
-        wrapper.deactivate_with(drop_with).unwrap();
+    pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, HostError>
+    where
+        D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
+    {
+        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::StillActivatedPlugin)?;
+
+        wrapper.deactivate_with(drop_with)
     }
 
     #[inline]
