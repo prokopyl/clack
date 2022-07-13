@@ -4,6 +4,7 @@ use crate::instance::processor::audio::AudioBuffers;
 use crate::instance::processor::PluginAudioProcessorState::*;
 use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
 use crate::wrapper::instance::PluginInstanceInner;
+use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::process::ProcessStatus;
 use clap_sys::process::clap_process;
@@ -169,6 +170,7 @@ pub struct StartedPluginAudioProcessor<H: for<'a> Host<'a>> {
 }
 
 impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
+    #[allow(clippy::too_many_arguments)]
     pub fn process(
         &mut self,
         audio_inputs: &AudioBuffers,
@@ -177,6 +179,7 @@ impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
         events_output: &mut OutputEvents,
         steady_time: i64,
         max_frame_count: Option<usize>,
+        transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, HostError> {
         let min_input_sample_count = audio_inputs.min_buffer_length;
         let min_output_sample_count = audio_outputs.min_buffer_length;
@@ -189,7 +192,9 @@ impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
         let process = clap_process {
             steady_time,
             frames_count: frames_count as u32,
-            transport: core::ptr::null(), // TODO
+            transport: transport
+                .map(|e| e.as_raw_ref() as *const _)
+                .unwrap_or(core::ptr::null()),
             audio_inputs: audio_inputs.buffers.as_ptr(),
             audio_outputs: audio_outputs.buffers.as_mut_ptr(),
             audio_inputs_count: audio_inputs.buffers.len() as u32,

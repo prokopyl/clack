@@ -165,6 +165,7 @@ impl TestHost {
             &mut events_out,
             0,
             None,
+            None,
         );
 
         self.processor = Some(processor.stop_processing());

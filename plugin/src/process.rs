@@ -1,5 +1,6 @@
 use crate::process::audio::Audio;
 use crate::process::events::ProcessEvents;
+use clack_common::events::event_types::TransportEvent;
 use clap_sys::process::clap_process;
 
 pub use clack_common::process::ProcessStatus;
@@ -33,7 +34,10 @@ impl Process {
         self.inner.steady_time
     }
 
-    // TODO: transport
+    #[inline]
+    pub fn transport(&self) -> &TransportEvent {
+        TransportEvent::from_raw_ref(unsafe { &*self.inner.transport })
+    }
 }
 
 pub mod audio;

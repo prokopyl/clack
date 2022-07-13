@@ -37,7 +37,8 @@ impl<'a> ParamInfoWriter<'a> {
             (core::ptr::addr_of_mut!((*buf).min_value) as *mut f64).write(param.min_value);
             (core::ptr::addr_of_mut!((*buf).max_value) as *mut f64).write(param.max_value);
             (core::ptr::addr_of_mut!((*buf).default_value) as *mut f64).write(param.default_value);
-            (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void).write(param.cookie);
+            (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void)
+                .write(param.cookie.as_raw());
 
             write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name.as_bytes());
             write_to_array_buf(

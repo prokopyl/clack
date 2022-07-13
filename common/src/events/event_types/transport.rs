@@ -1,5 +1,6 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader};
+use crate::utils::{BeatTime, SecondsTime};
 use bitflags::bitflags;
 use clap_sys::events::{
     clap_event_transport, CLAP_EVENT_TRANSPORT, CLAP_TRANSPORT_HAS_BEATS_TIMELINE,
@@ -22,7 +23,6 @@ bitflags! {
     }
 }
 
-// TODO: split into TransportInfo?
 #[repr(C)]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug)]
 pub struct TransportEvent {
@@ -30,18 +30,18 @@ pub struct TransportEvent {
 
     pub flags: TransportEventFlags,
 
-    pub song_pos_beats: i64,
-    pub song_pos_seconds: i64,
+    pub song_pos_beats: BeatTime,
+    pub song_pos_seconds: SecondsTime,
 
     pub tempo: f64,
     pub tempo_inc: f64,
 
-    pub loop_start_beats: i64,
-    pub loop_end_beats: i64,
-    pub loop_start_seconds: i64,
-    pub loop_end_seconds: i64,
+    pub loop_start_beats: BeatTime,
+    pub loop_end_beats: BeatTime,
+    pub loop_start_seconds: SecondsTime,
+    pub loop_end_seconds: SecondsTime,
 
-    pub bar_start: i64,
+    pub bar_start: BeatTime,
     pub bar_number: i32,
 
     pub time_signature_numerator: i16,
@@ -54,13 +54,26 @@ unsafe impl<'a> Event<'a> for TransportEvent {
 }
 
 impl TransportEvent {
+    #[inline]
     pub fn from_raw(raw: clap_event_transport) -> Self {
         // SAFETY: TransportEvent is repr(C) and has the same memory representation
         unsafe { core::mem::transmute(raw) }
     }
 
     #[inline]
+    pub fn from_raw_ref(raw: &clap_event_transport) -> &Self {
+        // SAFETY: TransportEvent is repr(C) and has the same memory representation
+        unsafe { core::mem::transmute(raw) }
+    }
+
+    #[inline]
     pub fn into_raw(self) -> clap_event_transport {
+        // SAFETY: TransportEvent is repr(C) and has the same memory representation
+        unsafe { core::mem::transmute(self) }
+    }
+
+    #[inline]
+    pub fn as_raw_ref(&self) -> &clap_event_transport {
         // SAFETY: TransportEvent is repr(C) and has the same memory representation
         unsafe { core::mem::transmute(self) }
     }

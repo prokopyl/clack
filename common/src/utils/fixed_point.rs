@@ -4,7 +4,7 @@ pub type BeatTime = FixedPoint;
 pub type SecondsTime = FixedPoint;
 
 #[repr(C)]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct FixedPoint(i64);
 
 impl FixedPoint {
