@@ -7,5 +7,5 @@ edition = "2021"
 clap-sys = "0.3.0"
 clack-common = { path = "../common" }
 libloading = "0.7.2"
-selfie = { git = "https://github.com/prokopyl/selfie" }
+selfie = "0.0.2"
 stable_deref_trait = "1.2.0"

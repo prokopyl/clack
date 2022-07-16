@@ -29,10 +29,13 @@ impl PluginBundle {
 
         let library = Pin::new(PluginEntryLibrary::load(path)?);
 
-        let inner = Arc::pin(EntrySource::FromLibrary(Selfie::try_new(
-            library,
-            |entry| unsafe { LoadedEntry::load(entry, path_str) },
-        )?));
+        let inner = Arc::pin(EntrySource::FromLibrary(
+            Selfie::try_new(library, |entry| unsafe {
+                LoadedEntry::load(entry, path_str)
+            })
+            // The library can be discarded completely
+            .map_err(|e| e.error)?,
+        ));
 
         Ok(Self { inner })
     }
