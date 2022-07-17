@@ -1,6 +1,5 @@
 use crate::{GainPluginMainThread, UiAtomics};
-use clack_extensions::gui::{GuiApiType, UiSize, Window};
-use clack_plugin::plugin::PluginError;
+use clack_extensions::gui::{GuiApiType, GuiError, GuiResizeHints, GuiSize, Window};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use vizia::*;
@@ -61,26 +60,16 @@ fn new_gui(cx: &mut Context, ui_atomics: Arc<UiAtomics>) {
     });
 }
 
-impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
-    fn is_api_supported(&self, _api: GuiApiType, _is_floating: bool) -> Result<(), PluginError> {
-        Ok(())
+impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread<'a> {
+    fn is_api_supported(&self, api: GuiApiType, _is_floating: bool) -> bool {
+        api.can_provide_raw_window_handle()
     }
 
-    fn get_preferred_api(&self) -> Result<(&str, bool), PluginError> {
-        Err(PluginError::Custom(Box::new({
-            #[derive(Debug)]
-            struct GetApiError;
-            impl std::fmt::Display for GetApiError {
-                fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                    write!(f, "could not get preferred api")
-                }
-            }
-            impl std::error::Error for GetApiError {}
-            GetApiError
-        })))
+    fn get_preferred_api(&self) -> Option<(GuiApiType<'static>, bool)> {
+        None
     }
 
-    fn create(&mut self, _api: GuiApiType, is_floating: bool) -> Result<(), PluginError> {
+    fn create(&mut self, _api: GuiApiType, is_floating: bool) -> Result<(), GuiError> {
         self.is_floating = is_floating;
         Ok(())
     }
@@ -91,8 +80,8 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
         }
     }
 
-    fn get_size(&mut self) -> Result<UiSize, PluginError> {
-        Ok(UiSize {
+    fn get_size(&mut self) -> Option<GuiSize> {
+        Some(GuiSize {
             width: 300,
             height: 300,
         })
@@ -102,22 +91,25 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
         false
     }
 
-    fn get_resize_hints(
-        &self,
-    ) -> Result<clack_extensions::gui::clap_gui_resize_hints, PluginError> {
-        Err(PluginError::CannotRescale)
+    fn get_resize_hints(&self) -> Option<GuiResizeHints> {
+        None
     }
 
-    fn set_size(&mut self, _size: UiSize) -> Result<(), PluginError> {
-        Err(PluginError::CannotRescale)
+    fn set_size(&mut self, _size: GuiSize) -> Result<(), GuiError> {
+        Err(GuiError::ResizeError)
     }
 
-    fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
+    fn set_parent(&mut self, window: Window) -> Result<(), GuiError> {
         self.related_window = Some(window);
         Ok(())
     }
 
-    fn show(&mut self) -> Result<(), PluginError> {
+    fn set_transient(&mut self, window: Window) -> Result<(), GuiError> {
+        self.related_window = Some(window);
+        Ok(())
+    }
+
+    fn show(&mut self) -> Result<(), GuiError> {
         let title = "Some default title I dunno";
         let ui_atomics = self.shared.from_ui.clone();
 
@@ -134,7 +126,7 @@ impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
         Ok(())
     }
 
-    fn hide(&mut self) -> Result<(), PluginError> {
+    fn hide(&mut self) -> Result<(), GuiError> {
         if let Some(mut window) = self.open_window.take() {
             window.close()
         }

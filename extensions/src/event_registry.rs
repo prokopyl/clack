@@ -1,5 +1,4 @@
 use clack_common::extensions::{Extension, HostExtension};
-use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -38,10 +37,12 @@ const _: () = {
 };
 
 #[cfg(feature = "clack-host")]
-const _: () = {
+mod host {
+    use super::*;
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
     use clack_common::extensions::ExtensionImplementation;
     use clack_host::host::Host;
+    use clack_host::wrapper::HostWrapper;
     use clap_sys::host::clap_host;
 
     /// Host implementation of an event registry
@@ -88,4 +89,7 @@ const _: () = {
         })
         .unwrap_or(false)
     }
-};
+}
+
+#[cfg(feature = "clack-host")]
+pub use host::*;

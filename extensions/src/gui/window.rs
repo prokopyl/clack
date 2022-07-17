@@ -1,10 +1,11 @@
 use crate::gui::GuiApiType;
-use clap_sys::ext::gui::clap_window;
+use clap_sys::ext::gui::{clap_window, clap_window_handle};
 use raw_window_handle::{
     AppKitHandle, HasRawWindowHandle, RawWindowHandle, Win32Handle, XlibHandle,
 };
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
 
+/// A host-provided parent window.
 pub struct Window {
     raw: clap_window,
 }
@@ -16,14 +17,52 @@ impl Window {
     }
 
     #[inline]
-    pub fn api_type(&self) -> GuiApiType {
-        unsafe { GuiApiType::from_ptr(self.raw.api) }
+    pub(crate) unsafe fn as_raw(&self) -> &clap_window {
+        &self.raw
     }
 
+    /// Returns the windowing API that is used to handle this window.
+    #[inline]
+    pub fn api_type(&self) -> GuiApiType {
+        unsafe { GuiApiType(CStr::from_ptr(self.raw.api)) }
+    }
+
+    /// Return this Window's handle as a raw C pointer.
+    ///
+    /// This is useful to handle custom GUI types.
     #[inline]
     pub fn raw_ptr(&self) -> *mut c_void {
         // SAFETY: it's all always representable as a pointer
         unsafe { self.raw.specific.ptr }
+    }
+
+    /// Creates a [`Window`] from a [`RawWindowHandle`].
+    ///
+    /// This returns [`None`] if the given window handle isn't back by the default supported APIs.
+    pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
+        match handle {
+            RawWindowHandle::Xlib(handle) => Some(Self {
+                raw: clap_window {
+                    api: GuiApiType::X11.0.as_ptr(),
+                    specific: clap_window_handle { x11: handle.window },
+                },
+            }),
+            RawWindowHandle::Win32(handle) => Some(Self {
+                raw: clap_window {
+                    api: GuiApiType::WIN32.0.as_ptr(),
+                    specific: clap_window_handle { win32: handle.hwnd },
+                },
+            }),
+            RawWindowHandle::AppKit(handle) => Some(Self {
+                raw: clap_window {
+                    api: GuiApiType::COCOA.0.as_ptr(),
+                    specific: clap_window_handle {
+                        cocoa: handle.ns_view,
+                    },
+                },
+            }),
+            _ => None,
+        }
     }
 }
 

@@ -24,7 +24,7 @@ impl PluginNotePorts {
             unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { NotePortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }.ok()
+            unsafe { NotePortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }
         } else {
             None
         }

@@ -68,7 +68,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         self: Pin<&mut Self>,
         audio_config: AudioConfiguration,
     ) -> Result<(), PluginWrapperError> {
-        if self.audio_processor.is_some() {
+        if self.is_active() {
             return Err(PluginWrapperError::ActivatedPlugin);
         }
 
@@ -120,6 +120,12 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         }
 
         Ok(())
+    }
+
+    /// Returns if the current plugin has been activated or not.
+    #[inline]
+    pub fn is_active(&self) -> bool {
+        self.audio_processor.is_some()
     }
 
     /// Returns a reference to a plugin's [`Shared`](crate::plugin::Plugin::Shared) struct.
@@ -326,6 +332,10 @@ pub enum PluginWrapperError {
     ///
     /// The given string may contain more information about which pointer was found to be null.
     NulPtr(&'static str),
+    /// An invalid parameter value was encountered.
+    ///
+    /// The given string may contain more information about which parameter was found to be invalid.
+    InvalidParameter(&'static str),
     /// The plugin was not properly initialized (i.e. `init` was not called or had failed).
     UninitializedPlugin,
     /// An attempt was made to call `activate` on an already activated plugin.
@@ -333,6 +343,9 @@ pub enum PluginWrapperError {
     /// An attempt was made to call an audio-thread function while the plugin was deactivated
     /// (e.g. without previously calling `activate`).
     DeactivatedPlugin,
+    /// A function which requires the plugin to be deactivated was called while the plugin was still
+    /// active.
+    DeactivationRequiredForFunction(&'static str),
     /// The plugin panicked during a function call.
     Panic,
     /// A given [`PluginError`](crate::plugin::PluginError) was raised during a function call.
@@ -410,6 +423,9 @@ impl Display for PluginWrapperError {
             PluginWrapperError::NulPtr(ptr_name) => {
                 write!(f, "Plugin method was called with null {} pointer", ptr_name)
             }
+            PluginWrapperError::InvalidParameter(p) => {
+                write!(f, "Received invalid parameter '{}'", p)
+            }
             PluginWrapperError::UninitializedPlugin => {
                 f.write_str("Plugin was not properly initialized before use")
             }
@@ -417,6 +433,11 @@ impl Display for PluginWrapperError {
             PluginWrapperError::DeactivatedPlugin => {
                 f.write_str("Plugin was not activated before calling a audio-thread method")
             }
+            PluginWrapperError::DeactivationRequiredForFunction(function) => write!(
+                f,
+                "Host attempted to call '{}' while plugin was still active",
+                function
+            ),
             PluginWrapperError::StringEncoding(e) => {
                 write!(
                     f,

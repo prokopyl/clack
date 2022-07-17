@@ -69,27 +69,6 @@ unsafe impl Extension for HostAudioPorts {
 unsafe impl Send for HostAudioPorts {}
 unsafe impl Sync for HostAudioPorts {}
 
-#[derive(Clone)]
-pub struct AudioPortInfoBuffer {
-    inner: MaybeUninit<clap_audio_port_info>,
-}
-
-impl Default for AudioPortInfoBuffer {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl AudioPortInfoBuffer {
-    #[inline]
-    pub const fn new() -> Self {
-        Self {
-            inner: MaybeUninit::uninit(),
-        }
-    }
-}
-
 pub struct AudioPortInfoData<'a> {
     pub id: u32, // TODO: ClapId
     pub name: &'a CStr,
@@ -100,8 +79,8 @@ pub struct AudioPortInfoData<'a> {
 }
 
 impl<'a> AudioPortInfoData<'a> {
-    unsafe fn try_from_raw(raw: &'a clap_audio_port_info) -> Result<Self, ()> {
-        Ok(Self {
+    unsafe fn try_from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
+        Some(Self {
             id: raw.id,
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
             channel_count: raw.channel_count,

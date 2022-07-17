@@ -174,9 +174,17 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum HostWrapperError {
     NullHostInstance,
     NullHostData,
     Panic,
     HostError(HostError),
+}
+
+impl From<HostError> for HostWrapperError {
+    #[inline]
+    fn from(e: HostError) -> Self {
+        Self::HostError(e)
+    }
 }

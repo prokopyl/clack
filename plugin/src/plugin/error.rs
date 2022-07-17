@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub enum PluginError {
-    CannotRescale,
     AlreadyActivated,
     Io(std::io::Error),
     Custom(Box<dyn Error + 'static>),
@@ -12,7 +11,6 @@ pub enum PluginError {
 impl Display for PluginError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            PluginError::CannotRescale => write!(f, "This plugin cannot be rescaled."),
             PluginError::AlreadyActivated => {
                 write!(
                     f,

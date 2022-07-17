@@ -5,6 +5,27 @@ use clack_host::plugin::PluginMainThreadHandle;
 use clack_host::wrapper::HostWrapper;
 use clap_sys::host::clap_host;
 
+#[derive(Clone)]
+pub struct AudioPortInfoBuffer {
+    inner: MaybeUninit<clap_audio_port_info>,
+}
+
+impl Default for AudioPortInfoBuffer {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AudioPortInfoBuffer {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            inner: MaybeUninit::uninit(),
+        }
+    }
+}
+
 impl PluginAudioPorts {
     pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
         match self.0.count {
@@ -24,7 +45,7 @@ impl PluginAudioPorts {
             unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { AudioPortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }.ok()
+            unsafe { AudioPortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }
         } else {
             None
         }

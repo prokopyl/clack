@@ -112,8 +112,8 @@ pub struct NotePortInfoData<'a> {
 }
 
 impl<'a> NotePortInfoData<'a> {
-    unsafe fn try_from_raw(raw: &'a clap_note_port_info) -> Result<Self, ()> {
-        Ok(Self {
+    unsafe fn try_from_raw(raw: &'a clap_note_port_info) -> Option<Self> {
+        Some(Self {
             id: raw.id,
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
