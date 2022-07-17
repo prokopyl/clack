@@ -49,14 +49,18 @@ use clap_sys::ext::gui::*;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 
-mod plugin;
-pub use plugin::*;
-
 mod window;
 pub use window::*;
 
+#[cfg(feature = "clack-host")]
 mod host;
+#[cfg(feature = "clack-host")]
 pub use host::*;
+
+#[cfg(feature = "clack-plugin")]
+mod plugin;
+#[cfg(feature = "clack-plugin")]
+pub use plugin::*;
 
 /// Plugin-provided hints about how to resize its window.
 ///
