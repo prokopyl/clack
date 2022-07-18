@@ -46,6 +46,7 @@
 
 use clack_common::extensions::{Extension, HostExtension, PluginExtension};
 use clap_sys::ext::gui::*;
+use std::cmp::Ordering;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -199,11 +200,80 @@ impl Display for GuiError {
 /// The size of a given GUI Window, in pixels.
 ///
 /// Note that the used [`GuiApiType`] is responsible to define if it is using logical or physical pixels.
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct GuiSize {
     /// The width of the GUI Window, in pixels.
     pub width: u32,
     /// The height of the GUI Window, in pixels.
     pub height: u32,
+}
+
+impl PartialOrd for GuiSize {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for GuiSize {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.area().cmp(&other.area())
+    }
+}
+
+impl GuiSize {
+    /// Computes the area, in pixels, that would be covered by a rectangular window of this size.
+    ///
+    /// This method saturates the resulting [`u64`] if the resulting value is too large to fit.
+    #[inline]
+    pub fn area(self) -> u64 {
+        (self.width as u64).saturating_mul(self.height as u64)
+    }
+
+    /// Packs this [`GuiSize`] into a single [`u64`] value.
+    ///
+    /// This may be useful in case [`u64`]s are better to store than a pair of [`u32`], e.g. with
+    /// Atomics.
+    ///
+    /// Use [`from_u64`](GuiSize::from_u64) to unpack this value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_extensions::gui::GuiSize;
+    ///
+    /// let ui_size = GuiSize { width: 42, height: 69 };
+    /// let packed = ui_size.to_u64();
+    ///
+    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// ```
+    #[inline]
+    pub fn to_u64(self) -> u64 {
+        self.width as u64 + ((self.height as u64) << u32::BITS)
+    }
+
+    /// Unpacks a single [`u64`] value into a new [`GuiSize`].
+    ///
+    /// Use [`to_u64`](GuiSize::to_u64) create the packed [`u64`] value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_extensions::gui::GuiSize;
+    ///
+    /// let ui_size = GuiSize { width: 42, height: 69 };
+    /// let packed = ui_size.to_u64();
+    ///
+    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// ```
+    #[inline]
+    pub fn from_u64(raw: u64) -> Self {
+        GuiSize {
+            width: raw as u32,
+            height: (raw >> u32::BITS) as u32,
+        }
+    }
 }
 
 /// A type of GUI API used to display windows to the user.
