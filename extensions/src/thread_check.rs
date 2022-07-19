@@ -68,6 +68,6 @@ pub mod host {
     where
         for<'a> <H as Host<'a>>::Shared: ThreadCheckImplementation,
     {
-        HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
+        HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_audio_thread())).unwrap_or(false)
     }
 }

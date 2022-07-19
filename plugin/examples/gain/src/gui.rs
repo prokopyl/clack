@@ -110,6 +110,10 @@ impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread
     }
 
     fn show(&mut self) -> Result<(), GuiError> {
+        if self.open_window.is_some() {
+            return Ok(());
+        }
+
         let title = "Some default title I dunno";
         let ui_atomics = self.shared.from_ui.clone();
 
