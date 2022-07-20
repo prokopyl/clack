@@ -1,6 +1,7 @@
 use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::io::TryPushError;
-use crate::events::{Event, UnknownEvent};
+use crate::events::spaces::CoreEventSpace;
+use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
 use core::mem::{size_of_val, MaybeUninit};
 use core::slice::from_raw_parts_mut;
@@ -37,7 +38,9 @@ impl EventBuffer {
     #[inline]
     pub fn with_capacity(event_headers: usize) -> Self {
         Self {
-            headers: Vec::with_capacity(event_headers),
+            headers: Vec::with_capacity(
+                event_headers * core::mem::size_of::<CoreEventSpace<'static>>(),
+            ),
             indexes: Vec::with_capacity(event_headers),
         }
     }
@@ -65,20 +68,39 @@ impl EventBuffer {
         }
     }
 
-    pub fn push_all<'a, E: Event<'a>>(&mut self, events: impl IntoIterator<Item = &'a E>) {
+    pub fn sort(&mut self) {
+        self.indexes.sort_by_key(|i| {
+            // SAFETY: Registered indexes always have actual event headers written by append_header_data
+            // PANIC: We used registered indexes, this should never panic
+            let event = unsafe { self.headers[*i as usize].assume_init_ref() };
+            event.0.time
+        })
+    }
+
+    pub fn insert(&mut self, event: &UnknownEvent<'static>, position: usize) {
+        let index = self.append_header_data(event);
+        self.indexes.insert(position, index as u32);
+    }
+
+    pub fn push_all<'a>(&mut self, events: impl IntoIterator<Item = &'a UnknownEvent<'static>>) {
         for e in events {
-            self.push(e.as_unknown());
+            self.push(e);
         }
     }
 
-    pub fn push(&mut self, event: &UnknownEvent) {
+    pub fn push(&mut self, event: &UnknownEvent<'static>) {
+        let index = self.append_header_data(event);
+        self.indexes.push(index as u32);
+    }
+
+    fn append_header_data(&mut self, event: &UnknownEvent<'static>) -> usize {
         let index = self.headers.len();
         let event_bytes = event.as_bytes();
         let bytes = self.allocate_mut(event_bytes.len());
 
         // PANIC: bytes is guaranteed by allocate_mut to be just the right size
         bytes.copy_from_slice(event_bytes);
-        self.indexes.push(index as u32);
+        index
     }
 
     fn allocate_mut(&mut self, byte_size: usize) -> &mut [u8] {
@@ -121,17 +143,17 @@ impl InputEventBuffer for EventBuffer {
 
     fn get(&self, index: u32) -> Option<&UnknownEvent> {
         let header_index = (*self.indexes.get(index as usize)?) as usize;
-        // SAFETY: Registered indexes always have actual event headers written by push_back
+        // SAFETY: Registered indexes always have actual event headers written by append_header_data
         // PANIC: We used registered indexes, this should never panic
         let event = unsafe { self.headers[header_index].assume_init_ref() };
 
-        // SAFETY: the event header was written from a valid UnknownEvent in push_back
+        // SAFETY: the event header was written from a valid UnknownEvent in append_header_data
         Some(unsafe { UnknownEvent::from_raw(&event.0) })
     }
 }
 
 impl OutputEventBuffer for EventBuffer {
-    fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
+    fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
         self.push(event);
 
         Ok(())
@@ -156,5 +178,39 @@ impl<'a> Iterator for EventBufferIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.range.next()?;
         self.buffer.get(next_index as u32)
+    }
+}
+
+#[cfg(test)]
+#[cfg(not(miri))] // TODO: MIRI does not support C-style inheritance casts
+mod test {
+    use crate::events::event_types::MidiEvent;
+    use crate::events::io::{EventBuffer, InputEventBuffer};
+    use crate::events::{Event, EventFlags, EventHeader};
+
+    #[test]
+    fn it_works() {
+        let event_0 = MidiEvent::new(EventHeader::new_core(0, EventFlags::empty()), 0, [0; 3]);
+        let event_1 = MidiEvent::new(EventHeader::new_core(1, EventFlags::empty()), 0, [1; 3]);
+        let event_2 = MidiEvent::new(EventHeader::new_core(2, EventFlags::empty()), 0, [2; 3]);
+        let event_3 = MidiEvent::new(EventHeader::new_core(3, EventFlags::empty()), 0, [3; 3]);
+
+        let events_1 = [event_1, event_2];
+        let events_2 = [event_0, event_3];
+
+        let mut buffer = EventBuffer::new();
+        buffer.push_all(
+            [events_1, events_2]
+                .iter()
+                .flatten()
+                .map(|e| e.as_unknown()),
+        );
+
+        buffer.sort();
+
+        assert_eq!(Some(&event_0), buffer.get(0).unwrap().as_event());
+        assert_eq!(Some(&event_1), buffer.get(1).unwrap().as_event());
+        assert_eq!(Some(&event_2), buffer.get(2).unwrap().as_event());
+        assert_eq!(Some(&event_3), buffer.get(3).unwrap().as_event());
     }
 }

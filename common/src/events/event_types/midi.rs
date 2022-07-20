@@ -19,6 +19,27 @@ unsafe impl<'a> Event<'a> for MidiEvent {
 
 impl MidiEvent {
     #[inline]
+    pub fn new(header: EventHeader<Self>, port_index: u16, data: [u8; 3]) -> Self {
+        Self {
+            inner: clap_event_midi {
+                header: header.into_raw(),
+                port_index,
+                data,
+            },
+        }
+    }
+
+    #[inline]
+    pub fn data(&self) -> [u8; 3] {
+        self.inner.data
+    }
+
+    #[inline]
+    pub fn set_data(&mut self, data: [u8; 3]) {
+        self.inner.data = data
+    }
+
+    #[inline]
     pub fn from_raw(raw: clap_event_midi) -> Self {
         Self { inner: raw }
     }
@@ -45,6 +66,8 @@ impl PartialEq for MidiEvent {
         self.inner.data == other.inner.data && self.inner.port_index == other.inner.port_index
     }
 }
+
+impl Eq for MidiEvent {}
 
 impl Debug for MidiEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -121,6 +144,8 @@ impl<'a> PartialEq for MidiSysExEvent<'a> {
     }
 }
 
+impl<'a> Eq for MidiSysExEvent<'a> {}
+
 impl<'a> Debug for MidiSysExEvent<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MidiSysexEvent")
@@ -141,6 +166,16 @@ unsafe impl<'a> Event<'a> for Midi2Event {
 }
 
 impl Midi2Event {
+    #[inline]
+    pub fn data(&self) -> [u32; 4] {
+        self.inner.data
+    }
+
+    #[inline]
+    pub fn set_data(&mut self, data: [u32; 4]) {
+        self.inner.data = data
+    }
+
     #[inline]
     pub fn from_raw(raw: clap_event_midi2) -> Self {
         Self { inner: raw }
@@ -168,6 +203,8 @@ impl PartialEq for Midi2Event {
         self.inner.data == other.inner.data && self.inner.port_index == other.inner.port_index
     }
 }
+
+impl Eq for Midi2Event {}
 
 impl Debug for Midi2Event {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

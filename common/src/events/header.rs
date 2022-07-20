@@ -151,6 +151,12 @@ impl<E> fmt::Debug for EventHeader<E> {
 impl<E> PartialOrd for EventHeader<E> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.inner.time.partial_cmp(&other.inner.time)
+        Some(self.cmp(other))
+    }
+}
+
+impl<E> Ord for EventHeader<E> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.inner.time.cmp(&other.inner.time)
     }
 }
