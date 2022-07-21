@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::Event;
+use crate::events::{Event, EventHeader};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -47,6 +47,27 @@ unsafe impl<'a> Event<'a> for NoteExpressionEvent {
 }
 
 impl NoteExpressionEvent {
+    pub fn new(
+        header: EventHeader<Self>,
+        note_id: i32,
+        port_index: i16,
+        key: i16,
+        channel: i16,
+        value: f64,
+        expression_type: NoteExpressionType,
+    ) -> Self {
+        Self {
+            inner: clap_event_note_expression {
+                header: header.into_raw(),
+                note_id,
+                port_index,
+                key,
+                channel,
+                expression_id: expression_type.into_raw(),
+                value,
+            },
+        }
+    }
     #[inline]
     pub fn expression_type(&self) -> Option<NoteExpressionType> {
         NoteExpressionType::from_raw(self.inner.expression_id)
