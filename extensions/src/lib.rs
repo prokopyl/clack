@@ -32,5 +32,7 @@ pub mod thread_check;
 pub mod thread_pool;
 #[cfg(feature = "timer")]
 pub mod timer;
+#[cfg(feature = "voice-info")]
+pub mod voice_info;
 
 pub(crate) mod utils;
