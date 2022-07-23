@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap-sys = "0.3.0"
+clap-sys = { git = "https://github.com/robbert-vdh/clap-sys.git", branch="update/clap-1.1.0" }
 clack-common = { path = "../common" }
 libloading = "0.7.2"
 selfie = "0.0.2"
