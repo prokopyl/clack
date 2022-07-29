@@ -54,49 +54,6 @@ mod plugin;
 pub use plugin::*;
 
 #[cfg(feature = "clack-host")]
-mod host {
-    use super::*;
-    use clack_common::stream::{InputStream, OutputStream};
-    use clack_host::plugin::PluginMainThreadHandle;
-    use std::io::{Read, Write};
-
-    impl PluginState {
-        pub fn load<R: Read>(
-            &self,
-            plugin: PluginMainThreadHandle,
-            reader: &mut R,
-        ) -> Result<(), StateError> {
-            let mut stream = InputStream::from_reader(reader);
-
-            if unsafe {
-                (self.0.load.ok_or(StateError { saving: false })?)(
-                    plugin.as_raw(),
-                    stream.as_raw_mut(),
-                )
-            } {
-                Ok(())
-            } else {
-                Err(StateError { saving: false })
-            }
-        }
-
-        pub fn save<W: Write>(
-            &self,
-            plugin: PluginMainThreadHandle,
-            writer: &mut W,
-        ) -> Result<(), StateError> {
-            let mut stream = OutputStream::from_writer(writer);
-
-            if unsafe {
-                (self.0.save.ok_or(StateError { saving: true })?)(
-                    plugin.as_raw(),
-                    stream.as_raw_mut(),
-                )
-            } {
-                Ok(())
-            } else {
-                Err(StateError { saving: true })
-            }
-        }
-    }
-}
+mod host;
+#[cfg(feature = "clack-host")]
+pub use host::*;
