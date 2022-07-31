@@ -23,12 +23,13 @@ use std::sync::atomic::{AtomicI32, Ordering};
 mod gui;
 
 pub struct GainPlugin<'a> {
-    shared: &'a GainPluginShared,
+    shared: &'a GainPluginShared<'a>,
     latest_gain_value: i32,
+    _host: HostAudioThreadHandle<'a>,
 }
 
 impl<'a> Plugin<'a> for GainPlugin<'a> {
-    type Shared = GainPluginShared;
+    type Shared = GainPluginShared<'a>;
     type MainThread = GainPluginMainThread<'a>;
 
     fn get_descriptor() -> Box<dyn PluginDescriptor> {
@@ -43,7 +44,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     }
 
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
         shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
@@ -51,6 +52,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         Ok(Self {
             shared,
             latest_gain_value: 0,
+            _host: host,
         })
     }
 
@@ -139,14 +141,16 @@ pub struct UiAtomics {
     gain: AtomicI32, // in dB TODO
 }
 
-pub struct GainPluginShared {
+pub struct GainPluginShared<'a> {
     from_ui: Arc<UiAtomics>,
+    _host: HostHandle<'a>,
 }
 
-impl<'a> PluginShared<'a> for GainPluginShared {
-    fn new(_host: HostHandle<'a>) -> Result<Self, PluginError> {
+impl<'a> PluginShared<'a> for GainPluginShared<'a> {
+    fn new(host: HostHandle<'a>) -> Result<Self, PluginError> {
         Ok(Self {
             from_ui: Arc::new(UiAtomics::default()),
+            _host: host,
         })
     }
 }
@@ -154,16 +158,17 @@ impl<'a> PluginShared<'a> for GainPluginShared {
 pub struct GainPluginMainThread<'a> {
     rusting: u32,
     #[allow(unused)]
-    shared: &'a GainPluginShared,
+    shared: &'a GainPluginShared<'a>,
 
     open_window: Option<WindowHandle>,
     is_floating: bool,
     related_window: Option<Window>,
+    _host: HostMainThreadHandle<'a>,
 }
 
-impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
+impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a> {
     fn new(
-        _host: HostMainThreadHandle<'a>,
+        host: HostMainThreadHandle<'a>,
         shared: &'a GainPluginShared,
     ) -> Result<Self, PluginError> {
         Ok(Self {
@@ -172,6 +177,7 @@ impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
             open_window: None,
             is_floating: false,
             related_window: None,
+            _host: host,
         })
     }
 }

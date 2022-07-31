@@ -79,6 +79,9 @@ pub struct HostHandle<'a> {
     _lifetime: PhantomData<&'a clap_host>,
 }
 
+unsafe impl<'a> Send for HostHandle<'a> {}
+unsafe impl<'a> Sync for HostHandle<'a> {}
+
 impl<'a> HostHandle<'a> {
     #[inline]
     pub fn info(&self) -> HostInfo<'a> {
@@ -184,6 +187,8 @@ pub struct HostAudioThreadHandle<'a> {
     raw: *const clap_host,
     _lifetime: PhantomData<&'a clap_host>,
 }
+
+unsafe impl<'a> Send for HostAudioThreadHandle<'a> {}
 
 impl<'a> HostAudioThreadHandle<'a> {
     #[inline]
