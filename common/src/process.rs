@@ -1,3 +1,5 @@
+//! Process audio and/or events
+
 use clap_sys::events::clap_event_transport;
 use clap_sys::process::*;
 

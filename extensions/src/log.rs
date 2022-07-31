@@ -7,6 +7,8 @@ mod error;
 pub mod implementation;
 pub use error::LogError;
 
+/// How significant a log message is, with `Debug` being the least
+/// important and `Fatal` being the most important.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum LogSeverity {

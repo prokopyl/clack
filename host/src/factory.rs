@@ -1,3 +1,5 @@
+//! [`PluginFactory`]
+
 use crate::bundle::PluginDescriptor;
 use crate::host::HostError;
 pub use clack_common::factory::*;
@@ -7,6 +9,9 @@ use clap_sys::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use std::ffi::{CStr, CString};
 use std::ptr::NonNull;
 
+/// Every clap library has a factory that is used to create instances of
+/// its plugins. A host gets a reference to the `PluginFactory` by calling
+/// [`PluginBundle::get_factory`](crate::bundle::PluginBundle::get_factory).
 #[repr(C)]
 pub struct PluginFactory {
     inner: clap_plugin_factory,
@@ -17,6 +22,7 @@ unsafe impl Factory for PluginFactory {
 }
 
 impl PluginFactory {
+    /// Returns the number of plugin types in the bundle.
     #[inline]
     pub fn plugin_count(&self) -> usize {
         // SAFETY: no special safety considerations
@@ -26,6 +32,9 @@ impl PluginFactory {
         }
     }
 
+    /// Returns a [`PluginDescriptor`] for the plugin at the given index.
+    ///
+    /// The descriptor contains the ID, which is used to instantiate the plugin.
     #[inline]
     pub fn plugin_descriptor(&self, index: usize) -> Option<PluginDescriptor> {
         // SAFETY: descriptor is guaranteed not to outlive the entry

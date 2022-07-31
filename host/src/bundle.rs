@@ -1,3 +1,5 @@
+//! [`PluginBundle`] and [`PluginDescriptor`]
+
 use clap_sys::entry::clap_plugin_entry;
 use std::error::Error;
 use std::ffi::{NulError, OsStr};
@@ -17,12 +19,22 @@ pub use clack_common::bundle::*;
 use clack_common::version::ClapVersion;
 pub use plugin_descriptor::*;
 
+/// A CLAP plugin is a dynamic library that can be loaded by a host
+/// program, and `PluginBundle` represents the collection of plugins in a
+/// given library.
 #[derive(Clone)]
 pub struct PluginBundle {
     inner: Pin<Arc<EntrySource>>,
 }
 
 impl PluginBundle {
+    /// Load a CLAP plugin library from a path as a bundle.
+    ///
+    /// ```rust
+    /// use clack_host::bundle::PluginBundle;
+    /// let bundle = PluginBundle::load("/home/user/.clap/path/to/plugin.clap")
+    ///     .expect("file does not exist or could not be loaded");
+    /// ```
     pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         let path = path.as_ref();
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
@@ -60,11 +72,28 @@ impl PluginBundle {
         }
     }
 
+    /// Returns a reference to this bundle's plugin factory.
+    ///
+    /// ```rust
+    /// use clack_host::bundle::PluginBundle;
+    /// let bundle = PluginBundle::load("/home/user/.clap/path/to/plugin.clap").unwrap();
+    /// let factory = bundle.get_factory().expect("factory is not provided in this bundle");
+    /// ```
     pub fn get_factory<F: Factory>(&self) -> Option<&F> {
         let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
     }
 
+    /// Returns the CLAP version that this plugin bundle adheres to.
+    ///
+    /// ```rust
+    /// use clack_host::{bundle::PluginBundle, version::ClapVersion};
+    ///
+    /// let my_version = ClapVersion { major: 1, minor: 0, patch: 0 };
+    /// let bundle = PluginBundle::load("/home/user/.clap/path/to/plugin.clap").unwrap();
+    /// let bundle_version = bundle.version();
+    /// assert_eq!(my_version.major, bundle_version.major);
+    /// ```
     #[inline]
     pub fn version(&self) -> ClapVersion {
         ClapVersion::from_raw(self.raw_entry().clap_version)

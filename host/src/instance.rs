@@ -9,11 +9,29 @@ use crate::instance::processor::StoppedPluginAudioProcessor;
 use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
 use crate::wrapper::instance::PluginInstanceInner;
 
+/// Audio configuration parameters for the plugin.
+///
+/// ```rust
+/// use clack_host::instance::PluginAudioConfiguration;
+/// let config = PluginAudioConfiguration {
+///     sample_rate: 44100.0,
+///     frames_count_range: 1..=4096,
+/// };
+/// ```
 pub struct PluginAudioConfiguration {
+    /// The sample rate should be constant throughout the duration of the process
     pub sample_rate: f64,
+    /// The frame count range should be a subset of the range `1..=std::i32::MAX`.
     pub frames_count_range: RangeInclusive<u32>,
 }
 
+/// A Clack host uses this instance struct to interact with the plugin. See
+/// [`Plugin`](../../clack_plugin/plugin/trait.Plugin.html) for more
+/// information.
+///
+/// Two different instances of a plugin will have independent state, and
+/// do not share input data or communicate with each other at all (unless
+/// explicitly set up to do so).
 pub struct PluginInstance<H: for<'a> Host<'a>> {
     inner: Arc<PluginInstanceInner<H>>,
 }

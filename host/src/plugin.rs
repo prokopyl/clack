@@ -1,3 +1,5 @@
+//! Plugin handle structures
+
 use clack_common::extensions::{Extension, PluginExtension};
 use clap_sys::plugin::clap_plugin;
 use std::marker::PhantomData;
