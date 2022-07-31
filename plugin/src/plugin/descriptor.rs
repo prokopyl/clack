@@ -254,7 +254,7 @@ pub mod features {
     /// `"compressor"`
     pub const COMPRESSOR: &CStr = CLAP_PLUGIN_FEATURE_COMPRESSOR;
     /// `"limiter"`
-    pub const FEATURE_LIMITER: &CStr = CLAP_PLUGIN_FEATURE_LIMITER;
+    pub const LIMITER: &CStr = CLAP_PLUGIN_FEATURE_LIMITER;
 
     /// `"flanger"`
     pub const FLANGER: &CStr = CLAP_PLUGIN_FEATURE_FLANGER;
