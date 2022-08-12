@@ -152,6 +152,11 @@ impl PluginDescriptor for StaticPluginDescriptor {
     }
 
     #[inline]
+    fn description(&self) -> Option<&CStr> {
+        self.description
+    }
+
+    #[inline]
     fn features(&self) -> Option<&[&CStr]> {
         self.features
     }
