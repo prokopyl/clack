@@ -158,6 +158,11 @@ impl PluginDescriptor for StaticPluginDescriptor {
     }
 
     #[inline]
+    fn description(&self) -> Option<&CStr> {
+        self.description
+    }
+
+    #[inline]
     fn feature_at(&self, index: usize) -> Option<&CStr> {
         self.features.and_then(|f| f.get(index).copied())
     }
