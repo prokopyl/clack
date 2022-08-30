@@ -24,7 +24,8 @@ unsafe impl Extension for HostLatency {
 }
 
 #[cfg(feature = "clack-host")]
-const _: () = {
+mod host {
+    use super::*;
     use clack_host::host::Host;
     use clack_host::plugin::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
@@ -63,10 +64,13 @@ const _: () = {
             Ok(())
         });
     }
-};
+}
+#[cfg(feature = "clack-host")]
+pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
-const _: () = {
+mod plugin {
+    use super::*;
     use clack_plugin::host::HostMainThreadHandle;
     use clack_plugin::plugin::wrapper::PluginWrapper;
     use clack_plugin::plugin::Plugin;
@@ -103,4 +107,6 @@ const _: () = {
         PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().get()))
             .unwrap_or(0)
     }
-};
+}
+#[cfg(feature = "clack-plugin")]
+pub use plugin::*;
