@@ -25,7 +25,7 @@ impl LogSeverity {
         use clap_sys::ext::log::*;
         use LogSeverity::*;
 
-        match raw as i32 {
+        match raw {
             CLAP_LOG_DEBUG => Some(Debug),
             CLAP_LOG_INFO => Some(Info),
             CLAP_LOG_WARNING => Some(Warning),

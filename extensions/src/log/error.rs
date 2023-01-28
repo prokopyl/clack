@@ -27,9 +27,9 @@ impl Display for LogError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             LogError::NulError(e) => {
-                write!(f, "Failed to encode message into a C String: {}", e)
+                write!(f, "Failed to encode message into a C String: {e}")
             }
-            LogError::FmtError(e) => write!(f, "Message could not be formatted: {}", e),
+            LogError::FmtError(e) => write!(f, "Message could not be formatted: {e}"),
         }
     }
 }

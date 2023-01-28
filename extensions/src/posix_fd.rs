@@ -68,15 +68,13 @@ impl Display for FdError {
         match self {
             FdError::Register((fd, flags)) => write!(
                 f,
-                "Failed to register file descriptor ({}) with flags ({:?})",
-                fd, flags
+                "Failed to register file descriptor ({fd}) with flags ({flags:?})"
             ),
             FdError::Modify((fd, flags)) => write!(
                 f,
-                "Failed to modify file descriptor ({}) with flags ({:?})",
-                fd, flags
+                "Failed to modify file descriptor ({fd}) with flags ({flags:?})"
             ),
-            FdError::Unregister(fd) => write!(f, "Failed to unregister file descriptor ({})", fd),
+            FdError::Unregister(fd) => write!(f, "Failed to unregister file descriptor ({fd})"),
         }
     }
 }

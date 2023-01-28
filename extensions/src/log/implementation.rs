@@ -45,7 +45,7 @@ unsafe extern "C" fn log<H: for<'a> Host<'a>>(
         if log_severity.is_none() {
             host.log(
                 LogSeverity::PluginMisbehaving,
-                &format!("Plugin logged with unknown log level: {}", severity),
+                &format!("Plugin logged with unknown log level: {severity}"),
             );
         }
 
@@ -53,6 +53,6 @@ unsafe extern "C" fn log<H: for<'a> Host<'a>>(
     });
 
     if res.is_none() {
-        eprintln!("[ERROR] Log handler failed when writing message: {}", msg)
+        eprintln!("[ERROR] Log handler failed when writing message: {msg}")
     }
 }
