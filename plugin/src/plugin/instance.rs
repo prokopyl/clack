@@ -61,7 +61,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         let plugin = Box::from_raw(plugin as *mut clap_plugin);
 
         if !plugin.plugin_data.is_null() {
-            Box::from_raw(plugin.plugin_data.cast::<PluginInstanceImpl<'a, P>>());
+            let _ = Box::from_raw(plugin.plugin_data.cast::<PluginInstanceImpl<'a, P>>());
         }
     }
 
