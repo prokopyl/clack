@@ -19,7 +19,7 @@ impl NoteExpressionType {
     #[inline]
     pub fn from_raw(raw: clap_note_expression) -> Option<Self> {
         use NoteExpressionType::*;
-        match raw as i32 {
+        match raw {
             CLAP_NOTE_EXPRESSION_VOLUME => Some(Volume),
             CLAP_NOTE_EXPRESSION_PAN => Some(Pan),
             CLAP_NOTE_EXPRESSION_TUNING => Some(Tuning),
@@ -42,7 +42,7 @@ pub struct NoteExpressionEvent {
 }
 
 unsafe impl<'a> Event<'a> for NoteExpressionEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_NOTE_EXPRESSION as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_EXPRESSION;
     type EventSpace = CoreEventSpace<'a>;
 }
 

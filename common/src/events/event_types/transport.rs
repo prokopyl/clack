@@ -49,7 +49,7 @@ pub struct TransportEvent {
 }
 
 unsafe impl<'a> Event<'a> for TransportEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT;
     type EventSpace = CoreEventSpace<'a>;
 }
 

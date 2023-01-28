@@ -83,7 +83,7 @@ unsafe impl HasRawWindowHandle for Window {
             handle.window = unsafe { self.raw.specific.x11 };
             RawWindowHandle::Xlib(handle)
         } else {
-            panic!("Unknown GUI API type: {:?}", api_type)
+            panic!("Unknown GUI API type: {api_type:?}")
         }
     }
 }

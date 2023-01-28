@@ -10,7 +10,7 @@ pub fn it_works() {
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX
     );
-    let bundle = PluginBundle::load(&bundle_path).unwrap();
+    let bundle = PluginBundle::load(bundle_path).unwrap();
 
     let desc = bundle
         .get_factory::<PluginFactory>()

@@ -26,7 +26,7 @@ pub struct ParamValueEvent {
 }
 
 unsafe impl<'a> Event<'a> for ParamValueEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_PARAM_VALUE as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_VALUE;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -133,7 +133,7 @@ pub struct ParamModEvent {
 }
 
 unsafe impl<'a> Event<'a> for ParamModEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_PARAM_MOD as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_MOD;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -241,7 +241,7 @@ pub struct ParamGestureBeginEvent {
 }
 
 unsafe impl<'a> Event<'a> for ParamGestureBeginEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_BEGIN as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_BEGIN;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -269,7 +269,7 @@ pub struct ParamGestureEndEvent {
 }
 
 unsafe impl<'a> Event<'a> for ParamGestureEndEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_END as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_END;
     type EventSpace = CoreEventSpace<'a>;
 }
 

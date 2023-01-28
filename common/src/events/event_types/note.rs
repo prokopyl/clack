@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 pub struct NoteOnEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteOnEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -18,7 +18,7 @@ unsafe impl<'a> Event<'a> for NoteOnEvent {
 pub struct NoteOffEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteOffEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_NOTE_OFF as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_OFF;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -27,7 +27,7 @@ unsafe impl<'a> Event<'a> for NoteOffEvent {
 pub struct NoteChokeEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteChokeEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_NOTE_CHOKE as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_CHOKE;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -36,7 +36,7 @@ unsafe impl<'a> Event<'a> for NoteChokeEvent {
 pub struct NoteEndEvent(pub NoteEvent<Self>);
 
 unsafe impl<'a> Event<'a> for NoteEndEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_NOTE_END as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_NOTE_END;
     type EventSpace = CoreEventSpace<'a>;
 }
 

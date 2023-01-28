@@ -120,7 +120,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
             )?)
         })
         .map(|s| s as clap_process_status)
-        .unwrap_or(CLAP_PROCESS_ERROR as i32)
+        .unwrap_or(CLAP_PROCESS_ERROR)
     }
 
     unsafe extern "C" fn get_extension(

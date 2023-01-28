@@ -96,10 +96,10 @@ impl Display for PluginBundleError {
         match self {
             PluginBundleError::EntryInitFailed => f.write_str("Plugin entry initialization failed"),
             PluginBundleError::NulDescriptorPath(e) => {
-                write!(f, "Invalid plugin descriptor path: {}", e)
+                write!(f, "Invalid plugin descriptor path: {e}")
             }
             PluginBundleError::LibraryLoadingError(e) => {
-                write!(f, "Failed to load plugin descriptor library: {}", e)
+                write!(f, "Failed to load plugin descriptor library: {e}")
             }
             PluginBundleError::InvalidUtf8Path => {
                 f.write_str("Plugin descriptor path contains invalid UTF-8")

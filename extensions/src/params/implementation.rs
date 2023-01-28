@@ -191,7 +191,7 @@ where
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
         P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
-            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR as i32))
+            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
     .is_some()
         && writer.finish()
@@ -210,7 +210,7 @@ where
 
     let val = PluginWrapper::<P>::handle(plugin, |p| {
         let display = core::str::from_utf8(display)
-            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR as i32))?;
+            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
         Ok(P::MainThread::text_to_value(
             p.main_thread().as_ref(),
             param_id,

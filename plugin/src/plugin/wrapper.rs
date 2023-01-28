@@ -421,10 +421,10 @@ impl Display for PluginWrapperError {
                 f.write_str("Plugin method was called with null clap_plugin.plugin_data pointer")
             }
             PluginWrapperError::NulPtr(ptr_name) => {
-                write!(f, "Plugin method was called with null {} pointer", ptr_name)
+                write!(f, "Plugin method was called with null {ptr_name} pointer")
             }
             PluginWrapperError::InvalidParameter(p) => {
-                write!(f, "Received invalid parameter '{}'", p)
+                write!(f, "Received invalid parameter '{p}'")
             }
             PluginWrapperError::UninitializedPlugin => {
                 f.write_str("Plugin was not properly initialized before use")
@@ -435,8 +435,7 @@ impl Display for PluginWrapperError {
             }
             PluginWrapperError::DeactivationRequiredForFunction(function) => write!(
                 f,
-                "Host attempted to call '{}' while plugin was still active",
-                function
+                "Host attempted to call '{function}' while plugin was still active"
             ),
             PluginWrapperError::StringEncoding(e) => {
                 write!(

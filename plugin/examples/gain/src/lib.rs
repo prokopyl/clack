@@ -93,7 +93,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
 
         let new_gain = self.shared.from_ui.gain.load(Ordering::Relaxed);
         if new_gain != self.latest_gain_value {
-            println!("New gain value: {}", new_gain);
+            println!("New gain value: {new_gain}");
             self.latest_gain_value = new_gain;
         }
 
@@ -219,7 +219,7 @@ impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result {
         use ::core::fmt::Write;
-        println!("Format param {}, value {}", param_id, value);
+        println!("Format param {param_id}, value {value}");
 
         if param_id == 0 {
             write!(writer, "{} crabz", value as u32)

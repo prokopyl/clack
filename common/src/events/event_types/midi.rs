@@ -13,7 +13,7 @@ pub struct MidiEvent {
 }
 
 unsafe impl<'a> Event<'a> for MidiEvent {
-    const TYPE_ID: u16 = CLAP_EVENT_MIDI as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI;
     type EventSpace = CoreEventSpace<'a>;
 }
 
@@ -86,7 +86,7 @@ pub struct MidiSysExEvent<'buf> {
 }
 
 unsafe impl<'buf> Event<'buf> for MidiSysExEvent<'buf> {
-    const TYPE_ID: u16 = CLAP_EVENT_MIDI_SYSEX as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI_SYSEX;
     type EventSpace = CoreEventSpace<'buf>;
 }
 
@@ -161,7 +161,7 @@ pub struct Midi2Event {
 }
 
 unsafe impl<'a> Event<'a> for Midi2Event {
-    const TYPE_ID: u16 = CLAP_EVENT_MIDI2 as u16;
+    const TYPE_ID: u16 = CLAP_EVENT_MIDI2;
     type EventSpace = CoreEventSpace<'a>;
 }
 

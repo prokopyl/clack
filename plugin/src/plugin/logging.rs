@@ -26,7 +26,7 @@ unsafe fn get_logger<'a, P: Plugin<'a>>(
 
 fn log_display<D: Display>(message: &D) -> Result<CString, Box<dyn Error>> {
     let mut buf = String::new();
-    write!(buf, "{}", message)?;
+    write!(buf, "{message}")?;
     Ok(CString::new(buf)?)
 }
 
@@ -37,12 +37,11 @@ pub unsafe fn plugin_log<'a, P: Plugin<'a>>(plugin: *const clap_plugin, e: &Plug
                 logger(host, e.severity(), cstr.as_ptr());
                 return;
             }
-            Err(e) => eprintln!(
-                "[CLAP_PLUGIN_ERROR] Failed to serialize error message for host: {}",
-                e
-            ),
+            Err(e) => {
+                eprintln!("[CLAP_PLUGIN_ERROR] Failed to serialize error message for host: {e}")
+            }
         };
     }
 
-    eprintln!("[CLAP_PLUGIN_ERROR] {}", e);
+    eprintln!("[CLAP_PLUGIN_ERROR] {e}");
 }
