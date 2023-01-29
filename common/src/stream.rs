@@ -176,3 +176,32 @@ fn handle_interrupted<F: FnMut() -> std::io::Result<usize>>(
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn input_streams_work() {
+        let src = b"Hello";
+        let mut buf = vec![0; 5];
+        let mut cursor = Cursor::new(src);
+
+        let mut stream = InputStream::from_reader(&mut cursor);
+        let res = stream.read(&mut buf).unwrap();
+        assert_eq!(res, 5);
+        assert_eq!(&buf, b"Hello");
+    }
+
+    #[test]
+    fn output_streams_work() {
+        let mut buf = vec![];
+
+        let mut stream = OutputStream::from_writer(&mut buf);
+        let res = stream.write(b"Hello").unwrap();
+
+        assert_eq!(res, 5);
+        assert_eq!(&buf, b"Hello");
+    }
+}
