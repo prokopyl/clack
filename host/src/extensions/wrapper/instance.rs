@@ -1,11 +1,10 @@
 use crate::bundle::PluginBundle;
-use crate::extensions::wrapper::descriptor::{RawHostDescriptor, RawHostDescriptorRef};
+use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::extensions::wrapper::{HostError, HostWrapper};
 use crate::host::{Host, HostInfo};
 use crate::instance::handle::PluginAudioProcessorHandle;
 use crate::instance::PluginAudioConfiguration;
 use clap_sys::plugin::clap_plugin;
-use selfie::Selfie;
 use stable_deref_trait::StableDeref;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -35,7 +34,8 @@ impl Deref for RawPluginInstanceRef {
 unsafe impl StableDeref for RawPluginInstanceRef {}
 
 pub struct PluginInstanceInner<H: for<'a> Host<'a>> {
-    host_descriptor: Selfie<'static, Box<HostWrapper<H>>, Pin<Box<RawHostDescriptorRef>>>,
+    host_wrapper: Pin<Box<HostWrapper<H>>>,
+    host_descriptor: Pin<Box<RawHostDescriptor>>,
     instance: *mut clap_plugin,
     _plugin_bundle: PluginBundle, // Keep the DLL/.SO alive while plugin is instantiated
 }
@@ -53,33 +53,43 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
     {
         let host_wrapper = Box::pin(HostWrapper::new(shared, main_thread));
-        let host_descriptor = Selfie::new(host_wrapper, |w| {
-            Box::pin(RawHostDescriptor::new(host_info, w))
+        let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
+
+        let mut instance = Arc::new(Self {
+            host_wrapper,
+            host_descriptor,
+            instance: core::ptr::null_mut(),
+            _plugin_bundle: entry.clone(),
         });
 
-        let raw_descriptor =
-            host_descriptor.with_referential(|d: &Pin<Box<RawHostDescriptor>>| d.raw() as *const _);
+        {
+            let instance = Arc::get_mut(&mut instance).unwrap();
+            instance.host_descriptor.set_wrapper(&instance.host_wrapper);
 
-        let instance = unsafe {
-            entry
-                .get_plugin_factory()
-                .ok_or(HostError::MissingPluginFactory)?
-                .create_plugin(plugin_id, &*raw_descriptor)?
-                .as_ptr()
-        };
+            let raw_descriptor = instance.host_descriptor.raw();
 
-        host_descriptor.owned().instantiated(instance);
+            let plugin_instance_ptr = unsafe {
+                entry
+                    .get_plugin_factory()
+                    .ok_or(HostError::MissingPluginFactory)?
+                    .create_plugin(plugin_id, raw_descriptor)?
+                    .as_ptr()
+            };
 
-        Ok(Arc::new(Self {
-            host_descriptor,
-            instance,
-            _plugin_bundle: entry.clone(),
-        }))
+            if plugin_instance_ptr.is_null() {
+                return Err(HostError::InstantiationFailed);
+            }
+
+            instance.host_wrapper.instantiated(plugin_instance_ptr);
+            instance.instance = plugin_instance_ptr;
+        }
+
+        Ok(instance)
     }
 
     #[inline]
     pub fn wrapper(&self) -> &HostWrapper<H> {
-        self.host_descriptor.owned()
+        &self.host_wrapper
     }
 
     #[inline]
@@ -182,6 +192,11 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
 impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
+        // Happens only if instantiate didn't complete
+        if self.instance.is_null() {
+            return;
+        }
+
         unsafe {
             if let Some(destroy) = (*self.instance).destroy {
                 destroy(self.raw_instance_mut() as *mut _)

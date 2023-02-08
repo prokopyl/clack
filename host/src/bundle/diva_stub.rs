@@ -2,7 +2,9 @@ use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor}
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
-pub struct DivaPluginStub;
+pub struct DivaPluginStub<'a> {
+    shared: &'a DivaPluginStubShared<'a>,
+}
 pub struct DivaPluginStubShared<'a> {
     host: HostHandle<'a>,
 }
@@ -13,7 +15,7 @@ impl<'a> PluginShared<'a> for DivaPluginStubShared<'a> {
     }
 }
 
-impl<'a> Plugin<'a> for DivaPluginStub {
+impl<'a> Plugin<'a> for DivaPluginStub<'a> {
     type Shared = DivaPluginStubShared<'a>;
     type MainThread = ();
 
@@ -34,19 +36,20 @@ impl<'a> Plugin<'a> for DivaPluginStub {
         shared: &'a Self::Shared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
-        shared.host.request_callback();
-
-        Ok(Self)
+        Ok(Self { shared })
     }
 
     fn process(
         &mut self,
         _process: &Process,
         mut audio: Audio,
-        events: ProcessEvents,
+        _events: ProcessEvents,
     ) -> Result<ProcessStatus, PluginError> {
-        for event in events.input {
-            events.output.try_push(event).unwrap();
+        self.shared.host.request_callback();
+
+        #[cfg(not(miri))]
+        for event in _events.input {
+            _events.output.try_push(event).unwrap();
         }
 
         let mut output_channels = audio.output(0).unwrap().channels_mut();

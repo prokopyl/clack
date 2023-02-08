@@ -11,7 +11,7 @@ pub type ClapLoggingFn =
 
 unsafe fn get_logger<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
-) -> Option<(&'a clap_host, ClapLoggingFn)> {
+) -> Option<(*const clap_host, ClapLoggingFn)> {
     let host = plugin
         .as_ref()?
         .plugin_data
@@ -20,7 +20,7 @@ unsafe fn get_logger<'a, P: Plugin<'a>>(
         .host()
         .as_raw();
 
-    let log = (host.get_extension?)(host, CLAP_EXT_LOG.as_ptr()) as *mut clap_host_log;
+    let log = ((*host).get_extension?)(host, CLAP_EXT_LOG.as_ptr()) as *mut clap_host_log;
     Some((host, log.as_ref()?.log?))
 }
 

@@ -2,24 +2,18 @@ use crate::extensions::wrapper::HostWrapper;
 use crate::host::{Host, HostExtensions, HostInfo, HostShared};
 use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
-use selfie::refs::RefType;
 use std::ffi::{c_void, CStr};
-use std::marker::PhantomData;
 
-pub struct RawHostDescriptor<'a> {
+pub struct RawHostDescriptor {
     raw: clap_host,
     _host_info: HostInfo,
-    _wrapper: PhantomData<&'a ()>,
 }
 
-impl<'a> RawHostDescriptor<'a> {
-    pub(crate) fn new<H: for<'h> Host<'h>>(
-        host_info: HostInfo,
-        wrapper: &'a HostWrapper<H>,
-    ) -> Self {
+impl RawHostDescriptor {
+    pub(crate) fn new<H: for<'h> Host<'h>>(host_info: HostInfo) -> Self {
         let mut raw = clap_host {
             clap_version: ClapVersion::CURRENT.to_raw(),
-            host_data: wrapper as *const _ as *mut _,
+            host_data: core::ptr::null_mut(),
             name: core::ptr::null_mut(),
             vendor: core::ptr::null_mut(),
             url: core::ptr::null_mut(),
@@ -35,20 +29,18 @@ impl<'a> RawHostDescriptor<'a> {
         Self {
             raw,
             _host_info: host_info,
-            _wrapper: PhantomData,
         }
     }
 
     #[inline]
-    pub fn raw(&self) -> &clap_host {
+    pub fn raw(&self) -> *const clap_host {
         &self.raw
     }
-}
 
-pub struct RawHostDescriptorRef;
-
-impl<'a> RefType<'a> for RawHostDescriptorRef {
-    type Ref = RawHostDescriptor<'a>;
+    #[inline]
+    pub fn set_wrapper<H: for<'h> Host<'h>>(&mut self, wrapper: &HostWrapper<H>) {
+        self.raw.host_data = wrapper as *const _ as *mut _
+    }
 }
 
 unsafe extern "C" fn get_extension<H: for<'a> Host<'a>>(

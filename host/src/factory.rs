@@ -47,7 +47,7 @@ impl PluginFactory {
     pub(crate) unsafe fn create_plugin(
         &self,
         plugin_id: &CStr,
-        host: &clap_host,
+        host: *const clap_host,
     ) -> Result<NonNull<clap_plugin>, HostError> {
         let plugin = NonNull::new((self
             .inner

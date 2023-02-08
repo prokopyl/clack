@@ -56,9 +56,7 @@ unsafe extern "C" fn create_plugin<'a, F: PluginFactoryImpl<'a>>(
     plugin_id: *const std::os::raw::c_char,
 ) -> *const clap_plugin {
     let plugin_id = CStr::from_ptr(plugin_id);
-    let clap_host = if let Some(clap_host) = clap_host.as_ref() {
-        clap_host
-    } else {
+    if clap_host.is_null() {
         eprintln!("[ERROR] Null clap_host pointer was provided to entry::create_plugin.");
         return core::ptr::null();
     };

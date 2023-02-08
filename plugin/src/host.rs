@@ -92,13 +92,13 @@ impl<'a> HostHandle<'a> {
     }
 
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_host {
-        unsafe { &*self.raw }
+    pub fn as_raw(&self) -> *const clap_host {
+        self.raw
     }
 
     #[inline]
     pub fn request_restart(&self) {
-        if let Some(request_restart) = self.as_raw().request_restart {
+        if let Some(request_restart) = unsafe { (*self.as_raw()).request_restart } {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_restart(self.raw) }
         }
@@ -106,7 +106,7 @@ impl<'a> HostHandle<'a> {
 
     #[inline]
     pub fn request_process(&self) {
-        if let Some(request_process) = self.as_raw().request_process {
+        if let Some(request_process) = unsafe { (*self.as_raw()).request_process } {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_process(self.raw) }
         }
@@ -114,7 +114,7 @@ impl<'a> HostHandle<'a> {
 
     #[inline]
     pub fn request_callback(&self) {
-        if let Some(request_callback) = self.as_raw().request_callback {
+        if let Some(request_callback) = unsafe { (*self.as_raw()).request_callback } {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_callback(self.raw) }
         }
