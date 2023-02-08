@@ -2,7 +2,7 @@
 
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::tail::*;
 use std::ffi::CStr;
 
@@ -17,7 +17,7 @@ unsafe impl Sync for PluginTail {}
 
 unsafe impl Extension for PluginTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 /// The Host-side of the Tail extension.
@@ -31,7 +31,7 @@ unsafe impl Sync for HostTail {}
 
 unsafe impl Extension for HostTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 /// The length of a plugin's tail, which can potentially be infinite.
@@ -101,9 +101,9 @@ impl TailLength {
 mod host {
     use super::*;
     use clack_common::extensions::ExtensionImplementation;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::plugin::PluginAudioProcessorHandle;
-    use clack_host::wrapper::HostWrapper;
+    use clack_host::instance::handle::PluginAudioProcessorHandle;
     use clap_sys::host::clap_host;
 
     impl PluginTail {

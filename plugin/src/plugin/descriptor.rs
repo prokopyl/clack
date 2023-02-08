@@ -97,8 +97,14 @@ pub trait PluginDescriptor: 'static {
     ///
     /// Example: `"instrument", "synthesizer", "stereo"`.
     #[inline]
-    fn features(&self) -> Option<&[&CStr]> {
+    #[allow(unused)]
+    fn feature_at(&self, index: usize) -> Option<&CStr> {
         None
+    }
+
+    #[inline]
+    fn features_count(&self) -> usize {
+        0
     }
 }
 
@@ -152,8 +158,13 @@ impl PluginDescriptor for StaticPluginDescriptor {
     }
 
     #[inline]
-    fn features(&self) -> Option<&[&CStr]> {
-        self.features
+    fn feature_at(&self, index: usize) -> Option<&CStr> {
+        self.features.and_then(|f| f.get(index).copied())
+    }
+
+    #[inline]
+    fn features_count(&self) -> usize {
+        self.features.map(|f| f.len()).unwrap_or(0)
     }
 }
 
@@ -168,12 +179,11 @@ const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
 
 impl PluginDescriptorWrapper {
     pub(crate) fn new(descriptor: Box<dyn PluginDescriptor>) -> Self {
-        let mut features_array: Vec<_> = descriptor
-            .features()
-            .unwrap_or(&[])
-            .iter()
+        let mut features_array: Vec<_> = (0..descriptor.features_count())
+            .filter_map(|i| descriptor.feature_at(i))
             .map(|s| s.as_ptr())
             .collect();
+
         features_array.push(core::ptr::null());
 
         Self {

@@ -2,13 +2,13 @@
 
 //! Allows plugins to know if their audio processing is running under realtime constraints or not.
 //!
-//! Plugins that do not implement this extensions are considered by host to not care if they are
+//! Plugins that do not implement this extension are considered by host to not care if they are
 //! running under realtime constraints or not, and will run just the same either way.
 //!
 //! If this information does not influence your rendering code, your plugin should **NOT**
 //! implement this extension.
 
-use clack_common::extensions::{Extension, PluginExtension};
+use clack_common::extensions::{Extension, PluginExtensionType};
 use clap_sys::ext::render::*;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -19,7 +19,7 @@ pub struct PluginRender(clap_plugin_render);
 
 unsafe impl Extension for PluginRender {
     const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
@@ -81,6 +81,7 @@ mod plugin {
         /// This is especially useful for plugins that are acting as a proxy to hardware devices, or
         /// other real-time events.
         fn has_hard_realtime_requirement(&self) -> bool;
+
         /// Switches the current render mode to the given [`RenderMode`].
         ///
         /// # Errors
@@ -139,7 +140,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_host::plugin::PluginMainThreadHandle;
+    use clack_host::instance::handle::PluginMainThreadHandle;
     impl PluginRender {
         /// Returns `true` if the plugin has an hard requirement to process in real-time.
         ///

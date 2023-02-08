@@ -6,7 +6,7 @@
 //! a plugin's callback at a given regular interval.
 
 use clack_common::extensions::{
-    Extension, ExtensionImplementation, HostExtension, PluginExtension,
+    Extension, ExtensionImplementation, HostExtensionType, PluginExtensionType,
 };
 use clap_sys::ext::timer_support::*;
 use clap_sys::plugin::clap_plugin;
@@ -25,7 +25,7 @@ unsafe impl Sync for HostTimer {}
 
 unsafe impl Extension for HostTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 /// Plugin-side of the Timer extension.
@@ -39,7 +39,7 @@ unsafe impl Sync for PluginTimer {}
 
 unsafe impl Extension for PluginTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 /// An identifier representing a timer given to a plugin.
@@ -161,9 +161,9 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::plugin::PluginMainThreadHandle;
-    use clack_host::wrapper::HostWrapper;
+    use clack_host::instance::handle::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
 
     /// Implementation of the Host-side of the Timer extension.

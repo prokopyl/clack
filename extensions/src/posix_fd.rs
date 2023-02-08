@@ -5,7 +5,7 @@
 #![deny(missing_docs)]
 
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::posix_fd_support::*;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -34,7 +34,7 @@ pub struct HostPosixFd(clap_host_posix_fd_support);
 
 unsafe impl Extension for PluginPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -44,7 +44,7 @@ unsafe impl Sync for PluginPosixFd {}
 
 unsafe impl Extension for HostPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -83,9 +83,9 @@ impl Display for FdError {
 mod host {
     use super::*;
     use clack_common::extensions::ExtensionImplementation;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::plugin::PluginMainThreadHandle;
-    use clack_host::wrapper::HostWrapper;
+    use clack_host::instance::handle::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
     use std::os::unix::prelude::RawFd;
 

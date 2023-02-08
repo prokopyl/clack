@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtension};
+use clack_common::extensions::{Extension, HostExtensionType};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
 use std::ffi::CStr;
 
@@ -12,7 +12,7 @@ unsafe impl Sync for ThreadCheck {}
 
 unsafe impl Extension for ThreadCheck {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -37,8 +37,8 @@ mod plugin {
 pub mod host {
     use crate::thread_check::ThreadCheck;
     use clack_common::extensions::ExtensionImplementation;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::wrapper::HostWrapper;
     use clap_sys::ext::thread_check::clap_host_thread_check;
     use clap_sys::host::clap_host;
 

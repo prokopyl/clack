@@ -21,8 +21,11 @@ pub(crate) fn handle_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
 }
 
 mod fixed_point;
+mod version;
 
 pub use fixed_point::*;
+pub use version::ClapVersion;
+
 use std::ffi::c_void;
 
 /// An opaque pointer for use in e.g. parameter definitions and parameter-related events.

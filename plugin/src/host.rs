@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtension};
+use clack_common::extensions::{Extension, HostExtensionType};
 use clap_sys::host::clap_host;
 use clap_sys::version::clap_version;
 use std::ffi::CStr;
@@ -51,7 +51,7 @@ impl<'a> HostInfo<'a> {
             .expect("Failed to read host version: invalid UTF-8 sequence")
     }
 
-    pub fn get_extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+    pub fn get_extension<E: Extension<ExtensionType = HostExtensionType>>(&self) -> Option<&'a E> {
         let ext =
             unsafe { (self.as_raw().get_extension?)(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
@@ -121,7 +121,7 @@ impl<'a> HostHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension<ExtensionType = HostExtensionType>>(&self) -> Option<&'a E> {
         self.info().get_extension()
     }
 
@@ -165,7 +165,7 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension<ExtensionType = HostExtensionType>>(&self) -> Option<&'a E> {
         self.shared().extension()
     }
 
@@ -200,7 +200,7 @@ impl<'a> HostAudioThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionType = HostExtension>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension<ExtensionType = HostExtensionType>>(&self) -> Option<&'a E> {
         self.shared().extension()
     }
 

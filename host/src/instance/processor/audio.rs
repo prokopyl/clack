@@ -1,17 +1,25 @@
 use clap_sys::audio_buffer::clap_audio_buffer;
-use std::ops::DerefMut;
+use core::array::IntoIter;
 
-pub struct ChannelBuffer<T> {
-    pub data: T,
+pub struct ChannelBuffer<'a, T> {
+    pub data: &'a mut [T],
     pub is_constant: bool,
 }
 
-impl<T> ChannelBuffer<T> {
+impl<'a, T> ChannelBuffer<'a, T> {
     #[inline]
-    pub fn variable(data: T) -> Self {
+    pub fn variable<D: ?Sized + AsMut<[T]> + 'a>(data: &'a mut D) -> Self {
         Self {
-            data,
+            data: data.as_mut(),
             is_constant: false,
+        }
+    }
+
+    #[inline]
+    pub fn constant<D: ?Sized + AsMut<[T]> + 'a>(data: &'a mut D) -> Self {
+        Self {
+            data: data.as_mut(),
+            is_constant: true,
         }
     }
 }
@@ -19,6 +27,20 @@ impl<T> ChannelBuffer<T> {
 pub enum AudioPortBufferType<I32, I64> {
     F32(I32),
     F64(I64),
+}
+
+impl<I32> AudioPortBufferType<I32, IntoIter<ChannelBuffer<'static, f64>, 0>> {
+    #[inline]
+    pub fn f32_only(iterator: I32) -> Self {
+        Self::F32(iterator)
+    }
+}
+
+impl<I64> AudioPortBufferType<IntoIter<ChannelBuffer<'static, f32>, 0>, I64> {
+    #[inline]
+    pub fn f64_only(iterator: I64) -> Self {
+        Self::F64(iterator)
+    }
 }
 
 pub struct AudioPortBuffer<I32, I64> {
@@ -67,17 +89,15 @@ impl AudioPorts {
         }
     }
 
-    pub fn with_data<'a, I, Iter, ChannelIter32, ChannelIter64, TBuf32, TBuf64>(
+    pub fn with_data<'a, I, Iter, ChannelIter32, ChannelIter64>(
         &'a mut self,
         iter: I,
     ) -> AudioBuffers<'a>
     where
         I: IntoIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>, IntoIter = Iter>,
         Iter: ExactSizeIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>>,
-        ChannelIter32: Iterator<Item = ChannelBuffer<TBuf32>>,
-        ChannelIter64: Iterator<Item = ChannelBuffer<TBuf64>>,
-        TBuf32: DerefMut<Target = [f32]> + 'a,
-        TBuf64: DerefMut<Target = [f64]> + 'a,
+        ChannelIter32: IntoIterator<Item = ChannelBuffer<'a, f32>>,
+        ChannelIter64: IntoIterator<Item = ChannelBuffer<'a, f64>>,
     {
         let iter = iter.into_iter();
         self.resize_buffer_configs(iter.len());
@@ -94,7 +114,7 @@ impl AudioPorts {
             let mut constant_mask = 0u64;
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
-                    for mut channel in channels {
+                    for channel in channels {
                         min_buffer_length = min_buffer_length.min(channel.data.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
@@ -105,7 +125,7 @@ impl AudioPorts {
                     false
                 }
                 AudioPortBufferType::F64(channels) => {
-                    for mut channel in channels {
+                    for channel in channels {
                         min_buffer_length = min_buffer_length.min(channel.data.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64

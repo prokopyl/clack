@@ -49,7 +49,7 @@ pub struct NoteEvent<E> {
 
 impl<E> NoteEvent<E> {
     #[inline]
-    pub fn new(
+    pub const fn new(
         header: EventHeader<E>,
         note_id: i32,
         port_index: i16,
@@ -71,13 +71,13 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
-    pub fn header(&self) -> &EventHeader<E> {
+    pub const fn header(&self) -> &EventHeader<E> {
         // SAFETY: this type guarantees the event header is valid
         unsafe { EventHeader::from_raw_unchecked(&self.inner.header) }
     }
 
     #[inline]
-    pub fn port_index(&self) -> i16 {
+    pub const fn port_index(&self) -> i16 {
         self.inner.port_index
     }
 
@@ -87,22 +87,22 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
-    pub fn key(&self) -> i16 {
+    pub const fn key(&self) -> i16 {
         self.inner.key
     }
 
     #[inline]
-    pub fn channel(&self) -> i16 {
+    pub const fn channel(&self) -> i16 {
         self.inner.channel
     }
 
     #[inline]
-    pub fn velocity(&self) -> f64 {
+    pub const fn velocity(&self) -> f64 {
         self.inner.velocity
     }
 
     #[inline]
-    pub fn from_raw(inner: clap_event_note) -> Self {
+    pub const fn from_raw(inner: clap_event_note) -> Self {
         Self {
             inner,
             _event: PhantomData,
@@ -110,7 +110,7 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
-    pub fn into_raw(self) -> clap_event_note {
+    pub const fn into_raw(self) -> clap_event_note {
         self.inner
     }
 }

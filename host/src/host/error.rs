@@ -1,3 +1,5 @@
+use crate::host::Host;
+use crate::instance::processor::ProcessingStartError;
 use core::fmt;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -11,7 +13,6 @@ pub enum HostError {
     PluginNotFound,
     MissingPluginFactory,
     InstantiationFailed,
-    PluginIdNulError,
     ProcessingFailed,
     ProcessorHandlePoisoned,
     ProcessingStopped,
@@ -36,7 +37,6 @@ impl fmt::Display for HostError {
             Self::PluginNotFound => write!(f, "Specified plugin was not found"),
             Self::MissingPluginFactory => write!(f, "No plugin factory was provided"),
             Self::InstantiationFailed => write!(f, "Could not instantiate"),
-            Self::PluginIdNulError => write!(f, "Plugin ID was null"),
             Self::ProcessingFailed => write!(f, "Could not process"),
             Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
             Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
@@ -51,3 +51,10 @@ impl fmt::Display for HostError {
 }
 
 impl std::error::Error for HostError {}
+
+impl<H: for<'a> Host<'a>> From<ProcessingStartError<H>> for HostError {
+    #[inline]
+    fn from(_: ProcessingStartError<H>) -> Self {
+        Self::StartProcessingFailed
+    }
+}

@@ -1,20 +1,20 @@
 //! Core types and traits to implement a Clack plugin.
 //!
-//! The [`Plugin`] trait that is the main one required to be implemented for a Clack plugin. It
+//! The [`Plugin`] trait is the main one required to be implemented for a Clack plugin. It
 //! can also be associated to two more types, implementing [`PluginMainThread`] and [`PluginShared`],
 //! following the CLAP thread model, as described below.
 //!
 //! # Thread model
 //!
-//! CLAP's thread model for plugin is split into three classes of operations: those happening in an
+//! CLAP's thread model for plugins is split into three classes of operations: those happening in an
 //! audio processing thread, those happening in the main thread, and thread-safe operations:
 //!
 //! * The *audio thread* (`[audio-thread]` in the CLAP specification): this is represented by a type
 //! implementing the main [`Plugin`] trait (also named the audio processor), which is [`Send`] but
-//! [`!Sync`](core::marker::Sync), and is the only one required to implement a Clack plugin.
+//! [`!Sync`](Sync), and is the only one required to implement a Clack plugin.
 //!
 //!   This type handles all DSP in one of the host's audio threads, of which there may be
-//! multiple, if the host uses a thread pool for example.
+//!   multiple, if the host uses a thread pool for example.
 //!
 //!   The host is free to [`Send`] the [`Plugin`] type between any of its audio threads, but any
 //!   operation of this class is guaranteed to be exclusive (`&mut`) to a single audio thread.

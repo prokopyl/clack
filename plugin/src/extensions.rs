@@ -15,7 +15,7 @@
 //! ```
 //! use std::ffi::CStr;
 //! use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
-//! use clack_common::extensions::{Extension, ExtensionImplementation, PluginExtension};
+//! use clack_common::extensions::{Extension, ExtensionImplementation, PluginExtensionType};
 //!
 //! // The struct end-users will actually interact with.
 //! #[repr(C)]
@@ -23,7 +23,7 @@
 //!
 //! unsafe impl Extension for PluginState {
 //!     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
-//!     type ExtensionType = PluginExtension;
+//!     type ExtensionType = PluginExtensionType;
 //! }
 //!
 //! // For implementors of the extensions (here, on the plugin side):
@@ -116,7 +116,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.
-    pub fn register<E: ExtensionImplementation<P, ExtensionType = PluginExtension>>(
+    pub fn register<E: ExtensionImplementation<P, ExtensionType = PluginExtensionType>>(
         &mut self,
     ) -> &mut Self {
         if self.found.is_some() {

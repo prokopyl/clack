@@ -44,7 +44,7 @@
 
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::gui::*;
 use std::cmp::Ordering;
 use std::ffi::CStr;
@@ -138,7 +138,7 @@ pub struct PluginGui {
 
 unsafe impl Extension for PluginGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 /// The Host-side of the GUI extension.
@@ -149,7 +149,7 @@ pub struct HostGui {
 
 unsafe impl Extension for HostGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 /// Errors that can occur related to Plugin GUI handling.

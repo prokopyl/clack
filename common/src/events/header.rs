@@ -39,6 +39,11 @@ impl<E> EventHeader<E> {
     }
 
     #[inline]
+    pub const fn payload_size(&self) -> u32 {
+        self.inner.size - (core::mem::size_of::<EventHeader>() as u32)
+    }
+
+    #[inline]
     pub const fn type_id(&self) -> u16 {
         self.inner.type_
     }
@@ -136,15 +141,13 @@ impl<E> Eq for EventHeader<E> {}
 
 impl<E> fmt::Debug for EventHeader<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "EventHeader {{{},{},{},{},{}}}",
-            self.inner.size,
-            self.inner.time,
-            self.inner.space_id,
-            self.inner.type_,
-            self.inner.flags
-        )
+        f.debug_struct("EventHeader")
+            .field("time", &self.time())
+            .field("flags", &self.flags())
+            .field("type_id", &self.inner.type_)
+            .field("space_id", &self.inner.space_id)
+            .field("payload_size", &self.payload_size())
+            .finish()
     }
 }
 

@@ -1,11 +1,16 @@
-use clack_common::extensions::{Extension, HostExtension};
+use clack_common::extensions::{Extension, HostExtensionType};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use std::ffi::CStr;
+use std::fmt::{Display, Formatter};
 
 mod error;
-#[cfg(feature = "clack-host")]
-pub mod implementation;
 pub use error::LogError;
+
+#[cfg(feature = "clack-host")]
+mod implementation;
+
+#[cfg(feature = "clack-host")]
+pub use implementation::*;
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -43,17 +48,33 @@ impl LogSeverity {
     }
 }
 
+impl Display for LogSeverity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let displayed = match self {
+            LogSeverity::Debug => "DEBUG",
+            LogSeverity::Info => "INFO",
+            LogSeverity::Warning => "WARN",
+            LogSeverity::Error => "ERROR",
+            LogSeverity::Fatal => "FATAL",
+            LogSeverity::HostMisbehaving => "HOST_MISBEHAVING",
+            LogSeverity::PluginMisbehaving => "PLUGIN_MISBEHAVING",
+        };
+
+        f.write_str(displayed)
+    }
+}
+
 #[repr(C)]
-pub struct Log(clap_host_log);
+pub struct HostLog(clap_host_log);
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
-unsafe impl Send for Log {}
-unsafe impl Sync for Log {}
+unsafe impl Send for HostLog {}
+unsafe impl Sync for HostLog {}
 
-unsafe impl Extension for Log {
+unsafe impl Extension for HostLog {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -62,7 +83,7 @@ mod plugin {
     use clack_plugin::host::HostHandle;
     use std::ffi::CStr;
 
-    impl Log {
+    impl HostLog {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
             if let Some(log) = self.0.log {

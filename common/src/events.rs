@@ -50,6 +50,7 @@ pub unsafe trait Event<'a>: Sized + 'a {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct UnknownEvent<'a> {
     header: EventHeader,
     _sysex_lifetime: PhantomData<&'a u8>,
@@ -145,5 +146,17 @@ impl<'a> UnknownEvent<'a> {
     #[inline]
     pub unsafe fn from_bytes_unchecked(bytes: &[u8]) -> &UnknownEvent {
         &*(bytes.as_ptr() as *const _)
+    }
+}
+
+impl<'a, E: Event<'a>> PartialEq<E> for UnknownEvent<'a>
+where
+    E: PartialEq,
+{
+    fn eq(&self, other: &E) -> bool {
+        match self.as_event_for_space::<E>(other.header().space_id()) {
+            None => false,
+            Some(s) => s.eq(other),
+        }
     }
 }

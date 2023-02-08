@@ -1,13 +1,19 @@
 use crate::bundle::PluginBundle;
 use crate::host::{Host, HostInfo};
 use clap_sys::plugin::clap_plugin;
+use std::ffi::CStr;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
+use crate::extensions::wrapper::instance::PluginInstanceInner;
 use crate::host::HostError;
+use crate::instance::handle::{
+    PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
+};
 use crate::instance::processor::StoppedPluginAudioProcessor;
-use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
-use crate::wrapper::instance::PluginInstanceInner;
+
+pub mod handle;
+pub mod processor;
 
 pub struct PluginAudioConfiguration {
     pub sample_rate: f64,
@@ -18,14 +24,12 @@ pub struct PluginInstance<H: for<'a> Host<'a>> {
     inner: Arc<PluginInstanceInner<H>>,
 }
 
-pub mod processor;
-
 impl<H: for<'b> Host<'b>> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
         bundle: &PluginBundle,
-        plugin_id: &[u8],
+        plugin_id: &CStr,
         host: &HostInfo,
     ) -> Result<Self, HostError>
     where

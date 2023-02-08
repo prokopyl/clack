@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtension};
+use clack_common::extensions::{Extension, HostExtensionType};
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -10,7 +10,7 @@ pub struct HostEventRegistry {
 
 unsafe impl Extension for HostEventRegistry {
     const IDENTIFIER: &'static CStr = CLAP_EXT_EVENT_REGISTRY;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -41,8 +41,8 @@ mod host {
     use super::*;
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
     use clack_common::extensions::ExtensionImplementation;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::wrapper::HostWrapper;
     use clap_sys::host::clap_host;
 
     /// Host implementation of an event registry

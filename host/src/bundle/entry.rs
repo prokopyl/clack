@@ -1,6 +1,6 @@
 use crate::bundle::PluginBundleError;
-use clack_common::version::ClapVersion;
-use clap_sys::entry::clap_plugin_entry;
+use clack_common::bundle::PluginEntryDescriptor;
+use clack_common::utils::ClapVersion;
 use libloading::Library;
 use selfie::refs::RefType;
 use selfie::Selfie;
@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 
 pub struct PluginEntryLibrary {
     _library: Library,
-    entry_ptr: NonNull<clap_plugin_entry>,
+    entry_ptr: NonNull<PluginEntryDescriptor>,
 }
 
 const SYMBOL_NAME: &[u8] = b"clap_entry\0";
@@ -20,10 +20,10 @@ impl PluginEntryLibrary {
         let library =
             unsafe { Library::new(path) }.map_err(PluginBundleError::LibraryLoadingError)?;
 
-        let symbol = unsafe { library.get::<*const clap_plugin_entry>(SYMBOL_NAME) }
+        let symbol = unsafe { library.get::<*const PluginEntryDescriptor>(SYMBOL_NAME) }
             .map_err(PluginBundleError::LibraryLoadingError)?;
 
-        let entry_ptr = NonNull::new(*symbol as *mut clap_plugin_entry)
+        let entry_ptr = NonNull::new(*symbol as *mut PluginEntryDescriptor)
             .ok_or(PluginBundleError::NullEntryPointer)?;
 
         Ok(Self {
@@ -33,13 +33,13 @@ impl PluginEntryLibrary {
     }
 
     #[inline]
-    pub fn entry(&self) -> &clap_plugin_entry {
+    pub fn entry(&self) -> &PluginEntryDescriptor {
         unsafe { self.entry_ptr.as_ref() }
     }
 }
 
 impl Deref for PluginEntryLibrary {
-    type Target = clap_plugin_entry;
+    type Target = PluginEntryDescriptor;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -54,12 +54,12 @@ unsafe impl Send for PluginEntryLibrary {}
 unsafe impl Sync for PluginEntryLibrary {}
 
 pub struct LoadedEntry<'a> {
-    entry: &'a clap_plugin_entry,
+    entry: &'a PluginEntryDescriptor,
 }
 
 impl<'a> LoadedEntry<'a> {
     pub unsafe fn load(
-        entry: &'a clap_plugin_entry,
+        entry: &'a PluginEntryDescriptor,
         path: &str,
     ) -> Result<Self, PluginBundleError> {
         let plugin_version = ClapVersion::from_raw(entry.clap_version);
@@ -79,7 +79,7 @@ impl<'a> LoadedEntry<'a> {
     }
 
     #[inline]
-    pub fn entry(&self) -> &'a clap_plugin_entry {
+    pub fn entry(&self) -> &'a PluginEntryDescriptor {
         self.entry
     }
 }

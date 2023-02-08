@@ -17,7 +17,7 @@
 
 use crate::audio_ports::AudioPortType;
 use crate::utils::{data_from_array_buf, from_bytes_until_nul};
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::audio_ports_config::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -31,7 +31,7 @@ pub struct PluginAudioPortsConfig(clap_plugin_audio_ports_config);
 
 unsafe impl Extension for PluginAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 /// The Host-side of the Audio Ports Configurations extension.
@@ -40,7 +40,7 @@ pub struct HostAudioPortsConfig(clap_host_audio_ports_config);
 
 unsafe impl Extension for HostAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 #[derive(Copy, Clone, Debug)]

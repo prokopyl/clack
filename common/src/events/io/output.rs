@@ -13,11 +13,11 @@ use std::marker::PhantomData;
 /// `OutputEvents`s do not own the event data, they are only lightweight wrappers around a compatible
 /// event buffer (i.e. [`OutputEventBuffer`]), see [`OutputEvents::from_buffer`].
 ///
-/// Unlike [`Vec`s](std::vec::Vec) or slices, `OutputEvents`s only support appending a new event to
+/// Unlike [`Vec`s](Vec) or slices, `OutputEvents`s only support appending a new event to
 /// the list ([`try_push`](OutputEvents::try_push)).
 ///
 /// This type also implements a few extra features based on these operations for convenience,
-/// such as [`Iterator`](core::iter::IntoIterator) or [`Extend`](core::iter::Extend).
+/// such as [`Iterator`](IntoIterator) or [`Extend`](Extend).
 ///
 /// # Example
 ///```

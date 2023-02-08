@@ -1,4 +1,3 @@
-use clap_sys::entry::clap_plugin_entry;
 use std::error::Error;
 use std::ffi::{NulError, OsStr};
 use std::fmt::{Display, Formatter};
@@ -11,11 +10,13 @@ use selfie::Selfie;
 use std::ptr::NonNull;
 
 mod entry;
-mod plugin_descriptor;
 
+#[cfg(test)]
+mod diva_stub;
+
+use crate::factory::PluginFactory;
 pub use clack_common::bundle::*;
-use clack_common::version::ClapVersion;
-pub use plugin_descriptor::*;
+use clack_common::utils::ClapVersion;
 
 #[derive(Clone)]
 pub struct PluginBundle {
@@ -53,7 +54,7 @@ impl PluginBundle {
     }
 
     #[inline]
-    pub fn raw_entry(&self) -> &clap_plugin_entry {
+    pub fn raw_entry(&self) -> &PluginEntryDescriptor {
         match &self.inner.as_ref().get_ref() {
             EntrySource::FromRaw(raw) => raw.entry(),
             EntrySource::FromLibrary(bundle) => bundle.with_referential(|e| e.entry()),
@@ -63,6 +64,11 @@ impl PluginBundle {
     pub fn get_factory<F: Factory>(&self) -> Option<&F> {
         let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
+    }
+
+    #[inline]
+    pub fn get_plugin_factory(&self) -> Option<&PluginFactory> {
+        self.get_factory()
     }
 
     #[inline]

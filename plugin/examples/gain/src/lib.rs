@@ -62,7 +62,6 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         mut audio: Audio,
         _events: ProcessEvents,
     ) -> Result<ProcessStatus, PluginError> {
-        // Only handle f32 samples for simplicity
         let io = if let Some(io) = audio.zip(0, 0) {
             io
         } else {

@@ -1,11 +1,13 @@
-use crate::bundle::PluginDescriptor;
 use crate::host::HostError;
 pub use clack_common::factory::*;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use clap_sys::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::ptr::NonNull;
+
+mod plugin_descriptor;
+pub use plugin_descriptor::*;
 
 #[repr(C)]
 pub struct PluginFactory {
@@ -33,13 +35,20 @@ impl PluginFactory {
             .map(PluginDescriptor::from_raw)
     }
 
-    pub(crate) unsafe fn instantiate(
+    #[inline]
+    pub fn plugin_descriptors(&self) -> PluginDescriptorsIter {
+        PluginDescriptorsIter {
+            factory: self,
+            count: self.plugin_count(),
+            current_index: 0,
+        }
+    }
+
+    pub(crate) unsafe fn create_plugin(
         &self,
-        plugin_id: &[u8],
+        plugin_id: &CStr,
         host: &clap_host,
     ) -> Result<NonNull<clap_plugin>, HostError> {
-        let plugin_id = CString::new(plugin_id).map_err(|_| HostError::PluginIdNulError)?;
-
         let plugin = NonNull::new((self
             .inner
             .create_plugin
@@ -61,5 +70,31 @@ impl PluginFactory {
         }
 
         Ok(plugin)
+    }
+}
+
+pub struct PluginDescriptorsIter<'a> {
+    factory: &'a PluginFactory,
+    current_index: usize,
+    count: usize,
+}
+
+impl<'a> Iterator for PluginDescriptorsIter<'a> {
+    type Item = PluginDescriptor<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.current_index >= self.count {
+                return None;
+            }
+
+            let descriptor = self.factory.plugin_descriptor(self.current_index);
+            self.current_index += 1;
+
+            // Skip all none-returning indexes
+            if let Some(d) = descriptor {
+                return Some(d);
+            }
+        }
     }
 }

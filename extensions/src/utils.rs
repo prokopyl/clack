@@ -1,6 +1,4 @@
-use std::cmp::min;
-use std::ffi::CStr;
-use std::os::raw::c_char;
+use std::{cmp::min, ffi::CStr, os::raw::c_char};
 
 pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe
@@ -12,6 +10,7 @@ pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
         .unwrap_or(data)
 }
 
+#[cfg(feature = "clack-plugin")]
 #[inline]
 pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
     let max_len = min(N - 1, value.len()); // Space for null byte

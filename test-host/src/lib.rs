@@ -1,7 +1,7 @@
 use crate::host::{TestHostAudioProcessor, TestHostImpl, TestHostMainThread, TestHostShared};
-use clack_host::bundle::{PluginBundle, PluginDescriptor, PluginEntryDescriptor};
+use clack_host::bundle::{PluginBundle, PluginEntryDescriptor};
 use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
-use clack_host::factory::PluginFactory;
+use clack_host::factory::{PluginDescriptor, PluginFactory};
 use clack_host::host::HostError;
 use clack_host::instance::processor::audio::{
     AudioPortBuffer, AudioPortBufferType, AudioPorts, ChannelBuffer,
@@ -12,7 +12,6 @@ use clack_host::process::ProcessStatus;
 use clack_host::{host::HostInfo, instance::PluginInstance};
 use selfie::refs::RefType;
 use selfie::Selfie;
-use std::vec::IntoIter;
 
 mod host;
 
@@ -57,7 +56,7 @@ impl TestHost {
             |_| TestHostShared,
             |_| TestHostMainThread,
             entry_and_descriptor.owned(),
-            entry_and_descriptor.referential().id().unwrap().to_bytes(),
+            entry_and_descriptor.referential().id().unwrap(),
             &info,
         )
         .unwrap();
@@ -135,33 +134,27 @@ impl TestHost {
         let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
         let mut outputs_descriptors = AudioPorts::with_capacity(2, 1);
 
-        let input_channels = inputs_descriptors
-            .with_data::<_, _, _, IntoIter<ChannelBuffer<_>>, _, &mut [f64]>([AudioPortBuffer {
-                channels: AudioPortBufferType::F32(
-                    self.input_buffers
-                        .iter_mut()
-                        .map(|buf| ChannelBuffer::variable(buf.as_mut_slice())),
-                ),
-                latency: 0,
-            }]);
+        let input_channels = inputs_descriptors.with_data([AudioPortBuffer {
+            channels: AudioPortBufferType::f32_only(
+                self.input_buffers.iter_mut().map(ChannelBuffer::variable),
+            ),
+            latency: 0,
+        }]);
 
-        let mut output_channels = outputs_descriptors
-            .with_data::<_, _, _, IntoIter<ChannelBuffer<_>>, _, &mut [f64]>([AudioPortBuffer {
-                channels: AudioPortBufferType::F32(
-                    self.output_buffers
-                        .iter_mut()
-                        .map(|buf| ChannelBuffer::variable(buf.as_mut_slice())),
-                ),
-                latency: 0,
-            }]);
+        let mut output_channels = outputs_descriptors.with_data([AudioPortBuffer {
+            channels: AudioPortBufferType::f32_only(
+                self.output_buffers.iter_mut().map(ChannelBuffer::variable),
+            ),
+            latency: 0,
+        }]);
 
-        let mut events_in = InputEvents::from_buffer(&self.input_events);
+        let events_in = InputEvents::from_buffer(&self.input_events);
         let mut events_out = OutputEvents::from_buffer(&mut self.output_events);
 
         let result = processor.process(
             &input_channels,
             &mut output_channels,
-            &mut events_in,
+            &events_in,
             &mut events_out,
             0,
             None,

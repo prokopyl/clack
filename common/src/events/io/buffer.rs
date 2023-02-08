@@ -61,6 +61,11 @@ impl EventBuffer {
     }
 
     #[inline]
+    pub fn get(&self, index: u32) -> Option<&UnknownEvent> {
+        <Self as InputEventBuffer>::get(self, index)
+    }
+
+    #[inline]
     pub fn iter(&self) -> EventBufferIter {
         EventBufferIter {
             buffer: self,
@@ -185,7 +190,7 @@ impl<'a> Iterator for EventBufferIter<'a> {
 #[cfg(not(miri))] // TODO: MIRI does not support C-style inheritance casts
 mod test {
     use crate::events::event_types::MidiEvent;
-    use crate::events::io::{EventBuffer, InputEventBuffer};
+    use crate::events::io::EventBuffer;
     use crate::events::{Event, EventFlags, EventHeader};
 
     #[test]

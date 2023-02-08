@@ -2,6 +2,7 @@ use clap_sys::events::clap_event_transport;
 use clap_sys::process::*;
 
 #[repr(i32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ProcessStatus {
     Continue = CLAP_PROCESS_CONTINUE,
     ContinueIfNotQuiet = CLAP_PROCESS_CONTINUE_IF_NOT_QUIET,

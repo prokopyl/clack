@@ -34,17 +34,17 @@ pub(crate) mod panic {
 
 /// A wrapper around a `clack` plugin of a given type.
 ///
-/// This wrapper allows access to a plugin's [`Shared`](crate::plugin::Plugin::Shared),
-/// [`MainThread`](crate::plugin::Plugin::MainThread), and Audio Processor (i.e. [`Plugin`](crate::plugin::Plugin)) structs, while
+/// This wrapper allows access to a plugin's [`Shared`](Plugin::Shared),
+/// [`MainThread`](Plugin::MainThread), and Audio Processor (i.e. [`Plugin`](Plugin)) structs, while
 /// also handling common FFI issues, such as error management and unwind safety.
 ///
 /// The only way to access an instance of `PluginWrapper` is through the
-/// [`handle`](crate::plugin::wrapper::PluginWrapper::handle) function.
+/// [`handle`](PluginWrapper::handle) function.
 pub struct PluginWrapper<'a, P: Plugin<'a>> {
-    host: HostHandle<'a>,
-    shared: Pin<Box<P::Shared>>,
-    main_thread: UnsafeCell<P::MainThread>,
     audio_processor: Option<UnsafeCell<P>>,
+    main_thread: UnsafeCell<P::MainThread>,
+    shared: Pin<Box<P::Shared>>,
+    host: HostHandle<'a>,
 }
 
 impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
@@ -128,7 +128,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         self.audio_processor.is_some()
     }
 
-    /// Returns a reference to a plugin's [`Shared`](crate::plugin::Plugin::Shared) struct.
+    /// Returns a reference to a plugin's [`Shared`](Plugin::Shared) struct.
     ///
     /// This is always safe to call in any context, since the `Shared` struct is required to
     /// implement `Sync`.
@@ -137,7 +137,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         &self.shared
     }
 
-    /// Returns a raw, non-null pointer to the plugin's [`MainThread`](crate::plugin::Plugin::MainThread)
+    /// Returns a raw, non-null pointer to the plugin's [`MainThread`](Plugin::MainThread)
     /// struct.
     ///
     /// # Safety
@@ -152,7 +152,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     }
 
     /// Returns a raw, non-null pointer to the plugin's audio processor
-    /// (i.e. [`Plugin`](crate::plugin::Plugin)) struct.
+    /// (i.e. [`Plugin`](Plugin)) struct.
     ///
     /// # Errors
     ///
@@ -214,7 +214,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     ///
     /// # Example
     ///
-    /// This is the implementation of the [`on_main_thread`](crate::plugin::PluginMainThread::on_main_thread)
+    /// This is the implementation of the [`on_main_thread`](PluginMainThread::on_main_thread)
     /// callback's C wrapper.
     ///
     /// This method is guaranteed by the CLAP specification to be only called on the main thread.
@@ -348,7 +348,7 @@ pub enum PluginWrapperError {
     DeactivationRequiredForFunction(&'static str),
     /// The plugin panicked during a function call.
     Panic,
-    /// A given [`PluginError`](crate::plugin::PluginError) was raised during a function call.
+    /// A given [`PluginError`](PluginError) was raised during a function call.
     Plugin(PluginError),
     /// Bad UTF-8.
     StringEncoding(std::str::Utf8Error),
@@ -366,11 +366,11 @@ impl PluginWrapperError {
     /// # Example
     ///
     /// ```
-    /// # use clap_sys::ext::log::CLAP_LOG_PLUGIN_MISBEHAVING;
+    /// use clap_sys::ext::log::CLAP_LOG_PLUGIN_MISBEHAVING;
     /// use clack_plugin::plugin::wrapper::PluginWrapperError;
     /// let error = PluginWrapperError::Panic;
     ///
-    /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING as i32);
+    /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
     /// ```
     pub fn severity(&self) -> clap_log_severity {
         match self {
@@ -389,12 +389,12 @@ impl PluginWrapperError {
     /// # Example
     /// ```
     /// use clap_sys::ext::log::CLAP_LOG_PLUGIN_MISBEHAVING;
-    /// # use clack_plugin::plugin::wrapper::PluginWrapperError;
+    /// use clack_plugin::plugin::wrapper::PluginWrapperError;
     ///
     /// let x: Result<(), _> = Err(std::env::VarError::NotPresent); // Some random error type
-    /// let clap_error = x.map_err(PluginWrapperError::with_severity(CLAP_LOG_PLUGIN_MISBEHAVING as i32));
+    /// let clap_error = x.map_err(PluginWrapperError::with_severity(CLAP_LOG_PLUGIN_MISBEHAVING));
     ///
-    /// assert_eq!(clap_error.unwrap_err().severity(), CLAP_LOG_PLUGIN_MISBEHAVING as i32);
+    /// assert_eq!(clap_error.unwrap_err().severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
     /// ```
     #[inline]
     pub fn with_severity<E: 'static + Error>(

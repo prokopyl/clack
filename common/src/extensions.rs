@@ -7,26 +7,32 @@ use core::ffi::c_void;
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
-/// A marker struct that represents extensions implemented by the plugin side.
-pub struct PluginExtension;
+/// A marker struct that represents extensions to be implemented by the plugin side.
+///
+/// See [`Extension::ExtensionType`].
+pub struct PluginExtensionType;
 
-/// A marker struct that represents extensions implemented by the host side.
-pub struct HostExtension;
+/// A marker struct that represents extensions to be implemented by the host side.
+///
+/// See [`Extension::ExtensionType`].
+pub struct HostExtensionType;
 
-/// An extension type marker: either [`PluginExtension`] or [`HostExtension`].
+/// An extension type marker: either [`PluginExtensionType`] or [`HostExtensionType`].
+///
+/// See [`Extension::ExtensionType`].
 pub trait ExtensionType: private::Sealed {}
-impl ExtensionType for PluginExtension {}
-impl ExtensionType for HostExtension {}
+impl ExtensionType for PluginExtensionType {}
+impl ExtensionType for HostExtensionType {}
 
 mod private {
     use super::*;
 
     pub trait Sealed {}
-    impl Sealed for PluginExtension {}
-    impl Sealed for HostExtension {}
+    impl Sealed for PluginExtensionType {}
+    impl Sealed for HostExtensionType {}
 }
 
-/// A type representing a CLAP extension.
+/// A type representing a CLAP extension ABI.
 ///
 /// The role of this trait is to tie a type to a standard CLAP extension identifier.
 /// This is then used by some Clack methods to retrieve the correct extension type from its
@@ -62,7 +68,8 @@ pub unsafe trait Extension: Sized + Send + Sync + 'static {
     }
 }
 
-/// Provides an implementation of this extension for a given type `I`.
+/// Provides an implementation of this extension for a given type `I` (typically either a host or
+/// plugin structure).
 pub trait ExtensionImplementation<I>: Extension {
     /// The implementation of the extension.
     const IMPLEMENTATION: &'static Self;

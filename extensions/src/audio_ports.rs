@@ -1,6 +1,6 @@
-use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+use crate::utils::*;
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::audio_ports::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -51,7 +51,7 @@ bitflags! {
 
 unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -61,7 +61,7 @@ unsafe impl Sync for PluginAudioPorts {}
 
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto

@@ -1,5 +1,5 @@
 use crate::host::Host;
-use crate::plugin::PluginAudioProcessorHandle;
+use crate::instance::handle::PluginAudioProcessorHandle;
 use clap_sys::plugin::clap_plugin;
 use selfie::refs::RefType;
 use selfie::Selfie;

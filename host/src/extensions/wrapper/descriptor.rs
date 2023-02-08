@@ -1,7 +1,6 @@
-use crate::extensions::HostExtensions;
-use crate::host::{Host, HostInfo, HostShared};
-use crate::wrapper::HostWrapper;
-use clack_common::version::ClapVersion;
+use crate::extensions::wrapper::HostWrapper;
+use crate::host::{Host, HostExtensions, HostInfo, HostShared};
+use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use selfie::refs::RefType;
 use std::ffi::{c_void, CStr};

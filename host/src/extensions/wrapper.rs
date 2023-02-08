@@ -1,5 +1,9 @@
+//! Helper utilities to help implementing the host side of custom CLAP extensions.
+
 use crate::host::{Host, HostError, HostMainThread, HostShared};
-use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
+use crate::instance::handle::{
+    PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
+};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use selfie::Selfie;
@@ -39,6 +43,71 @@ unsafe impl<H: for<'h> Host<'h>> Send for HostWrapper<H> {}
 unsafe impl<H: for<'h> Host<'h>> Sync for HostWrapper<H> {}
 
 impl<H: for<'h> Host<'h>> HostWrapper<H> {
+    /// TODO: docs
+    ///
+    /// # Safety
+    ///
+    /// The given host wrapper type `H` **must** be the correct type for the received pointer. Otherwise,
+    /// incorrect casts will occur, which will lead to Undefined Behavior.
+    ///
+    /// The `host` pointer must also point to a valid instance of `clap_host`, as created by
+    /// the CLAP Host. While this function does a couple of simple safety checks, only a few common
+    /// cases are actually covered (i.e. null checks), and those **must not** be relied upon for safety: those
+    /// checks only exist to help debugging.
+    pub unsafe fn handle<T, F>(host: *const clap_host, handler: F) -> Option<T>
+    where
+        F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
+    {
+        match Self::handle_panic(host, handler) {
+            Ok(value) => Some(value),
+            Err(_e) => {
+                // logging::plugin_log::<P>(host, &e); TODO
+
+                None
+            }
+        }
+    }
+
+    /// Returns a raw, non-null pointer to the host's main thread ([`MainThread`](Host::MainThread))
+    /// struct.
+    ///
+    /// # Safety
+    /// The caller must ensure this method is only called on the main thread.
+    ///
+    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
+    /// aliased, as per usual safety rules.
+    #[inline]
+    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread> {
+        self.data.with_referential(|d| d.main_thread().cast())
+    }
+
+    /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
+    /// struct.
+    ///
+    /// # Safety
+    /// The caller must ensure this method is only called on the audio thread.
+    ///
+    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
+    /// aliased, as per usual safety rules.
+    #[inline]
+    pub unsafe fn audio_processor(
+        &self,
+    ) -> Result<NonNull<<H as Host>::AudioProcessor>, HostError> {
+        self.data.with_referential(|d| {
+            d.audio_processor()
+                .map(|a| a.cast())
+                .ok_or(HostError::DeactivatedPlugin)
+        })
+    }
+
+    /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
+    #[inline]
+    pub fn shared(&self) -> &<H as Host>::Shared {
+        // SAFETY: TODO
+        self.data
+            .with_referential(|d| unsafe { d.shared().cast().as_ref() })
+    }
+
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Self
     where
         FS: for<'s> FnOnce(&'s ()) -> <H as Host<'s>>::Shared,
@@ -90,77 +159,13 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
         self.data.with_referential(|d| d.is_active())
     }
 
-    /// Returns a raw, non-null pointer to the host's main thread ([`MainThread`](crate::host::Host::MainThread))
-    /// struct.
-    ///
-    /// # Safety
-    /// The caller must ensure this method is only called on the main thread.
-    ///
-    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
-    /// aliased, as per usual safety rules.
-    #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread> {
-        self.data.with_referential(|d| d.main_thread().cast())
-    }
-
-    /// Returns a raw, non-null pointer to the host's ([`AudioProcessor`](crate::host::Host::AudioProcessor))
-    /// struct.
-    ///
-    /// # Safety
-    /// The caller must ensure this method is only called on the audio thread.
-    ///
-    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
-    /// aliased, as per usual safety rules.
-    #[inline]
-    pub unsafe fn audio_processor(
-        &self,
-    ) -> Result<NonNull<<H as Host>::AudioProcessor>, HostError> {
-        self.data.with_referential(|d| {
-            d.audio_processor()
-                .map(|a| a.cast())
-                .ok_or(HostError::DeactivatedPlugin)
-        })
-    }
-
-    #[inline]
-    pub fn shared(&self) -> &<H as Host>::Shared {
-        // SAFETY: TODO
-        self.data
-            .with_referential(|d| unsafe { d.shared().cast().as_ref() })
-    }
-
-    /// TODO: docs
-    ///
-    /// # Safety
-    ///
-    /// The given host wrapper type `H` **must** be the correct type for the received pointer. Otherwise,
-    /// incorrect casts will occur, which will lead to Undefined Behavior.
-    ///
-    /// The `host` pointer must also point to a valid instance of `clap_host`, as created by
-    /// the CLAP Host. While this function does a couple of simple safety checks, only a few common
-    /// cases are actually covered (i.e. null checks), and those **must not** be relied upon for safety: those
-    /// checks only exist to help debugging.
-    pub unsafe fn handle<T, F>(host: *const clap_host, handler: F) -> Option<T>
-    where
-        F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
-    {
-        match Self::handle_panic(host, handler) {
-            Ok(value) => Some(value),
-            Err(_e) => {
-                // logging::plugin_log::<P>(host, &e); TODO
-
-                None
-            }
-        }
-    }
-
     unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
     where
         F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
     {
-        let plugin = Self::from_raw(host)?;
+        let host = Self::from_raw(host)?;
 
-        panic::catch_unwind(AssertUnwindSafe(|| handler(plugin)))
+        panic::catch_unwind(AssertUnwindSafe(|| handler(host)))
             .map_err(|_| HostWrapperError::Panic)?
     }
 

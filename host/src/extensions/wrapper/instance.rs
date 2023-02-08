@@ -1,13 +1,13 @@
 use crate::bundle::PluginBundle;
-use crate::factory::PluginFactory;
+use crate::extensions::wrapper::descriptor::{RawHostDescriptor, RawHostDescriptorRef};
+use crate::extensions::wrapper::{HostError, HostWrapper};
 use crate::host::{Host, HostInfo};
+use crate::instance::handle::PluginAudioProcessorHandle;
 use crate::instance::PluginAudioConfiguration;
-use crate::plugin::PluginAudioProcessorHandle;
-use crate::wrapper::descriptor::{RawHostDescriptor, RawHostDescriptorRef};
-use crate::wrapper::{HostError, HostWrapper};
 use clap_sys::plugin::clap_plugin;
 use selfie::Selfie;
 use stable_deref_trait::StableDeref;
+use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::pin::Pin;
@@ -45,7 +45,7 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         shared: FS,
         main_thread: FH,
         entry: &PluginBundle,
-        plugin_id: &[u8],
+        plugin_id: &CStr,
         host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
     where
@@ -62,9 +62,9 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
 
         let instance = unsafe {
             entry
-                .get_factory::<PluginFactory>()
+                .get_plugin_factory()
                 .ok_or(HostError::MissingPluginFactory)?
-                .instantiate(plugin_id, &*raw_descriptor)?
+                .create_plugin(plugin_id, &*raw_descriptor)?
                 .as_ptr()
         };
 

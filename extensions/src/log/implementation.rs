@@ -1,22 +1,22 @@
-use super::{Log, LogSeverity};
+use super::{HostLog, LogSeverity};
 use clack_common::extensions::ExtensionImplementation;
+use clack_host::extensions::wrapper::HostWrapper;
 use clack_host::host::Host;
-use clack_host::wrapper::HostWrapper;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use std::borrow::Cow::Owned;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
-pub trait HostLog {
+pub trait HostLogImpl {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for Log
+impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLog
 where
-    for<'a> <H as Host<'a>>::Shared: HostLog,
+    for<'a> <H as Host<'a>>::Shared: HostLogImpl,
 {
-    const IMPLEMENTATION: &'static Self = &Log(clap_host_log {
+    const IMPLEMENTATION: &'static Self = &HostLog(clap_host_log {
         log: Some(log::<H>),
     });
 }
@@ -26,7 +26,7 @@ unsafe extern "C" fn log<H: for<'a> Host<'a>>(
     severity: clap_log_severity,
     msg: *const c_char,
 ) where
-    for<'a> <H as Host<'a>>::Shared: HostLog,
+    for<'a> <H as Host<'a>>::Shared: HostLogImpl,
 {
     let msg = CStr::from_ptr(msg).to_string_lossy();
     let res = HostWrapper::<H>::handle(host, |host| {

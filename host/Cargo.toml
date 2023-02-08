@@ -10,3 +10,7 @@ clack-common = { path = "../common" }
 libloading = "0.7.2"
 selfie = "=0.0.2"
 stable_deref_trait = "1.2.0"
+
+[dev-dependencies]
+clack-plugin = { path = "../plugin" }
+clack-extensions = { path = "../extensions", features = ["clack-host", "latency", "log"] }

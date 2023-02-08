@@ -23,12 +23,9 @@ use std::ops::{Index, Range};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
 /// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
 ///
-/// let mut buf = EventBuffer::new();
 /// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
-/// buf.try_push(event.as_unknown());
-/// assert_eq!(1, buf.len());
-///
-/// let mut input_events = InputEvents::from_buffer(&mut buf);
+/// let buf = [event];
+/// let mut input_events = InputEvents::from_buffer(&buf);
 ///
 /// assert_eq!(1, input_events.len());
 /// assert_eq!(&event, input_events[0].as_event().unwrap());

@@ -1,5 +1,5 @@
 use clack_common::extensions::*;
-use clack_host::wrapper::HostWrapper;
+use clack_host::extensions::wrapper::HostWrapper;
 use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
 use std::ffi::CStr;
 
@@ -10,7 +10,7 @@ pub struct PluginLatency {
 
 unsafe impl Extension for PluginLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 #[repr(C)]
@@ -20,14 +20,14 @@ pub struct HostLatency {
 
 unsafe impl Extension for HostLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
     use clack_host::host::Host;
-    use clack_host::plugin::PluginMainThreadHandle;
+    use clack_host::instance::handle::PluginMainThreadHandle;
     use clap_sys::host::clap_host;
 
     impl PluginLatency {

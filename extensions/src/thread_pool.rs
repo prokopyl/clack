@@ -1,7 +1,7 @@
 //! Allows plugins to use an host's thread pool for multi-threaded audio processing.
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtension, PluginExtension};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::thread_pool::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -18,7 +18,7 @@ unsafe impl Sync for PluginThreadPool {}
 
 unsafe impl Extension for PluginThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
-    type ExtensionType = PluginExtension;
+    type ExtensionType = PluginExtensionType;
 }
 
 /// Host-side of the ThreadPool extension.
@@ -32,7 +32,7 @@ unsafe impl Sync for HostThreadPool {}
 
 unsafe impl Extension for HostThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
-    type ExtensionType = HostExtension;
+    type ExtensionType = HostExtensionType;
 }
 
 /// An error that occurred as a plugin requested access to the host's thread pool.
@@ -59,7 +59,7 @@ mod plugin {
     use clap_sys::ext::thread_pool::clap_plugin_thread_pool;
     use clap_sys::plugin::clap_plugin;
 
-    /// Implementation of the Plugin-side of the Timer extension.
+    /// Implementation of the Plugin-side of the Thread Pool extension.
     pub trait PluginThreadPoolImpl {
         /// A callback that gets called from the Host's thread pool, for each task the plugin
         /// requested as it called `request_exec`.
@@ -124,9 +124,9 @@ pub use plugin::*;
 mod host {
     use super::*;
     use clack_common::extensions::ExtensionImplementation;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
-    use clack_host::plugin::PluginSharedHandle;
-    use clack_host::wrapper::HostWrapper;
+    use clack_host::instance::handle::PluginSharedHandle;
     use clap_sys::host::clap_host;
 
     /// Implementation of the Host-side of the Thread Pool extension.
