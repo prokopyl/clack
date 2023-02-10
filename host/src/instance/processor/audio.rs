@@ -139,8 +139,7 @@ impl AudioPorts {
                             constant_mask |= 1 << i as u64
                         }
 
-                        self.buffer_lists
-                            .push(channel.buffer.as_ptr().cast_mut().cast())
+                        self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
                     }
                     false
                 }
@@ -151,8 +150,7 @@ impl AudioPorts {
                             constant_mask |= 1 << i as u64
                         }
 
-                        self.buffer_lists
-                            .push(channel.buffer.as_ptr().cast_mut().cast())
+                        self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
                     }
                     true
                 }
@@ -207,14 +205,14 @@ impl AudioPorts {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
                         min_buffer_length = min_buffer_length.min(channel.len());
-                        self.buffer_lists.push(channel.as_ptr().cast_mut().cast())
+                        self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     false
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
                         min_buffer_length = min_buffer_length.min(channel.len());
-                        self.buffer_lists.push(channel.as_ptr().cast_mut().cast())
+                        self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     true
                 }
