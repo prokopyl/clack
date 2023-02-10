@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
 
-use baseview::WindowHandle;
-use clack_extensions::gui::{PluginGui, Window};
+#[cfg(not(miri))]
+use clack_extensions::gui::PluginGui;
 
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, PluginAudioPorts,
@@ -20,6 +20,7 @@ use clack_plugin::process::audio::channels::AudioBufferType;
 use clack_plugin::utils::Cookie;
 use std::sync::atomic::{AtomicI32, Ordering};
 
+#[cfg(not(miri))]
 mod gui;
 
 pub struct GainPlugin<'a> {
@@ -102,8 +103,10 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
         builder
             .register::<PluginParams>()
-            .register::<PluginAudioPorts>()
-            .register::<PluginGui>();
+            .register::<PluginAudioPorts>();
+
+        #[cfg(not(miri))]
+        builder.register::<PluginGui>();
     }
 }
 
@@ -159,9 +162,8 @@ pub struct GainPluginMainThread<'a> {
     #[allow(unused)]
     shared: &'a GainPluginShared<'a>,
 
-    open_window: Option<WindowHandle>,
-    is_floating: bool,
-    related_window: Option<Window>,
+    #[cfg(not(miri))]
+    gui: gui::MainThreadGui,
     _host: HostMainThreadHandle<'a>,
 }
 
@@ -173,9 +175,8 @@ impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a>
         Ok(Self {
             rusting: 0,
             shared,
-            open_window: None,
-            is_floating: false,
-            related_window: None,
+            #[cfg(not(miri))]
+            gui: gui::MainThreadGui::default(),
             _host: host,
         })
     }

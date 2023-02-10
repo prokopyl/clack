@@ -1,8 +1,16 @@
 use crate::{GainPluginMainThread, UiAtomics};
+use baseview::WindowHandle;
 use clack_extensions::gui::{GuiApiType, GuiError, GuiResizeHints, GuiSize, Window};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use vizia::*;
+
+#[derive(Default)]
+pub struct MainThreadGui {
+    open_window: Option<WindowHandle>,
+    is_floating: bool,
+    related_window: Option<Window>,
+}
 
 const STYLE: &str = r#"
     knob {
@@ -70,12 +78,12 @@ impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread
     }
 
     fn create(&mut self, _api: GuiApiType, is_floating: bool) -> Result<(), GuiError> {
-        self.is_floating = is_floating;
+        self.gui.is_floating = is_floating;
         Ok(())
     }
 
     fn destroy(&mut self) {
-        if let Some(mut window) = self.open_window.take() {
+        if let Some(mut window) = self.gui.open_window.take() {
             window.close()
         }
     }
@@ -100,17 +108,17 @@ impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread
     }
 
     fn set_parent(&mut self, window: Window) -> Result<(), GuiError> {
-        self.related_window = Some(window);
+        self.gui.related_window = Some(window);
         Ok(())
     }
 
     fn set_transient(&mut self, window: Window) -> Result<(), GuiError> {
-        self.related_window = Some(window);
+        self.gui.related_window = Some(window);
         Ok(())
     }
 
     fn show(&mut self) -> Result<(), GuiError> {
-        if self.open_window.is_some() {
+        if self.gui.open_window.is_some() {
             return Ok(());
         }
 
@@ -121,17 +129,17 @@ impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread
             new_gui(cx, ui_atomics.clone())
         });
 
-        self.open_window = if self.is_floating {
+        self.gui.open_window = if self.gui.is_floating {
             Some(app.open_as_if_parented())
         } else {
-            Some(app.open_parented(self.related_window.as_ref().unwrap()))
+            Some(app.open_parented(self.gui.related_window.as_ref().unwrap()))
         };
 
         Ok(())
     }
 
     fn hide(&mut self) -> Result<(), GuiError> {
-        if let Some(mut window) = self.open_window.take() {
+        if let Some(mut window) = self.gui.open_window.take() {
             window.close()
         }
 

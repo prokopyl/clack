@@ -1,10 +1,8 @@
-use crate::utils::{data_from_array_buf, from_bytes_until_nul};
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::note_ports::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
-use std::mem::MaybeUninit;
 
 #[repr(C)]
 pub struct PluginNotePorts(
@@ -83,27 +81,6 @@ unsafe impl Extension for HostNotePorts {
 unsafe impl Send for HostNotePorts {}
 unsafe impl Sync for HostNotePorts {}
 
-#[derive(Clone)]
-pub struct NotePortInfoBuffer {
-    inner: MaybeUninit<clap_note_port_info>,
-}
-
-impl Default for NotePortInfoBuffer {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl NotePortInfoBuffer {
-    #[inline]
-    pub const fn new() -> Self {
-        Self {
-            inner: MaybeUninit::uninit(),
-        }
-    }
-}
-
 pub struct NotePortInfoData<'a> {
     pub id: u32,
     pub name: &'a CStr,
@@ -112,7 +89,10 @@ pub struct NotePortInfoData<'a> {
 }
 
 impl<'a> NotePortInfoData<'a> {
+    #[cfg(feature = "clack-host")]
+    // TODO: make pub?
     unsafe fn try_from_raw(raw: &'a clap_note_port_info) -> Option<Self> {
+        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
         Some(Self {
             id: raw.id,
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,

@@ -136,7 +136,7 @@ impl TestHost {
 
         let input_channels = inputs_descriptors.with_input_buffers([AudioPortBuffer {
             channels: AudioPortBufferType::f32_input_only(
-                self.input_buffers.iter().map(InputChannel::variable),
+                self.input_buffers.iter_mut().map(InputChannel::variable),
             ),
             latency: 0,
         }]);

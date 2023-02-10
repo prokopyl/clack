@@ -4,6 +4,28 @@ use clack_host::extensions::wrapper::HostWrapper;
 use clack_host::host::Host;
 use clack_host::instance::handle::PluginMainThreadHandle;
 use clap_sys::host::clap_host;
+use std::mem::MaybeUninit;
+
+#[derive(Clone)]
+pub struct NotePortInfoBuffer {
+    inner: MaybeUninit<clap_note_port_info>,
+}
+
+impl Default for NotePortInfoBuffer {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl NotePortInfoBuffer {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            inner: MaybeUninit::uninit(),
+        }
+    }
+}
 
 impl PluginNotePorts {
     pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {

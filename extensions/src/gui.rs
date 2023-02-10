@@ -78,6 +78,8 @@ pub struct GuiResizeHints {
 }
 
 impl GuiResizeHints {
+    #[cfg(feature = "clack-host")]
+    // TODO: make pub?
     fn from_raw(raw: &clap_gui_resize_hints) -> Self {
         Self {
             can_resize_horizontally: raw.can_resize_horizontally,
@@ -97,6 +99,7 @@ impl GuiResizeHints {
         }
     }
 
+    #[cfg(feature = "clack-plugin")]
     fn to_raw(self) -> clap_gui_resize_hints {
         let mut hints = clap_gui_resize_hints {
             can_resize_horizontally: self.can_resize_horizontally,

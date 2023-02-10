@@ -181,7 +181,7 @@
 //! let mut output_events_buffer = EventBuffer::new();
 //!
 //! // Audio buffers
-//! let input_audio_buffers = [[0.0f32; 4]; 2]; // 2 channels (stereo), 1 port
+//! let mut input_audio_buffers = [[0.0f32; 4]; 2]; // 2 channels (stereo), 1 port
 //! let mut output_audio_buffers = [[0.0f32; 4]; 2];
 //!
 //! // Audio port buffers
@@ -195,17 +195,16 @@
 //!
 //!    // Step 7: Process audio and events.
 //!    // Borrow all buffers, and wrap them in cheap CLAP-compatible structs.
-//!    let mut input_events = InputEvents::from_buffer(&input_events_buffer);
+//!    let input_events = InputEvents::from_buffer(&input_events_buffer);
 //!    let mut output_events = OutputEvents::from_buffer(&mut output_events_buffer);
 //!
 //!    let mut input_audio = input_ports.with_input_buffers([AudioPortBuffer {
 //!        latency: 0,
 //!        // We only use F32 (32-bit floating point) audio
-//!        channels: AudioPortBufferType::f32_input_only([
-//!             // These buffers can be marked constant, as they only contain 0s
-//!            InputChannel::constant(&input_audio_buffers[0]),
-//!            InputChannel::constant(&input_audio_buffers[1])
-//!        ])
+//!        channels: AudioPortBufferType::f32_input_only(
+//!            // These buffers can be marked constant, as they only contain zeros
+//!            input_audio_buffers.iter_mut().map(|b| InputChannel::constant(b))
+//!        )
 //!    }]);
 //!
 //!    let mut output_audio = output_ports.with_output_buffers([AudioPortBuffer {

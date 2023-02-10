@@ -2,7 +2,6 @@
 
 //! A way for plugins to list custom note names for hosts to display in e.g. a piano roll.
 
-use crate::utils::{data_from_array_buf, from_bytes_until_nul};
 use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::note_name::*;
 use std::ffi::CStr;
@@ -42,7 +41,11 @@ pub struct NoteName<'a> {
 }
 
 impl<'a> NoteName<'a> {
+    #[cfg(feature = "clack-host")]
+    // TODO: make pub?
     unsafe fn try_from_raw(raw: &'a clap_note_name) -> Option<Self> {
+        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+
         Some(Self {
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
 

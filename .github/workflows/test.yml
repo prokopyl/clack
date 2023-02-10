@@ -11,6 +11,8 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     runs-on: ${{ matrix.os }}
+    env:
+      RUSTFLAGS: -D warnings
 
     steps:
     - if: matrix.os == 'ubuntu-latest'
@@ -25,10 +27,16 @@ jobs:
         override: true
     - name: Build
       run: cargo build --all --all-features --verbose
+    - name: Check Plugin-only Extensions
+      run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-plugin" --no-default-features
+    - name: Check Host-only Extensions
+      run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-host" --no-default-features
+    - name: Check Standalone Extensions
+      run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" --no-default-features
     - name: Run tests
       run: cargo test --all --verbose
 
-  check:
+  clippy:
     runs-on: ubuntu-latest
 
     steps:
@@ -39,7 +47,6 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-        components: rustfmt, clippy
     - name: Format
       run: cargo fmt --all -- --check
     - uses: actions-rs/clippy-check@v1
@@ -65,3 +72,19 @@ jobs:
         with:
           command: miri
           args: test --all --all-features --verbose
+  rustdoc:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - run: sudo apt-get install libgl-dev libxcursor-dev libxcb-dri2-0-dev libxcb-icccm4-dev libx11-xcb-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all-features --no-deps

@@ -16,14 +16,11 @@
 //! port rescan to the host.
 
 use crate::audio_ports::AudioPortType;
-use crate::utils::{data_from_array_buf, from_bytes_until_nul};
 use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::audio_ports_config::*;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
-use std::os::raw::c_char;
-use std::ptr::NonNull;
 
 /// The Plugin-side of the Audio Ports Configurations extension.
 #[repr(C)]
@@ -66,8 +63,11 @@ pub struct AudioPortsConfiguration<'a> {
     pub main_output: Option<MainPortInfo>,
 }
 
+#[cfg(feature = "clack-host")]
 impl<'a> AudioPortsConfiguration<'a> {
     unsafe fn try_from_raw(raw: &'a clap_audio_ports_config) -> Option<Self> {
+        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+
         Some(Self {
             id: raw.id,
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
@@ -95,15 +95,18 @@ pub struct MainPortInfo {
     /// The number of channels of this port.
     pub channel_count: u32,
     /// The type of this port.
-    pub port_type: AudioPortType,
+    pub port_type: AudioPortType<'static>,
 }
 
+#[cfg(feature = "clack-host")]
 impl MainPortInfo {
     unsafe fn try_from_raw(
         exists: bool,
         channel_count: u32,
-        port_type: *const c_char,
+        port_type: *const std::os::raw::c_char,
     ) -> Option<Self> {
+        use std::ptr::NonNull;
+
         if !exists {
             return None;
         }

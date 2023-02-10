@@ -4,6 +4,7 @@ use clack_host::extensions::wrapper::HostWrapper;
 use clack_host::host::Host;
 use clack_host::instance::handle::PluginMainThreadHandle;
 use clap_sys::host::clap_host;
+use core::mem::MaybeUninit;
 
 #[derive(Clone)]
 pub struct AudioPortInfoBuffer {

@@ -5,11 +5,8 @@
 //! This extension allows plugins to register timers to the host, which will then proceed to call
 //! a plugin's callback at a given regular interval.
 
-use clack_common::extensions::{
-    Extension, ExtensionImplementation, HostExtensionType, PluginExtensionType,
-};
+use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::timer_support::*;
-use clap_sys::plugin::clap_plugin;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -72,9 +69,11 @@ impl Error for TimerError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::ExtensionImplementation;
     use clack_plugin::host::HostHandle;
     use clack_plugin::plugin::wrapper::PluginWrapper;
     use clack_plugin::plugin::Plugin;
+    use clap_sys::plugin::clap_plugin;
 
     impl HostTimer {
         /// Registers a new Timer, returning its unique [`TimerId`].
@@ -161,6 +160,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_common::extensions::ExtensionImplementation;
     use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
     use clack_host::instance::handle::PluginMainThreadHandle;
@@ -256,4 +256,6 @@ mod host {
         }
     }
 }
+
+#[cfg(feature = "clack-host")]
 pub use host::*;

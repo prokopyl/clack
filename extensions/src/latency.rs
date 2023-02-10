@@ -1,5 +1,4 @@
 use clack_common::extensions::*;
-use clack_host::extensions::wrapper::HostWrapper;
 use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
 use std::ffi::CStr;
 
@@ -26,6 +25,7 @@ unsafe impl Extension for HostLatency {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
     use clack_host::instance::handle::PluginMainThreadHandle;
     use clap_sys::host::clap_host;

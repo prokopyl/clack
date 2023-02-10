@@ -1,11 +1,8 @@
-use crate::utils::*;
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::audio_ports::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::ptr::NonNull;
 
 pub use clap_sys::ext::audio_ports::{CLAP_PORT_MONO, CLAP_PORT_STEREO};
 
@@ -22,7 +19,7 @@ pub struct HostAudioPorts(
 );
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct AudioPortType(pub &'static CStr);
+pub struct AudioPortType<'a>(pub &'a CStr);
 
 pub const MONO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_MONO);
 pub const STEREO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_STEREO);
@@ -74,12 +71,17 @@ pub struct AudioPortInfoData<'a> {
     pub name: &'a CStr,
     pub channel_count: u32,
     pub flags: AudioPortFlags,
-    pub port_type: Option<AudioPortType>,
+    pub port_type: Option<AudioPortType<'a>>,
     pub in_place_pair: u32,
 }
 
 impl<'a> AudioPortInfoData<'a> {
-    unsafe fn try_from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
+    /// # Safety
+    /// The raw port_type pointer must be a valid C string for the 'a lifetime.
+    pub unsafe fn try_from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
+        use crate::utils::*;
+        use std::ptr::NonNull;
+
         Some(Self {
             id: raw.id,
             name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,

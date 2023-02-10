@@ -11,11 +11,13 @@ pub struct Window {
 }
 
 impl Window {
+    #[cfg(feature = "clack-plugin")]
     #[inline]
     pub(crate) unsafe fn from_raw(raw: clap_window) -> Self {
         Self { raw }
     }
 
+    #[cfg(feature = "clack-host")]
     #[inline]
     pub(crate) unsafe fn as_raw(&self) -> &clap_window {
         &self.raw

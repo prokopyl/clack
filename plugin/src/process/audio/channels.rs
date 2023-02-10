@@ -115,6 +115,15 @@ impl<'a, S> TAudioChannelsMut<'a, S> {
     }
 
     #[inline]
+    pub fn get_channel_data(&self, channel_index: usize) -> Option<&'a [S]> {
+        unsafe {
+            self.data.get(channel_index).map(|data| {
+                core::slice::from_raw_parts(*data as *const _, self.frames_count as usize)
+            })
+        }
+    }
+
+    #[inline]
     pub fn get_channel_data_mut(&mut self, channel_index: usize) -> Option<&'a mut [S]> {
         unsafe {
             self.data.get(channel_index).map(|data| {

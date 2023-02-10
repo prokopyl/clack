@@ -1,7 +1,6 @@
 use clack_common::extensions::{Extension, HostExtensionType};
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
 use std::ffi::CStr;
-use std::os::raw::c_char;
 
 #[repr(C)]
 pub struct HostEventRegistry {
@@ -44,6 +43,7 @@ mod host {
     use clack_host::extensions::wrapper::HostWrapper;
     use clack_host::host::Host;
     use clap_sys::host::clap_host;
+    use std::os::raw::c_char;
 
     /// Host implementation of an event registry
     ///

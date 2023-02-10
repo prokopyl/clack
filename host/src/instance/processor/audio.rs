@@ -5,26 +5,26 @@ mod ports_info;
 pub use ports_info::*;
 
 pub struct InputChannel<'a, T> {
-    pub buffer: &'a [T],
+    pub buffer: &'a mut [T],
     pub is_constant: bool,
 }
 
 impl<'a, T> InputChannel<'a, T> {
     #[inline]
-    pub fn from_buffer<D: ?Sized + AsRef<[T]> + 'a>(buffer: &'a D, is_constant: bool) -> Self {
+    pub fn from_buffer<D: ?Sized + AsMut<[T]> + 'a>(buffer: &'a mut D, is_constant: bool) -> Self {
         Self {
-            buffer: buffer.as_ref(),
+            buffer: buffer.as_mut(),
             is_constant,
         }
     }
 
     #[inline]
-    pub fn variable<D: ?Sized + AsRef<[T]> + 'a>(buffer: &'a D) -> Self {
+    pub fn variable<D: ?Sized + AsMut<[T]> + 'a>(buffer: &'a mut D) -> Self {
         Self::from_buffer(buffer, false)
     }
 
     #[inline]
-    pub fn constant<D: ?Sized + AsRef<[T]> + 'a>(buffer: &'a D) -> Self {
+    pub fn constant<D: ?Sized + AsMut<[T]> + 'a>(buffer: &'a mut D) -> Self {
         Self::from_buffer(buffer, true)
     }
 }
@@ -281,12 +281,12 @@ mod test {
     #[test]
     pub fn input_audio_buffers_work() {
         let mut ports = AudioPorts::with_capacity(2, 1);
-        let bufs = [[0f32; 4]; 2];
+        let mut bufs = [[0f32; 4]; 2];
 
         let buffers = ports.with_input_buffers([AudioPortBuffer {
             latency: 0,
-            channels: AudioPortBufferType::f32_input_only(bufs.iter().map(|b| InputChannel {
-                buffer: b.as_slice(),
+            channels: AudioPortBufferType::f32_input_only(bufs.iter_mut().map(|b| InputChannel {
+                buffer: b.as_mut_slice(),
                 is_constant: false,
             })),
         }]);
@@ -318,13 +318,15 @@ mod test {
     pub fn input_audio_buffers_work_with_refcell() {
         let mut ports = AudioPorts::with_capacity(2, 1);
         let bufs = [RefCell::new([0f32; 4]), RefCell::new([0f32; 4])];
-        let borrowed: Vec<_> = bufs.iter().map(|c| c.borrow()).collect();
+        let mut borrowed: Vec<_> = bufs.iter().map(|c| c.borrow_mut()).collect();
 
         let buffers = ports.with_input_buffers([AudioPortBuffer {
             latency: 0,
-            channels: AudioPortBufferType::f32_input_only(borrowed.iter().map(|b| InputChannel {
-                buffer: b.as_slice(),
-                is_constant: false,
+            channels: AudioPortBufferType::f32_input_only(borrowed.iter_mut().map(|b| {
+                InputChannel {
+                    buffer: b.as_mut_slice(),
+                    is_constant: false,
+                }
             })),
         }]);
 
