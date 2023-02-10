@@ -4,7 +4,7 @@ use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
 use clack_host::factory::{PluginDescriptor, PluginFactory};
 use clack_host::host::HostError;
 use clack_host::instance::processor::audio::{
-    AudioPortBuffer, AudioPortBufferType, AudioPorts, ChannelBuffer,
+    AudioPortBuffer, AudioPortBufferType, AudioPorts, InputChannel,
 };
 use clack_host::instance::processor::StoppedPluginAudioProcessor;
 use clack_host::instance::PluginAudioConfiguration;
@@ -134,16 +134,16 @@ impl TestHost {
         let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
         let mut outputs_descriptors = AudioPorts::with_capacity(2, 1);
 
-        let input_channels = inputs_descriptors.with_data([AudioPortBuffer {
-            channels: AudioPortBufferType::f32_only(
-                self.input_buffers.iter_mut().map(ChannelBuffer::variable),
+        let input_channels = inputs_descriptors.with_input_buffers([AudioPortBuffer {
+            channels: AudioPortBufferType::f32_input_only(
+                self.input_buffers.iter().map(InputChannel::variable),
             ),
             latency: 0,
         }]);
 
-        let mut output_channels = outputs_descriptors.with_data([AudioPortBuffer {
-            channels: AudioPortBufferType::f32_only(
-                self.output_buffers.iter_mut().map(ChannelBuffer::variable),
+        let mut output_channels = outputs_descriptors.with_output_buffers([AudioPortBuffer {
+            channels: AudioPortBufferType::f32_output_only(
+                self.output_buffers.iter_mut().map(|b| b.as_mut_slice()),
             ),
             latency: 0,
         }]);

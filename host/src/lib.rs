@@ -84,7 +84,7 @@
 //!
 //!    Those buffer wrappers are [`InputEvents`](events::io::InputEvents) and
 //!    [`OutputEvents`](events::io::OutputEvents) for events, and
-//!    [`AudioBuffers`](instance::processor::audio::AudioBuffers) for audio (obtained via a call to
+//!    [`AudioBuffers`](instance::processor::audio::InputAudioBuffers) for audio (obtained via a call to
 //!    [`AudioPorts::with_data`](instance::processor::audio::AudioPorts)).
 //!
 //!    See the documentation of those buffer types for more detail on what types they support, as
@@ -181,8 +181,8 @@
 //! let mut output_events_buffer = EventBuffer::new();
 //!
 //! // Audio buffers
-//! let mut input_audio_buffers = ([0.0f32; 4], [0.0f32; 4]); // 2 channels (stereo), 1 port
-//! let mut output_audio_buffers = ([0.0f32; 4], [0.0f32; 4]);
+//! let input_audio_buffers = [[0.0f32; 4]; 2]; // 2 channels (stereo), 1 port
+//! let mut output_audio_buffers = [[0.0f32; 4]; 2];
 //!
 //! // Audio port buffers
 //! let mut input_ports = AudioPorts::with_capacity(2, 1); // 2 channels (stereo), 1 port
@@ -198,22 +198,21 @@
 //!    let mut input_events = InputEvents::from_buffer(&input_events_buffer);
 //!    let mut output_events = OutputEvents::from_buffer(&mut output_events_buffer);
 //!
-//!    let mut input_audio = input_ports.with_data([AudioPortBuffer {
+//!    let mut input_audio = input_ports.with_input_buffers([AudioPortBuffer {
 //!        latency: 0,
 //!        // We only use F32 (32-bit floating point) audio
-//!        channels: AudioPortBufferType::f32_only([
+//!        channels: AudioPortBufferType::f32_input_only([
 //!             // These buffers can be marked constant, as they only contain 0s
-//!            ChannelBuffer::constant(&mut input_audio_buffers.0),
-//!            ChannelBuffer::constant(&mut input_audio_buffers.1)
+//!            InputChannel::constant(&input_audio_buffers[0]),
+//!            InputChannel::constant(&input_audio_buffers[1])
 //!        ])
 //!    }]);
 //!
-//!    let mut output_audio = output_ports.with_data([AudioPortBuffer {
+//!    let mut output_audio = output_ports.with_output_buffers([AudioPortBuffer {
 //!        latency: 0,
-//!        channels: AudioPortBufferType::f32_only([
-//!            ChannelBuffer::variable(&mut output_audio_buffers.0),
-//!            ChannelBuffer::variable(&mut output_audio_buffers.1)
-//!        ])
+//!        channels: AudioPortBufferType::f32_output_only(
+//!            output_audio_buffers.iter_mut().map(|b| b.as_mut_slice())
+//!        )
 //!    }]);
 //!
 //!    // Finally do the processing itself.
@@ -243,8 +242,8 @@
 //!
 //!
 //! // The raw audio for each channel
-//! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers.0);
-//! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers.1);
+//! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers[0]);
+//! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers[1]);
 //!
 //! // The input note event has been passed through
 //! # #[cfg(not(miri))] {

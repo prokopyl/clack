@@ -2,8 +2,9 @@ use crate::extensions::wrapper::instance::PluginInstanceInner;
 use crate::host::Host;
 use crate::host::HostError;
 use crate::instance::handle::{PluginAudioProcessorHandle, PluginSharedHandle};
-use crate::instance::processor::audio::AudioBuffers;
+use crate::instance::processor::audio::InputAudioBuffers;
 use crate::instance::processor::PluginAudioProcessor::*;
+use crate::prelude::OutputAudioBuffers;
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_common::process::ProcessStatus;
@@ -177,12 +178,12 @@ pub struct StartedPluginAudioProcessor<H: for<'a> Host<'a>> {
     inner: Arc<PluginInstanceInner<H>>,
 }
 
-impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
+impl<H: for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
     #[allow(clippy::too_many_arguments)]
     pub fn process(
         &mut self,
-        audio_inputs: &AudioBuffers,
-        audio_outputs: &mut AudioBuffers,
+        audio_inputs: &InputAudioBuffers,
+        audio_outputs: &mut OutputAudioBuffers,
         events_input: &InputEvents,
         events_output: &mut OutputEvents,
         steady_time: i64,
@@ -204,21 +205,23 @@ impl<'a, H: 'a + for<'h> Host<'h>> StartedPluginAudioProcessor<H> {
                 .map(|e| e.as_raw_ref() as *const _)
                 .unwrap_or(core::ptr::null()),
             audio_inputs: audio_inputs.buffers.as_ptr(),
-            audio_outputs: audio_outputs.buffers.as_mut_ptr(),
+            audio_outputs: audio_outputs.output_data.as_mut_ptr(),
             audio_inputs_count: audio_inputs.buffers.len() as u32,
-            audio_outputs_count: audio_outputs.buffers.len() as u32,
+            audio_outputs_count: audio_outputs.output_data.len() as u32,
             in_events: events_input.as_raw(),
             out_events: events_output.as_raw_mut() as *mut _,
         };
 
         let instance = self.inner.raw_instance();
 
-        ProcessStatus::from_raw(unsafe {
+        let status = ProcessStatus::from_raw(unsafe {
             (instance.process.ok_or(HostError::NullProcessFunction)?)(instance, &process)
         })
         .ok_or(())
         .and_then(|r| r)
-        .map_err(|_| HostError::ProcessingFailed)
+        .map_err(|_| HostError::ProcessingFailed)?;
+
+        Ok(status)
     }
 
     #[inline]
