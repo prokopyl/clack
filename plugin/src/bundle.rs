@@ -55,10 +55,10 @@ unsafe extern "C" fn get_factory<E: PluginEntry>(
 
 pub struct SinglePluginEntry<'a, P: Plugin<'a>>(PhantomData<&'a P>);
 
-static mut WRAPPER: Option<PluginDescriptorWrapper> = None;
-static INIT: Once = Once::new();
-
 fn get_wrapper<'a, P: Plugin<'a>>() -> Option<&'static PluginDescriptorWrapper> {
+    static mut WRAPPER: Option<PluginDescriptorWrapper> = None;
+    static INIT: Once = Once::new();
+
     INIT.call_once(|| {
         // SAFETY: this static is guaranteed to be initialized only once
         unsafe { WRAPPER = Some(PluginDescriptorWrapper::new(P::get_descriptor())) };
@@ -70,8 +70,8 @@ fn get_wrapper<'a, P: Plugin<'a>>() -> Option<&'static PluginDescriptorWrapper> 
 
 impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
     fn init(_plugin_path: &CStr) -> bool {
-        get_wrapper::<P>(); // Force initialization
-        INIT.is_completed()
+        // Force initialization
+        get_wrapper::<P>().is_some()
     }
 
     #[inline]

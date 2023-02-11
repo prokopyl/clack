@@ -183,7 +183,7 @@ pub struct PluginDescriptorWrapper {
 const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
 
 impl PluginDescriptorWrapper {
-    pub(crate) fn new(descriptor: Box<dyn PluginDescriptor>) -> Self {
+    pub fn new(descriptor: Box<dyn PluginDescriptor>) -> Self {
         let mut features_array: Vec<_> = (0..descriptor.features_count())
             .filter_map(|i| descriptor.feature_at(i))
             .map(|s| s.as_ptr())
@@ -219,6 +219,9 @@ impl PluginDescriptorWrapper {
         &self.raw_descriptor
     }
 }
+
+unsafe impl Send for PluginDescriptorWrapper {}
+unsafe impl Sync for PluginDescriptorWrapper {}
 
 /// A set of standard plugin features meant to be used for a plugin descriptor's features.
 ///
