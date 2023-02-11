@@ -1,35 +1,26 @@
 use super::*;
 use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
-use clack_common::extensions::ExtensionImplementation;
-use clack_host::extensions::wrapper::HostWrapper;
-use clack_host::host::Host;
-use clack_host::instance::handle::{PluginAudioProcessorHandle, PluginMainThreadHandle};
-use clack_host::instance::PluginInstance;
-use clap_sys::host::clap_host;
+use clack_host::extensions::prelude::*;
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 impl PluginParams {
-    pub fn count<H: for<'a> Host<'a>>(&self, plugin: &PluginInstance<H>) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle) -> u32 {
         match self.0.count {
             None => 0,
-            Some(count) => unsafe { count(plugin.raw_instance()) },
+            Some(count) => unsafe { count(plugin.as_raw()) },
         }
     }
 
-    pub fn get_info<'b, H: for<'a> Host<'a>>(
+    pub fn get_info<'b>(
         &self,
-        plugin: &PluginInstance<H>,
+        plugin: &PluginMainThreadHandle,
         param_index: u32,
         info: &'b mut MaybeUninit<ParamInfo>,
     ) -> Option<&'b mut ParamInfo> {
         let valid = unsafe {
-            (self.0.get_info?)(
-                plugin.raw_instance(),
-                param_index,
-                info.as_mut_ptr() as *mut _,
-            )
+            (self.0.get_info?)(plugin.as_raw(), param_index, info.as_mut_ptr() as *mut _)
         };
 
         if valid {
@@ -41,12 +32,11 @@ impl PluginParams {
 
     pub fn get_value<H: for<'a> Host<'a>>(
         &self,
-        plugin: &PluginInstance<H>,
+        plugin: &PluginMainThreadHandle,
         param_id: u32,
     ) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
-        let valid =
-            unsafe { (self.0.get_value?)(plugin.raw_instance(), param_id, value.as_mut_ptr()) };
+        let valid = unsafe { (self.0.get_value?)(plugin.as_raw(), param_id, value.as_mut_ptr()) };
 
         if valid {
             unsafe { Some(value.assume_init()) }
@@ -57,14 +47,14 @@ impl PluginParams {
 
     pub fn value_to_text<'b, H: for<'a> Host<'a>>(
         &self,
-        plugin: &PluginInstance<H>,
+        plugin: &PluginMainThreadHandle,
         param_id: u32,
         value: f64,
         buffer: &'b mut [MaybeUninit<u8>],
     ) -> Option<&'b mut [u8]> {
         let valid = unsafe {
             (self.0.value_to_text?)(
-                plugin.raw_instance(),
+                plugin.as_raw(),
                 param_id,
                 value,
                 buffer.as_mut_ptr() as *mut _,
@@ -85,7 +75,7 @@ impl PluginParams {
 
     pub fn text_to_value<H: for<'a> Host<'a>>(
         &self,
-        plugin: &PluginInstance<H>,
+        plugin: &PluginMainThreadHandle,
         param_id: u32,
         display: &CStr,
     ) -> Option<f64> {
@@ -93,7 +83,7 @@ impl PluginParams {
 
         let valid = unsafe {
             (self.0.text_to_value?)(
-                plugin.raw_instance(),
+                plugin.as_raw(),
                 param_id,
                 display.as_ptr(),
                 value.as_mut_ptr(),

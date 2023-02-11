@@ -8,14 +8,14 @@
 //!
 //! This example shows a basic implementation for the plugin side of the CLAP State extension.
 //!
-//! The implementation wrapper leverages the [`PluginWrapper`](crate::plugin::wrapper::PluginWrapper)
+//! The implementation wrapper leverages the [`PluginWrapper`](wrapper::PluginWrapper)
 //! utility to handle things like error management and unwind safety. See its documentation for more
 //! information.
 //!
 //! ```
 //! use std::ffi::CStr;
 //! use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
-//! use clack_common::extensions::{Extension, ExtensionImplementation, PluginExtensionType};
+//! use clack_plugin::extensions::prelude::*;
 //!
 //! // The struct end-users will actually interact with.
 //! #[repr(C)]
@@ -37,7 +37,6 @@
 //!
 //! // Then, implement the ExtensionImplementation trait for the given implementors
 //! // to provide the C FFI-compatible struct.
-//! use clack_plugin::plugin::Plugin;
 //!
 //! impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
 //! where
@@ -56,9 +55,7 @@
 //! # }
 //!
 //! // Finally, implement the C FFI functions that will be exposed to the host.
-//! use clap_sys::plugin::clap_plugin;
 //! use clap_sys::stream::clap_istream;
-//! use clack_plugin::plugin::wrapper::PluginWrapper;
 //!
 //! unsafe extern "C" fn load<'a, P: Plugin<'a>>(
 //!     plugin: *const clap_plugin,
@@ -85,13 +82,15 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
+pub mod wrapper;
+
 pub use clack_common::extensions::*;
 
 /// A collection of all extensions supported for a given plugin type `P`.
 ///
 /// Plugins can declare the different extensions they support by using the
 /// [`register`](PluginExtensions::register) method on this struct, during a call to
-/// [`declare_extensions`](crate::plugin::Plugin::declare_extensions).
+/// [`declare_extensions`](Plugin::declare_extensions).
 pub struct PluginExtensions<'a, P> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
@@ -129,4 +128,12 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
 
         self
     }
+}
+
+pub mod prelude {
+    pub use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
+    pub use crate::extensions::{Extension, ExtensionImplementation, PluginExtensionType};
+    pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
+    pub use crate::plugin::{Plugin, PluginError};
+    pub use clap_sys::plugin::clap_plugin;
 }

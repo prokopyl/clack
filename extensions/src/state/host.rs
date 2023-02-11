@@ -1,10 +1,6 @@
 use super::*;
-use clack_common::extensions::ExtensionImplementation;
 use clack_common::stream::{InputStream, OutputStream};
-use clack_host::extensions::wrapper::HostWrapper;
-use clack_host::host::Host;
-use clack_host::instance::handle::PluginMainThreadHandle;
-use clap_sys::host::clap_host;
+use clack_host::extensions::prelude::*;
 use std::io::{Read, Write};
 
 impl PluginState {

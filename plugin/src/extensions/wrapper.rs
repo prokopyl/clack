@@ -221,7 +221,8 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
     ///
     /// ```
     /// use clap_sys::plugin::clap_plugin;
-    /// use clack_plugin::plugin::{Plugin, PluginMainThread, wrapper::PluginWrapper};
+    /// use clack_plugin::plugin::{Plugin, PluginMainThread};
+    /// use clack_plugin::extensions::wrapper::PluginWrapper;
     ///
     /// unsafe extern "C" fn on_main_thread<'a, P: Plugin<'a>>(plugin: *const clap_plugin) {
     ///   PluginWrapper::<P>::handle(plugin, |p| {
@@ -367,7 +368,7 @@ impl PluginWrapperError {
     ///
     /// ```
     /// use clap_sys::ext::log::CLAP_LOG_PLUGIN_MISBEHAVING;
-    /// use clack_plugin::plugin::wrapper::PluginWrapperError;
+    /// use clack_plugin::extensions::wrapper::PluginWrapperError;
     /// let error = PluginWrapperError::Panic;
     ///
     /// assert_eq!(error.severity(), CLAP_LOG_PLUGIN_MISBEHAVING);
@@ -389,7 +390,7 @@ impl PluginWrapperError {
     /// # Example
     /// ```
     /// use clap_sys::ext::log::CLAP_LOG_PLUGIN_MISBEHAVING;
-    /// use clack_plugin::plugin::wrapper::PluginWrapperError;
+    /// use clack_plugin::extensions::wrapper::PluginWrapperError;
     ///
     /// let x: Result<(), _> = Err(std::env::VarError::NotPresent); // Some random error type
     /// let clap_error = x.map_err(PluginWrapperError::with_severity(CLAP_LOG_PLUGIN_MISBEHAVING));

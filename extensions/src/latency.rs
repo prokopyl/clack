@@ -25,10 +25,7 @@ unsafe impl Extension for HostLatency {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clack_host::instance::handle::PluginMainThreadHandle;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
 
     impl PluginLatency {
         #[inline]
@@ -71,10 +68,7 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_plugin::host::HostMainThreadHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::plugin::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
 
     impl HostLatency {
         #[inline]

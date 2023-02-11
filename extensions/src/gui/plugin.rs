@@ -1,10 +1,6 @@
 use super::*;
-use clack_common::extensions::ExtensionImplementation;
-use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
-use clack_plugin::plugin::Plugin;
-use clack_plugin::prelude::HostHandle;
+use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::gui::{clap_gui_resize_hints, clap_plugin_gui, clap_window};
-use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 

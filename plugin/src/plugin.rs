@@ -57,7 +57,6 @@ pub mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
-pub mod wrapper;
 
 use crate::plugin::descriptor::PluginDescriptor;
 pub use error::PluginError;

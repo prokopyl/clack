@@ -100,11 +100,7 @@ impl TailLength {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clack_host::instance::handle::PluginAudioProcessorHandle;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
 
     impl PluginTail {
         /// Returns the plugin's [`TailLength`].
@@ -150,11 +146,7 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::host::HostAudioThreadHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::prelude::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
 
     impl HostTail {
         /// Informs the host that the plugin's tail length has changed and needs to be updated.

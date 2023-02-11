@@ -69,10 +69,7 @@ impl Display for PluginRenderError {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
-    use clack_plugin::plugin::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
 
     /// Implementation of the Plugin-side of the Render extension.
     pub trait PluginRenderImpl {
@@ -140,7 +137,8 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_host::instance::handle::PluginMainThreadHandle;
+    use clack_host::extensions::prelude::*;
+
     impl PluginRender {
         /// Returns `true` if the plugin has an hard requirement to process in real-time.
         ///

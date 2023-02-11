@@ -39,10 +39,7 @@ const _: () = {
 mod host {
     use super::*;
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
     use std::os::raw::c_char;
 
     /// Host implementation of an event registry

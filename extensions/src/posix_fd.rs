@@ -82,11 +82,7 @@ impl Display for FdError {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clack_host::instance::handle::PluginMainThreadHandle;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
     use std::os::unix::prelude::RawFd;
 
     impl PluginPosixFd {
@@ -179,11 +175,7 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::host::HostMainThreadHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::plugin::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
     use std::os::unix::prelude::RawFd;
 
     impl HostPosixFd {

@@ -1,11 +1,7 @@
 use crate::audio_ports::{AudioPortInfoData, HostAudioPorts, PluginAudioPorts, RescanType};
 use crate::utils::write_to_array_buf;
-use clack_common::extensions::ExtensionImplementation;
-use clack_plugin::host::HostMainThreadHandle;
-use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
-use clack_plugin::plugin::Plugin;
+use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
-use clap_sys::plugin::clap_plugin;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;

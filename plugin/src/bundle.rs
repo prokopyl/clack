@@ -1,8 +1,8 @@
+use crate::extensions::wrapper::panic::catch_unwind;
 use crate::factory::plugin::{PluginFactory, PluginFactoryImpl};
 use crate::factory::PluginFactories;
 use crate::host::HostInfo;
 use crate::plugin::descriptor::{PluginDescriptorWrapper, RawPluginDescriptor};
-use crate::plugin::wrapper::panic::catch_unwind;
 use crate::plugin::{Plugin, PluginInstance};
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{c_void, CStr};

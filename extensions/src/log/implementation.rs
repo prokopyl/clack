@@ -1,9 +1,6 @@
 use super::{HostLog, LogSeverity};
-use clack_common::extensions::ExtensionImplementation;
-use clack_host::extensions::wrapper::HostWrapper;
-use clack_host::host::Host;
+use clack_host::extensions::prelude::*;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
-use clap_sys::host::clap_host;
 use std::borrow::Cow::Owned;
 use std::ffi::CStr;
 use std::os::raw::c_char;

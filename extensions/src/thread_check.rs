@@ -36,11 +36,8 @@ mod plugin {
 #[cfg(feature = "clack-host")]
 pub mod host {
     use crate::thread_check::ThreadCheck;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
+    use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
-    use clap_sys::host::clap_host;
 
     pub trait ThreadCheckImplementation {
         fn is_main_thread(&self) -> bool;

@@ -1,4 +1,4 @@
-use crate::plugin::wrapper::PluginWrapperError;
+use crate::extensions::wrapper::PluginWrapperError;
 use crate::plugin::{Plugin, PluginInstanceImpl};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use clap_sys::host::clap_host;

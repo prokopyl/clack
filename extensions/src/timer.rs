@@ -69,11 +69,7 @@ impl Error for TimerError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::host::HostHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::plugin::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
 
     impl HostTimer {
         /// Registers a new Timer, returning its unique [`TimerId`].
@@ -160,11 +156,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clack_host::instance::handle::PluginMainThreadHandle;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Timer extension.
     pub trait HostTimerImpl {

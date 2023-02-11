@@ -1,10 +1,6 @@
 use super::*;
 use crate::utils::write_to_array_buf;
-use clack_common::extensions::ExtensionImplementation;
-use clack_plugin::host::HostMainThreadHandle;
-use clack_plugin::plugin::wrapper::{PluginWrapper, PluginWrapperError};
-use clack_plugin::plugin::Plugin;
-use clap_sys::plugin::clap_plugin;
+use clack_plugin::extensions::prelude::*;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;

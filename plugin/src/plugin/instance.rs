@@ -1,7 +1,7 @@
+use crate::extensions::wrapper::PluginWrapper;
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::descriptor::RawPluginDescriptor;
-use crate::plugin::wrapper::PluginWrapper;
 use crate::plugin::{AudioConfiguration, Plugin, PluginMainThread};
 use crate::process::Process;
 use clap_sys::plugin::clap_plugin;

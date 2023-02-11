@@ -4,8 +4,6 @@ use clap_sys::ext::audio_ports::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
-pub use clap_sys::ext::audio_ports::{CLAP_PORT_MONO, CLAP_PORT_STEREO};
-
 #[repr(C)]
 pub struct PluginAudioPorts(
     clap_plugin_audio_ports,

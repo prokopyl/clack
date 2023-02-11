@@ -52,12 +52,8 @@ impl Error for ThreadPoolRequestError {}
 mod plugin {
     use super::*;
 
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::host::HostAudioThreadHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::plugin::Plugin;
+    use clack_plugin::extensions::prelude::*;
     use clap_sys::ext::thread_pool::clap_plugin_thread_pool;
-    use clap_sys::plugin::clap_plugin;
 
     /// Implementation of the Plugin-side of the Thread Pool extension.
     pub trait PluginThreadPoolImpl {
@@ -123,11 +119,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::extensions::wrapper::HostWrapper;
-    use clack_host::host::Host;
-    use clack_host::instance::handle::PluginSharedHandle;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Thread Pool extension.
     pub trait HostThreadPoolImpl {

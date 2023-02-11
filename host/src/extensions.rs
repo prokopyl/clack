@@ -139,3 +139,13 @@
 
 pub use clack_common::extensions::*;
 pub mod wrapper;
+
+pub mod prelude {
+    pub use crate::extensions::wrapper::{HostWrapper, HostWrapperError};
+    pub use crate::extensions::{Extension, ExtensionImplementation, HostExtensionType};
+    pub use crate::host::Host;
+    pub use crate::instance::handle::{
+        PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
+    };
+    pub use clap_sys::host::clap_host;
+}
