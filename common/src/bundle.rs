@@ -1,7 +1,10 @@
 use clap_sys::entry::clap_plugin_entry;
 
-/// A raw plugin entry descriptor.
+/// A C-FFI compatible descriptor of a bundle's entry point.
 ///
 /// This type is what is statically exposed in the plugin bundle's dynamic library file, and is
-/// loaded by host upon loading the file.
+/// loaded by the host upon loading the file.
+///
+/// This type is what is exposed by the `clack-plugin` crate, and can be loaded using the
+/// `clack-host` crate.
 pub type PluginEntryDescriptor = clap_plugin_entry;

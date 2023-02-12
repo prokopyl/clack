@@ -67,7 +67,7 @@ impl<'a> LoadedEntry<'a> {
             return Err(PluginBundleError::IncompatibleClapVersion { plugin_version });
         }
 
-        let path = CString::new(path).map_err(PluginBundleError::NulDescriptorPath)?;
+        let path = CString::new(path).map_err(PluginBundleError::InvalidNulPath)?;
 
         if let Some(init) = entry.init {
             if !init(path.as_ptr()) {

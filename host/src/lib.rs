@@ -18,7 +18,7 @@
 //! [`Host`](host::Host) trait, and on CLAP's thread specifications model.
 //!
 //! 1. CLAP plugins are distributed in binary files called bundles. These are prebuilt
-//!    dynamically-loaded libraries (e.g. `.dll` or `.so` files), and can contain the implementations
+//!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
 //!    of multiple plugins. They can be loaded with the [`PluginBundle::load`](bundle::PluginBundle::load)
 //!    method. See the [`bundle`] module documentation for more information.
 //! 2. Bundles' entry points can expose multiple [factories](factory::Factory). These are singleton

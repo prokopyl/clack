@@ -1,3 +1,47 @@
+#![deny(missing_docs)]
+
+//! Loading and handling of CLAP plugin bundle files.
+//!
+//! CLAP plugins are distributed in binary files called bundles, which are prebuilt
+//! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
+//! They expose a single [`PluginEntryDescriptor`], which, once initialized, acts as the entry
+//! point for the host to read into the bundle.
+//!
+//! CLAP plugin bundles expose implementations of various standard [factories](Factory), which are
+//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`],
+//! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
+//! documentation to learn more about factories.
+//!
+//! Clack handles all of this functionality through the [`PluginBundle`] type, which exposes all
+//! of the bundle's factory implementation, and allow the bundle to be loaded in two different ways:
+//!
+//! * From a file, using [`PluginBundle::load`].
+//!
+//!   This is the most common usage, as it allows to load
+//!   third-party CLAP bundles present anywhere on the file system, which is most likely the
+//!   functionality "CLAP plugin support" implies for most hosts.
+//!
+//! * From a static [`PluginEntryDescriptor`] reference, using [`PluginBundle::load_from_raw`].
+//!   
+//!   This is a more advanced usage, and it allows to load plugins that have been statically built
+//!   into the host's binary (i.e. built-in plugins) without having to distribute them in separate
+//!   files, or to perform any filesystem access or plugin discovery.
+//!
+//!   If needed, this also allows host implementations to not use Clack's implementation of bundle
+//!   loading (which uses [`libloading`](https://crates.io/crates/libloading) under the hood), and
+//!   implement their own instead.
+//!
+//! See the [`PluginBundle`]'s type documentation for examples.
+//!
+//! # Plugin bundle discovery
+//!
+//! As of now, Clack does not implement any utilities to aid host implementations with discovering
+//! which CLAP bundle files are available to be loaded on the filesystem.
+//!
+//! Refer to the
+//! [CLAP specification](https://github.com/free-audio/clap/blob/main/include/clap/entry.h) for more
+//! information about standard search paths and the general discovery process.
+
 use std::error::Error;
 use std::ffi::{NulError, OsStr};
 use std::fmt::{Display, Formatter};
@@ -18,12 +62,58 @@ use crate::factory::PluginFactory;
 pub use clack_common::bundle::*;
 use clack_common::utils::ClapVersion;
 
+/// A handle to a loaded CLAP plugin bundle file.
+///
+/// This allows getting all of the [factories](Factory) exposed by the bundle, mainly the
+/// [`PluginFactory`] which allows to list plugin instances.
+///
+/// This is only a lightweight handle: plugin bundles are only loaded once, and the [`Clone`]
+/// operation on this type only clones the handle.
+///
+/// Plugin bundles are only unloaded when all handles are dropped and all associated instances
+/// are unloaded.
+///
+/// A [`PluginBundle`] can also be loaded from a static [`PluginEntryDescriptor`] instead of a file.
+/// See [`PluginBundle::load_from_raw`].
+///
+/// See the [module docs](crate::bundle) for more information about CLAP bundles.
+///
+/// # Example
+///
+/// ```no_run
+/// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use clack_host::prelude::PluginBundle;
+///
+/// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+/// let plugin_factory = bundle.get_plugin_factory().unwrap();
+///
+/// println!("Loaded bundle CLAP version: {}", bundle.version());
+/// # Ok(()) }
+/// ```
 #[derive(Clone)]
 pub struct PluginBundle {
     inner: Pin<Arc<EntrySource>>,
 }
 
 impl PluginBundle {
+    /// Loads a CLAP bundle from a file located a the given path.
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if loading the bundle fails.
+    /// See [`PluginBundleError`] for all the possible errors that may occur.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use clack_host::prelude::PluginBundle;
+    ///
+    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    ///
+    /// println!("Loaded bundle CLAP version: {}", bundle.version());
+    /// # Ok(()) }
+    /// ```
     pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         let path = path.as_ref();
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
@@ -41,8 +131,42 @@ impl PluginBundle {
         Ok(Self { inner })
     }
 
+    /// Loads a CLAP bundle from a `'static` [`PluginEntryDescriptor`].
+    ///
+    /// Note that CLAP plugins loaded this way still need a valid path, as they may perform various
+    /// filesystem operations relative to their bundle files.
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if initializing the entry fails.
+    /// See [`PluginBundleError`] for all the possible errors that may occur.
+    ///
     /// # Safety
-    /// Must only be called once for a given descriptor, else entry could be init'd multiple times
+    ///
+    /// Plugin entries must be initialized only once, which this function cannot enforce.
+    /// Users of this function *must* ensure it is only called *once* for every
+    /// [`PluginEntryDescriptor`] it is called on.
+    ///
+    /// Users of this function *must* also ensure the [`PluginEntryDescriptor`]'s fields are all
+    /// valid as per the
+    /// [CLAP specification](https://github.com/free-audio/clap/blob/main/include/clap/entry.h), as
+    /// any undefined behavior may otherwise occur.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use clack_host::bundle::PluginEntryDescriptor;
+    /// use clack_host::prelude::PluginBundle;
+    /// # pub fn foo(descriptor: &'static PluginEntryDescriptor) -> Result<(), Box<dyn std::error::Error>> {
+    ///
+    /// let descriptor: &'static PluginEntryDescriptor = /* ... */
+    /// # descriptor;
+    ///
+    /// let path = "/home/user/.clap/u-he/libdiva.so";
+    /// let bundle = unsafe { PluginBundle::load_from_raw(descriptor, path)? };
+    ///
+    /// println!("Loaded bundle CLAP version: {}", bundle.version());
+    /// # Ok(()) }
     #[inline]
     pub unsafe fn load_from_raw(
         inner: &'static PluginEntryDescriptor,
@@ -53,6 +177,7 @@ impl PluginBundle {
         })
     }
 
+    /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
     pub fn raw_entry(&self) -> &PluginEntryDescriptor {
         match &self.inner.as_ref().get_ref() {
@@ -61,36 +186,90 @@ impl PluginBundle {
         }
     }
 
+    /// Returns the [`Factory`] of type `F` exposed by this bundle, if it exists.
+    ///
+    /// If this bundle does not expose a [`Factory`] of the requested type, [`None`] is returned.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use clack_host::factory::PluginFactory;
+    /// use clack_host::prelude::PluginBundle;
+    ///
+    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    /// let plugin_factory = bundle.get_factory::<PluginFactory>().unwrap();
+    ///
+    /// println!("Found {} plugins.", plugin_factory.plugin_count());
+    /// # Ok(()) }
+    /// ```
     pub fn get_factory<F: Factory>(&self) -> Option<&F> {
         let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
         NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
     }
 
+    /// Returns the [`PluginFactory`] exposed by this bundle, if it exists.
+    ///
+    /// If this bundle does not expose a [`PluginFactory`], [`None`] is returned.
+    ///
+    /// This is a convenience method, and is equivalent to calling
+    /// [`get_factory`](PluginBundle::get_factory) with a [`PluginFactory`] type parameter.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use clack_host::prelude::PluginBundle;
+    ///
+    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    /// let plugin_factory = bundle.get_plugin_factory().unwrap();
+    ///
+    /// println!("Found {} plugins.", plugin_factory.plugin_count());
+    /// # Ok(()) }
+    /// ```
     #[inline]
     pub fn get_plugin_factory(&self) -> Option<&PluginFactory> {
         self.get_factory()
     }
 
+    /// Returns the CLAP version used by this bundle.
     #[inline]
     pub fn version(&self) -> ClapVersion {
         ClapVersion::from_raw(self.raw_entry().clap_version)
     }
 }
 
+/// Errors that can occur while loading a [`PluginBundle`].
+///
+/// See [`PluginBundle::load`] and [`PluginBundle::load_from_raw`].
 #[derive(Debug)]
 pub enum PluginBundleError {
-    EntryInitFailed,
-    NulDescriptorPath(NulError),
-    NullEntryPointer,
+    /// The path given to [`PluginBundle::load`] is not valid UTF-8.
     InvalidUtf8Path,
+    /// The dynamic library file could not be loaded.
+    ///
+    /// This contains the error type from the underlying
+    /// [`libloading`](https://crates.io/crates/libloading) library.
     LibraryLoadingError(libloading::Error),
-    IncompatibleClapVersion { plugin_version: ClapVersion },
+    /// The entry pointer exposed by the dynamic library file is `null`.
+    NullEntryPointer,
+    /// The exposed entry used an incompatible CLAP version.
+    IncompatibleClapVersion {
+        /// The CLAP version that the entry uses.
+        ///
+        /// See [`ClapVersion::CURRENT`] to get the current clap version.
+        plugin_version: ClapVersion,
+    },
+    /// The given path is not a valid C string.
+    InvalidNulPath(NulError),
+    /// The entry's `init` method failed.
+    EntryInitFailed,
 }
 
 impl Error for PluginBundleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            PluginBundleError::NulDescriptorPath(e) => Some(e),
+            PluginBundleError::InvalidNulPath(e) => Some(e),
             PluginBundleError::LibraryLoadingError(e) => Some(e),
             _ => None,
         }
@@ -101,7 +280,7 @@ impl Display for PluginBundleError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PluginBundleError::EntryInitFailed => f.write_str("Plugin entry initialization failed"),
-            PluginBundleError::NulDescriptorPath(e) => {
+            PluginBundleError::InvalidNulPath(e) => {
                 write!(f, "Invalid plugin descriptor path: {e}")
             }
             PluginBundleError::LibraryLoadingError(e) => {
