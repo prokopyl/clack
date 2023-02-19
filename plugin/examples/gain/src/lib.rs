@@ -12,8 +12,8 @@ use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
 use clack_extensions::gui::PluginGui;
 
 use clack_extensions::audio_ports::{
-    AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, PluginAudioPorts,
-    PluginAudioPortsImplementation, STEREO_PORT_TYPE,
+    AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
+    PluginAudioPortsImplementation,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::channels::AudioBufferType;
@@ -120,18 +120,18 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin<'a> {
 }
 
 impl<'a> PluginAudioPortsImplementation for GainPluginMainThread<'a> {
-    fn count(&self, _is_input: bool) -> usize {
+    fn count(&self, _is_input: bool) -> u32 {
         1
     }
 
-    fn get(&self, _is_input: bool, index: usize, writer: &mut AudioPortInfoWriter) {
+    fn get(&self, _is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
         if index == 0 {
             writer.set(&AudioPortInfoData {
                 id: 0,
-                name: CStr::from_bytes_with_nul(b"main\0").unwrap(),
+                name: "main",
                 channel_count: 2,
                 flags: AudioPortFlags::IS_MAIN,
-                port_type: Some(STEREO_PORT_TYPE),
+                port_type: Some(AudioPortType::STEREO),
                 in_place_pair: 0,
             });
         }
@@ -182,7 +182,7 @@ impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a>
     }
 }
 
-impl<'a> PluginMainThreadParams<'a> for GainPluginMainThread<'a> {
+impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     fn count(&self) -> u32 {
         1
     }

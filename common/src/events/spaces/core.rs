@@ -2,6 +2,7 @@ use crate::events::event_types::*;
 use crate::events::{Event, EventSpace, UnknownEvent};
 use std::ffi::CStr;
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum CoreEventSpace<'a> {
     NoteOn(&'a NoteOnEvent),
     NoteOff(&'a NoteOffEvent),

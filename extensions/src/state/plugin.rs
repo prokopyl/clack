@@ -13,8 +13,8 @@ impl HostState {
 }
 
 pub trait PluginStateImplementation {
-    fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
+    fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState

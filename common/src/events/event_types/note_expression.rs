@@ -1,16 +1,17 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader};
+use crate::events::{Event, EventHeader, UnknownEvent};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
 #[non_exhaustive]
 #[repr(i32)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum NoteExpressionType {
     Volume = CLAP_NOTE_EXPRESSION_VOLUME,
     Pan = CLAP_NOTE_EXPRESSION_PAN,
     Tuning = CLAP_NOTE_EXPRESSION_TUNING,
     Vibrato = CLAP_NOTE_EXPRESSION_VIBRATO,
+    Expression = CLAP_NOTE_EXPRESSION_EXPRESSION,
     Brightness = CLAP_NOTE_EXPRESSION_BRIGHTNESS,
     Pressure = CLAP_NOTE_EXPRESSION_PRESSURE,
 }
@@ -46,6 +47,13 @@ unsafe impl<'a> Event<'a> for NoteExpressionEvent {
     type EventSpace = CoreEventSpace<'a>;
 }
 
+impl<'a> AsRef<UnknownEvent<'a>> for NoteExpressionEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
+}
+
 impl NoteExpressionEvent {
     pub fn new(
         header: EventHeader<Self>,
@@ -71,6 +79,11 @@ impl NoteExpressionEvent {
     #[inline]
     pub fn expression_type(&self) -> Option<NoteExpressionType> {
         NoteExpressionType::from_raw(self.inner.expression_id)
+    }
+
+    #[inline]
+    pub fn note_id(&self) -> i32 {
+        self.inner.note_id
     }
 
     #[inline]
@@ -104,6 +117,7 @@ impl PartialEq for NoteExpressionEvent {
     fn eq(&self, other: &Self) -> bool {
         self.inner.key == other.inner.key
             && self.inner.expression_id == other.inner.expression_id
+            && self.inner.note_id == other.inner.note_id
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
             && self.inner.value == other.inner.value
@@ -117,6 +131,7 @@ impl Debug for NoteExpressionEvent {
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
             .field("expression_id", &self.inner.expression_id)
+            .field("note_id", &self.inner.note_id)
             .field("value", &self.inner.value)
             .finish()
     }

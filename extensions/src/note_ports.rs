@@ -83,7 +83,7 @@ unsafe impl Sync for HostNotePorts {}
 
 pub struct NotePortInfoData<'a> {
     pub id: u32,
-    pub name: &'a CStr,
+    pub name: &'a str,
     pub supported_dialects: NoteDialects,
     pub preferred_dialect: Option<NoteDialect>,
 }
@@ -95,7 +95,9 @@ impl<'a> NotePortInfoData<'a> {
         use crate::utils::{data_from_array_buf, from_bytes_until_nul};
         Some(Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
+            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
+                .to_str()
+                .ok()?,
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
             preferred_dialect: NoteDialect::from_raw(raw.preferred_dialect),
         })

@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader};
+use crate::events::{Event, EventHeader, UnknownEvent};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -13,6 +13,13 @@ unsafe impl<'a> Event<'a> for NoteOnEvent {
     type EventSpace = CoreEventSpace<'a>;
 }
 
+impl<'a> AsRef<UnknownEvent<'a>> for NoteOnEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOffEvent(pub NoteEvent<Self>);
@@ -20,6 +27,13 @@ pub struct NoteOffEvent(pub NoteEvent<Self>);
 unsafe impl<'a> Event<'a> for NoteOffEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_OFF;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for NoteOffEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -31,6 +45,13 @@ unsafe impl<'a> Event<'a> for NoteChokeEvent {
     type EventSpace = CoreEventSpace<'a>;
 }
 
+impl<'a> AsRef<UnknownEvent<'a>> for NoteChokeEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteEndEvent(pub NoteEvent<Self>);
@@ -38,6 +59,13 @@ pub struct NoteEndEvent(pub NoteEvent<Self>);
 unsafe impl<'a> Event<'a> for NoteEndEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_END;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for NoteEndEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -87,6 +115,11 @@ impl<E> NoteEvent<E> {
     }
 
     #[inline]
+    pub const fn note_id(&self) -> i32 {
+        self.inner.note_id
+    }
+
+    #[inline]
     pub const fn key(&self) -> i16 {
         self.inner.key
     }
@@ -122,6 +155,7 @@ impl<E> PartialEq for NoteEvent<E> {
             && self.inner.channel == other.inner.channel
             && self.inner.port_index == other.inner.port_index
             && self.inner.velocity == other.inner.velocity
+            && self.inner.note_id == other.inner.note_id
     }
 }
 
@@ -132,6 +166,7 @@ impl<E> Debug for NoteEvent<E> {
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
             .field("velocity", &self.inner.velocity)
+            .field("note_id", &self.inner.note_id)
             .finish()
     }
 }

@@ -28,7 +28,7 @@ impl<'a> AudioPortInfoWriter<'a> {
 
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name.to_bytes_with_nul());
+            write_to_array_buf(addr_of_mut!((*buf).name), data.name.as_bytes());
 
             write(addr_of_mut!((*buf).flags), data.flags.bits);
             write(addr_of_mut!((*buf).channel_count), data.channel_count);
@@ -48,8 +48,8 @@ impl<'a> AudioPortInfoWriter<'a> {
 }
 
 pub trait PluginAudioPortsImplementation {
-    fn count(&self, is_input: bool) -> usize;
-    fn get(&self, is_input: bool, index: usize, writer: &mut AudioPortInfoWriter);
+    fn count(&self, is_input: bool) -> u32;
+    fn get(&self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter);
 }
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPorts
@@ -90,9 +90,7 @@ where
         };
 
         let mut writer = AudioPortInfoWriter::from_raw(info);
-        p.main_thread()
-            .as_ref()
-            .get(is_input, index as usize, &mut writer);
+        p.main_thread().as_ref().get(is_input, index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

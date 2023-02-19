@@ -48,7 +48,7 @@ pub struct AudioPortsConfiguration<'a> {
     /// It has to be unique for this instance of the plugin.
     pub id: u32,
     /// A user-friendly display name for the configuration.
-    pub name: &'a CStr,
+    pub name: &'a str,
 
     /// The number of input ports this configuration exposes
     pub input_port_count: u32,
@@ -70,7 +70,9 @@ impl<'a> AudioPortsConfiguration<'a> {
 
         Some(Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
+            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
+                .to_str()
+                .ok()?,
 
             input_port_count: raw.input_port_count,
             output_port_count: raw.output_port_count,

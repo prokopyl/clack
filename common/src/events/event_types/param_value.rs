@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader};
+use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::Cookie;
 use bitflags::bitflags;
 use clap_sys::events::{
@@ -19,8 +19,8 @@ bitflags! {
     }
 }
 
-#[derive(Copy, Clone)]
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ParamValueEvent {
     inner: clap_event_param_value,
 }
@@ -28,6 +28,13 @@ pub struct ParamValueEvent {
 unsafe impl<'a> Event<'a> for ParamValueEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_VALUE;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for ParamValueEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl ParamValueEvent {
@@ -65,6 +72,11 @@ impl ParamValueEvent {
     #[inline]
     pub fn param_id(&self) -> u32 {
         self.inner.param_id
+    }
+
+    #[inline]
+    pub fn note_id(&self) -> i32 {
+        self.inner.note_id
     }
 
     #[inline]
@@ -112,6 +124,7 @@ impl PartialEq for ParamValueEvent {
             && self.inner.port_index == other.inner.port_index
             && self.inner.param_id == other.inner.param_id
             && self.inner.value == other.inner.value
+            && self.inner.note_id == other.inner.note_id
     }
 }
 
@@ -122,11 +135,13 @@ impl Debug for ParamValueEvent {
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
             .field("param_id", &self.inner.param_id)
+            .field("note_id", &self.inner.note_id)
             .field("value", &self.inner.value)
             .finish()
     }
 }
 
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ParamModEvent {
     inner: clap_event_param_mod,
@@ -135,6 +150,13 @@ pub struct ParamModEvent {
 unsafe impl<'a> Event<'a> for ParamModEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_MOD;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for ParamModEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl ParamModEvent {
@@ -185,6 +207,11 @@ impl ParamModEvent {
     }
 
     #[inline]
+    pub fn note_id(&self) -> i32 {
+        self.inner.note_id
+    }
+
+    #[inline]
     pub fn key(&self) -> i16 {
         self.inner.key
     }
@@ -195,7 +222,7 @@ impl ParamModEvent {
     }
 
     #[inline]
-    pub fn value(&self) -> f64 {
+    pub fn amount(&self) -> f64 {
         self.inner.amount
     }
 
@@ -219,6 +246,7 @@ impl PartialEq for ParamModEvent {
             && self.inner.port_index == other.inner.port_index
             && self.inner.param_id == other.inner.param_id
             && self.inner.amount == other.inner.amount
+            && self.inner.note_id == other.inner.note_id
     }
 }
 
@@ -229,13 +257,14 @@ impl Debug for ParamModEvent {
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
             .field("param_id", &self.inner.param_id)
+            .field("note_id", &self.inner.note_id)
             .field("amount", &self.inner.amount)
             .finish()
     }
 }
 
-#[derive(Copy, Clone)]
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ParamGestureBeginEvent {
     inner: clap_event_param_gesture,
 }
@@ -243,6 +272,13 @@ pub struct ParamGestureBeginEvent {
 unsafe impl<'a> Event<'a> for ParamGestureBeginEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_BEGIN;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for ParamGestureBeginEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl ParamGestureBeginEvent {
@@ -262,8 +298,24 @@ impl ParamGestureBeginEvent {
     }
 }
 
-#[derive(Copy, Clone)]
+impl Debug for ParamGestureBeginEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParamGestureBeginEvent")
+            .field("param_id", &self.inner.param_id)
+            .finish()
+    }
+}
+
+impl PartialEq for ParamGestureBeginEvent {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.header.time == other.inner.header.time
+            && self.inner.param_id == other.inner.param_id
+    }
+}
+
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ParamGestureEndEvent {
     inner: clap_event_param_gesture,
 }
@@ -271,6 +323,13 @@ pub struct ParamGestureEndEvent {
 unsafe impl<'a> Event<'a> for ParamGestureEndEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_END;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for ParamGestureEndEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl ParamGestureEndEvent {
@@ -287,5 +346,22 @@ impl ParamGestureEndEvent {
     #[inline]
     pub const fn param_id(&self) -> u32 {
         self.inner.param_id
+    }
+}
+
+impl Debug for ParamGestureEndEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParamGestureEndEvent")
+            .field("header", self.header())
+            .field("param_id", &self.inner.param_id)
+            .finish()
+    }
+}
+
+impl PartialEq for ParamGestureEndEvent {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.header.time == other.inner.header.time
+            && self.inner.param_id == other.inner.param_id
     }
 }

@@ -87,13 +87,15 @@ impl<'a, S> TAudioChannels<'a, S> {
             frames_count: self.frames_count,
         }
     }
+}
+
+impl<'a, T> IntoIterator for &'a TAudioChannels<'a, T> {
+    type Item = &'a [T];
+    type IntoIter = TAudioChannelsIter<'a, T>;
 
     #[inline]
-    pub fn iter_mut(&mut self) -> TAudioChannelsIterMut<S> {
-        TAudioChannelsIterMut {
-            data: self.data.as_ref().iter(),
-            frames_count: self.frames_count,
-        }
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -162,6 +164,26 @@ impl<'a, T> Iterator for TAudioChannelsIter<'a, T> {
         self.data
             .next()
             .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) })
+    }
+}
+
+impl<'a, T> IntoIterator for &'a TAudioChannelsMut<'a, T> {
+    type Item = &'a [T];
+    type IntoIter = TAudioChannelsIter<'a, T>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut TAudioChannelsMut<'a, T> {
+    type Item = &'a mut [T];
+    type IntoIter = TAudioChannelsIterMut<'a, T>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 

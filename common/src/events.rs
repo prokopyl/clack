@@ -29,7 +29,7 @@ pub use header::*;
 ///
 /// * The [`EventSpace`](Event::EventSpace) type *must* be the [`EventSpace`] implementation that
 /// * [`TYPE_ID`](Event::TYPE_ID) *must* match the event ID from its
-pub unsafe trait Event<'a>: Sized + 'a {
+pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     const TYPE_ID: u16;
     type EventSpace: EventSpace<'a>;
 
@@ -158,5 +158,12 @@ where
             None => false,
             Some(s) => s.eq(other),
         }
+    }
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for UnknownEvent<'a> {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self
     }
 }

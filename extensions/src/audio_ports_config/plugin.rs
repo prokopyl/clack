@@ -7,13 +7,13 @@ use std::ptr::addr_of_mut;
 /// Implementation of the Plugin-side of the Audio Ports Configuration extension.
 pub trait PluginAudioPortsConfigImplementation {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
-    fn count(&self) -> usize;
+    fn count(&self) -> u32;
 
     /// Retrieves a specific [`AudioPortsConfiguration`] from its index.
     ///
     /// The plugin gets passed a host-provided mutable buffer to write the configuration into, to
     /// avoid any unnecessary allocations.
-    fn get(&self, index: usize, writer: &mut AudioPortConfigWriter);
+    fn get(&self, index: u32, writer: &mut AudioPortConfigWriter);
 
     /// Requests the plugin to change its Audio Ports Configuration to the one with the given ID.
     ///
@@ -59,7 +59,7 @@ where
         };
 
         let mut writer = AudioPortConfigWriter::from_raw(config);
-        p.main_thread().as_ref().get(index as usize, &mut writer);
+        p.main_thread().as_ref().get(index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)
@@ -105,7 +105,7 @@ impl<'a> AudioPortConfigWriter<'a> {
 
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name.to_bytes_with_nul());
+            write_to_array_buf(addr_of_mut!((*buf).name), data.name.as_bytes());
 
             write(addr_of_mut!((*buf).input_port_count), data.input_port_count);
             write(

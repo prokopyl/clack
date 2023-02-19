@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader};
+use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::{BeatTime, SecondsTime};
 use bitflags::bitflags;
 use clap_sys::events::{
@@ -51,6 +51,13 @@ pub struct TransportEvent {
 unsafe impl<'a> Event<'a> for TransportEvent {
     const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for TransportEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl TransportEvent {

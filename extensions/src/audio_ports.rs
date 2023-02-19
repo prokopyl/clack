@@ -19,8 +19,10 @@ pub struct HostAudioPorts(
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AudioPortType<'a>(pub &'a CStr);
 
-pub const MONO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_MONO);
-pub const STEREO_PORT_TYPE: AudioPortType = AudioPortType(CLAP_PORT_STEREO);
+impl<'a> AudioPortType<'a> {
+    pub const MONO: AudioPortType<'static> = AudioPortType(CLAP_PORT_MONO);
+    pub const STEREO: AudioPortType<'static> = AudioPortType(CLAP_PORT_STEREO);
+}
 
 bitflags! {
     #[repr(C)]
@@ -66,7 +68,7 @@ unsafe impl Sync for HostAudioPorts {}
 
 pub struct AudioPortInfoData<'a> {
     pub id: u32, // TODO: ClapId
-    pub name: &'a CStr,
+    pub name: &'a str,
     pub channel_count: u32,
     pub flags: AudioPortFlags,
     pub port_type: Option<AudioPortType<'a>>,
@@ -82,7 +84,9 @@ impl<'a> AudioPortInfoData<'a> {
 
         Some(Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
+            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
+                .to_str()
+                .ok()?,
             channel_count: raw.channel_count,
             flags: AudioPortFlags { bits: raw.flags },
             port_type: NonNull::new(raw.port_type as *mut _)

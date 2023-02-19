@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader};
+use crate::events::{Event, EventHeader, UnknownEvent};
 use clap_sys::events::{
     clap_event_midi, clap_event_midi2, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
     CLAP_EVENT_MIDI_SYSEX,
@@ -15,6 +15,13 @@ pub struct MidiEvent {
 unsafe impl<'a> Event<'a> for MidiEvent {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for MidiEvent {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl MidiEvent {
@@ -90,6 +97,13 @@ unsafe impl<'buf> Event<'buf> for MidiSysExEvent<'buf> {
     type EventSpace = CoreEventSpace<'buf>;
 }
 
+impl<'buf> AsRef<UnknownEvent<'buf>> for MidiSysExEvent<'buf> {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'buf> {
+        self.as_unknown()
+    }
+}
+
 impl<'buf> MidiSysExEvent<'buf> {
     /// # Safety
     /// This function allows creating an event from an arbitrary lifetime.
@@ -163,6 +177,13 @@ pub struct Midi2Event {
 unsafe impl<'a> Event<'a> for Midi2Event {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI2;
     type EventSpace = CoreEventSpace<'a>;
+}
+
+impl<'a> AsRef<UnknownEvent<'a>> for Midi2Event {
+    #[inline]
+    fn as_ref(&self) -> &UnknownEvent<'a> {
+        self.as_unknown()
+    }
 }
 
 impl Midi2Event {

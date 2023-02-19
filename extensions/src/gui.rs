@@ -160,6 +160,8 @@ unsafe impl Extension for HostGui {
 pub enum GuiError {
     /// The plugin failed to create its GUI.
     CreateError,
+    /// The plugin failed to set its size.
+    SetSizeError,
     /// The plugin failed to set its scale.
     SetScaleError,
     /// The plugin failed to set a parent window for its GUI.
@@ -188,6 +190,7 @@ impl Display for GuiError {
             GuiError::ShowError => f.write_str("Failed to show plugin window"),
             GuiError::HideError => f.write_str("Failed to hide plugin window"),
             GuiError::CreateError => f.write_str("Failed to create plugin GUI"),
+            GuiError::SetSizeError => f.write_str("Failed to set plugin window size"),
             GuiError::SetScaleError => f.write_str("Failed to set plugin window scaling"),
             GuiError::SetParentError => f.write_str("Failed to set plugin window parent"),
             GuiError::SetTransientError => f.write_str("Failed to set plugin transient"),

@@ -107,10 +107,10 @@ impl<'a> OutputEvents<'a> {
     /// reasonable amount of space before forwarding the list to the plugin, in order to make
     /// allocations as unlikely as possible.
     #[inline]
-    pub fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
+    pub fn try_push<E: AsRef<UnknownEvent<'a>>>(&mut self, event: E) -> Result<(), TryPushError> {
         let try_push = self.inner.try_push.ok_or(TryPushError)?;
 
-        if !unsafe { try_push(&self.inner, event.as_raw()) } {
+        if !unsafe { try_push(&self.inner, event.as_ref().as_raw()) } {
             Err(TryPushError {})
         } else {
             Ok(())

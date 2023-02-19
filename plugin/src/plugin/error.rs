@@ -4,6 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 #[derive(Debug)]
 pub enum PluginError {
     AlreadyActivated,
+    OperationFailed,
     Io(std::io::Error),
     Custom(Box<dyn Error + 'static>),
 }
@@ -17,6 +18,7 @@ impl Display for PluginError {
                     "This plugin's activate() function was called while already activated"
                 )
             }
+            PluginError::OperationFailed => write!(f, "The requested operation has failed"),
             PluginError::Custom(e) => std::fmt::Display::fmt(&e, f),
             PluginError::Io(e) => std::fmt::Display::fmt(&e, f),
         }

@@ -35,9 +35,19 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
+    pub fn input_count(self) -> usize {
+        self.inputs.len()
+    }
+
+    #[inline]
     pub fn output(&mut self, index: usize) -> Option<AudioBufferMut> {
         // SAFETY: &mut ensures there is no input being read concurrently
         unsafe { self.output_unchecked(index) }
+    }
+
+    #[inline]
+    pub fn output_count(&self) -> usize {
+        self.outputs.len()
     }
 
     ///
