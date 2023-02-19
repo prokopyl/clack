@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::ffi::CStr;
@@ -10,7 +10,7 @@ pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>)
 
 unsafe impl Extension for PluginState {
     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -23,7 +23,7 @@ pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
 
 unsafe impl Extension for HostState {
     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto

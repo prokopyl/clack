@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide};
 use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
 use std::ffi::CStr;
 
@@ -9,7 +9,7 @@ pub struct HostEventRegistry {
 
 unsafe impl Extension for HostEventRegistry {
     const IDENTIFIER: &'static CStr = CLAP_EXT_EVENT_REGISTRY;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[cfg(feature = "clack-plugin")]

@@ -136,16 +136,88 @@
 //! # Creating custom extensions
 //!
 //! TODO: document custom extensions.
+//!
+//! ## Example
+//!
+//! ```
+//! use clack_host::extensions::prelude::*;
+//! use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
+//! use std::ffi::CStr;
+//!
+//! /// The type we will receive from a plugin implementing the Latency extension
+//! #[repr(C)]
+//! pub struct PluginLatency {
+//!     inner: clap_plugin_latency,
+//! }
+//!
+//! // Mark this type as being the plugin side of an extension, and tie it to its ID
+//! unsafe impl Extension for PluginLatency {
+//!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+//!     type ExtensionSide = PluginExtensionSide;
+//! }
+//!
+//! /// The type we will expose to a plugin by implementing the Latency extension
+//! #[repr(C)]
+//! pub struct HostLatency {
+//!     inner: clap_host_latency,
+//! }
+//!
+//! // Mark this type as being the host side of an extension, and tie it to its ID
+//! unsafe impl Extension for HostLatency {
+//!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+//!     type ExtensionSide = HostExtensionSide;
+//! }
+//!
+//! // Implement calling to the plugin-side
+//! impl PluginLatency {
+//!     // The `clap_plugin_latency.get` function requires to be called on the `[main-thread]`.
+//!     // Therefore, we will require the `PluginMainThreadHandle` to be passed.
+//!     #[inline]
+//!     pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+//!         match self.inner.get {
+//!             None => 0,
+//!             Some(get) => unsafe { get(plugin.as_raw()) },
+//!         }
+//!     }
+//! }
+//!
+//! /// Provides the implementation of the host-side to be called by the plugin.
+//! pub trait HostLatencyImpl {
+//!     fn changed(&mut self);
+//! }
+//!
+//! impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLatency
+//!     where for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+//! {
+//!     const IMPLEMENTATION: &'static Self = &HostLatency {
+//!         inner: clap_host_latency {
+//!             changed: Some(changed::<H>),
+//!         },
+//!     };
+//! }
+//!
+//! unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
+//!     where for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+//! {
+//!     HostWrapper::<H>::handle(host, |host| {
+//!         host.main_thread().as_mut().changed();
+//!         Ok(())
+//!     });
+//! }
+//! ```
 
 pub use clack_common::extensions::*;
 pub mod wrapper;
 
 pub mod prelude {
     pub use crate::extensions::wrapper::{HostWrapper, HostWrapperError};
-    pub use crate::extensions::{Extension, ExtensionImplementation, HostExtensionType};
+    pub use crate::extensions::{
+        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+    };
     pub use crate::host::Host;
     pub use crate::instance::handle::{
         PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
     };
+    /// FOO
     pub use clap_sys::host::clap_host;
 }

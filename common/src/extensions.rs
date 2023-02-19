@@ -9,27 +9,27 @@ use std::ptr::NonNull;
 
 /// A marker struct that represents extensions to be implemented by the plugin side.
 ///
-/// See [`Extension::ExtensionType`].
-pub struct PluginExtensionType;
+/// See [`Extension::ExtensionSide`].
+pub struct PluginExtensionSide;
 
 /// A marker struct that represents extensions to be implemented by the host side.
 ///
-/// See [`Extension::ExtensionType`].
-pub struct HostExtensionType;
+/// See [`Extension::ExtensionSide`].
+pub struct HostExtensionSide;
 
-/// An extension type marker: either [`PluginExtensionType`] or [`HostExtensionType`].
+/// An extension side marker: either [`PluginExtensionSide`] or [`HostExtensionSide`].
 ///
-/// See [`Extension::ExtensionType`].
-pub trait ExtensionType: private::Sealed {}
-impl ExtensionType for PluginExtensionType {}
-impl ExtensionType for HostExtensionType {}
+/// See [`Extension::ExtensionSide`].
+pub trait ExtensionSide: private::Sealed {}
+impl ExtensionSide for PluginExtensionSide {}
+impl ExtensionSide for HostExtensionSide {}
 
 mod private {
     use super::*;
 
     pub trait Sealed {}
-    impl Sealed for PluginExtensionType {}
-    impl Sealed for HostExtensionType {}
+    impl Sealed for PluginExtensionSide {}
+    impl Sealed for HostExtensionSide {}
 }
 
 /// A type representing a CLAP extension ABI.
@@ -53,7 +53,7 @@ pub unsafe trait Extension: Sized + Send + Sync + 'static {
     /// The standard identifier for this extension.
     const IDENTIFIER: &'static CStr;
     /// Whether this is a host extension or a plugin extension
-    type ExtensionType: ExtensionType;
+    type ExtensionSide: ExtensionSide;
 
     /// Returns an instance of the extension from a given extension pointer.
     ///

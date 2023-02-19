@@ -1,7 +1,7 @@
 //! Allows plugins to use an host's thread pool for multi-threaded audio processing.
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::thread_pool::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -18,7 +18,7 @@ unsafe impl Sync for PluginThreadPool {}
 
 unsafe impl Extension for PluginThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// Host-side of the ThreadPool extension.
@@ -32,7 +32,7 @@ unsafe impl Sync for HostThreadPool {}
 
 unsafe impl Extension for HostThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 /// An error that occurred as a plugin requested access to the host's thread pool.

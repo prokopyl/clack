@@ -16,7 +16,7 @@
 //! port rescan to the host.
 
 use crate::audio_ports::AudioPortType;
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::audio_ports_config::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -28,7 +28,7 @@ pub struct PluginAudioPortsConfig(clap_plugin_audio_ports_config);
 
 unsafe impl Extension for PluginAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// The Host-side of the Audio Ports Configurations extension.
@@ -37,7 +37,7 @@ pub struct HostAudioPortsConfig(clap_host_audio_ports_config);
 
 unsafe impl Extension for HostAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[derive(Copy, Clone, Debug)]

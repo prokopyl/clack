@@ -2,7 +2,7 @@
 
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::tail::*;
 use std::ffi::CStr;
 
@@ -17,7 +17,7 @@ unsafe impl Sync for PluginTail {}
 
 unsafe impl Extension for PluginTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// The Host-side of the Tail extension.
@@ -31,7 +31,7 @@ unsafe impl Sync for HostTail {}
 
 unsafe impl Extension for HostTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 /// The length of a plugin's tail, which can potentially be infinite.

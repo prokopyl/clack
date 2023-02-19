@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::audio_ports::*;
 use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
@@ -49,7 +49,7 @@ bitflags! {
 
 unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -59,7 +59,7 @@ unsafe impl Sync for PluginAudioPorts {}
 
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto

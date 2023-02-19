@@ -5,7 +5,7 @@
 //! This extension allows plugins to register timers to the host, which will then proceed to call
 //! a plugin's callback at a given regular interval.
 
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::timer_support::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -22,7 +22,7 @@ unsafe impl Sync for HostTimer {}
 
 unsafe impl Extension for HostTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 /// Plugin-side of the Timer extension.
@@ -36,7 +36,7 @@ unsafe impl Sync for PluginTimer {}
 
 unsafe impl Extension for PluginTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// An identifier representing a timer given to a plugin.

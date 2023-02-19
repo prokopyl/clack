@@ -8,7 +8,7 @@
 //! If this information does not influence your rendering code, your plugin should **NOT**
 //! implement this extension.
 
-use clack_common::extensions::{Extension, PluginExtensionType};
+use clack_common::extensions::{Extension, PluginExtensionSide};
 use clap_sys::ext::render::*;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -19,7 +19,7 @@ pub struct PluginRender(clap_plugin_render);
 
 unsafe impl Extension for PluginRender {
     const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]

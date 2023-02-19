@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
 use std::ffi::CStr;
 
@@ -12,7 +12,7 @@ unsafe impl Sync for HostThreadCheck {}
 
 unsafe impl Extension for HostThreadCheck {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[cfg(feature = "clack-plugin")]

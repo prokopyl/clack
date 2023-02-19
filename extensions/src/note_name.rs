@@ -2,7 +2,7 @@
 
 //! A way for plugins to list custom note names for hosts to display in e.g. a piano roll.
 
-use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::note_name::*;
 use std::ffi::CStr;
 
@@ -12,7 +12,7 @@ pub struct PluginNoteName(clap_plugin_note_name);
 
 unsafe impl Extension for PluginNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// The Host-side of the Note Name extension.
@@ -21,7 +21,7 @@ pub struct HostNoteName(clap_host_note_name);
 
 unsafe impl Extension for HostNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[derive(Copy, Clone, Debug)]

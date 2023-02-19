@@ -9,7 +9,7 @@ pub struct PluginLatency {
 
 unsafe impl Extension for PluginLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
-    type ExtensionType = PluginExtensionType;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 #[repr(C)]
@@ -19,7 +19,7 @@ pub struct HostLatency {
 
 unsafe impl Extension for HostLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[cfg(feature = "clack-host")]

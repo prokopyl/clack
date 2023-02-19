@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtensionType};
+use clack_common::extensions::{Extension, HostExtensionSide};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -74,7 +74,7 @@ unsafe impl Sync for HostLog {}
 
 unsafe impl Extension for HostLog {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
-    type ExtensionType = HostExtensionType;
+    type ExtensionSide = HostExtensionSide;
 }
 
 #[cfg(feature = "clack-plugin")]

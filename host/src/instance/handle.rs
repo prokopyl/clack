@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, PluginExtensionType};
+use clack_common::extensions::{Extension, PluginExtensionSide};
 use clap_sys::plugin::clap_plugin;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
@@ -53,7 +53,7 @@ impl<'a> PluginSharedHandle<'a> {
         self.raw
     }
 
-    pub fn get_extension<E: Extension<ExtensionType = PluginExtensionType>>(
+    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
         &self,
     ) -> Option<&'a E> {
         let ext =

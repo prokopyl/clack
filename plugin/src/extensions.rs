@@ -23,7 +23,7 @@
 //!
 //! unsafe impl Extension for PluginState {
 //!     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
-//!     type ExtensionType = PluginExtensionType;
+//!     type ExtensionSide = PluginExtensionSide;
 //! }
 //!
 //! // For implementors of the extensions (here, on the plugin side):
@@ -115,7 +115,7 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.
-    pub fn register<E: ExtensionImplementation<P, ExtensionType = PluginExtensionType>>(
+    pub fn register<E: ExtensionImplementation<P, ExtensionSide = PluginExtensionSide>>(
         &mut self,
     ) -> &mut Self {
         if self.found.is_some() {
@@ -132,7 +132,9 @@ impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
 
 pub mod prelude {
     pub use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
-    pub use crate::extensions::{Extension, ExtensionImplementation, PluginExtensionType};
+    pub use crate::extensions::{
+        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+    };
     pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
     pub use crate::plugin::{Plugin, PluginError};
     pub use clap_sys::plugin::clap_plugin;

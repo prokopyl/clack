@@ -33,7 +33,7 @@ impl<'a, 'b, H: Host<'b>> HostExtensions<'a, H> {
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.
-    pub fn register<E: ExtensionImplementation<H, ExtensionType = HostExtensionType>>(
+    pub fn register<E: ExtensionImplementation<H, ExtensionSide = HostExtensionSide>>(
         &mut self,
     ) -> &mut Self {
         if self.found.is_some() {
