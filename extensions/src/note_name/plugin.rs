@@ -5,7 +5,7 @@ use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
 
 /// Implementation of the Plugin-side of the Note Name extension.
-pub trait PluginNoteNameImplementation {
+pub trait PluginNoteNameImpl {
     /// Returns the number of available [`NoteName`]s.
     fn count(&self) -> usize;
 
@@ -18,7 +18,7 @@ pub trait PluginNoteNameImplementation {
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginNoteName
 where
-    P::MainThread: PluginNoteNameImplementation,
+    P::MainThread: PluginNoteNameImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self(clap_plugin_note_name {
@@ -29,7 +29,7 @@ where
 
 unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> u32
 where
-    P::MainThread: PluginNoteNameImplementation,
+    P::MainThread: PluginNoteNameImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count() as u32)).unwrap_or(0)
 }
@@ -40,7 +40,7 @@ unsafe extern "C" fn get<'a, P: Plugin<'a>>(
     config: *mut clap_note_name,
 ) -> bool
 where
-    P::MainThread: PluginNoteNameImplementation,
+    P::MainThread: PluginNoteNameImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {
@@ -77,7 +77,7 @@ impl<'a> NoteNameWriter<'a> {
         let buf = self.buf.as_mut_ptr();
 
         unsafe {
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name.to_bytes_with_nul());
+            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
             write(addr_of_mut!((*buf).port), data.port);
             write(addr_of_mut!((*buf).channel), data.channel);

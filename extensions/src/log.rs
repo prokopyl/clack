@@ -7,10 +7,10 @@ mod error;
 pub use error::LogError;
 
 #[cfg(feature = "clack-host")]
-mod implementation;
+mod host;
 
 #[cfg(feature = "clack-host")]
-pub use implementation::*;
+pub use host::*;
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

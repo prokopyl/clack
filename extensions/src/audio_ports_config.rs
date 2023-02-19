@@ -47,8 +47,8 @@ pub struct AudioPortsConfiguration<'a> {
     ///
     /// It has to be unique for this instance of the plugin.
     pub id: u32,
-    /// A user-friendly display name for the configuration.
-    pub name: &'a str,
+    /// A user-facing display name for the configuration.
+    pub name: &'a [u8],
 
     /// The number of input ports this configuration exposes
     pub input_port_count: u32,
@@ -65,14 +65,12 @@ pub struct AudioPortsConfiguration<'a> {
 
 #[cfg(feature = "clack-host")]
 impl<'a> AudioPortsConfiguration<'a> {
-    unsafe fn try_from_raw(raw: &'a clap_audio_ports_config) -> Option<Self> {
-        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+    unsafe fn from_raw(raw: &'a clap_audio_ports_config) -> Self {
+        use crate::utils::data_from_array_buf;
 
-        Some(Self {
+        Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
-                .to_str()
-                .ok()?,
+            name: data_from_array_buf(&raw.name),
 
             input_port_count: raw.input_port_count,
             output_port_count: raw.output_port_count,
@@ -87,7 +85,7 @@ impl<'a> AudioPortsConfiguration<'a> {
                 raw.main_output_channel_count,
                 raw.main_output_port_type,
             ),
-        })
+        }
     }
 }
 

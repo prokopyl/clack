@@ -62,7 +62,7 @@ pub fn it_works() {
         .unwrap();
 
     assert_eq!(info.id, 0);
-    assert_eq!(info.name, "main");
+    assert_eq!(info.name, b"main");
 
     host.activate();
 

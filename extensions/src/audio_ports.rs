@@ -69,7 +69,7 @@ unsafe impl Sync for HostAudioPorts {}
 
 pub struct AudioPortInfoData<'a> {
     pub id: u32, // TODO: ClapId
-    pub name: &'a str,
+    pub name: &'a [u8],
     pub channel_count: u32,
     pub flags: AudioPortFlags,
     pub port_type: Option<AudioPortType<'a>>,
@@ -79,15 +79,13 @@ pub struct AudioPortInfoData<'a> {
 impl<'a> AudioPortInfoData<'a> {
     /// # Safety
     /// The raw port_type pointer must be a valid C string for the 'a lifetime.
-    pub unsafe fn try_from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
+    pub unsafe fn from_raw(raw: &'a clap_audio_port_info) -> Self {
         use crate::utils::*;
         use std::ptr::NonNull;
 
-        Some(Self {
+        Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
-                .to_str()
-                .ok()?,
+            name: data_from_array_buf(&raw.name),
             channel_count: raw.channel_count,
             flags: AudioPortFlags { bits: raw.flags },
             port_type: NonNull::new(raw.port_type as *mut _)
@@ -99,7 +97,7 @@ impl<'a> AudioPortInfoData<'a> {
             } else {
                 Some(raw.in_place_pair)
             },
-        })
+        }
     }
 }
 

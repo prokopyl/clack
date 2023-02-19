@@ -68,7 +68,7 @@ fn new_gui(cx: &mut Context, ui_atomics: Arc<UiAtomics>) {
     });
 }
 
-impl<'a> clack_extensions::gui::PluginGuiImplementation for GainPluginMainThread<'a> {
+impl<'a> clack_extensions::gui::PluginGuiImpl for GainPluginMainThread<'a> {
     fn is_api_supported(&self, api: GuiApiType, _is_floating: bool) -> bool {
         api.can_provide_raw_window_handle()
     }

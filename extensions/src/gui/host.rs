@@ -226,7 +226,7 @@ impl PluginGui {
 }
 
 /// Implementation of the Host-side of the GUI extension.
-pub trait HostGuiImplementation {
+pub trait HostGuiImpl {
     /// Notify the host that the plugin window's [`GuiResizeHints`] have changed, and
     /// `get_resize_hints` should be called again.
     fn resize_hints_changed(&self);
@@ -271,7 +271,7 @@ pub trait HostGuiImplementation {
 
 impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostGui
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self {
@@ -287,7 +287,7 @@ where
 
 unsafe extern "C" fn resize_hints_changed<H: for<'a> Host<'a>>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().resize_hints_changed();
@@ -301,7 +301,7 @@ unsafe extern "C" fn request_resize<H: for<'a> Host<'a>>(
     height: u32,
 ) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -314,21 +314,21 @@ where
 
 unsafe extern "C" fn request_show<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show().is_ok())).unwrap_or(false)
 }
 
 unsafe extern "C" fn request_hide<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide().is_ok())).unwrap_or(false)
 }
 
 unsafe extern "C" fn closed<H: for<'a> Host<'a>>(host: *const clap_host, was_destroyed: bool)
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImplementation,
+    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().closed(was_destroyed);

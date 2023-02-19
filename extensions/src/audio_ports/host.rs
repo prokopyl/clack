@@ -42,21 +42,21 @@ impl PluginAudioPorts {
             unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { AudioPortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }
+            Some(unsafe { AudioPortInfoData::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }
     }
 }
 
-pub trait HostAudioPortsImplementation {
+pub trait HostAudioPortsImpl {
     fn is_rescan_flag_supported(&self, flag: RescanType) -> bool;
     fn rescan(&mut self, flag: RescanType);
 }
 
 impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostAudioPorts
 where
-    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsImplementation,
+    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsImpl,
 {
     const IMPLEMENTATION: &'static Self = &HostAudioPorts(
         clap_host_audio_ports {
@@ -72,7 +72,7 @@ unsafe extern "C" fn is_rescan_flag_supported<H: for<'a> Host<'a>>(
     flag: u32,
 ) -> bool
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -85,7 +85,7 @@ where
 
 unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

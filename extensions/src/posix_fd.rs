@@ -99,7 +99,7 @@ mod host {
     }
 
     /// Implementation of the Host-side of the POSIX File Descriptors extension.
-    pub trait HostPosixFdImplementation {
+    pub trait HostPosixFdImpl {
         /// Registers a given File Descriptor into the host's event reactor, for a given set of events.
         ///
         /// The host will call the plugin's `on_fd` method every time the File Descriptor fires one
@@ -113,7 +113,7 @@ mod host {
 
     impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostPosixFd
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_host_posix_fd_support {
@@ -129,7 +129,7 @@ mod host {
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -147,7 +147,7 @@ mod host {
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -160,7 +160,7 @@ mod host {
     }
     unsafe extern "C" fn unregister_fd<H: for<'a> Host<'a>>(host: *const clap_host, fd: i32) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host.main_thread().as_mut().unregister_fd(fd).is_ok())
@@ -231,7 +231,7 @@ mod plugin {
     }
 
     /// Implementation of the Plugin-side of the POSIX File Descriptors extension.
-    pub trait PluginPosixFdImplementation {
+    pub trait PluginPosixFdImpl {
         /// A callback that gets called for every event on each registered File Descriptor.
         ///
         /// Note this callback is "level-triggered". It means that for instance, a writable File
@@ -244,7 +244,7 @@ mod plugin {
 
     impl<H: for<'a> Plugin<'a>> ExtensionImplementation<H> for PluginPosixFd
     where
-        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImplementation,
+        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_posix_fd_support {
@@ -257,7 +257,7 @@ mod plugin {
         fd: i32,
         flags: clap_posix_fd_flags,
     ) where
-        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImplementation,
+        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImpl,
     {
         PluginWrapper::<H>::handle(plugin, |plugin| {
             plugin

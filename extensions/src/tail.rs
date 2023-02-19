@@ -114,14 +114,14 @@ mod host {
     }
 
     /// Implementation of the Host-side of the Tail extension.
-    pub trait HostTailImplementation {
+    pub trait HostTailImpl {
         /// Informs the host that the plugin's tail length has changed and needs to be updated.
         fn changed(&mut self);
     }
 
     impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostTail
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImplementation,
+        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_host_tail {
@@ -131,7 +131,7 @@ mod host {
 
     unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImplementation,
+        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.audio_processor()?.as_mut().changed();
@@ -159,14 +159,14 @@ mod plugin {
     }
 
     /// Implementation of the Plugin-side of the Tail extension.
-    pub trait PluginTailImplementation {
+    pub trait PluginTailImpl {
         /// Returns the plugin's [`TailLength`].
         fn get(&self) -> TailLength;
     }
 
     impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginTail
     where
-        for<'a> P: PluginTailImplementation,
+        for<'a> P: PluginTailImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_tail {
@@ -176,7 +176,7 @@ mod plugin {
 
     unsafe extern "C" fn get<P: for<'a> Plugin<'a>>(plugin: *const clap_plugin) -> u32
     where
-        for<'a> P: PluginTailImplementation,
+        for<'a> P: PluginTailImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin.audio_processor()?.as_ref().get().to_raw())

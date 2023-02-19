@@ -27,7 +27,7 @@ impl<'a> NotePortInfoWriter<'a> {
 
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name.as_bytes());
+            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
             write(
                 addr_of_mut!((*buf).supported_dialects),
@@ -43,14 +43,14 @@ impl<'a> NotePortInfoWriter<'a> {
     }
 }
 
-pub trait PluginNotePortsImplementation {
+pub trait PluginNotePortsImpl {
     fn count(&self, is_input: bool) -> u32;
     fn get(&self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter);
 }
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginNotePorts
 where
-    P::MainThread: PluginNotePortsImplementation,
+    P::MainThread: PluginNotePortsImpl,
 {
     const IMPLEMENTATION: &'static Self = &PluginNotePorts(
         clap_plugin_note_ports {
@@ -63,7 +63,7 @@ where
 
 unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
-    P::MainThread: PluginNotePortsImplementation,
+    P::MainThread: PluginNotePortsImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count(is_input)))
         .unwrap_or(0)
@@ -76,7 +76,7 @@ unsafe extern "C" fn get<'a, P: Plugin<'a>>(
     info: *mut clap_note_port_info,
 ) -> bool
 where
-    P::MainThread: PluginNotePortsImplementation,
+    P::MainThread: PluginNotePortsImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if info.is_null() {

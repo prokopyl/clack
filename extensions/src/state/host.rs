@@ -37,13 +37,13 @@ impl PluginState {
     }
 }
 
-pub trait HostStateImplementation {
+pub trait HostStateImpl {
     fn mark_dirty(&mut self);
 }
 
 impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostState
 where
-    for<'a> <H as Host<'a>>::MainThread: HostStateImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostStateImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self(
@@ -56,7 +56,7 @@ where
 
 unsafe extern "C" fn mark_dirty<H: for<'a> Host<'a>>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostStateImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostStateImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().mark_dirty();

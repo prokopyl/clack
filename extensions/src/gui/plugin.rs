@@ -98,7 +98,7 @@ impl HostGui {
 ///    or [get_size][Self::get_size] to get initial size
 /// 4. [set_parent][Self::set_parent]
 #[allow(unused)]
-pub trait PluginGuiImplementation {
+pub trait PluginGuiImpl {
     /// Indicate whether a particular API is supported.
     fn is_api_supported(&self, api: GuiApiType, is_floating: bool) -> bool;
 
@@ -177,7 +177,7 @@ pub trait PluginGuiImplementation {
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginGui
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     const IMPLEMENTATION: &'static Self = &PluginGui {
         inner: clap_plugin_gui {
@@ -206,7 +206,7 @@ unsafe extern "C" fn is_api_supported<'a, P: Plugin<'a>>(
     is_floating: bool,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
@@ -223,7 +223,7 @@ unsafe extern "C" fn get_preferred_api<'a, P: Plugin<'a>>(
     is_floating: *mut bool,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if api.is_null() || is_floating.is_null() {
@@ -249,7 +249,7 @@ unsafe extern "C" fn create<'a, P: Plugin<'a>>(
     is_floating: bool,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
@@ -263,7 +263,7 @@ where
 
 unsafe extern "C" fn destroy<'a, P: Plugin<'a>>(plugin: *const clap_plugin)
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         plugin.main_thread().as_mut().destroy();
@@ -273,7 +273,7 @@ where
 
 unsafe extern "C" fn set_scale<'a, P: Plugin<'a>>(plugin: *const clap_plugin, scale: f64) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().set_scale(scale).is_ok())
@@ -287,7 +287,7 @@ unsafe extern "C" fn get_size<'a, P: Plugin<'a>>(
     height: *mut u32,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if let Some(size) = plugin.main_thread().as_mut().get_size() {
@@ -305,7 +305,7 @@ where
 
 unsafe extern "C" fn can_resize<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_ref().can_resize())
@@ -318,7 +318,7 @@ unsafe extern "C" fn get_resize_hints<'a, P: Plugin<'a>>(
     hints: *mut clap_gui_resize_hints,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if let Some(plugin_hints) = plugin.main_thread().as_ref().get_resize_hints() {
@@ -345,7 +345,7 @@ unsafe extern "C" fn adjust_size<'a, P: Plugin<'a>>(
     height_adj: *mut u32,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     if width_adj.is_null() || height_adj.is_null() {
         return false;
@@ -378,7 +378,7 @@ unsafe extern "C" fn set_size<'a, P: Plugin<'a>>(
     height: u32,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = GuiSize { width, height };
@@ -392,7 +392,7 @@ unsafe extern "C" fn set_parent<'a, P: Plugin<'a>>(
     window: *const clap_window,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let window = window
@@ -413,7 +413,7 @@ unsafe extern "C" fn set_transient<'a, P: Plugin<'a>>(
     window: *const clap_window,
 ) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let window = window
@@ -433,7 +433,7 @@ unsafe extern "C" fn suggest_title<'a, P: Plugin<'a>>(
     plugin: *const clap_plugin,
     title: *const c_char,
 ) where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let title = CStr::from_ptr(title)
@@ -448,7 +448,7 @@ unsafe extern "C" fn suggest_title<'a, P: Plugin<'a>>(
 
 unsafe extern "C" fn show<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().show().is_ok())
@@ -458,7 +458,7 @@ where
 
 unsafe extern "C" fn hide<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> bool
 where
-    P::MainThread: PluginGuiImplementation,
+    P::MainThread: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().hide().is_ok())

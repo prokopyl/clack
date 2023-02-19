@@ -48,7 +48,7 @@ impl PluginNoteName {
             unsafe { (self.0.get?)(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { NoteName::try_from_raw(buffer.inner.assume_init_ref()) }
+            Some(unsafe { NoteName::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }
@@ -56,7 +56,7 @@ impl PluginNoteName {
 }
 
 /// Implementation of the Host-side of the Note Name extension.
-pub trait HostNoteNameImplementation {
+pub trait HostNoteNameImpl {
     /// Informs the host that the available Note Names list has changed and needs to
     /// be rescanned.
     fn changed(&mut self);
@@ -64,7 +64,7 @@ pub trait HostNoteNameImplementation {
 
 impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostNoteName
 where
-    for<'h> <H as Host<'h>>::MainThread: HostNoteNameImplementation,
+    for<'h> <H as Host<'h>>::MainThread: HostNoteNameImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &HostNoteName(clap_host_note_name {
@@ -74,7 +74,7 @@ where
 
 unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostNoteNameImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostNoteNameImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().changed();

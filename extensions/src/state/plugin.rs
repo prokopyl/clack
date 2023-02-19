@@ -12,14 +12,14 @@ impl HostState {
     }
 }
 
-pub trait PluginStateImplementation {
+pub trait PluginStateImpl {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
 where
-    P::MainThread: PluginStateImplementation,
+    P::MainThread: PluginStateImpl,
 {
     const IMPLEMENTATION: &'static Self = &PluginState(
         clap_plugin_state {
@@ -35,7 +35,7 @@ unsafe extern "C" fn load<'a, P: Plugin<'a>>(
     stream: *const clap_istream,
 ) -> bool
 where
-    P::MainThread: PluginStateImplementation,
+    P::MainThread: PluginStateImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
@@ -50,7 +50,7 @@ unsafe extern "C" fn save<'a, P: Plugin<'a>>(
     stream: *const clap_ostream,
 ) -> bool
 where
-    P::MainThread: PluginStateImplementation,
+    P::MainThread: PluginStateImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));

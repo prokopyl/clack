@@ -48,7 +48,7 @@ impl PluginAudioPortsConfig {
             unsafe { (self.0.get?)(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { AudioPortsConfiguration::try_from_raw(buffer.inner.assume_init_ref()) }
+            Some(unsafe { AudioPortsConfiguration::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }
@@ -80,7 +80,7 @@ impl PluginAudioPortsConfig {
 }
 
 /// Implementation of the Host-side of the Audio Ports Configuration extension.
-pub trait HostAudioPortsConfigImplementation {
+pub trait HostAudioPortsConfigImpl {
     /// Informs the host that the available Audio Ports Configuration list has changed and needs to
     /// be rescanned.
     fn rescan(&mut self);
@@ -88,7 +88,7 @@ pub trait HostAudioPortsConfigImplementation {
 
 impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostAudioPortsConfig
 where
-    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsConfigImplementation,
+    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsConfigImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &HostAudioPortsConfig(clap_host_audio_ports_config {
@@ -98,7 +98,7 @@ where
 
 unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsConfigImplementation,
+    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsConfigImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().rescan();

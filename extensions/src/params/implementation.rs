@@ -113,10 +113,7 @@ pub trait PluginMainThreadParams {
     );
 }
 
-pub trait PluginParamsImpl<'a>: Plugin<'a>
-where
-    Self::MainThread: PluginMainThreadParams,
-{
+pub trait PluginParamsImpl {
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,
@@ -124,7 +121,7 @@ where
     );
 }
 
-unsafe extern "C" fn count<'a, P: PluginParamsImpl<'a>>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<'a, P: PluginParamsImpl + Plugin<'a>>(plugin: *const clap_plugin) -> u32
 where
     P::MainThread: PluginMainThreadParams,
 {
@@ -134,7 +131,7 @@ where
     .unwrap_or(0)
 }
 
-unsafe extern "C" fn get_info<'a, P: PluginParamsImpl<'a>>(
+unsafe extern "C" fn get_info<'a, P: PluginParamsImpl + Plugin<'a>>(
     plugin: *const clap_plugin,
     param_index: u32,
     value: *mut clap_param_info,
@@ -151,7 +148,7 @@ where
         && info.initialized
 }
 
-unsafe extern "C" fn get_value<'a, P: PluginParamsImpl<'a>>(
+unsafe extern "C" fn get_value<'a, P: PluginParamsImpl + Plugin<'a>>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: *mut f64,
@@ -173,7 +170,7 @@ where
     }
 }
 
-unsafe extern "C" fn value_to_text<'a, P: PluginParamsImpl<'a>>(
+unsafe extern "C" fn value_to_text<'a, P: PluginParamsImpl + Plugin<'a>>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: f64,
@@ -193,7 +190,7 @@ where
         && writer.finish()
 }
 
-unsafe extern "C" fn text_to_value<'a, P: PluginParamsImpl<'a>>(
+unsafe extern "C" fn text_to_value<'a, P: PluginParamsImpl + Plugin<'a>>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     display: *const std::os::raw::c_char,
@@ -224,7 +221,7 @@ where
     }
 }
 
-unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
+unsafe extern "C" fn flush<'a, P: PluginParamsImpl + Plugin<'a>>(
     plugin: *const clap_plugin,
     input_parameter_changes: *const clap_input_events,
     output_parameter_changes: *const clap_output_events,
@@ -253,7 +250,7 @@ unsafe extern "C" fn flush<'a, P: PluginParamsImpl<'a>>(
     });
 }
 
-impl<'a, P: PluginParamsImpl<'a>> ExtensionImplementation<P> for super::PluginParams
+impl<'a, P: PluginParamsImpl + Plugin<'a>> ExtensionImplementation<P> for super::PluginParams
 where
     P::MainThread: PluginMainThreadParams,
 {

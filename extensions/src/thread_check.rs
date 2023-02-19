@@ -34,19 +34,19 @@ mod plugin {
 }
 
 #[cfg(feature = "clack-host")]
-pub mod host {
+mod host {
     use crate::thread_check::HostThreadCheck;
     use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
 
-    pub trait ThreadCheckImplementation {
+    pub trait HostThreadCheckImpl {
         fn is_main_thread(&self) -> bool;
         fn is_audio_thread(&self) -> bool;
     }
 
     impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostThreadCheck
     where
-        for<'a> <H as Host<'a>>::Shared: ThreadCheckImplementation,
+        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostThreadCheck(clap_host_thread_check {
             is_main_thread: Some(is_main_thread::<H>),
@@ -56,15 +56,18 @@ pub mod host {
 
     unsafe extern "C" fn is_main_thread<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
     where
-        for<'a> <H as Host<'a>>::Shared: ThreadCheckImplementation,
+        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
     }
 
     unsafe extern "C" fn is_audio_thread<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
     where
-        for<'a> <H as Host<'a>>::Shared: ThreadCheckImplementation,
+        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_audio_thread())).unwrap_or(false)
     }
 }
+
+#[cfg(feature = "clack-host")]
+pub use host::*;

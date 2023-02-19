@@ -40,7 +40,7 @@ impl Window {
 
     /// Creates a [`Window`] from a [`RawWindowHandle`].
     ///
-    /// This returns [`None`] if the given window handle isn't back by the default supported APIs.
+    /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
     pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
         match handle {
             RawWindowHandle::Xlib(handle) => Some(Self {

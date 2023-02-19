@@ -5,7 +5,7 @@ use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
 
 /// Implementation of the Plugin-side of the Audio Ports Configuration extension.
-pub trait PluginAudioPortsConfigImplementation {
+pub trait PluginAudioPortsConfigImpl {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
     fn count(&self) -> u32;
 
@@ -28,7 +28,7 @@ pub trait PluginAudioPortsConfigImplementation {
 
 impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPortsConfig
 where
-    P::MainThread: PluginAudioPortsConfigImplementation,
+    P::MainThread: PluginAudioPortsConfigImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &PluginAudioPortsConfig(clap_plugin_audio_ports_config {
@@ -40,9 +40,9 @@ where
 
 unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> u32
 where
-    P::MainThread: PluginAudioPortsConfigImplementation,
+    P::MainThread: PluginAudioPortsConfigImpl,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count() as u32)).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count())).unwrap_or(0)
 }
 
 unsafe extern "C" fn get<'a, P: Plugin<'a>>(
@@ -51,7 +51,7 @@ unsafe extern "C" fn get<'a, P: Plugin<'a>>(
     config: *mut clap_audio_ports_config,
 ) -> bool
 where
-    P::MainThread: PluginAudioPortsConfigImplementation,
+    P::MainThread: PluginAudioPortsConfigImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {
@@ -67,7 +67,7 @@ where
 
 unsafe extern "C" fn select<'a, P: Plugin<'a>>(plugin: *const clap_plugin, config_id: u32) -> bool
 where
-    P::MainThread: PluginAudioPortsConfigImplementation,
+    P::MainThread: PluginAudioPortsConfigImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if p.is_active() {
@@ -105,7 +105,7 @@ impl<'a> AudioPortConfigWriter<'a> {
 
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name.as_bytes());
+            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
             write(addr_of_mut!((*buf).input_port_count), data.input_port_count);
             write(

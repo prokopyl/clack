@@ -83,7 +83,7 @@ unsafe impl Sync for HostNotePorts {}
 
 pub struct NotePortInfoData<'a> {
     pub id: u32,
-    pub name: &'a str,
+    pub name: &'a [u8],
     pub supported_dialects: NoteDialects,
     pub preferred_dialect: Option<NoteDialect>,
 }
@@ -92,12 +92,10 @@ impl<'a> NotePortInfoData<'a> {
     #[cfg(feature = "clack-host")]
     // TODO: make pub?
     unsafe fn try_from_raw(raw: &'a clap_note_port_info) -> Option<Self> {
-        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+        use crate::utils::data_from_array_buf;
         Some(Self {
             id: raw.id,
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?
-                .to_str()
-                .ok()?,
+            name: data_from_array_buf(&raw.name),
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
             preferred_dialect: NoteDialect::from_raw(raw.preferred_dialect),
         })

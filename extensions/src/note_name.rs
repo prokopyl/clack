@@ -27,8 +27,8 @@ unsafe impl Extension for HostNoteName {
 #[derive(Copy, Clone, Debug)]
 /// A Note's name.
 pub struct NoteName<'a> {
-    /// A user-friendly display name for the note.
-    pub name: &'a CStr,
+    /// A user-facing display name for the note.
+    pub name: &'a [u8],
 
     /// The Port this note name applies to, or `-1` if it applies to every key.
     pub port: i16,
@@ -43,16 +43,16 @@ pub struct NoteName<'a> {
 impl<'a> NoteName<'a> {
     #[cfg(feature = "clack-host")]
     // TODO: make pub?
-    unsafe fn try_from_raw(raw: &'a clap_note_name) -> Option<Self> {
-        use crate::utils::{data_from_array_buf, from_bytes_until_nul};
+    unsafe fn from_raw(raw: &'a clap_note_name) -> Self {
+        use crate::utils::data_from_array_buf;
 
-        Some(Self {
-            name: from_bytes_until_nul(data_from_array_buf(&raw.name))?,
+        Self {
+            name: data_from_array_buf(&raw.name),
 
             port: raw.port,
             key: raw.key,
             channel: raw.channel,
-        })
+        }
     }
 }
 

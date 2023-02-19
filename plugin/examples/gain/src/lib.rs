@@ -13,7 +13,7 @@ use clack_extensions::gui::PluginGui;
 
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
-    PluginAudioPortsImplementation,
+    PluginAudioPortsImpl,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::channels::AudioBufferType;
@@ -110,7 +110,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     }
 }
 
-impl<'a> PluginParamsImpl<'a> for GainPlugin<'a> {
+impl<'a> PluginParamsImpl for GainPlugin<'a> {
     fn flush(
         &mut self,
         _input_parameter_changes: &InputEvents,
@@ -119,7 +119,7 @@ impl<'a> PluginParamsImpl<'a> for GainPlugin<'a> {
     }
 }
 
-impl<'a> PluginAudioPortsImplementation for GainPluginMainThread<'a> {
+impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
     fn count(&self, _is_input: bool) -> u32 {
         1
     }
@@ -128,7 +128,7 @@ impl<'a> PluginAudioPortsImplementation for GainPluginMainThread<'a> {
         if index == 0 {
             writer.set(&AudioPortInfoData {
                 id: 0,
-                name: "main",
+                name: b"main",
                 channel_count: 2,
                 flags: AudioPortFlags::IS_MAIN,
                 port_type: Some(AudioPortType::STEREO),
