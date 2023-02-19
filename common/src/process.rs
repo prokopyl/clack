@@ -1,4 +1,3 @@
-use clap_sys::events::clap_event_transport;
 use clap_sys::process::*;
 
 #[repr(i32)]
@@ -23,9 +22,4 @@ impl ProcessStatus {
             _ => None,
         }
     }
-}
-
-#[repr(C)]
-pub struct Transport {
-    inner: clap_event_transport,
 }

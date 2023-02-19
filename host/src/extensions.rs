@@ -209,6 +209,9 @@
 pub use clack_common::extensions::*;
 pub mod wrapper;
 
+/// A prelude which re-exports all the types and traits used for custom extension implementation.
+///
+/// See the [module docs](self) for more information on how to implement custom extensions in a host.
 pub mod prelude {
     pub use crate::extensions::wrapper::{HostWrapper, HostWrapperError};
     pub use crate::extensions::{
