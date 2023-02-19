@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionType, PluginExtensionType};
 use clap_sys::ext::audio_ports::*;
+use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
@@ -72,7 +73,7 @@ pub struct AudioPortInfoData<'a> {
     pub channel_count: u32,
     pub flags: AudioPortFlags,
     pub port_type: Option<AudioPortType<'a>>,
-    pub in_place_pair: u32,
+    pub in_place_pair: Option<u32>,
 }
 
 impl<'a> AudioPortInfoData<'a> {
@@ -92,7 +93,12 @@ impl<'a> AudioPortInfoData<'a> {
             port_type: NonNull::new(raw.port_type as *mut _)
                 .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr())))
                 .filter(|t| !t.0.to_bytes().is_empty()),
-            in_place_pair: raw.in_place_pair,
+
+            in_place_pair: if raw.in_place_pair == CLAP_INVALID_ID {
+                None
+            } else {
+                Some(raw.in_place_pair)
+            },
         })
     }
 }

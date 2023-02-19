@@ -2,6 +2,7 @@ use crate::audio_ports::{AudioPortInfoData, HostAudioPorts, PluginAudioPorts, Re
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
+use clap_sys::id::CLAP_INVALID_ID;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
@@ -40,7 +41,10 @@ impl<'a> AudioPortInfoWriter<'a> {
                     .unwrap_or(core::ptr::null()),
             );
 
-            write(addr_of_mut!((*buf).in_place_pair), data.in_place_pair);
+            write(
+                addr_of_mut!((*buf).in_place_pair),
+                data.in_place_pair.unwrap_or(CLAP_INVALID_ID),
+            );
         }
 
         self.is_set = true;

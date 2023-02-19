@@ -132,7 +132,7 @@ impl<'a> PluginAudioPortsImplementation for GainPluginMainThread<'a> {
                 channel_count: 2,
                 flags: AudioPortFlags::IS_MAIN,
                 port_type: Some(AudioPortType::STEREO),
-                in_place_pair: 0,
+                in_place_pair: None,
             });
         }
     }
