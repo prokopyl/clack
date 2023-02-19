@@ -41,9 +41,9 @@ pub trait HostStateImpl {
     fn mark_dirty(&mut self);
 }
 
-impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostState
+impl<H: Host> ExtensionImplementation<H> for HostState
 where
-    for<'a> <H as Host<'a>>::MainThread: HostStateImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostStateImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self(
@@ -54,9 +54,9 @@ where
     );
 }
 
-unsafe extern "C" fn mark_dirty<H: for<'a> Host<'a>>(host: *const clap_host)
+unsafe extern "C" fn mark_dirty<H: Host>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostStateImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostStateImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().mark_dirty();

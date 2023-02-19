@@ -184,9 +184,9 @@ mod host {
         fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError>;
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostTimer
+    impl<H: Host> ExtensionImplementation<H> for HostTimer
     where
-        for<'a> <H as Host<'a>>::MainThread: HostTimerImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &HostTimer(clap_host_timer_support {
@@ -195,13 +195,13 @@ mod host {
         });
     }
 
-    unsafe extern "C" fn register_timer<H: for<'a> Host<'a>>(
+    unsafe extern "C" fn register_timer<H: Host>(
         host: *const clap_host,
         period_ms: u32,
         timer_id: *mut u32,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostTimerImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             match host.main_thread().as_mut().register_timer(period_ms) {
@@ -218,12 +218,9 @@ mod host {
         .unwrap_or(false)
     }
 
-    unsafe extern "C" fn unregister_timer<H: for<'a> Host<'a>>(
-        host: *const clap_host,
-        timer_id: u32,
-    ) -> bool
+    unsafe extern "C" fn unregister_timer<H: Host>(host: *const clap_host, timer_id: u32) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostTimerImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

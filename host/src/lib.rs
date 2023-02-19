@@ -125,11 +125,11 @@
 //! }
 //!
 //! struct MyHost;
-//! impl<'a> Host<'a> for MyHost {
-//!     type Shared = MyHostShared;
+//! impl Host for MyHost {
+//!     type Shared<'a> = MyHostShared;
 //!
-//!     type MainThread = ();
-//!     type AudioProcessor = ();
+//!     type MainThread<'a> = ();
+//!     type AudioProcessor<'a> = ();
 //! }
 //! # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!

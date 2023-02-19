@@ -52,7 +52,7 @@ impl fmt::Display for HostError {
 
 impl std::error::Error for HostError {}
 
-impl<H: for<'a> Host<'a>> From<ProcessingStartError<H>> for HostError {
+impl<H: Host> From<ProcessingStartError<H>> for HostError {
     #[inline]
     fn from(_: ProcessingStartError<H>) -> Self {
         Self::StartProcessingFailed

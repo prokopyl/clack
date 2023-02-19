@@ -111,9 +111,9 @@ mod host {
         fn unregister_fd(&mut self, fd: RawFd) -> Result<(), FdError>;
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostPosixFd
+    impl<H: Host> ExtensionImplementation<H> for HostPosixFd
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_host_posix_fd_support {
@@ -123,13 +123,13 @@ mod host {
         });
     }
 
-    unsafe extern "C" fn register_fd<H: for<'a> Host<'a>>(
+    unsafe extern "C" fn register_fd<H: Host>(
         host: *const clap_host,
         fd: i32,
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -141,13 +141,13 @@ mod host {
         .unwrap_or(false)
     }
 
-    unsafe extern "C" fn modify_fd<H: for<'a> Host<'a>>(
+    unsafe extern "C" fn modify_fd<H: Host>(
         host: *const clap_host,
         fd: i32,
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -158,9 +158,9 @@ mod host {
         })
         .unwrap_or(false)
     }
-    unsafe extern "C" fn unregister_fd<H: for<'a> Host<'a>>(host: *const clap_host, fd: i32) -> bool
+    unsafe extern "C" fn unregister_fd<H: Host>(host: *const clap_host, fd: i32) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostPosixFdImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host.main_thread().as_mut().unregister_fd(fd).is_ok())

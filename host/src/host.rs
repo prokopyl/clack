@@ -139,13 +139,13 @@
 //! }
 //!
 //! struct MyHost;
-//! impl<'a> Host<'a> for MyHost {
-//!     type Shared = MyHostShared<'a>;
+//! impl Host for MyHost {
+//!     type Shared<'a> = MyHostShared<'a>;
 //!
-//!     type MainThread = MyHostMainThread<'a>;
-//!     type AudioProcessor = ();
+//!     type MainThread<'a> = MyHostMainThread<'a>;
+//!     type AudioProcessor<'a> = ();
 //!
-//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {
+//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared<'_>) {
 //!         builder
 //!             .register::<HostLog>()
 //!             .register::<HostLatency>();
@@ -216,15 +216,15 @@ pub trait HostShared<'a>: Send + Sync {
 }
 
 /// A Clack Host implementation.
-pub trait Host<'a>: 'static {
-    type Shared: HostShared<'a> + 'a;
+pub trait Host: 'static {
+    type Shared<'a>: HostShared<'a> + 'a;
 
-    type MainThread: HostMainThread<'a> + 'a;
-    type AudioProcessor: HostAudioProcessor<'a> + 'a;
+    type MainThread<'a>: HostMainThread<'a> + 'a;
+    type AudioProcessor<'a>: HostAudioProcessor<'a> + 'a;
 
     #[inline]
     #[allow(unused)]
-    fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {}
+    fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared<'_>) {}
 }
 
 // QoL implementations

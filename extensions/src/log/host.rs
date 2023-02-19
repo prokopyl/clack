@@ -9,21 +9,21 @@ pub trait HostLogImpl {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLog
+impl<H: Host> ExtensionImplementation<H> for HostLog
 where
-    for<'a> <H as Host<'a>>::Shared: HostLogImpl,
+    for<'a> <H as Host>::Shared<'a>: HostLogImpl,
 {
     const IMPLEMENTATION: &'static Self = &HostLog(clap_host_log {
         log: Some(log::<H>),
     });
 }
 
-unsafe extern "C" fn log<H: for<'a> Host<'a>>(
+unsafe extern "C" fn log<H: Host>(
     host: *const clap_host,
     severity: clap_log_severity,
     msg: *const c_char,
 ) where
-    for<'a> <H as Host<'a>>::Shared: HostLogImpl,
+    for<'a> <H as Host>::Shared<'a>: HostLogImpl,
 {
     let msg = CStr::from_ptr(msg).to_string_lossy();
     let res = HostWrapper::<H>::handle(host, |host| {

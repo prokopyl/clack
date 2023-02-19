@@ -15,7 +15,7 @@ pub struct HostExtensions<'a, H: ?Sized> {
     plugin_type: PhantomData<H>,
 }
 
-impl<'a, 'b, H: Host<'b>> HostExtensions<'a, H> {
+impl<'a, H: Host> HostExtensions<'a, H> {
     #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {

@@ -138,21 +138,18 @@ mod host {
         fn request_exec(&mut self, task_count: u32) -> Result<(), ThreadPoolRequestError>;
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostThreadPool
+    impl<H: Host> ExtensionImplementation<H> for HostThreadPool
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostThreadPoolImpl,
+        for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
     {
         const IMPLEMENTATION: &'static Self = &Self(clap_host_thread_pool {
             request_exec: Some(request_exec::<H>),
         });
     }
 
-    unsafe extern "C" fn request_exec<H: for<'a> Host<'a>>(
-        host: *const clap_host,
-        num_tasks: u32,
-    ) -> bool
+    unsafe extern "C" fn request_exec<H: Host>(host: *const clap_host, num_tasks: u32) -> bool
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostThreadPoolImpl,
+        for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

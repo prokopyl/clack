@@ -86,9 +86,9 @@ pub trait HostAudioPortsConfigImpl {
     fn rescan(&mut self);
 }
 
-impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostAudioPortsConfig
+impl<H: Host> ExtensionImplementation<H> for HostAudioPortsConfig
 where
-    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsConfigImpl,
+    for<'h> <H as Host>::MainThread<'h>: HostAudioPortsConfigImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &HostAudioPortsConfig(clap_host_audio_ports_config {
@@ -96,9 +96,9 @@ where
     });
 }
 
-unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host)
+unsafe extern "C" fn rescan<H: Host>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsConfigImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsConfigImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().rescan();

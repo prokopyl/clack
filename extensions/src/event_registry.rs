@@ -57,9 +57,9 @@ mod host {
         }
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostEventRegistry
+    impl<H: Host> ExtensionImplementation<H> for HostEventRegistry
     where
-        for<'a> <H as Host<'a>>::MainThread: HostEventRegistryImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostEventRegistryImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostEventRegistry {
             inner: clap_host_event_registry {
@@ -68,13 +68,13 @@ mod host {
         };
     }
 
-    unsafe extern "C" fn query<H: for<'a> Host<'a>>(
+    unsafe extern "C" fn query<H: Host>(
         host: *const clap_host,
         space_name: *const c_char,
         space_id: *mut u16,
     ) -> bool
     where
-        for<'a> <H as Host<'a>>::MainThread: HostEventRegistryImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostEventRegistryImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);

@@ -34,15 +34,15 @@ pub(crate) mod descriptor;
 pub(crate) mod data;
 use data::*;
 
-pub struct HostWrapper<H: for<'a> Host<'a>> {
+pub struct HostWrapper<H: Host> {
     data: Selfie<'static, RawPluginInstanceRef, HostDataRef<H>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: for<'h> Host<'h>> Send for HostWrapper<H> {}
-unsafe impl<H: for<'h> Host<'h>> Sync for HostWrapper<H> {}
+unsafe impl<H: Host> Send for HostWrapper<H> {}
+unsafe impl<H: Host> Sync for HostWrapper<H> {}
 
-impl<H: for<'h> Host<'h>> HostWrapper<H> {
+impl<H: Host> HostWrapper<H> {
     /// TODO: docs
     ///
     /// # Safety
@@ -77,7 +77,7 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
     /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread> {
+    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
         self.data.with_referential(|d| d.main_thread().cast())
     }
 
@@ -92,7 +92,7 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     #[inline]
     pub unsafe fn audio_processor(
         &self,
-    ) -> Result<NonNull<<H as Host>::AudioProcessor>, HostError> {
+    ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
         self.data.with_referential(|d| {
             d.audio_processor()
                 .map(|a| a.cast())
@@ -102,7 +102,7 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
 
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
     #[inline]
-    pub fn shared(&self) -> &<H as Host>::Shared {
+    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
         // SAFETY: TODO
         self.data
             .with_referential(|d| unsafe { d.shared().cast().as_ref() })
@@ -110,8 +110,8 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
 
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Self
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host<'s>>::Shared,
-        FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
+        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
+        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
         let instance_ptr = Pin::new(RawPluginInstanceRef::default());
 
@@ -135,9 +135,9 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host<'a>>::Shared,
-            &mut <H as Host<'a>>::MainThread,
-        ) -> <H as Host<'a>>::AudioProcessor,
+            &'a <H as Host>::Shared<'a>,
+            &mut <H as Host>::MainThread<'a>,
+        ) -> <H as Host>::AudioProcessor<'a>,
     {
         self.data
             .with_referential(|d| d.activate(audio_processor, instance))
@@ -147,8 +147,8 @@ impl<H: for<'h> Host<'h>> HostWrapper<H> {
     pub(crate) unsafe fn deactivate<T>(
         &self,
         drop: impl for<'s> FnOnce(
-            <H as Host<'s>>::AudioProcessor,
-            &mut <H as Host<'s>>::MainThread,
+            <H as Host>::AudioProcessor<'s>,
+            &mut <H as Host>::MainThread<'s>,
         ) -> T,
     ) -> T {
         self.data.with_referential(|d| d.deactivate(drop))

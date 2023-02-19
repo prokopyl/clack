@@ -62,9 +62,9 @@ pub trait HostNoteNameImpl {
     fn changed(&mut self);
 }
 
-impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostNoteName
+impl<H: Host> ExtensionImplementation<H> for HostNoteName
 where
-    for<'h> <H as Host<'h>>::MainThread: HostNoteNameImpl,
+    for<'h> <H as Host>::MainThread<'h>: HostNoteNameImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &HostNoteName(clap_host_note_name {
@@ -72,9 +72,9 @@ where
     });
 }
 
-unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
+unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostNoteNameImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostNoteNameImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().changed();

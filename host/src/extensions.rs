@@ -121,13 +121,13 @@
 //! }
 //!
 //! struct MyHost;
-//! impl<'a> Host<'a> for MyHost {
-//!     type Shared = MyHostShared<'a>;
+//! impl Host for MyHost {
+//!     type Shared<'a> = MyHostShared<'a>;
 //!
-//!     type MainThread = MyHostMainThread<'a>;
-//!     type AudioProcessor = ();
+//!     type MainThread<'a> = MyHostMainThread<'a>;
+//!     type AudioProcessor<'a> = ();
 //!
-//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared) {
+//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared<'_>) {
 //!         builder.register::<HostLatency>();
 //!     }
 //! }
@@ -186,8 +186,8 @@
 //!     fn changed(&mut self);
 //! }
 //!
-//! impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLatency
-//!     where for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+//! impl<H: Host> ExtensionImplementation<H> for HostLatency
+//!     where for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &HostLatency {
 //!         inner: clap_host_latency {
@@ -196,8 +196,8 @@
 //!     };
 //! }
 //!
-//! unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
-//!     where for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+//! unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
+//!     where for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
 //! {
 //!     HostWrapper::<H>::handle(host, |host| {
 //!         host.main_thread().as_mut().changed();

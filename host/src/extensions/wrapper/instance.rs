@@ -33,14 +33,14 @@ impl Deref for RawPluginInstanceRef {
 // SAFETY: this derefs to nothing
 unsafe impl StableDeref for RawPluginInstanceRef {}
 
-pub struct PluginInstanceInner<H: for<'a> Host<'a>> {
+pub struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     instance: *mut clap_plugin,
     _plugin_bundle: PluginBundle, // Keep the DLL/.SO alive while plugin is instantiated
 }
 
-impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
+impl<H: Host> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
@@ -49,8 +49,8 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
         host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host<'s>>::Shared,
-        FH: for<'s> FnOnce(&'s <H as Host<'s>>::Shared) -> <H as Host<'s>>::MainThread,
+        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
+        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
         let host_wrapper = Box::pin(HostWrapper::new(shared, main_thread));
         let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
@@ -110,9 +110,9 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host<'a>>::Shared,
-            &mut <H as Host<'a>>::MainThread,
-        ) -> <H as Host<'a>>::AudioProcessor,
+            &'a <H as Host>::Shared<'a>,
+            &mut <H as Host>::MainThread<'a>,
+        ) -> <H as Host>::AudioProcessor<'a>,
     {
         if self.wrapper().is_active() {
             return Err(HostError::AlreadyActivatedPlugin);
@@ -146,8 +146,8 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     pub fn deactivate_with<T>(
         &mut self,
         drop: impl for<'s> FnOnce(
-            <H as Host<'s>>::AudioProcessor,
-            &mut <H as Host<'s>>::MainThread,
+            <H as Host>::AudioProcessor<'s>,
+            &mut <H as Host>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
         if !self.wrapper().is_active() {
@@ -189,7 +189,7 @@ impl<H: for<'a> Host<'a>> PluginInstanceInner<H> {
     }
 }
 
-impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
+impl<H: Host> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
         // Happens only if instantiate didn't complete
@@ -206,5 +206,5 @@ impl<H: for<'h> Host<'h>> Drop for PluginInstanceInner<H> {
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: for<'h> Host<'h>> Send for PluginInstanceInner<H> {}
-unsafe impl<H: for<'h> Host<'h>> Sync for PluginInstanceInner<H> {}
+unsafe impl<H: Host> Send for PluginInstanceInner<H> {}
+unsafe impl<H: Host> Sync for PluginInstanceInner<H> {}

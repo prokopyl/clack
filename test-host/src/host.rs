@@ -23,8 +23,8 @@ impl<'a> HostAudioProcessor<'a> for TestHostAudioProcessor {}
 
 impl<'a> HostMainThread<'a> for TestHostMainThread {}
 
-impl<'a> Host<'a> for TestHostImpl {
-    type AudioProcessor = TestHostAudioProcessor;
-    type Shared = TestHostShared;
-    type MainThread = TestHostMainThread;
+impl Host for TestHostImpl {
+    type Shared<'a> = TestHostShared;
+    type MainThread<'a> = TestHostMainThread;
+    type AudioProcessor<'a> = TestHostAudioProcessor;
 }

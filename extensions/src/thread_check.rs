@@ -44,9 +44,9 @@ mod host {
         fn is_audio_thread(&self) -> bool;
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostThreadCheck
+    impl<H: Host> ExtensionImplementation<H> for HostThreadCheck
     where
-        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
+        for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostThreadCheck(clap_host_thread_check {
             is_main_thread: Some(is_main_thread::<H>),
@@ -54,16 +54,16 @@ mod host {
         });
     }
 
-    unsafe extern "C" fn is_main_thread<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_main_thread<H: Host>(host: *const clap_host) -> bool
     where
-        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
+        for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
     }
 
-    unsafe extern "C" fn is_audio_thread<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_audio_thread<H: Host>(host: *const clap_host) -> bool
     where
-        for<'a> <H as Host<'a>>::Shared: HostThreadCheckImpl,
+        for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_audio_thread())).unwrap_or(false)
     }

@@ -54,9 +54,9 @@ pub trait HostAudioPortsImpl {
     fn rescan(&mut self, flag: RescanType);
 }
 
-impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostAudioPorts
+impl<H: Host> ExtensionImplementation<H> for HostAudioPorts
 where
-    for<'h> <H as Host<'h>>::MainThread: HostAudioPortsImpl,
+    for<'h> <H as Host>::MainThread<'h>: HostAudioPortsImpl,
 {
     const IMPLEMENTATION: &'static Self = &HostAudioPorts(
         clap_host_audio_ports {
@@ -67,12 +67,9 @@ where
     );
 }
 
-unsafe extern "C" fn is_rescan_flag_supported<H: for<'a> Host<'a>>(
-    host: *const clap_host,
-    flag: u32,
-) -> bool
+unsafe extern "C" fn is_rescan_flag_supported<H: Host>(host: *const clap_host, flag: u32) -> bool
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -83,9 +80,9 @@ where
     .unwrap_or(false)
 }
 
-unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostAudioPortsImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

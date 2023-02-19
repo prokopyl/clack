@@ -20,11 +20,11 @@ pub struct PluginAudioConfiguration {
     pub frames_count_range: RangeInclusive<u32>,
 }
 
-pub struct PluginInstance<H: for<'a> Host<'a>> {
+pub struct PluginInstance<H: Host> {
     inner: Arc<PluginInstanceInner<H>>,
 }
 
-impl<H: for<'b> Host<'b>> PluginInstance<H> {
+impl<H: Host> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
@@ -33,8 +33,8 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         host: &HostInfo,
     ) -> Result<Self, HostError>
     where
-        FS: for<'b> FnOnce(&'b ()) -> <H as Host<'b>>::Shared,
-        FH: for<'b> FnOnce(&'b <H as Host<'b>>::Shared) -> <H as Host<'b>>::MainThread,
+        FS: for<'b> FnOnce(&'b ()) -> <H as Host>::Shared<'b>,
+        FH: for<'b> FnOnce(&'b <H as Host>::Shared<'b>) -> <H as Host>::MainThread<'b>,
     {
         let inner = PluginInstanceInner::<H>::instantiate(
             shared,
@@ -55,9 +55,9 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host<'a>>::Shared,
-            &mut <H as Host<'a>>::MainThread,
-        ) -> <H as Host<'a>>::AudioProcessor,
+            &'a <H as Host>::Shared<'a>,
+            &mut <H as Host>::MainThread<'a>,
+        ) -> <H as Host>::AudioProcessor<'a>,
     {
         let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
 
@@ -82,7 +82,7 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
         drop_with: D,
     ) -> T
     where
-        D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
+        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
     {
         if !Arc::ptr_eq(&self.inner, &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
@@ -96,7 +96,7 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
 
     pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, HostError>
     where
-        D: for<'s> FnOnce(<H as Host<'s>>::AudioProcessor, &mut <H as Host<'s>>::MainThread) -> T,
+        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
     {
         let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::StillActivatedPlugin)?;
 
@@ -120,19 +120,19 @@ impl<H: for<'b> Host<'b>> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
         self.inner.wrapper().shared()
     }
 
     #[inline]
-    pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread {
+    pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.wrapper().main_thread().as_ref() }
     }
 
     #[inline]
-    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread {
+    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.wrapper().main_thread().as_mut() }

@@ -41,9 +41,9 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostLatency
+    impl<H: Host> ExtensionImplementation<H> for HostLatency
     where
-        for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
     {
         const IMPLEMENTATION: &'static Self = &HostLatency {
             inner: clap_host_latency {
@@ -52,9 +52,9 @@ mod host {
         };
     }
 
-    unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
-        for<'a> <H as Host<'a>>::MainThread: HostLatencyImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();

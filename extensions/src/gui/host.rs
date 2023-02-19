@@ -269,9 +269,9 @@ pub trait HostGuiImpl {
     fn closed(&self, was_destroyed: bool);
 }
 
-impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostGui
+impl<H: Host> ExtensionImplementation<H> for HostGui
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self {
@@ -285,9 +285,9 @@ where
     };
 }
 
-unsafe extern "C" fn resize_hints_changed<H: for<'a> Host<'a>>(host: *const clap_host)
+unsafe extern "C" fn resize_hints_changed<H: Host>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().resize_hints_changed();
@@ -295,13 +295,13 @@ where
     });
 }
 
-unsafe extern "C" fn request_resize<H: for<'a> Host<'a>>(
+unsafe extern "C" fn request_resize<H: Host>(
     host: *const clap_host,
     width: u32,
     height: u32,
 ) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -312,23 +312,23 @@ where
     .unwrap_or(false)
 }
 
-unsafe extern "C" fn request_show<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
+unsafe extern "C" fn request_show<H: Host>(host: *const clap_host) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show().is_ok())).unwrap_or(false)
 }
 
-unsafe extern "C" fn request_hide<H: for<'a> Host<'a>>(host: *const clap_host) -> bool
+unsafe extern "C" fn request_hide<H: Host>(host: *const clap_host) -> bool
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide().is_ok())).unwrap_or(false)
 }
 
-unsafe extern "C" fn closed<H: for<'a> Host<'a>>(host: *const clap_host, was_destroyed: bool)
+unsafe extern "C" fn closed<H: Host>(host: *const clap_host, was_destroyed: bool)
 where
-    for<'a> <H as Host<'a>>::Shared: HostGuiImpl,
+    for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().closed(was_destroyed);

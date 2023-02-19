@@ -54,9 +54,9 @@ pub trait HostNotePortsImpl {
     fn rescan(&self, flags: NotePortRescanFlags);
 }
 
-impl<H: for<'h> Host<'h>> ExtensionImplementation<H> for HostNotePorts
+impl<H: Host> ExtensionImplementation<H> for HostNotePorts
 where
-    for<'h> <H as Host<'h>>::MainThread: HostNotePortsImpl,
+    for<'h> <H as Host>::MainThread<'h>: HostNotePortsImpl,
 {
     const IMPLEMENTATION: &'static Self = &HostNotePorts(
         clap_host_note_ports {
@@ -67,9 +67,9 @@ where
     );
 }
 
-unsafe extern "C" fn supported_dialects<H: for<'a> Host<'a>>(host: *const clap_host) -> u32
+unsafe extern "C" fn supported_dialects<H: Host>(host: *const clap_host) -> u32
 where
-    for<'a> <H as Host<'a>>::MainThread: HostNotePortsImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host.main_thread().as_ref().supported_dialects().bits)
@@ -77,9 +77,9 @@ where
     .unwrap_or(0)
 }
 
-unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as Host<'a>>::MainThread: HostNotePortsImpl,
+    for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

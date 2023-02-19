@@ -10,7 +10,7 @@ pub struct RawHostDescriptor {
 }
 
 impl RawHostDescriptor {
-    pub(crate) fn new<H: for<'h> Host<'h>>(host_info: HostInfo) -> Self {
+    pub(crate) fn new<H: Host>(host_info: HostInfo) -> Self {
         let mut raw = clap_host {
             clap_version: ClapVersion::CURRENT.to_raw(),
             host_data: core::ptr::null_mut(),
@@ -38,12 +38,12 @@ impl RawHostDescriptor {
     }
 
     #[inline]
-    pub fn set_wrapper<H: for<'h> Host<'h>>(&mut self, wrapper: &HostWrapper<H>) {
+    pub fn set_wrapper<H: Host>(&mut self, wrapper: &HostWrapper<H>) {
         self.raw.host_data = wrapper as *const _ as *mut _
     }
 }
 
-unsafe extern "C" fn get_extension<H: for<'a> Host<'a>>(
+unsafe extern "C" fn get_extension<H: Host>(
     host: *const clap_host,
     identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
@@ -57,21 +57,21 @@ unsafe extern "C" fn get_extension<H: for<'a> Host<'a>>(
     builder.found()
 }
 
-unsafe extern "C" fn request_restart<H: for<'a> Host<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_restart<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_restart();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_process<H: for<'a> Host<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_process<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_process();
         Ok(())
     });
 }
 
-unsafe extern "C" fn request_callback<H: for<'a> Host<'a>>(host: *const clap_host) {
+unsafe extern "C" fn request_callback<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_callback();
         Ok(())

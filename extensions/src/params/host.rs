@@ -30,7 +30,7 @@ impl PluginParams {
         }
     }
 
-    pub fn get_value<H: for<'a> Host<'a>>(
+    pub fn get_value<H: Host>(
         &self,
         plugin: &PluginMainThreadHandle,
         param_id: u32,
@@ -45,7 +45,7 @@ impl PluginParams {
         }
     }
 
-    pub fn value_to_text<'b, H: for<'a> Host<'a>>(
+    pub fn value_to_text<'b, H: Host>(
         &self,
         plugin: &PluginMainThreadHandle,
         param_id: u32,
@@ -73,7 +73,7 @@ impl PluginParams {
         }
     }
 
-    pub fn text_to_value<H: for<'a> Host<'a>>(
+    pub fn text_to_value<H: Host>(
         &self,
         plugin: &PluginMainThreadHandle,
         param_id: u32,
@@ -148,10 +148,10 @@ pub trait HostParamsImplMainThread {
     fn clear(&mut self, param_id: u32, flags: ParamClearFlags);
 }
 
-impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostParams
+impl<H: Host> ExtensionImplementation<H> for HostParams
 where
-    for<'a> <H as Host<'a>>::Shared: HostParamsImplShared,
-    for<'a> <H as Host<'a>>::MainThread: HostParamsImplMainThread,
+    for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,
+    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
 {
     const IMPLEMENTATION: &'static Self = &HostParams(clap_host_params {
         rescan: Some(rescan::<H>),
@@ -160,11 +160,9 @@ where
     });
 }
 
-unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(
-    host: *const clap_host,
-    flags: clap_param_rescan_flags,
-) where
-    for<'a> <H as Host<'a>>::MainThread: HostParamsImplMainThread,
+unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flags: clap_param_rescan_flags)
+where
+    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -175,12 +173,12 @@ unsafe extern "C" fn rescan<H: for<'a> Host<'a>>(
     });
 }
 
-unsafe extern "C" fn clear<H: for<'a> Host<'a>>(
+unsafe extern "C" fn clear<H: Host>(
     host: *const clap_host,
     param_id: u32,
     flags: clap_param_clear_flags,
 ) where
-    for<'a> <H as Host<'a>>::MainThread: HostParamsImplMainThread,
+    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -191,9 +189,9 @@ unsafe extern "C" fn clear<H: for<'a> Host<'a>>(
     });
 }
 
-unsafe extern "C" fn request_flush<H: for<'a> Host<'a>>(host: *const clap_host)
+unsafe extern "C" fn request_flush<H: Host>(host: *const clap_host)
 where
-    for<'a> <H as Host<'a>>::Shared: HostParamsImplShared,
+    for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().request_flush();

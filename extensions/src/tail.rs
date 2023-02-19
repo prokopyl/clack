@@ -119,9 +119,9 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostTail
+    impl<H: Host> ExtensionImplementation<H> for HostTail
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImpl,
+        for<'a> <H as Host>::AudioProcessor<'a>: HostTailImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_host_tail {
@@ -129,9 +129,9 @@ mod host {
         });
     }
 
-    unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
-        for<'a> <H as Host<'a>>::AudioProcessor: HostTailImpl,
+        for<'a> <H as Host>::AudioProcessor<'a>: HostTailImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.audio_processor()?.as_mut().changed();
@@ -166,7 +166,7 @@ mod plugin {
 
     impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginTail
     where
-        for<'a> P: PluginTailImpl,
+        P: PluginTailImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_tail {
@@ -176,7 +176,7 @@ mod plugin {
 
     unsafe extern "C" fn get<P: for<'a> Plugin<'a>>(plugin: *const clap_plugin) -> u32
     where
-        for<'a> P: PluginTailImpl,
+        P: PluginTailImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin.audio_processor()?.as_ref().get().to_raw())
