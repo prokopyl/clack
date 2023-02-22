@@ -56,14 +56,14 @@ impl<'a> PluginDescriptor<'a> {
     #[inline]
     pub fn features(&self) -> impl Iterator<Item = &'a CStr> {
         FeaturesIter {
-            current: self.descriptor.features as *mut _,
+            current: self.descriptor.features,
             _lifetime: PhantomData,
         }
     }
 }
 
 struct FeaturesIter<'a> {
-    current: *mut *const std::os::raw::c_char,
+    current: *const *const std::os::raw::c_char,
     _lifetime: PhantomData<&'a CStr>,
 }
 
@@ -71,7 +71,11 @@ impl<'a> Iterator for FeaturesIter<'a> {
     type Item = &'a CStr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // SAFETY: list is guaranteed to be null-terminated
+        if self.current.is_null() {
+            return None;
+        }
+
+        // SAFETY: we just null-checked the list pointer above.
         let current = unsafe { self.current.as_ref() }?;
         if current.is_null() {
             return None;

@@ -190,6 +190,10 @@ impl PluginBundle {
     ///
     /// If this bundle does not expose a [`Factory`] of the requested type, [`None`] is returned.
     ///
+    /// If you are looking to fetch the bundle's [`PluginFactory`], you can also use the
+    /// [`get_plugin_factory`](PluginBundle::get_plugin_factory) method, which is just a convenience
+    /// wrapper around this method.
+    ///
     /// # Example
     ///
     /// ```no_run
