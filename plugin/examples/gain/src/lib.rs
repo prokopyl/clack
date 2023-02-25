@@ -8,9 +8,6 @@ use std::sync::Arc;
 
 use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
 
-#[cfg(not(miri))]
-use clack_extensions::gui::PluginGui;
-
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
     PluginAudioPortsImpl,
@@ -19,9 +16,6 @@ use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::channels::AudioBufferType;
 use clack_plugin::utils::Cookie;
 use std::sync::atomic::{AtomicI32, Ordering};
-
-#[cfg(not(miri))]
-mod gui;
 
 pub struct GainPlugin<'a> {
     shared: &'a GainPluginShared<'a>,
@@ -104,9 +98,6 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         builder
             .register::<PluginParams>()
             .register::<PluginAudioPorts>();
-
-        #[cfg(not(miri))]
-        builder.register::<PluginGui>();
     }
 }
 
@@ -162,8 +153,6 @@ pub struct GainPluginMainThread<'a> {
     #[allow(unused)]
     shared: &'a GainPluginShared<'a>,
 
-    #[cfg(not(miri))]
-    gui: gui::MainThreadGui,
     _host: HostMainThreadHandle<'a>,
 }
 
@@ -175,8 +164,6 @@ impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a>
         Ok(Self {
             rusting: 0,
             shared,
-            #[cfg(not(miri))]
-            gui: gui::MainThreadGui::default(),
             _host: host,
         })
     }
@@ -233,7 +220,6 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     }
 
     fn flush(&mut self, _input_events: &InputEvents, _output_events: &mut OutputEvents) {
-        // TODO
         /*let value_events = input_events.iter().filter_map(|e| match e.as_event()? {
             Event::ParamValue(v) => Some(v),
             _ => None,

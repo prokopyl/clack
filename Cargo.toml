@@ -7,16 +7,3 @@ members = [
     "extensions",
     "test-host"
 ]
-
-[patch.crates-io]
-glow = { git = "https://github.com/prokopyl/glow" }
-
-[patch."https://github.com/glowcoil/raw-gl-context"]
-raw-gl-context = { git = "https://github.com/prokopyl/raw-gl-context" }
-
-[patch."https://github.com/geom3trik/VIZIA"]
-vizia = { git = "https://github.com/prokopyl/VIZIA" }
-vizia_baseview = { git = "https://github.com/prokopyl/VIZIA" }
-
-[patch."https://github.com/RustAudio/baseview"]
-baseview = { git = "https://github.com/prokopyl/baseview" }
