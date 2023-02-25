@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 //! Factory types and associated utilities.
 //!
 //! In CLAP, factories are singleton objects exposed by the [plugin bundle](crate::bundle)'s
