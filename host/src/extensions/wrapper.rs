@@ -1,9 +1,7 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
 use crate::host::{Host, HostError, HostMainThread, HostShared};
-use crate::instance::handle::{
-    PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
-};
+use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use selfie::Selfie;

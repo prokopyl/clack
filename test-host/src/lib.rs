@@ -1,15 +1,7 @@
 use crate::host::{TestHostAudioProcessor, TestHostImpl, TestHostMainThread, TestHostShared};
-use clack_host::bundle::{PluginBundle, PluginEntryDescriptor};
-use clack_host::events::io::{EventBuffer, InputEvents, OutputEvents};
+use clack_host::bundle::PluginEntryDescriptor;
 use clack_host::factory::{PluginDescriptor, PluginFactory};
-use clack_host::host::HostError;
-use clack_host::instance::processor::audio::{
-    AudioPortBuffer, AudioPortBufferType, AudioPorts, InputChannel,
-};
-use clack_host::instance::processor::StoppedPluginAudioProcessor;
-use clack_host::instance::PluginAudioConfiguration;
-use clack_host::process::ProcessStatus;
-use clack_host::{host::HostInfo, instance::PluginInstance};
+use clack_host::prelude::*;
 use selfie::refs::RefType;
 use selfie::Selfie;
 

@@ -1,19 +1,26 @@
+use self::audio_buffers::InputAudioBuffers;
 use crate::extensions::wrapper::instance::PluginInstanceInner;
 use crate::host::Host;
 use crate::host::HostError;
-use crate::instance::handle::{PluginAudioProcessorHandle, PluginSharedHandle};
-use crate::instance::processor::audio::InputAudioBuffers;
-use crate::instance::processor::PluginAudioProcessor::*;
+use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
 use crate::prelude::OutputAudioBuffers;
+use crate::process::PluginAudioProcessor::*;
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
-use clack_common::process::ProcessStatus;
 use clap_sys::process::clap_process;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::RangeInclusive;
 use std::sync::Arc;
 
-pub mod audio;
+pub use clack_common::process::*;
+
+pub mod audio_buffers;
+
+pub struct PluginAudioConfiguration {
+    pub sample_rate: f64,
+    pub frames_count_range: RangeInclusive<u32>,
+}
 
 pub enum PluginAudioProcessor<H: Host> {
     Started(StartedPluginAudioProcessor<H>),

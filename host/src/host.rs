@@ -18,7 +18,7 @@
 //!
 //! * The *main thread* (`[main-thread]` in the CLAP specification): this is represented by a type
 //!   implementing the [`HostMainThread`] trait, which is neither [`Send`] nor [`Sync`], and lives
-//!   encapsulated in the [`PluginInstance`](crate::instance::PluginInstance) struct.
+//!   encapsulated in the [`PluginInstance`](crate::plugin::PluginInstance) struct.
 //!
 //!   This type can handle all non-realtime-safe operations, such as those related to buffer
 //!   allocations or GUI handling, and extensions can extend its use to more kinds of operations.
@@ -29,9 +29,9 @@
 //! * The *audio thread* (`[audio-thread]` in the CLAP specification): this is represented by a type
 //!   implementing the [`HostAudioProcessor`] trait, which is [`Send`] but
 //!   [`!Sync`](Sync), and lives encapsulated in the
-//!   [`PluginAudioProcessor`](crate::instance::processor::PluginAudioProcessor) struct. It is only
-//!   instantiated when the [`activate`](crate::instance::PluginInstance::activate) method is called,
-//!   and is dropped on [`deactivate`](crate::instance::PluginInstance::deactivate). If it isn't
+//!   [`PluginAudioProcessor`](crate::process::PluginAudioProcessor) struct. It is only
+//!   instantiated when the [`activate`](crate::plugin::PluginInstance::activate) method is called,
+//!   and is dropped on [`deactivate`](crate::plugin::PluginInstance::deactivate). If it isn't
 //!   needed , `()` can be used instead.
 //!
 //!   This type is designed to handle all DSP-related requests from the plugin and lives in one of
@@ -197,7 +197,7 @@ pub use error::HostError;
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 
-use crate::instance::handle::{PluginMainThreadHandle, PluginSharedHandle};
+use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
 
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
@@ -259,7 +259,7 @@ pub trait HostShared<'a>: Send + Sync {
     fn request_process(&self);
 
     /// Called by the plugin when it requests a call to the
-    /// [`on_main_thread` callback](crate::instance::PluginInstance::call_on_main_thread_callback)
+    /// [`on_main_thread` callback](crate::plugin::PluginInstance::call_on_main_thread_callback)
     /// to be scheduled on the main thread.
     fn request_callback(&self);
 }

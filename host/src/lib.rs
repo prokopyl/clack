@@ -33,72 +33,72 @@
 //!    (displayed name, author, etc.) about the plugins included in this bundle, including their
 //!    unique IDs. These can be displayed in a list for the user to chose from.
 //! 4. The selected plugin's ID can now be used to create a new
-//!    [`PluginInstance`](instance::PluginInstance) using its
-//!    [`new`](instance::PluginInstance::new) method. This is also where the [`Host`](host::Host)
+//!    [`PluginInstance`](plugin::PluginInstance) using its
+//!    [`new`](plugin::PluginInstance::new) method. This is also where the [`Host`](host::Host)
 //!    types come into play, as they need to be ready to handle the plugin instance's callbacks.
 //!
-//!    See the [`PluginInstance::new`](instance::PluginInstance::new) method's documentation for
+//!    See the [`PluginInstance::new`](plugin::PluginInstance::new) method's documentation for
 //!    for more detail.
 //! 5. The plugin instance now needs to be activated for audio processing, using the
-//!    [`activate`](instance::PluginInstance::activate) method. This method receives the current
-//!    [`PluginAudioConfiguration`](instance::PluginAudioConfiguration), which allows it to
+//!    [`activate`](plugin::PluginInstance::activate) method. This method receives the current
+//!    [`PluginAudioConfiguration`](process::PluginAudioConfiguration), which allows it to
 //!    allocate its buffers with proper sizes depending on sample rate, for instance. This is also
 //!    where the host should allocate its own audio and event buffers (see
 //!    [`EventBuffers`](events::io::EventBuffer) and
-//!    [`AudioPorts`](instance::processor::audio::AudioPorts)), and also where the
+//!    [`AudioPorts`](process::audio_buffers::AudioPorts)), and also where the
 //!    [`AudioProcessor`](host::Host::AudioProcessor) type is created to handle audio processing
 //!    callbacks.
 //!
 //!    If the plugin activation is successful, the plugin's
-//!    [`StoppedAudioProcessor`](instance::processor::StoppedPluginAudioProcessor) is returned.
+//!    [`StoppedAudioProcessor`](process::StoppedPluginAudioProcessor) is returned.
 //!
 //!    All of this allocation always happens on the main thread. Also, because the allocated buffers
 //!    are dependent on the given configuration, plugins have to be deactivated and then
 //!    re-activated whenever it changes.
-//! 6. Once the [`StoppedAudioProcessor`](instance::processor::StoppedPluginAudioProcessor) is
+//! 6. Once the [`StoppedAudioProcessor`](process::StoppedPluginAudioProcessor) is
 //!    created and active, we can send it to another thread dedicated to audio processing, while the
 //!    main instance type has to stay on the main thread (it is not [`Send`], while the audio
 //!    processor is). Once there, all we need to do is to indicate that continuous processing
 //!    is about to start, using the
-//!    [`start_processing`](instance::processor::StoppedPluginAudioProcessor::start_processing)
+//!    [`start_processing`](process::StoppedPluginAudioProcessor::start_processing)
 //!    method, which consumes the
-//!    [`StoppedAudioProcessor`](instance::processor::StoppedPluginAudioProcessor) and returns a
-//!    [`StartedAudioProcessor`](instance::processor::StartedPluginAudioProcessor).
+//!    [`StoppedAudioProcessor`](process::StoppedPluginAudioProcessor) and returns a
+//!    [`StartedAudioProcessor`](process::StartedPluginAudioProcessor).
 //!
 //!    Note that if this pattern of consuming the audio processors is too cumbersome, they can be
-//!    converted into a [`PluginAudioProcessor`](instance::processor::PluginAudioProcessor) using
+//!    converted into a [`PluginAudioProcessor`](process::PluginAudioProcessor) using
 //!    the [`Into`] trait, which handles switching between both states using only a `&mut` reference,
 //!    at the cost of making the
-//!    [`start_processing`](instance::processor::PluginAudioProcessor::start_processing),
-//!    [`process`](instance::processor::StartedPluginAudioProcessor::process), and
-//!    [`stop_processing`](instance::processor::PluginAudioProcessor::stop_processing) operations
+//!    [`start_processing`](process::PluginAudioProcessor::start_processing),
+//!    [`process`](process::StartedPluginAudioProcessor::process), and
+//!    [`stop_processing`](process::PluginAudioProcessor::stop_processing) operations
 //!    fallible at runtime if the lifecycle isn't properly handled. See the
-//!    [`PluginAudioProcessor`](instance::processor::PluginAudioProcessor) documentation for more
+//!    [`PluginAudioProcessor`](process::PluginAudioProcessor) documentation for more
 //!    information.
 //! 7. Perform the processing of a block of audio and events using the
-//!    [`process`](instance::processor::StartedPluginAudioProcessor::process) method.
+//!    [`process`](process::StartedPluginAudioProcessor::process) method.
 //!    
 //!    Because CLAP Audio and Event buffers are generic, some cheap, short-lived wrappers around the
 //!    audio and event buffers must be crated for each process call, in order to be passed to the
-//!    plugin's [`process`](instance::processor::StartedPluginAudioProcessor::process) method.
+//!    plugin's [`process`](process::StartedPluginAudioProcessor::process) method.
 //!
 //!    Those buffer wrappers are [`InputEvents`](events::io::InputEvents) and
 //!    [`OutputEvents`](events::io::OutputEvents) for events, and
-//!    [`AudioBuffers`](instance::processor::audio::InputAudioBuffers) for audio (obtained via a call to
-//!    [`AudioPorts::with_data`](instance::processor::audio::AudioPorts)).
+//!    [`AudioBuffers`](process::audio_buffers::InputAudioBuffers) for audio (obtained via a call to
+//!    [`AudioPorts::with_data`](process::audio_buffers::AudioPorts)).
 //!
 //!    See the documentation of those buffer types for more detail on what types they support, as
-//!    well as the [`process`](instance::processor::StartedPluginAudioProcessor::process) method's
+//!    well as the [`process`](process::StartedPluginAudioProcessor::process) method's
 //!    documentation for more information.
 //! 8. Once continuous processing has stopped, the host needs to call
-//!    [`start_processing`](instance::processor::StartedPluginAudioProcessor::stop_processing),
+//!    [`start_processing`](process::StartedPluginAudioProcessor::stop_processing),
 //!    in a similar fashion to Step 6 above.
 //!
 //! 9. The audio processor now has to be sent back to the main thread to be deactivated (in order to
 //!    not perform de-allocations in the realtime audio thread).
-//!    The [`PluginInstance::deactivate`](instance::PluginInstance::deactivate) can then be used
+//!    The [`PluginInstance::deactivate`](plugin::PluginInstance::deactivate) can then be used
 //!    to consume the Audio Processor. Only then, the
-//!    [`PluginInstance`](instance::PluginInstance) itself can be dropped to destroy the instance
+//!    [`PluginInstance`](plugin::PluginInstance) itself can be dropped to destroy the instance
 //!    entirely.
 //!
 //! # Example
@@ -262,10 +262,10 @@ pub mod bundle;
 pub mod extensions;
 pub mod factory;
 pub mod host;
-pub mod instance;
+pub mod plugin;
+pub mod process;
 
 pub use clack_common::events;
-pub use clack_common::process;
 pub use clack_common::stream;
 pub use clack_common::utils;
 
@@ -276,11 +276,14 @@ pub mod prelude {
             io::{EventBuffer, InputEvents, OutputEvents},
             EventHeader, UnknownEvent,
         },
-        host::{Host, HostAudioProcessor, HostExtensions, HostInfo, HostMainThread, HostShared},
-        instance::handle::{
-            PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
+        host::{
+            Host, HostAudioProcessor, HostError, HostExtensions, HostInfo, HostMainThread,
+            HostShared,
         },
-        instance::{processor::audio::*, PluginAudioConfiguration, PluginInstance},
-        process::ProcessStatus,
+        plugin::PluginInstance,
+        plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
+        process::{
+            audio_buffers::*, PluginAudioConfiguration, ProcessStatus, StoppedPluginAudioProcessor,
+        },
     };
 }

@@ -2,24 +2,15 @@ use crate::bundle::PluginBundle;
 use crate::host::{Host, HostInfo};
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
-use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use crate::extensions::wrapper::instance::PluginInstanceInner;
-use crate::host::HostError;
-use crate::instance::handle::{
-    PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
-};
-use crate::instance::processor::StoppedPluginAudioProcessor;
+use crate::prelude::*;
 
-pub mod handle;
-pub mod processor;
+mod handle;
+pub use handle::*;
 
-pub struct PluginAudioConfiguration {
-    pub sample_rate: f64,
-    pub frames_count_range: RangeInclusive<u32>,
-}
-
+/// A plugin instance.
 pub struct PluginInstance<H: Host> {
     inner: Arc<PluginInstanceInner<H>>,
 }

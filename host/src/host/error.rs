@@ -1,5 +1,5 @@
 use crate::host::Host;
-use crate::instance::processor::ProcessingStartError;
+use crate::process::ProcessingStartError;
 use core::fmt;
 
 /// All errors that can arise using plugin instances.

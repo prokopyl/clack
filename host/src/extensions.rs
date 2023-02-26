@@ -30,8 +30,8 @@
 //! * Querying a plugin for its side of the ABI, and consuming it.
 //!   
 //!   This is the most straightforward part: once the plugin is instantiated and the host can access
-//!   its [`PluginSharedHandle`](crate::instance::handle::PluginSharedHandle), it can use the
-//!   [`PluginSharedHandle::get_extension`](crate::instance::handle::PluginSharedHandle::get_extension)
+//!   its [`PluginSharedHandle`](crate::plugin::PluginSharedHandle), it can use the
+//!   [`PluginSharedHandle::get_extension`](crate::plugin::PluginSharedHandle::get_extension)
 //!   method to query the plugin for any supported extension, and store its associated ABI.
 //!
 //!   References to an Extension ABI can be shared, copied and used in any thread as long as they
@@ -218,7 +218,7 @@ pub mod prelude {
         Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
     };
     pub use crate::host::Host;
-    pub use crate::instance::handle::{
+    pub use crate::plugin::{
         PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
     };
     /// FOO
