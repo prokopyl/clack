@@ -110,7 +110,7 @@ mod host {
     }
 
     /// Implementation of the Host-side of the Voice Info extension.
-    pub trait HostVoiceInfoImplementation {
+    pub trait HostVoiceInfoImpl {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
         /// it by calling [`get`](PluginVoiceInfo::get) again.
         fn changed(&mut self);
@@ -118,7 +118,7 @@ mod host {
 
     impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostVoiceInfo
     where
-        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImpl,
     {
         const IMPLEMENTATION: &'static Self = &Self(clap_host_voice_info {
             changed: Some(changed::<H>),
@@ -127,7 +127,7 @@ mod host {
 
     unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
     where
-        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImplementation,
+        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();
@@ -150,7 +150,7 @@ mod plugin {
 
     impl HostVoiceInfo {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
-        /// it by calling [`get`](PluginVoiceInfoImplementation::get) again.
+        /// it by calling [`get`](PluginVoiceInfoImpl::get) again.
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
             if let Some(changed) = self.0.changed {
                 unsafe { changed(host.as_raw()) }
@@ -159,7 +159,7 @@ mod plugin {
     }
 
     /// Implementation of the Plugin-side of the Voice Info extension.
-    pub trait PluginVoiceInfoImplementation {
+    pub trait PluginVoiceInfoImpl {
         /// Retrieves a plugin's Voice Information.
         ///
         /// If the plugin failed to provide any Voice Information, this returns [`None`].
@@ -168,7 +168,7 @@ mod plugin {
 
     impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginVoiceInfo
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImplementation,
+        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImpl,
     {
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_voice_info {
             get: Some(get::<P>),
@@ -180,7 +180,7 @@ mod plugin {
         info: *mut clap_voice_info,
     ) -> bool
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImplementation,
+        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| match plugin.main_thread().as_mut().get() {
             None => Ok(false),
