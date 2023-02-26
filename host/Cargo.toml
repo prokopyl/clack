@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.59"
 
 [dependencies]
-clap-sys = "0.3.0"
+clap-sys = { git = "https://github.com/glowcoil/clap-sys", rev="40f88806915368d72c265b578b27204f85d902b4" }
 clack-common = { path = "../common" }
 libloading = "0.7.2"
 selfie = "=0.0.2"

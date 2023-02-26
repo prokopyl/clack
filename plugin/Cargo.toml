@@ -8,5 +8,5 @@ rust-version = "1.59"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap-sys = "0.3.0"
+clap-sys = { git = "https://github.com/glowcoil/clap-sys", rev="40f88806915368d72c265b578b27204f85d902b4" }
 clack-common = { path = "../common" }
