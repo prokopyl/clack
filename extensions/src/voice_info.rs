@@ -10,7 +10,7 @@
 #![deny(missing_docs)]
 
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtension};
+use clack_common::extensions::*;
 use clap_sys::ext::voice_info::*;
 use std::ffi::CStr;
 
@@ -25,7 +25,7 @@ unsafe impl Sync for PluginVoiceInfo {}
 
 unsafe impl Extension for PluginVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
-    type ExtensionType = HostExtension;
+    type ExtensionSide = PluginExtensionSide;
 }
 
 /// Host-side of the Voice Info extension.
@@ -39,7 +39,7 @@ unsafe impl Sync for HostVoiceInfo {}
 
 unsafe impl Extension for HostVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
-    type ExtensionType = HostExtension;
+    type ExtensionSide = HostExtensionSide;
 }
 
 bitflags! {
@@ -88,11 +88,7 @@ impl VoiceInfo {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_host::host::Host;
-    use clack_host::plugin::PluginMainThreadHandle;
-    use clack_host::wrapper::HostWrapper;
-    use clap_sys::host::clap_host;
+    use clack_host::extensions::prelude::*;
     use std::mem::MaybeUninit;
 
     impl PluginVoiceInfo {
@@ -116,18 +112,18 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> Host<'a>> ExtensionImplementation<H> for HostVoiceInfo
+    impl<H: for<'a> Host> ExtensionImplementation<H> for HostVoiceInfo
     where
-        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
     {
         const IMPLEMENTATION: &'static Self = &Self(clap_host_voice_info {
             changed: Some(changed::<H>),
         });
     }
 
-    unsafe extern "C" fn changed<H: for<'a> Host<'a>>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
-        for<'a> <H as Host<'a>>::MainThread: HostVoiceInfoImpl,
+        for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();
@@ -142,11 +138,7 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::ExtensionImplementation;
-    use clack_plugin::host::HostMainThreadHandle;
-    use clack_plugin::plugin::wrapper::PluginWrapper;
-    use clack_plugin::plugin::Plugin;
-    use clap_sys::plugin::clap_plugin;
+    use clack_plugin::extensions::prelude::*;
 
     impl HostVoiceInfo {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
