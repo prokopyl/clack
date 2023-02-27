@@ -4,7 +4,6 @@
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use std::ffi::CStr;
-use std::sync::Arc;
 
 use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
 
@@ -13,12 +12,10 @@ use clack_extensions::audio_ports::{
     PluginAudioPortsImpl,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
-use clack_plugin::process::audio::channels::AudioBufferType;
+use clack_plugin::process::audio::channels::SampleType;
 use clack_plugin::utils::Cookie;
-use std::sync::atomic::{AtomicI32, Ordering};
 
 pub struct GainPlugin<'a> {
-    shared: &'a GainPluginShared<'a>,
     latest_gain_value: i32,
     _host: HostAudioThreadHandle<'a>,
 }
@@ -41,11 +38,10 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
     fn activate(
         host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
-        shared: &'a GainPluginShared,
+        _shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
         Ok(Self {
-            shared,
             latest_gain_value: 0,
             _host: host,
         })
@@ -64,31 +60,18 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         };
 
         match io {
-            AudioBufferType::F32(io) => {
+            SampleType::F32(io) => {
                 // Supports safe in_place processing
                 for (input, output) in io {
                     output.set(input.get() * 2.0)
                 }
             }
-            AudioBufferType::F64(io) => {
+            SampleType::F64(io) => {
                 // Supports safe in_place processing
                 for (input, output) in io {
                     output.set(input.get() * 2.0)
                 }
             }
-        }
-
-        /*let io = audio.zip(0, 0).unwrap().into_f32().unwrap();
-
-        // Supports safe in_place processing
-        for (input, output) in io {
-            output.set(input.get() * 2.0)
-        }*/
-
-        let new_gain = self.shared.from_ui.gain.load(Ordering::Relaxed);
-        if new_gain != self.latest_gain_value {
-            println!("New gain value: {new_gain}");
-            self.latest_gain_value = new_gain;
         }
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
@@ -129,22 +112,13 @@ impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
     }
 }
 
-#[derive(Default)]
-pub struct UiAtomics {
-    gain: AtomicI32, // in dB TODO
-}
-
 pub struct GainPluginShared<'a> {
-    from_ui: Arc<UiAtomics>,
     _host: HostHandle<'a>,
 }
 
 impl<'a> PluginShared<'a> for GainPluginShared<'a> {
     fn new(host: HostHandle<'a>) -> Result<Self, PluginError> {
-        Ok(Self {
-            from_ui: Arc::new(UiAtomics::default()),
-            _host: host,
-        })
+        Ok(Self { _host: host })
     }
 }
 
