@@ -1,12 +1,15 @@
-use crate::process::audio::buffer::{AudioBuffer, AudioBufferMut};
-use crate::process::audio::channels::{AudioBufferType, TAudioChannelsMut};
+use crate::process::audio::pair::{AudioPortPair, AudioPortsPairIter};
+use crate::process::audio::port::{AudioInputPort, AudioOutputPort};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::process::clap_process;
-use std::cell::Cell;
+
+pub mod channels;
+pub mod pair;
+pub mod port;
 
 pub struct Audio<'a> {
     inputs: &'a [clap_audio_buffer],
-    outputs: &'a [clap_audio_buffer],
+    outputs: &'a mut [clap_audio_buffer],
     frames_count: u32,
 }
 
@@ -20,7 +23,7 @@ impl<'a> Audio<'a> {
                     process.audio_inputs,
                     process.audio_inputs_count as usize,
                 ),
-                outputs: core::slice::from_raw_parts(
+                outputs: core::slice::from_raw_parts_mut(
                     process.audio_outputs,
                     process.audio_outputs_count as usize,
                 ),
@@ -28,10 +31,10 @@ impl<'a> Audio<'a> {
         }
     }
 
-    pub fn input(&self, index: usize) -> Option<AudioBuffer> {
+    pub fn input(&self, index: usize) -> Option<AudioInputPort> {
         self.inputs
             .get(index)
-            .map(|buf| unsafe { AudioBuffer::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { AudioInputPort::from_raw(buf, self.frames_count) })
     }
 
     #[inline]
@@ -40,9 +43,11 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
-    pub fn output(&mut self, index: usize) -> Option<AudioBufferMut> {
-        // SAFETY: &mut ensures there is no input being read concurrently
-        unsafe { self.output_unchecked(index) }
+    pub fn output(&mut self, index: usize) -> Option<AudioOutputPort> {
+        self.outputs
+            .get_mut(index)
+            // SAFETY: &mut ensures there is no input being read concurrently
+            .map(|buf| unsafe { AudioOutputPort::from_raw(buf, self.frames_count) })
     }
 
     #[inline]
@@ -50,56 +55,50 @@ impl<'a> Audio<'a> {
         self.outputs.len()
     }
 
-    ///
-    /// # Safety
-    /// The caller must guarantee that the requested buffer is not aliased to any input buffer by
-    /// the host.
-    pub unsafe fn output_unchecked(&self, index: usize) -> Option<AudioBufferMut> {
-        self.outputs
-            .get(index)
-            .map(|buf| AudioBufferMut::from_raw(buf, self.frames_count))
-    }
-
-    fn zip_channels<'b, T: Sized>(
-        input: &mut TAudioChannelsMut<'b, T>,
-        output: &mut TAudioChannelsMut<'b, T>,
-        channel_index: usize,
-    ) -> Option<impl Iterator<Item = (&'b Cell<T>, &'b Cell<T>)>> {
-        let input = input.get_channel_data_mut(channel_index)?;
-        let output = output.get_channel_data_mut(channel_index)?;
-
-        Some(
-            Cell::from_mut(input)
-                .as_slice_of_cells()
-                .iter()
-                .zip(Cell::from_mut(output).as_slice_of_cells().iter()),
-        )
-    }
-
-    pub fn zip(
-        &mut self,
-        port_index: usize,
-        channel_index: usize,
-    ) -> Option<
-        AudioBufferType<
-            impl Iterator<Item = (&Cell<f32>, &Cell<f32>)>,
-            impl Iterator<Item = (&Cell<f64>, &Cell<f64>)>,
-        >,
-    > {
-        let mut input_buffer =
-            unsafe { AudioBufferMut::from_raw(self.inputs.get(port_index)?, self.frames_count) };
-        let mut output_buffer = unsafe { self.output_unchecked(port_index) }?;
-
-        match (input_buffer.channels_mut(), output_buffer.channels_mut()) {
-            (AudioBufferType::F32(mut in_chans), AudioBufferType::F32(mut out_chans)) => {
-                Some(AudioBufferType::F32(Self::zip_channels(&mut in_chans, &mut out_chans, channel_index)?))
-            },
-            (AudioBufferType::F64(mut in_chans), AudioBufferType::F64(mut out_chans)) =>
-                Some(AudioBufferType::F64(Self::zip_channels(&mut in_chans, &mut out_chans, channel_index)?)),
-            _ => panic!("Cannot reconciliate buffer types: input and output buffers must be both either f32 or f64")
-        }
+    #[inline]
+    pub fn port_pairs(&mut self) -> AudioPortsPairIter {
+        AudioPortsPairIter::new(self)
     }
 }
 
-pub mod buffer;
-pub mod channels;
+impl<'a> IntoIterator for &'a mut Audio<'a> {
+    type Item = AudioPortPair<'a>;
+    type IntoIter = AudioPortsPairIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.port_pairs()
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use clack_host::prelude::*;
+
+    #[test]
+    fn can_get_all_outputs() {
+        let ins = [[0f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut audio = Audio {
+            inputs: &[clap_audio_buffer {
+                data32: &ins as *const _ as *const _,
+                data64: ::core::ptr::null(),
+                constant_mask: 0,
+                latency: 0,
+                channel_count: 2,
+            }],
+            outputs: &mut [clap_audio_buffer {
+                data32: &mut outs as *const _ as *const _,
+                data64: ::core::ptr::null(),
+                constant_mask: 0,
+                latency: 0,
+                channel_count: 2,
+            }],
+            frames_count: 4,
+        };
+
+        let pairs = audio.port_pairs().collect::<Vec<_>>();
+    }
+}
