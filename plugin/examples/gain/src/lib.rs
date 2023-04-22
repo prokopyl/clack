@@ -12,7 +12,7 @@ use clack_extensions::audio_ports::{
     PluginAudioPortsImpl,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
-use clack_plugin::process::audio::channels::{ChannelPair, SampleType};
+use clack_plugin::process::audio::{ChannelPair, SampleType};
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin<'a> {
@@ -51,19 +51,21 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         &mut self,
         _process: &Process,
         mut audio: Audio,
-        _events: ProcessEvents,
+        _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
         for mut channel_pair in audio
             .port_pairs()
+            // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
             .filter_map(|mut p| p.channel_pairs()?.into_f32())
             .flatten()
         {
             let buf = match channel_pair {
                 ChannelPair::InputOnly(_) => continue, // Ignore extra inputs
                 ChannelPair::OutputOnly(o) => {
+                    // Just set extra outputs to 0
                     o.fill(0.0);
                     continue;
-                } // Just set extra outputs to 0
+                }
                 ChannelPair::InputOutput(i, o) => {
                     o.copy_from_slice(i);
                     o
@@ -75,26 +77,6 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
                 *x *= 2.0;
             }
         }
-        /*let io = if let Some(io) = audio.zip(0, 0) {
-            io
-        } else {
-            return Ok(ProcessStatus::ContinueIfNotQuiet);
-        };*/
-
-        /*match io {
-            SampleType::F32(io) => {
-                // Supports safe in_place processing
-                for (input, output) in io {
-                    output.set(input.get() * 2.0)
-                }
-            }
-            SampleType::F64(io) => {
-                // Supports safe in_place processing
-                for (input, output) in io {
-                    output.set(input.get() * 2.0)
-                }
-            }
-        }*/
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }

@@ -52,7 +52,7 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
             _events.output.try_push(event).unwrap();
         }
 
-        let mut output_channels = audio.output(0).unwrap().channels_mut();
+        let mut output_channels = audio.output(0).unwrap().channels_mut().unwrap();
 
         let output_buf = output_channels.as_f32_mut().unwrap().iter_mut();
 
