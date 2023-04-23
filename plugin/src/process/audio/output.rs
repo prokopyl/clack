@@ -1,7 +1,35 @@
+use crate::prelude::Audio;
 use crate::process::audio::SampleType;
 use crate::process::InputChannelsIter;
 use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
+use std::slice::IterMut;
+
+pub struct OutputPortsIter<'a> {
+    outputs: IterMut<'a, clap_audio_buffer>,
+    frames_count: u32,
+}
+
+impl<'a> OutputPortsIter<'a> {
+    #[inline]
+    pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
+        Self {
+            outputs: audio.outputs.iter_mut(),
+            frames_count: audio.frames_count,
+        }
+    }
+}
+
+impl<'a> Iterator for OutputPortsIter<'a> {
+    type Item = OutputPort<'a>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.outputs
+            .next()
+            .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
+    }
+}
 
 pub struct OutputPort<'a> {
     inner: &'a mut clap_audio_buffer,
@@ -76,18 +104,18 @@ impl<'a, S> OutputChannels<'a, S> {
     }
 
     #[inline]
-    pub fn get_channel_data(&self, channel_index: usize) -> Option<&'a [S]> {
+    pub fn channel(&self, channel_index: u32) -> Option<&'a [S]> {
         unsafe {
-            self.data.get(channel_index).map(|data| {
+            self.data.get(channel_index as usize).map(|data| {
                 core::slice::from_raw_parts(*data as *const _, self.frames_count as usize)
             })
         }
     }
 
     #[inline]
-    pub fn get_channel_data_mut(&mut self, channel_index: usize) -> Option<&'a mut [S]> {
+    pub fn channel_mut(&mut self, channel_index: u32) -> Option<&'a mut [S]> {
         unsafe {
-            self.data.get(channel_index).map(|data| {
+            self.data.get(channel_index as usize).map(|data| {
                 core::slice::from_raw_parts_mut(*data as *mut _, self.frames_count as usize)
             })
         }
@@ -126,6 +154,19 @@ impl<'a, T> IntoIterator for &'a mut OutputChannels<'a, T> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
+    }
+}
+
+impl<'a, T> IntoIterator for OutputChannels<'a, T> {
+    type Item = &'a mut [T];
+    type IntoIter = OutputChannelsIter<'a, T>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        OutputChannelsIter {
+            data: self.data.as_ref().iter(),
+            frames_count: self.frames_count,
+        }
     }
 }
 

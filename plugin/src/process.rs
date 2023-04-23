@@ -77,6 +77,34 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
+    pub fn split_at(&mut self, input_mid: usize, output_mid: usize) -> (Audio, Audio) {
+        let (ins_1, ins_2) = if input_mid > self.inputs.len() {
+            (self.inputs, [].as_slice())
+        } else {
+            self.inputs.split_at(input_mid)
+        };
+
+        let (outs_1, outs_2) = if output_mid > self.outputs.len() {
+            (&mut self.outputs[..], [].as_mut_slice())
+        } else {
+            self.outputs.split_at_mut(output_mid)
+        };
+
+        (
+            Audio {
+                inputs: ins_1,
+                outputs: outs_1,
+                frames_count: self.frames_count,
+            },
+            Audio {
+                inputs: ins_2,
+                outputs: outs_2,
+                frames_count: self.frames_count,
+            },
+        )
+    }
+
+    #[inline]
     pub fn input_port(&self, index: usize) -> Option<InputPort> {
         self.inputs
             .get(index)
@@ -86,6 +114,11 @@ impl<'a> Audio<'a> {
     #[inline]
     pub fn input_port_count(&self) -> usize {
         self.inputs.len()
+    }
+
+    #[inline]
+    pub fn input_ports(&self) -> InputPortsIter<'a> {
+        InputPortsIter::new(self)
     }
 
     #[inline]
@@ -99,6 +132,11 @@ impl<'a> Audio<'a> {
     #[inline]
     pub fn output_port_count(&self) -> usize {
         self.outputs.len()
+    }
+
+    #[inline]
+    pub fn output_ports(&mut self) -> OutputPortsIter {
+        OutputPortsIter::new(self)
     }
 
     #[inline]

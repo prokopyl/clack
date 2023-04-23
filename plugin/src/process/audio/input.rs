@@ -1,6 +1,34 @@
+use crate::prelude::Audio;
 use crate::process::audio::SampleType;
 use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
+use std::slice::Iter;
+
+pub struct InputPortsIter<'a> {
+    outputs: Iter<'a, clap_audio_buffer>,
+    frames_count: u32,
+}
+
+impl<'a> InputPortsIter<'a> {
+    #[inline]
+    pub(crate) fn new(audio: &Audio<'a>) -> Self {
+        Self {
+            outputs: audio.inputs.iter(),
+            frames_count: audio.frames_count,
+        }
+    }
+}
+
+impl<'a> Iterator for InputPortsIter<'a> {
+    type Item = InputPort<'a>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.outputs
+            .next()
+            .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
+    }
+}
 
 #[derive(Copy, Clone)]
 pub struct InputPort<'a> {
@@ -70,7 +98,7 @@ impl<'a, S> InputChannels<'a, S> {
     }
 
     #[inline]
-    pub fn get_channel_data(&self, channel_index: u32) -> Option<&'a [S]> {
+    pub fn channel(&self, channel_index: u32) -> Option<&'a [S]> {
         unsafe {
             self.data
                 .get(channel_index as usize)

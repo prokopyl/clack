@@ -105,4 +105,85 @@ pub mod tests {
 
         assert_eq!(ins, outs);
     }
+
+    #[test]
+    fn can_iterate_on_io() {
+        let mut ins = [[1f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut input_ports = AudioPorts::with_capacity(2, 1);
+        let mut output_ports = AudioPorts::with_capacity(2, 1);
+
+        let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+
+        let mut ports = audio.input_ports();
+        let port = ports.next().unwrap();
+        assert!(ports.next().is_none());
+
+        let channels = port.channels().unwrap().into_f32().unwrap();
+        let mut total = 0;
+
+        for channel in channels {
+            assert!(channel.iter().all(|f| *f == 1.0));
+            total += 1;
+        }
+
+        assert_eq!(total, 2);
+
+        let mut ports = audio.output_ports();
+        let mut port = ports.next().unwrap();
+        assert!(ports.next().is_none());
+
+        let channels = port.channels().unwrap().into_f32().unwrap();
+        let mut total = 0;
+
+        for channel in channels {
+            channel.fill(1.0);
+            total += 1;
+        }
+
+        assert_eq!(total, 2);
+
+        assert_eq!(ins, outs);
+    }
+
+    #[test]
+    fn can_access_io_with_indexes() {
+        let mut ins = [[1f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut input_ports = AudioPorts::with_capacity(2, 1);
+        let mut output_ports = AudioPorts::with_capacity(2, 1);
+
+        let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+        assert_eq!(audio.port_pair_count(), 1);
+
+        let port = audio.input_port(0).unwrap();
+        assert_eq!(port.channel_count(), 2);
+
+        let channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.channel_count(), 2);
+
+        for i in 0..port.channel_count() {
+            let channel = channels.channel(i).unwrap();
+            assert!(channel.iter().all(|f| *f == 1.0));
+        }
+
+        let mut port = audio.output_port(0).unwrap();
+        assert_eq!(port.channel_count(), 2);
+
+        let mut channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.channel_count(), 2);
+
+        let constant_mask = ConstantMask::FULLY_CONSTANT;
+
+        for i in 0..port.channel_count() {
+            let channel = channels.channel_mut(i).unwrap();
+            channel.fill(1.0);
+        }
+
+        port.set_constant_mask(constant_mask);
+
+        assert_eq!(ins, outs);
+    }
 }
