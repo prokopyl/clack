@@ -12,7 +12,7 @@ use clack_extensions::audio_ports::{
     PluginAudioPortsImpl,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
-use clack_plugin::process::audio::{ChannelPair, SampleType};
+use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin<'a> {

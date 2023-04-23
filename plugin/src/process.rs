@@ -115,35 +115,3 @@ impl<'a> IntoIterator for &'a mut Audio<'a> {
         self.port_pairs()
     }
 }
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn can_get_all_outputs() {
-        let ins = [[0f32; 4]; 2];
-        let mut outs = [[0f32; 4]; 2];
-
-        let mut audio = Audio {
-            inputs: &[clap_audio_buffer {
-                data32: &ins as *const _ as *const _,
-                data64: ::core::ptr::null(),
-                constant_mask: 0,
-                latency: 0,
-                channel_count: 2,
-            }],
-            outputs: &mut [clap_audio_buffer {
-                data32: &mut outs as *const _ as *const _,
-                data64: ::core::ptr::null(),
-                constant_mask: 0,
-                latency: 0,
-                channel_count: 2,
-            }],
-            frames_count: 4,
-        };
-
-        let pairs = audio.port_pairs().collect::<Vec<_>>();
-        // audio.input(0).unwrap().channels()
-    }
-}

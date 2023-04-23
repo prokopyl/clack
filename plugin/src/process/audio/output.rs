@@ -54,8 +54,8 @@ impl<'a> OutputPort<'a> {
     }
 
     #[inline]
-    pub fn constant_mask_mut(&mut self) -> &mut ConstantMask {
-        ConstantMask::from_bits_mut(&mut self.inner.constant_mask)
+    pub fn set_constant_mask(&mut self, new_mask: ConstantMask) {
+        self.inner.constant_mask = new_mask.to_bits()
     }
 }
 

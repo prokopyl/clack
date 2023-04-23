@@ -1,4 +1,4 @@
-use crate::process::audio::pair::ChannelPair::{InputOnly, OutputOnly};
+use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{InputPort, OutputPort, SampleType};
 use crate::process::Audio;
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -197,9 +197,26 @@ impl<'a, S> ChannelPair<'a, S> {
     #[inline]
     pub(crate) fn from_io(input: &'a [S], output: &'a mut [S]) -> Self {
         if input.as_ptr() == output.as_ptr() {
-            ChannelPair::InPlace(output)
+            InPlace(output)
         } else {
-            ChannelPair::InputOutput(input, output)
+            InputOutput(input, output)
+        }
+    }
+
+    #[inline]
+    pub fn input(&'a self) -> Option<&'a [S]> {
+        match self {
+            InputOnly(i) | InputOutput(i, _) => Some(i),
+            OutputOnly(_) => None,
+            InPlace(io) => Some(io),
+        }
+    }
+
+    #[inline]
+    pub fn output(&'a self) -> Option<&'a [S]> {
+        match self {
+            OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
+            InputOnly(_) => None,
         }
     }
 }

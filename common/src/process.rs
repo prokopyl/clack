@@ -1,4 +1,6 @@
 use clap_sys::process::*;
+use std::fmt::{Debug, Formatter};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -45,12 +47,6 @@ impl ConstantMask {
     }
 
     #[inline]
-    pub fn from_bits_mut(bits: &mut u64) -> &mut Self {
-        // SAFETY: ConstantMask is a transparent wrapper around u64
-        unsafe { core::mem::transmute(bits) }
-    }
-
-    #[inline]
     pub const fn is_channel_constant(&self, channel_index: u64) -> bool {
         (self.0 & (1 << channel_index)) == 1
     }
@@ -62,5 +58,60 @@ impl ConstantMask {
         } else {
             self.0 &= !(1 << channel_index)
         }
+    }
+}
+
+impl Debug for ConstantMask {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        core::fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl BitAnd for ConstantMask {
+    type Output = ConstantMask;
+
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        ConstantMask(self.0 & rhs.0)
+    }
+}
+
+impl BitOr for ConstantMask {
+    type Output = ConstantMask;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        ConstantMask(self.0 | rhs.0)
+    }
+}
+
+impl BitXor for ConstantMask {
+    type Output = ConstantMask;
+
+    #[inline]
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        ConstantMask(self.0 ^ rhs.0)
+    }
+}
+
+impl BitAndAssign for ConstantMask {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0
+    }
+}
+
+impl BitOrAssign for ConstantMask {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0
+    }
+}
+
+impl BitXorAssign for ConstantMask {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0
     }
 }

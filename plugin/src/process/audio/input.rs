@@ -30,6 +30,7 @@ impl<'a> InputPort<'a> {
     #[inline]
     pub fn channels(&self) -> SampleType<InputChannels<'a, f32>, InputChannels<'a, f64>> {
         unsafe {
+            // TODO: use proper method
             if buffer_is_f32(self.inner) {
                 SampleType::F32(InputChannels {
                     data: core::slice::from_raw_parts(

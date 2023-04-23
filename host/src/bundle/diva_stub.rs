@@ -43,7 +43,7 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
         &mut self,
         _process: &Process,
         mut audio: Audio,
-        _events: ProcessEvents,
+        _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
         self.shared.host.request_callback();
 
