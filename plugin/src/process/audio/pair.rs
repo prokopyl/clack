@@ -4,22 +4,22 @@ use crate::process::Audio;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::{Iter, IterMut};
 
-pub struct PortPair<'a> {
+pub struct PairedPort<'a> {
     input: Option<&'a clap_audio_buffer>,
     output: Option<&'a mut clap_audio_buffer>,
     frames_count: u32,
 }
 
-impl<'a> PortPair<'a> {
+impl<'a> PairedPort<'a> {
     #[inline]
-    pub(crate) unsafe fn new(
+    pub(crate) unsafe fn from_raw(
         input: Option<&'a clap_audio_buffer>,
         output: Option<&'a mut clap_audio_buffer>,
         frames_count: u32,
     ) -> Option<Self> {
         match (input, output) {
             (None, None) => None,
-            (input, output) => Some(PortPair {
+            (input, output) => Some(PairedPort {
                 input,
                 output,
                 frames_count,
@@ -41,47 +41,54 @@ impl<'a> PortPair<'a> {
     }
 
     #[inline]
-    fn input_channel(&self, index: usize) -> Option<SampleType<&'a [f32], &'a [f64]>> {
-        Some(
-            unsafe { SampleType::from_raw_buffer(self.input?) }?
-                .map_option(|b| b.get(index), |b| b.get(index))?
-                .map(
-                    |b| unsafe { core::slice::from_raw_parts(*b, self.frames_count as usize) },
-                    |b| unsafe { core::slice::from_raw_parts(*b, self.frames_count as usize) },
-                ),
-        )
-    }
-
-    #[inline]
-    fn output_channel(&mut self, index: usize) -> Option<SampleType<&'a mut [f32], &'a mut [f64]>> {
-        Some(
-            unsafe { SampleType::from_raw_buffer_mut(self.output.as_mut()?) }?
-                .map_option(|b| b.get(index), |b| b.get(index))?
-                .map(
-                    |b| unsafe {
-                        core::slice::from_raw_parts_mut(*b as *mut _, self.frames_count as usize)
-                    },
-                    |b| unsafe {
-                        core::slice::from_raw_parts_mut(*b as *mut _, self.frames_count as usize)
-                    },
-                ),
-        )
-    }
-
-    pub fn channel_pair(
+    pub fn channels(
         &mut self,
-        index: usize,
-    ) -> Option<SampleType<ChannelPair<'a, f32>, ChannelPair<'a, f64>>> {
-        let input = self.input_channel(index);
-        let output = self.output_channel(index);
+    ) -> Option<SampleType<PairedChannels<'a, f32>, PairedChannels<'a, f64>>> {
+        let input = self
+            .input
+            .and_then(|buffer| unsafe { SampleType::from_raw_buffer(buffer) });
+        let output = self
+            .output
+            .as_mut()
+            .and_then(|buffer| unsafe { SampleType::from_raw_buffer_mut(buffer) });
 
         match (input, output) {
             (None, None) => None,
-            (Some(input), None) => Some(input.map(InputOnly, InputOnly)),
-            (None, Some(output)) => Some(output.map(OutputOnly, OutputOnly)),
+            (Some(input), None) => Some(input.map(
+                |i| PairedChannels {
+                    input_data: Some(i),
+                    output_data: None,
+                    frames_count: self.frames_count,
+                },
+                |i| PairedChannels {
+                    input_data: Some(i),
+                    output_data: None,
+                    frames_count: self.frames_count,
+                },
+            )),
+            (None, Some(output)) => Some(output.map(
+                |o| PairedChannels {
+                    input_data: None,
+                    output_data: Some(o),
+                    frames_count: self.frames_count,
+                },
+                |o| PairedChannels {
+                    input_data: None,
+                    output_data: Some(o),
+                    frames_count: self.frames_count,
+                },
+            )),
             (Some(input), Some(output)) => Some(input.try_match_with(output)?.map(
-                |(i, o)| ChannelPair::from_io(i, o),
-                |(i, o)| ChannelPair::from_io(i, o),
+                |(i, o)| PairedChannels {
+                    input_data: Some(i),
+                    output_data: Some(o),
+                    frames_count: self.frames_count,
+                },
+                |(i, o)| PairedChannels {
+                    input_data: Some(i),
+                    output_data: Some(o),
+                    frames_count: self.frames_count,
+                },
             )),
         }
     }
@@ -93,51 +100,90 @@ impl<'a> PortPair<'a> {
 
         in_channels.max(out_channels) as usize
     }
+}
 
-    pub fn channel_pairs(
+pub struct PairedChannels<'a, S> {
+    input_data: Option<&'a [*const S]>,
+    output_data: Option<&'a mut [*const S]>,
+    frames_count: u32,
+}
+
+impl<'a, S> PairedChannels<'a, S> {
+    #[inline]
+    pub fn frames_count(&self) -> u32 {
+        self.frames_count
+    }
+
+    #[inline]
+    pub fn channel_pair_count(&self) -> usize {
+        let in_channels = self.input_data.map(|b| b.len()).unwrap_or(0);
+        let out_channels = self.output_data.as_ref().map(|b| b.len()).unwrap_or(0);
+
+        in_channels.max(out_channels)
+    }
+
+    #[inline]
+    pub fn channel_pair(&mut self, index: usize) -> Option<ChannelPair<'a, S>> {
+        self.mismatched_channel_pair(index, index)
+    }
+
+    #[inline]
+    pub fn mismatched_channel_pair(
         &mut self,
-    ) -> Option<SampleType<ChannelPairsIter<'a, f32>, ChannelPairsIter<'a, f64>>> {
+        input_index: usize,
+        output_index: usize,
+    ) -> Option<ChannelPair<'a, S>> {
         let input = self
-            .input
-            .and_then(|b| unsafe { SampleType::from_raw_buffer(b) })
-            .map_or_else(
-                || SampleType::Both([].iter(), [].iter()),
-                |s| s.map(|b| b.iter(), |b| b.iter()),
-            );
-
+            .input_data
+            .and_then(|d| d.get(input_index))
+            .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) });
         let output = self
-            .output
+            .output_data
             .as_mut()
-            .and_then(|b| unsafe { SampleType::from_raw_buffer_mut(b) })
-            .map_or_else(
-                || SampleType::Both([].iter_mut(), [].iter_mut()),
-                |s| s.map(|b| b.iter_mut(), |b| b.iter_mut()),
-            );
+            .and_then(|d| d.get(output_index))
+            .map(|ptr| unsafe {
+                core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
+            });
 
-        input.try_match_with(output).map(|s| {
-            s.map(
-                |(i, o)| ChannelPairsIter {
-                    input_iter: i,
-                    output_iter: o,
-                    frames_count: self.frames_count,
-                },
-                |(i, o)| ChannelPairsIter {
-                    input_iter: i,
-                    output_iter: o,
-                    frames_count: self.frames_count,
-                },
-            )
-        })
+        ChannelPair::from_optional_io(input, output)
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> PairedChannelsIter<S> {
+        PairedChannelsIter {
+            input_iter: self.input_data.map_or_else(|| [].iter(), |s| s.iter()),
+            output_iter: self
+                .output_data
+                .as_mut()
+                .map_or_else(|| [].iter_mut(), |s| s.iter_mut()),
+            frames_count: self.frames_count,
+        }
     }
 }
 
-pub struct ChannelPairsIter<'a, S> {
+impl<'a, S> IntoIterator for PairedChannels<'a, S> {
+    type Item = ChannelPair<'a, S>;
+    type IntoIter = PairedChannelsIter<'a, S>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        PairedChannelsIter {
+            input_iter: self.input_data.map_or_else(|| [].iter(), |s| s.iter()),
+            output_iter: self
+                .output_data
+                .map_or_else(|| [].iter_mut(), |s| s.iter_mut()),
+            frames_count: self.frames_count,
+        }
+    }
+}
+
+pub struct PairedChannelsIter<'a, S> {
     input_iter: Iter<'a, *const S>,
     output_iter: IterMut<'a, *const S>,
     frames_count: u32,
 }
 
-impl<'a, S> Iterator for ChannelPairsIter<'a, S> {
+impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
     type Item = ChannelPair<'a, S>;
 
     #[inline]
@@ -155,13 +201,13 @@ impl<'a, S> Iterator for ChannelPairsIter<'a, S> {
     }
 }
 
-pub struct PortsPairIter<'a> {
+pub struct PairedPortsIter<'a> {
     inputs: Iter<'a, clap_audio_buffer>,
     outputs: IterMut<'a, clap_audio_buffer>,
     frames_count: u32,
 }
 
-impl<'a> PortsPairIter<'a> {
+impl<'a> PairedPortsIter<'a> {
     #[inline]
     pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
         Self {
@@ -172,12 +218,12 @@ impl<'a> PortsPairIter<'a> {
     }
 }
 
-impl<'a> Iterator for PortsPairIter<'a> {
-    type Item = PortPair<'a>;
+impl<'a> Iterator for PairedPortsIter<'a> {
+    type Item = PairedPort<'a>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        unsafe { PortPair::new(self.inputs.next(), self.outputs.next(), self.frames_count) }
+        unsafe { PairedPort::from_raw(self.inputs.next(), self.outputs.next(), self.frames_count) }
     }
 }
 

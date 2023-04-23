@@ -57,7 +57,7 @@ pub mod tests {
         let mut port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channel_pairs().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().into_f32().unwrap();
         let mut constant_mask = ConstantMask::FULLY_CONSTANT;
         let mut total = 0;
 
@@ -87,10 +87,14 @@ pub mod tests {
 
         let mut port = audio.port_pair(0).unwrap();
         assert_eq!(port.channel_pair_count(), 2);
+
+        let mut channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.channel_pair_count(), 2);
+
         let mut constant_mask = ConstantMask::FULLY_CONSTANT;
 
         for i in 0..port.channel_pair_count() {
-            let channel = port.channel_pair(i).unwrap().into_f32().unwrap();
+            let channel = channels.channel_pair(i).unwrap();
             let ChannelPair::InputOutput(input, output) = channel else { panic!("Expected I/O channel") };
             output.copy_from_slice(input);
 

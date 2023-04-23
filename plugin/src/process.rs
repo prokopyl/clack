@@ -102,12 +102,12 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
-    pub fn port_pairs(&mut self) -> PortsPairIter {
-        PortsPairIter::new(self)
+    pub fn port_pairs(&mut self) -> PairedPortsIter {
+        PairedPortsIter::new(self)
     }
 
     #[inline]
-    pub fn port_pair(&mut self, index: usize) -> Option<PortPair> {
+    pub fn port_pair(&mut self, index: usize) -> Option<PairedPort> {
         self.mismatched_port_pair(index, index)
     }
 
@@ -121,9 +121,9 @@ impl<'a> Audio<'a> {
         &mut self,
         input_index: usize,
         output_index: usize,
-    ) -> Option<PortPair> {
+    ) -> Option<PairedPort> {
         unsafe {
-            PortPair::new(
+            PairedPort::from_raw(
                 self.inputs.get(input_index),
                 self.outputs.get_mut(output_index),
                 self.frames_count,
@@ -133,8 +133,8 @@ impl<'a> Audio<'a> {
 }
 
 impl<'a> IntoIterator for &'a mut Audio<'a> {
-    type Item = PortPair<'a>;
-    type IntoIter = PortsPairIter<'a>;
+    type Item = PairedPort<'a>;
+    type IntoIter = PairedPortsIter<'a>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {

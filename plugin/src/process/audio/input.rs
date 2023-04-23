@@ -8,16 +8,6 @@ pub struct InputPort<'a> {
     frames_count: u32,
 }
 
-pub(crate) fn buffer_is_f32(buf: &clap_audio_buffer) -> bool {
-    match (buf.data32.is_null(), buf.data64.is_null()) {
-        (false, _) => true,
-        (true, false) => false,
-        _ => panic!(
-            "Invalid audio buffer data (both data32 and data64 pointers are either null or set)"
-        ),
-    }
-}
-
 impl<'a> InputPort<'a> {
     #[inline]
     pub(crate) unsafe fn from_raw(inner: &'a clap_audio_buffer, frames_count: u32) -> Self {
@@ -28,27 +18,17 @@ impl<'a> InputPort<'a> {
     }
 
     #[inline]
-    pub fn channels(&self) -> SampleType<InputChannels<'a, f32>, InputChannels<'a, f64>> {
-        unsafe {
-            // TODO: use proper method
-            if buffer_is_f32(self.inner) {
-                SampleType::F32(InputChannels {
-                    data: core::slice::from_raw_parts(
-                        self.inner.data32 as *const _,
-                        self.inner.channel_count as usize,
-                    ),
-                    frames_count: self.frames_count,
-                })
-            } else {
-                SampleType::F64(InputChannels {
-                    data: core::slice::from_raw_parts(
-                        self.inner.data64 as *const _,
-                        self.inner.channel_count as usize,
-                    ),
-                    frames_count: self.frames_count,
-                })
-            }
-        }
+    pub fn channels(&self) -> Option<SampleType<InputChannels<'a, f32>, InputChannels<'a, f64>>> {
+        Some(unsafe { SampleType::from_raw_buffer(self.inner) }?.map(
+            |data| InputChannels {
+                data,
+                frames_count: self.frames_count,
+            },
+            |data| InputChannels {
+                data,
+                frames_count: self.frames_count,
+            },
+        ))
     }
 
     #[inline]
@@ -74,8 +54,8 @@ impl<'a> InputPort<'a> {
 
 #[derive(Copy, Clone)]
 pub struct InputChannels<'a, S> {
-    pub(crate) frames_count: u32,
-    pub(crate) data: &'a [*const S],
+    frames_count: u32,
+    data: &'a [*const S],
 }
 
 impl<'a, S> InputChannels<'a, S> {

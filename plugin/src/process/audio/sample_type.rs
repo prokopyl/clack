@@ -6,7 +6,6 @@ pub enum SampleType<F32, F64> {
     Both(F32, F64),
 }
 
-// TODO: Implement Both
 impl<F32, F64> SampleType<F32, F64> {
     #[inline]
     pub fn as_f32(&self) -> Option<&F32> {

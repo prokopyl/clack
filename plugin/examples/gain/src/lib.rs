@@ -16,7 +16,6 @@ use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin<'a> {
-    latest_gain_value: i32,
     _host: HostAudioThreadHandle<'a>,
 }
 
@@ -41,10 +40,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         _shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
-        Ok(Self {
-            latest_gain_value: 0,
-            _host: host,
-        })
+        Ok(Self { _host: host })
     }
 
     fn process(
@@ -56,7 +52,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         for channel_pair in audio
             .port_pairs()
             // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
-            .filter_map(|mut p| p.channel_pairs()?.into_f32())
+            .filter_map(|mut p| p.channels()?.into_f32())
             .flatten()
         {
             let buf = match channel_pair {

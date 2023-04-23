@@ -18,7 +18,7 @@ impl<'a> OutputPort<'a> {
     }
 
     #[inline]
-    pub fn channels_mut(
+    pub fn channels(
         &mut self,
     ) -> Option<SampleType<OutputChannels<'a, f32>, OutputChannels<'a, f64>>> {
         Some(unsafe { SampleType::from_raw_buffer_mut(self.inner) }?.map(
