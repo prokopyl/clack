@@ -12,6 +12,22 @@ pub struct PortPair<'a> {
 
 impl<'a> PortPair<'a> {
     #[inline]
+    pub(crate) unsafe fn new(
+        input: Option<&'a clap_audio_buffer>,
+        output: Option<&'a mut clap_audio_buffer>,
+        frames_count: u32,
+    ) -> Option<Self> {
+        match (input, output) {
+            (None, None) => None,
+            (input, output) => Some(PortPair {
+                input,
+                output,
+                frames_count,
+            }),
+        }
+    }
+
+    #[inline]
     pub fn input(&self) -> Option<InputPort<'a>> {
         self.input
             .map(|i| unsafe { InputPort::from_raw(i, self.frames_count) })
@@ -59,7 +75,23 @@ impl<'a> PortPair<'a> {
         let input = self.input_channel(index);
         let output = self.output_channel(index);
 
-        channel_pair_from_io(input, output)
+        match (input, output) {
+            (None, None) => None,
+            (Some(input), None) => Some(input.map(InputOnly, InputOnly)),
+            (None, Some(output)) => Some(output.map(OutputOnly, OutputOnly)),
+            (Some(input), Some(output)) => Some(input.try_match_with(output)?.map(
+                |(i, o)| ChannelPair::from_io(i, o),
+                |(i, o)| ChannelPair::from_io(i, o),
+            )),
+        }
+    }
+
+    #[inline]
+    pub fn channel_pair_count(&self) -> usize {
+        let in_channels = self.input.map(|b| b.channel_count).unwrap_or(0);
+        let out_channels = self.output.as_ref().map(|b| b.channel_count).unwrap_or(0);
+
+        in_channels.max(out_channels) as usize
     }
 
     pub fn channel_pairs(
@@ -119,38 +151,7 @@ impl<'a, S> Iterator for ChannelPairsIter<'a, S> {
             core::slice::from_raw_parts_mut((*ptr) as *mut _, self.frames_count as usize)
         });
 
-        channel_pair_from_io_2(input, output)
-    }
-}
-
-// TODO: inline this into ChannelPair
-#[inline]
-fn channel_pair_from_io_2<'a, S>(
-    input: Option<&'a [S]>,
-    output: Option<&'a mut [S]>,
-) -> Option<ChannelPair<'a, S>> {
-    match (input, output) {
-        (None, None) => None,
-        (Some(input), None) => Some(InputOnly(input)),
-        (None, Some(output)) => Some(OutputOnly(output)),
-        (Some(input), Some(output)) => Some(ChannelPair::from_io(input, output)),
-    }
-}
-
-// TODO: remove this
-#[inline]
-fn channel_pair_from_io<'a>(
-    input: Option<SampleType<&'a [f32], &'a [f64]>>,
-    output: Option<SampleType<&'a mut [f32], &'a mut [f64]>>,
-) -> Option<SampleType<ChannelPair<'a, f32>, ChannelPair<'a, f64>>> {
-    match (input, output) {
-        (None, None) => None,
-        (Some(input), None) => Some(input.map(InputOnly, InputOnly)),
-        (None, Some(output)) => Some(output.map(OutputOnly, OutputOnly)),
-        (Some(input), Some(output)) => Some(input.try_match_with(output)?.map(
-            |(i, o)| ChannelPair::from_io(i, o),
-            |(i, o)| ChannelPair::from_io(i, o),
-        )),
+        ChannelPair::from_optional_io(input, output)
     }
 }
 
@@ -174,15 +175,9 @@ impl<'a> PortsPairIter<'a> {
 impl<'a> Iterator for PortsPairIter<'a> {
     type Item = PortPair<'a>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        match (self.inputs.next(), self.outputs.next()) {
-            (None, None) => None,
-            (input, output) => Some(PortPair {
-                input,
-                output,
-                frames_count: self.frames_count,
-            }),
-        }
+        unsafe { PortPair::new(self.inputs.next(), self.outputs.next(), self.frames_count) }
     }
 }
 
@@ -194,6 +189,19 @@ pub enum ChannelPair<'a, S> {
 }
 
 impl<'a, S> ChannelPair<'a, S> {
+    #[inline]
+    pub(crate) fn from_optional_io(
+        input: Option<&'a [S]>,
+        output: Option<&'a mut [S]>,
+    ) -> Option<ChannelPair<'a, S>> {
+        match (input, output) {
+            (None, None) => None,
+            (Some(input), None) => Some(InputOnly(input)),
+            (None, Some(output)) => Some(OutputOnly(output)),
+            (Some(input), Some(output)) => Some(ChannelPair::from_io(input, output)),
+        }
+    }
+
     #[inline]
     pub(crate) fn from_io(input: &'a [S], output: &'a mut [S]) -> Self {
         if input.as_ptr() == output.as_ptr() {

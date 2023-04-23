@@ -45,7 +45,7 @@ pub mod tests {
     }
 
     #[test]
-    fn can_iterate_on_io() {
+    fn can_iterate_on_pairs() {
         let mut ins = [[1f32; 4]; 2];
         let mut outs = [[0f32; 4]; 2];
 
@@ -65,10 +65,40 @@ pub mod tests {
             let ChannelPair::InputOutput(i, o) = channel else { panic!("Expected I/O channel") };
             o.copy_from_slice(i);
             total += 1;
-            constant_mask.set_channel_constant(total, true);
+            constant_mask.set_channel_constant(total, false);
         }
 
+        port.output().unwrap().set_constant_mask(constant_mask);
+
         assert_eq!(total, 2);
+        assert_eq!(ins, outs);
+    }
+
+    #[test]
+    fn can_access_pairs_with_indexes() {
+        let mut ins = [[1f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut input_ports = AudioPorts::with_capacity(2, 1);
+        let mut output_ports = AudioPorts::with_capacity(2, 1);
+
+        let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+        assert_eq!(audio.port_pair_count(), 1);
+
+        let mut port = audio.port_pair(0).unwrap();
+        assert_eq!(port.channel_pair_count(), 2);
+        let mut constant_mask = ConstantMask::FULLY_CONSTANT;
+
+        for i in 0..port.channel_pair_count() {
+            let channel = port.channel_pair(i).unwrap().into_f32().unwrap();
+            let ChannelPair::InputOutput(input, output) = channel else { panic!("Expected I/O channel") };
+            output.copy_from_slice(input);
+
+            constant_mask.set_channel_constant(i as u64, false);
+        }
+
+        port.output().unwrap().set_constant_mask(constant_mask);
+
         assert_eq!(ins, outs);
     }
 }

@@ -76,19 +76,20 @@ impl<'a> Audio<'a> {
         }
     }
 
-    pub fn input(&self, index: usize) -> Option<InputPort> {
+    #[inline]
+    pub fn input_port(&self, index: usize) -> Option<InputPort> {
         self.inputs
             .get(index)
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
     }
 
     #[inline]
-    pub fn input_count(self) -> usize {
+    pub fn input_port_count(&self) -> usize {
         self.inputs.len()
     }
 
     #[inline]
-    pub fn output(&mut self, index: usize) -> Option<OutputPort> {
+    pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
         self.outputs
             .get_mut(index)
             // SAFETY: &mut ensures there is no input being read concurrently
@@ -96,13 +97,38 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
-    pub fn output_count(&self) -> usize {
+    pub fn output_port_count(&self) -> usize {
         self.outputs.len()
     }
 
     #[inline]
     pub fn port_pairs(&mut self) -> PortsPairIter {
         PortsPairIter::new(self)
+    }
+
+    #[inline]
+    pub fn port_pair(&mut self, index: usize) -> Option<PortPair> {
+        self.mismatched_port_pair(index, index)
+    }
+
+    #[inline]
+    pub fn port_pair_count(&self) -> usize {
+        self.input_port_count().max(self.output_port_count())
+    }
+
+    #[inline]
+    pub fn mismatched_port_pair(
+        &mut self,
+        input_index: usize,
+        output_index: usize,
+    ) -> Option<PortPair> {
+        unsafe {
+            PortPair::new(
+                self.inputs.get(input_index),
+                self.outputs.get_mut(output_index),
+                self.frames_count,
+            )
+        }
     }
 }
 

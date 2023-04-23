@@ -53,7 +53,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         mut audio: Audio,
         _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
-        for mut channel_pair in audio
+        for channel_pair in audio
             .port_pairs()
             // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
             .filter_map(|mut p| p.channel_pairs()?.into_f32())
