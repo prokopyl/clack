@@ -2,6 +2,7 @@ use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::process::clap_process;
+use std::ops::RangeBounds;
 
 pub use clack_common::process::ProcessStatus;
 pub mod audio;
@@ -102,6 +103,40 @@ impl<'a> Audio<'a> {
                 frames_count: self.frames_count,
             },
         )
+    }
+
+    #[inline]
+    pub fn get_range<R: RangeBounds<usize> + Copy>(&mut self, range: R) -> Audio {
+        self.get_mismatched_ranges(range, range)
+    }
+
+    #[inline]
+    pub fn get_mismatched_ranges<R: RangeBounds<usize>>(
+        &mut self,
+        input_range: R,
+        output_range: R,
+    ) -> Audio {
+        let inputs = self
+            .inputs
+            .get((
+                input_range.start_bound().cloned(),
+                input_range.end_bound().cloned(),
+            ))
+            .unwrap_or(&[]);
+
+        let outputs = self
+            .outputs
+            .get_mut((
+                output_range.start_bound().cloned(),
+                output_range.end_bound().cloned(),
+            ))
+            .unwrap_or(&mut []);
+
+        Audio {
+            inputs,
+            outputs,
+            frames_count: self.frames_count,
+        }
     }
 
     #[inline]
