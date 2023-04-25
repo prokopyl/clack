@@ -54,10 +54,14 @@ pub mod tests {
 
         let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
         let mut ports = audio.port_pairs();
+        assert_eq!(ports.len(), 1);
+        assert_eq!(ports.size_hint(), (1, Some(1)));
         let mut port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let mut channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.iter_mut().len(), 2);
+        assert_eq!(channels.iter_mut().size_hint(), (2, Some(2)));
         let mut constant_mask = ConstantMask::FULLY_CONSTANT;
         let mut total = 0;
 
@@ -117,10 +121,14 @@ pub mod tests {
         let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
 
         let mut ports = audio.input_ports();
+        assert_eq!(ports.len(), 1);
+        assert_eq!(ports.size_hint(), (1, Some(1)));
         let port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
         let channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.iter().len(), 2);
+        assert_eq!(channels.iter().size_hint(), (2, Some(2)));
         let mut total = 0;
 
         for channel in channels {
@@ -131,10 +139,14 @@ pub mod tests {
         assert_eq!(total, 2);
 
         let mut ports = audio.output_ports();
+        assert_eq!(ports.len(), 1);
+        assert_eq!(ports.size_hint(), (1, Some(1)));
         let mut port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let mut channels = port.channels().unwrap().into_f32().unwrap();
+        assert_eq!(channels.iter_mut().len(), 2);
+        assert_eq!(channels.iter_mut().size_hint(), (2, Some(2)));
         let mut total = 0;
 
         for channel in channels {

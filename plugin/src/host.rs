@@ -125,16 +125,22 @@ impl<'a> HostHandle<'a> {
         self.info().get_extension()
     }
 
+    /// # Safety
+    ///
+    /// Callers *MUST* ensure this is only called on the main thread, and that they have exclusive (&mut) access.
     #[inline]
-    pub(crate) unsafe fn to_main_thread(self) -> HostMainThreadHandle<'a> {
+    pub unsafe fn as_main_thread_unchecked(&self) -> HostMainThreadHandle<'a> {
         HostMainThreadHandle {
             raw: self.raw,
             _lifetime: PhantomData,
         }
     }
 
+    /// # Safety
+    ///
+    /// Callers *MUST* ensure this is only called on the audio thread, and that they have exclusive (&mut) access.
     #[inline]
-    pub(crate) unsafe fn to_audio_thread(self) -> HostAudioThreadHandle<'a> {
+    pub unsafe fn as_audio_thread_unchecked(&self) -> HostAudioThreadHandle<'a> {
         HostAudioThreadHandle {
             raw: self.raw,
             _lifetime: PhantomData,

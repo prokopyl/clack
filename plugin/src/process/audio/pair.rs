@@ -115,11 +115,18 @@ impl<'a, S> PairedChannels<'a, S> {
     }
 
     #[inline]
-    pub fn channel_pair_count(&self) -> usize {
-        let in_channels = self.input_data.map(|b| b.len()).unwrap_or(0);
-        let out_channels = self.output_data.as_ref().map(|b| b.len()).unwrap_or(0);
+    pub fn input_channel_count(&self) -> usize {
+        self.input_data.map(|b| b.len()).unwrap_or(0)
+    }
 
-        in_channels.max(out_channels)
+    #[inline]
+    pub fn output_channel_count(&self) -> usize {
+        self.output_data.as_ref().map(|b| b.len()).unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn channel_pair_count(&self) -> usize {
+        self.input_channel_count().max(self.output_channel_count())
     }
 
     #[inline]
@@ -199,6 +206,18 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
 
         ChannelPair::from_optional_io(input, output)
     }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
+}
+
+impl<'a, S> ExactSizeIterator for PairedChannelsIter<'a, S> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.input_iter.len().max(self.output_iter.len())
+    }
 }
 
 pub struct PairedPortsIter<'a> {
@@ -224,6 +243,18 @@ impl<'a> Iterator for PairedPortsIter<'a> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         unsafe { PairedPort::from_raw(self.inputs.next(), self.outputs.next(), self.frames_count) }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
+}
+
+impl<'a> ExactSizeIterator for PairedPortsIter<'a> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.inputs.len().max(self.outputs.len())
     }
 }
 

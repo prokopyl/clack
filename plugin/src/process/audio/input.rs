@@ -5,7 +5,7 @@ use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::Iter;
 
 pub struct InputPortsIter<'a> {
-    outputs: Iter<'a, clap_audio_buffer>,
+    inputs: Iter<'a, clap_audio_buffer>,
     frames_count: u32,
 }
 
@@ -13,7 +13,7 @@ impl<'a> InputPortsIter<'a> {
     #[inline]
     pub(crate) fn new(audio: &Audio<'a>) -> Self {
         Self {
-            outputs: audio.inputs.iter(),
+            inputs: audio.inputs.iter(),
             frames_count: audio.frames_count,
         }
     }
@@ -24,9 +24,21 @@ impl<'a> Iterator for InputPortsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.outputs
+        self.inputs
             .next()
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inputs.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for InputPortsIter<'a> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.inputs.len()
     }
 }
 
@@ -137,7 +149,7 @@ impl<'a, T> IntoIterator for &'a InputChannels<'a, T> {
 
 pub struct InputChannelsIter<'a, T> {
     // TODO: hide these with new() function
-    pub(crate) data: core::slice::Iter<'a, *const T>,
+    pub(crate) data: Iter<'a, *const T>,
     pub(crate) frames_count: u32,
 }
 
@@ -149,5 +161,17 @@ impl<'a, T> Iterator for InputChannelsIter<'a, T> {
         self.data
             .next()
             .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.data.size_hint()
+    }
+}
+
+impl<'a, S> ExactSizeIterator for InputChannelsIter<'a, S> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.data.len()
     }
 }

@@ -46,13 +46,15 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
             return true; // TODO: revert
         }
 
-        data.plugin_data = Some(match PluginWrapper::new(data.host.to_main_thread()) {
-            Ok(d) => d,
-            Err(e) => {
-                super::logging::plugin_log::<P>(plugin, &e.into());
-                return false;
-            }
-        });
+        data.plugin_data = Some(
+            match PluginWrapper::new(data.host.as_main_thread_unchecked()) {
+                Ok(d) => d,
+                Err(e) => {
+                    super::logging::plugin_log::<P>(plugin, &e.into());
+                    return false;
+                }
+            },
+        );
 
         true
     }

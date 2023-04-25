@@ -29,6 +29,18 @@ impl<'a> Iterator for OutputPortsIter<'a> {
             .next()
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.outputs.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for OutputPortsIter<'a> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.outputs.len()
+    }
 }
 
 pub struct OutputPort<'a> {
@@ -183,5 +195,17 @@ impl<'a, T> Iterator for OutputChannelsIter<'a, T> {
         self.data.next().map(|ptr| unsafe {
             core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
         })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.data.size_hint()
+    }
+}
+
+impl<'a, S> ExactSizeIterator for OutputChannelsIter<'a, S> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.data.len()
     }
 }
