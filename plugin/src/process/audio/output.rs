@@ -111,6 +111,11 @@ impl<'a, S> OutputChannels<'a, S> {
     }
 
     #[inline]
+    pub fn raw_data(&self) -> &'a [*const S] {
+        self.data
+    }
+
+    #[inline]
     pub fn channel_count(&self) -> u32 {
         self.data.len() as u32
     }
