@@ -1,8 +1,10 @@
+mod error;
 mod input;
 mod output;
 mod pair;
 mod sample_type;
 
+pub use error::BufferError;
 pub use input::*;
 pub use output::*;
 pub use pair::*;

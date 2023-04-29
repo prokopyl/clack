@@ -52,7 +52,7 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         for channel_pair in audio
             .port_pairs()
             // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
-            .filter_map(|mut p| p.channels()?.into_f32())
+            .filter_map(|mut p| p.channels().ok()?.into_f32())
             .flatten()
         {
             let buf = match channel_pair {

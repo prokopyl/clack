@@ -1,5 +1,5 @@
 use crate::prelude::Audio;
-use crate::process::audio::SampleType;
+use crate::process::audio::{BufferError, SampleType};
 use crate::process::InputChannelsIter;
 use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -60,8 +60,8 @@ impl<'a> OutputPort<'a> {
     #[inline]
     pub fn channels(
         &mut self,
-    ) -> Option<SampleType<OutputChannels<'a, f32>, OutputChannels<'a, f64>>> {
-        Some(unsafe { SampleType::from_raw_buffer_mut(self.inner) }?.map(
+    ) -> Result<SampleType<OutputChannels<'a, f32>, OutputChannels<'a, f64>>, BufferError> {
+        Ok(unsafe { SampleType::from_raw_buffer_mut(self.inner) }?.map(
             |data| OutputChannels {
                 data,
                 frames_count: self.frames_count,

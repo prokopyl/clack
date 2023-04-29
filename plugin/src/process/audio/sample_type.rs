@@ -1,3 +1,4 @@
+use crate::process::audio::BufferError;
 use clap_sys::audio_buffer::clap_audio_buffer;
 
 pub enum SampleType<F32, F64> {
@@ -69,60 +70,45 @@ impl<F32, F64> SampleType<F32, F64> {
     }
 
     #[inline]
-    pub fn map_option<TF32, TF64, Fn32, Fn64>(
-        self,
-        fn32: Fn32,
-        fn64: Fn64,
-    ) -> Option<SampleType<TF32, TF64>>
-    where
-        Fn32: FnOnce(F32) -> Option<TF32>,
-        Fn64: FnOnce(F64) -> Option<TF64>,
-    {
-        match self {
-            SampleType::F32(c) => Some(SampleType::F32(fn32(c)?)),
-            SampleType::F64(c) => Some(SampleType::F64(fn64(c)?)),
-            SampleType::Both(c32, c64) => match (fn32(c32), fn64(c64)) {
-                (Some(c32), Some(c64)) => Some(SampleType::Both(c32, c64)),
-                (Some(c), None) => Some(SampleType::F32(c)),
-                (None, Some(c)) => Some(SampleType::F64(c)),
-                (None, None) => None,
-            },
-        }
-    }
-
-    #[inline]
+    #[allow(clippy::type_complexity)] // I'm sorry
     pub fn try_match_with<TF32, TF64>(
         self,
         other: SampleType<TF32, TF64>,
-    ) -> Option<SampleType<(F32, TF32), (F64, TF64)>> {
+    ) -> Result<SampleType<(F32, TF32), (F64, TF64)>, BufferError> {
         match (self, other) {
             (
                 SampleType::F32(s) | SampleType::Both(s, _),
                 SampleType::F32(o) | SampleType::Both(o, _),
-            ) => Some(SampleType::F32((s, o))),
+            ) => Ok(SampleType::F32((s, o))),
             (
                 SampleType::F64(s) | SampleType::Both(_, s),
                 SampleType::F64(o) | SampleType::Both(_, o),
-            ) => Some(SampleType::F64((s, o))),
-            _ => None,
+            ) => Ok(SampleType::F64((s, o))),
+            _ => Err(BufferError::MismatchedBufferPair),
         }
     }
 }
 
 impl<'a> SampleType<&'a [*const f32], &'a [*const f64]> {
     #[inline]
-    pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Option<Self> {
+    pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
-            (true, true) => None,
-            (false, true) => Some(SampleType::F32(core::slice::from_raw_parts(
+            (true, true) => {
+                if raw.channel_count == 0 {
+                    Ok(SampleType::Both([].as_slice(), [].as_slice()))
+                } else {
+                    Err(BufferError::InvalidChannelBuffer)
+                }
+            }
+            (false, true) => Ok(SampleType::F32(core::slice::from_raw_parts(
                 raw.data32,
                 raw.channel_count as usize,
             ))),
-            (true, false) => Some(SampleType::F64(core::slice::from_raw_parts(
+            (true, false) => Ok(SampleType::F64(core::slice::from_raw_parts(
                 raw.data64,
                 raw.channel_count as usize,
             ))),
-            (false, false) => Some(SampleType::Both(
+            (false, false) => Ok(SampleType::Both(
                 core::slice::from_raw_parts(raw.data32, raw.channel_count as usize),
                 core::slice::from_raw_parts(raw.data64, raw.channel_count as usize),
             )),
@@ -132,18 +118,26 @@ impl<'a> SampleType<&'a [*const f32], &'a [*const f64]> {
 
 impl<'a> SampleType<&'a mut [*const f32], &'a mut [*const f64]> {
     #[inline]
-    pub(crate) unsafe fn from_raw_buffer_mut(raw: &mut clap_audio_buffer) -> Option<Self> {
+    pub(crate) unsafe fn from_raw_buffer_mut(
+        raw: &mut clap_audio_buffer,
+    ) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
-            (true, true) => None,
-            (false, true) => Some(SampleType::F32(core::slice::from_raw_parts_mut(
+            (true, true) => {
+                if raw.channel_count == 0 {
+                    Ok(SampleType::Both([].as_mut_slice(), [].as_mut_slice()))
+                } else {
+                    Err(BufferError::InvalidChannelBuffer)
+                }
+            }
+            (false, true) => Ok(SampleType::F32(core::slice::from_raw_parts_mut(
                 raw.data32 as *mut _,
                 raw.channel_count as usize,
             ))),
-            (true, false) => Some(SampleType::F64(core::slice::from_raw_parts_mut(
+            (true, false) => Ok(SampleType::F64(core::slice::from_raw_parts_mut(
                 raw.data64 as *mut _,
                 raw.channel_count as usize,
             ))),
-            (false, false) => Some(SampleType::Both(
+            (false, false) => Ok(SampleType::Both(
                 core::slice::from_raw_parts_mut(raw.data32 as *mut _, raw.channel_count as usize),
                 core::slice::from_raw_parts_mut(raw.data64 as *mut _, raw.channel_count as usize),
             )),

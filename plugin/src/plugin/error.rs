@@ -1,3 +1,4 @@
+use crate::process::audio::BufferError;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -5,6 +6,7 @@ use std::fmt::{Debug, Display, Formatter};
 pub enum PluginError {
     AlreadyActivated,
     OperationFailed,
+    AudioBufferError(BufferError),
     Io(std::io::Error),
     Custom(Box<dyn Error + 'static>),
 }
@@ -21,6 +23,7 @@ impl Display for PluginError {
             PluginError::OperationFailed => write!(f, "The requested operation has failed"),
             PluginError::Custom(e) => std::fmt::Display::fmt(&e, f),
             PluginError::Io(e) => std::fmt::Display::fmt(&e, f),
+            PluginError::AudioBufferError(e) => std::fmt::Display::fmt(&e, f),
         }
     }
 }
@@ -31,5 +34,12 @@ impl From<std::io::Error> for PluginError {
     #[inline]
     fn from(e: std::io::Error) -> Self {
         PluginError::Io(e)
+    }
+}
+
+impl From<BufferError> for PluginError {
+    #[inline]
+    fn from(e: BufferError) -> Self {
+        PluginError::AudioBufferError(e)
     }
 }
