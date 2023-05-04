@@ -265,4 +265,12 @@ impl<'a, S> ChannelPair<'a, S> {
             InputOnly(_) => None,
         }
     }
+
+    #[inline]
+    pub fn output_mut(&'a mut self) -> Option<&'a mut [S]> {
+        match self {
+            OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
+            InputOnly(_) => None,
+        }
+    }
 }

@@ -215,7 +215,7 @@ pub trait Plugin<'a>: Sized + Send + 'a {
 
     fn process(
         &mut self,
-        process: &Process,
+        process: Process,
         audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError>;

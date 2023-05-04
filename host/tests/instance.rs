@@ -39,7 +39,7 @@ impl<'a> Plugin<'a> for DivaPluginStub {
 
     fn process(
         &mut self,
-        _process: &Process,
+        _process: Process,
         _audio: Audio,
         _events: Events,
     ) -> Result<ProcessStatus, PluginError> {

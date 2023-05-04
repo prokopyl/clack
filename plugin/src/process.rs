@@ -1,3 +1,8 @@
+//! Types exposing data and metadata to be used by plugins during audio processing.
+//!
+//! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::Plugin::process)
+//! method. See the [`Plugin`](crate::plugin::Plugin) trait documentation for examples on how these types interact.
+
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -8,39 +13,57 @@ pub use clack_common::process::ProcessStatus;
 pub mod audio;
 use audio::*;
 
-#[repr(C)]
-pub struct Process {
-    inner: clap_process,
+/// Metadata about the current process call.
+///
+/// This exposes [transport information](Process::transport) (in the form of a [`TransportEvent`]), as well as a
+/// [steady sample time counter](Process::steady_time).
+///
+#[derive(Copy, Clone)]
+pub struct Process<'a> {
+    /// Transport information at sample 0.
+    ///
+    /// If this is set to [`None`], then this means the plugin is running is a free-running host,
+    /// and no transport events will be provided.
+    pub transport: Option<&'a TransportEvent>,
+    /// A steady sample time counter.
+    ///
+    /// This field can be used to calculate the sleep duration between two process calls.
+    /// This value may be specific to this plugin instance and have no relation to what
+    /// other plugin instances may receive.
+    ///
+    /// If no steady sample time counter is available from the host, this is set to [`None`].
+    ///
+    /// Note that this counter's maximum value is actually [`i64::MAX`], due to how it is
+    /// implemented in the CLAP specification.
+    pub steady_time: Option<u64>,
 }
 
-impl Process {
+impl<'a> Process<'a> {
     #[inline]
-    pub(crate) unsafe fn from_raw<'a>(
-        raw: *const clap_process,
-    ) -> (&'a Process, Audio<'a>, Events<'a>) {
-        // SAFETY: Process is repr(C) and is guaranteed to have the same memory representation
-        let process: &Process = &*(raw as *const _);
-        (process, Audio::from_raw(&*raw), Events::from_raw(&*raw))
-    }
+    pub(crate) unsafe fn from_raw(raw: *const clap_process) -> Process<'a> {
+        let transport = (*raw).transport;
+        let steady_time = (*raw).steady_time;
 
-    #[inline]
-    pub fn frames_count(&self) -> u32 {
-        self.inner.frames_count
-    }
-
-    #[inline]
-    pub fn steady_time(&self) -> i64 {
-        self.inner.steady_time
-    }
-
-    #[inline]
-    pub fn transport(&self) -> &TransportEvent {
-        TransportEvent::from_raw_ref(unsafe { &*self.inner.transport })
+        Self {
+            steady_time: if steady_time < 0 {
+                None
+            } else {
+                Some(steady_time as u64)
+            },
+            transport: if transport.is_null() {
+                None
+            } else {
+                Some(TransportEvent::from_raw_ref(&*transport))
+            },
+        }
     }
 }
 
+/// Input and output events that occurred during this processing block.
 pub struct Events<'a> {
+    /// The input event buffer, for the plugin to read events from.
     pub input: &'a InputEvents<'a>,
+    /// The output event buffer, for the plugin to push events into.
     pub output: &'a mut OutputEvents<'a>,
 }
 
@@ -53,6 +76,15 @@ impl<'a> Events<'a> {
     }
 }
 
+/// Input and output audio buffers to processed by the plugin.
+///
+/// Audio buffers in CLAP follow the following structure:
+///
+/// * Plugins may have an arbitrary amount of input and output ports;
+/// * Each port can hold either 32-bit, or 64-bit floating-point sample data;
+/// * Port sample data is split in multiple channels (1 for mono, 2 for stereo, etc.);
+/// * Each channel is a raw buffer (i.e. slice) of either [`f32`] or [`f64`] samples.
+///
 pub struct Audio<'a> {
     inputs: &'a [clap_audio_buffer],
     outputs: &'a mut [clap_audio_buffer],
@@ -74,68 +106,6 @@ impl<'a> Audio<'a> {
                     process.audio_outputs_count as usize,
                 ),
             }
-        }
-    }
-
-    #[inline]
-    pub fn split_at(&mut self, input_mid: usize, output_mid: usize) -> (Audio, Audio) {
-        let (ins_1, ins_2) = if input_mid > self.inputs.len() {
-            (self.inputs, [].as_slice())
-        } else {
-            self.inputs.split_at(input_mid)
-        };
-
-        let (outs_1, outs_2) = if output_mid > self.outputs.len() {
-            (&mut self.outputs[..], [].as_mut_slice())
-        } else {
-            self.outputs.split_at_mut(output_mid)
-        };
-
-        (
-            Audio {
-                inputs: ins_1,
-                outputs: outs_1,
-                frames_count: self.frames_count,
-            },
-            Audio {
-                inputs: ins_2,
-                outputs: outs_2,
-                frames_count: self.frames_count,
-            },
-        )
-    }
-
-    #[inline]
-    pub fn get_range<R: RangeBounds<usize> + Copy>(&mut self, range: R) -> Audio {
-        self.get_mismatched_ranges(range, range)
-    }
-
-    #[inline]
-    pub fn get_mismatched_ranges<R: RangeBounds<usize>>(
-        &mut self,
-        input_range: R,
-        output_range: R,
-    ) -> Audio {
-        let inputs = self
-            .inputs
-            .get((
-                input_range.start_bound().cloned(),
-                input_range.end_bound().cloned(),
-            ))
-            .unwrap_or(&[]);
-
-        let outputs = self
-            .outputs
-            .get_mut((
-                output_range.start_bound().cloned(),
-                output_range.end_bound().cloned(),
-            ))
-            .unwrap_or(&mut []);
-
-        Audio {
-            inputs,
-            outputs,
-            frames_count: self.frames_count,
         }
     }
 
@@ -181,7 +151,13 @@ impl<'a> Audio<'a> {
 
     #[inline]
     pub fn port_pair(&mut self, index: usize) -> Option<PairedPort> {
-        self.mismatched_port_pair(index, index)
+        unsafe {
+            PairedPort::from_raw(
+                self.inputs.get(index),
+                self.outputs.get_mut(index),
+                self.frames_count,
+            )
+        }
     }
 
     #[inline]
@@ -190,18 +166,27 @@ impl<'a> Audio<'a> {
     }
 
     #[inline]
-    pub fn mismatched_port_pair(
-        &mut self,
-        input_index: usize,
-        output_index: usize,
-    ) -> Option<PairedPort> {
-        unsafe {
-            PairedPort::from_raw(
-                self.inputs.get(input_index),
-                self.outputs.get_mut(output_index),
-                self.frames_count,
-            )
+    pub fn get_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
+        let inputs = self
+            .inputs
+            .get((range.start_bound().cloned(), range.end_bound().cloned()))
+            .unwrap_or(&[]);
+
+        let outputs = self
+            .outputs
+            .get_mut((range.start_bound().cloned(), range.end_bound().cloned()))
+            .unwrap_or(&mut []);
+
+        Audio {
+            inputs,
+            outputs,
+            frames_count: self.frames_count,
         }
+    }
+
+    #[inline]
+    pub fn frames_count(&self) -> u32 {
+        self.frames_count
     }
 }
 
@@ -209,6 +194,8 @@ impl<'a> IntoIterator for &'a mut Audio<'a> {
     type Item = PairedPort<'a>;
     type IntoIter = PairedPortsIter<'a>;
 
+    /// Returns a mutable iterator over all port pairs. This is equivalent to using
+    /// [`port_pairs`](Audio::port_pairs).
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.port_pairs()

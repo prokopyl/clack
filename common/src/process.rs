@@ -2,16 +2,35 @@ use clap_sys::process::*;
 use std::fmt::{Debug, Formatter};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
+/// Status returned by a plugin after processing.
+///
+/// This is mainly used as a way for the plugin to tell the host when it can be safely put to sleep.
+///
+/// Note that Clack uses a [`Result`] enum for relaying a failed processing to the host,
+/// unlike the C CLAP API which uses an extra state in enum (`CLAP_PROCESS_ERROR`) to indicate failure.
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ProcessStatus {
+    /// Processing should continue: the plugin has no desire to be put to sleep.
     Continue = CLAP_PROCESS_CONTINUE,
+    /// Processing should continue, unless all outputs are quiet.
     ContinueIfNotQuiet = CLAP_PROCESS_CONTINUE_IF_NOT_QUIET,
-    Sleep = CLAP_PROCESS_SLEEP,
+    /// The plugin is currently processing its tail (e.g. release, reverb, etc.).
+    ///
+    /// Use the `tail` extension to query the plugin for its current tail length.
     Tail = CLAP_PROCESS_TAIL,
+    /// No more processing is required until the next event or variation in audio input.
+    Sleep = CLAP_PROCESS_SLEEP,
 }
 
 impl ProcessStatus {
+    /// Gets a [`ProcessStatus`] from the raw, C-FFI compatible value.
+    ///
+    /// In order to match Clack's APIs, this returns `Some(Err(()))` if the value is
+    /// `CLAP_PROCESS_ERROR`.
+    ///
+    /// If the given integer does not match any known CLAP Processing status codes, [`None`] is
+    /// returned.
     pub fn from_raw(raw: clap_process_status) -> Option<Result<Self, ()>> {
         use ProcessStatus::*;
 
