@@ -245,10 +245,8 @@
 //! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers[1]);
 //!
 //! // The input note event has been passed through
-//! # #[cfg(not(miri))] {
 //! assert_eq!(output_events_buffer.get(0).unwrap(), &note_on_event);
 //! assert_eq!(output_events_buffer.len(), 1);
-//! # }
 //!
 //! // Step 9: stop and deactivate the plugin.
 //!

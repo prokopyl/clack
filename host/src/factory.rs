@@ -22,9 +22,9 @@
 
 use crate::host::HostError;
 pub use clack_common::factory::*;
+use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use clap_sys::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use std::ffi::CStr;
 use std::ptr::NonNull;
 

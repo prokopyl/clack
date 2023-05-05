@@ -151,9 +151,23 @@ impl InputEventBuffer for EventBuffer {
         // SAFETY: Registered indexes always have actual event headers written by append_header_data
         // PANIC: We used registered indexes, this should never panic
         let event = unsafe { self.headers[header_index].assume_init_ref() };
+        let event_size = event.0.size as usize;
+        let header_end_index =
+            byte_index_to_value_index::<AlignedEventHeader>(event_size) + header_index;
+
+        let event = &self.headers[header_index..header_end_index];
+
+        let event_bytes_padded = unsafe {
+            core::slice::from_raw_parts(
+                event.as_ptr() as *const _,
+                event.len() * core::mem::size_of::<AlignedEventHeader>(),
+            )
+        };
+
+        let event_bytes = &event_bytes_padded[..event_size];
 
         // SAFETY: the event header was written from a valid UnknownEvent in append_header_data
-        Some(unsafe { UnknownEvent::from_raw(&event.0) })
+        Some(unsafe { UnknownEvent::from_bytes_unchecked(event_bytes) })
     }
 }
 
@@ -187,7 +201,6 @@ impl<'a> Iterator for EventBufferIter<'a> {
 }
 
 #[cfg(test)]
-#[cfg(not(miri))] // TODO: MIRI does not support C-style inheritance casts
 mod test {
     use crate::events::event_types::MidiEvent;
     use crate::events::io::EventBuffer;

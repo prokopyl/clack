@@ -13,11 +13,10 @@ pub use clack_common::bundle::*;
 
 pub trait PluginEntry: Sized {
     #[inline]
-    fn init(_plugin_path: &CStr) -> bool {
+    #[allow(unused)]
+    fn new(plugin_path: &CStr) -> bool {
         true
     }
-    #[inline]
-    fn de_init() {}
 
     fn declare_factories(builder: &mut PluginFactories);
 
@@ -28,13 +27,32 @@ pub trait PluginEntry: Sized {
         get_factory: Some(get_factory::<Self>),
     };
 }
+/*
+struct EntryHolder {
+
+}
+
+impl EntryHolder {
+    const fn new (option: &'static u32) -> PluginEntryDescriptor {
+        unsafe extern "C" fn init(plugin_path: *const std::os::raw::c_char) -> bool {
+            let x = option;
+            todo!()
+        }
+        PluginEntryDescriptor {
+            clap_version: CLAP_VERSION,
+            init: Some(),
+            deinit: None,
+            get_factory: None,
+        }
+    }
+}*/
 
 unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const std::os::raw::c_char) -> bool {
-    catch_unwind(|| E::init(CStr::from_ptr(plugin_path))).unwrap_or(false)
+    catch_unwind(|| E::new(CStr::from_ptr(plugin_path))).unwrap_or(false)
 }
 
 unsafe extern "C" fn de_init<E: PluginEntry>() {
-    let _ = catch_unwind(|| E::de_init());
+    // let _ = catch_unwind(|| E::de_init());
 }
 
 unsafe extern "C" fn get_factory<E: PluginEntry>(
@@ -69,7 +87,7 @@ fn get_wrapper<'a, P: Plugin<'a>>() -> Option<&'static PluginDescriptorWrapper> 
 }
 
 impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
-    fn init(_plugin_path: &CStr) -> bool {
+    fn new(_plugin_path: &CStr) -> bool {
         // Force initialization
         get_wrapper::<P>().is_some()
     }
