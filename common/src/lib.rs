@@ -6,6 +6,8 @@
 //! All modules of this crate are re-exported in the `clack-host` and `clack-plugin` crates. Most users
 //! should not have to use `clack-common` directly.
 
+extern crate core;
+
 pub mod bundle;
 pub mod events;
 pub mod extensions;

@@ -3,9 +3,9 @@ use crate::factory::FactoryImplementation;
 use crate::host::HostInfo;
 use crate::plugin::descriptor::RawPluginDescriptor;
 use crate::plugin::PluginInstance;
+use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
-use clap_sys::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use std::ffi::CStr;
 
 #[repr(C)]

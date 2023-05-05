@@ -47,7 +47,6 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
     ) -> Result<ProcessStatus, PluginError> {
         self.shared.host.request_callback();
 
-        #[cfg(not(miri))]
         for event in _events.input {
             _events.output.try_push(event).unwrap();
         }

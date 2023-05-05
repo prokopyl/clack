@@ -51,7 +51,7 @@ unsafe extern "C" fn try_push<O: OutputEventBuffer>(
     handle_panic(|| {
         O::try_push(
             &mut *((*list).ctx as *const _ as *mut O),
-            UnknownEvent::from_raw(&*event),
+            UnknownEvent::from_raw(event),
         )
         .is_ok()
     })

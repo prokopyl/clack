@@ -18,7 +18,6 @@ use std::ops::{Index, Range};
 ///
 /// # Example
 ///```
-/// # #[cfg(not(miri))] let _: () = { // TODO: MIRI does not support C-style inheritance casts
 /// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
 /// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
@@ -29,7 +28,6 @@ use std::ops::{Index, Range};
 ///
 /// assert_eq!(1, input_events.len());
 /// assert_eq!(&event, input_events[0].as_event().unwrap());
-/// # };
 /// ```
 #[repr(C)]
 pub struct InputEvents<'a> {
@@ -83,11 +81,12 @@ impl<'a> InputEvents<'a> {
     /// If `index` is out of bounds, `None` is returned.
     #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
-        unsafe {
-            (self.inner.get?)(&self.inner, index)
-                .as_ref()
-                .map(|e| UnknownEvent::from_raw(e))
-        }
+        let event = unsafe { (self.inner.get?)(&self.inner, index) };
+        if event.is_null() {
+            return None;
+        };
+
+        unsafe { Some(UnknownEvent::from_raw(event)) }
     }
 
     #[inline]
