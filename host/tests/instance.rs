@@ -3,6 +3,7 @@ use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
 use clack_host::prelude::*;
+use clack_plugin::clack_export_entry;
 
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread;
@@ -47,7 +48,8 @@ impl<'a> Plugin<'a> for DivaPluginStub {
     }
 }
 
-static DIVA_STUB_ENTRY: PluginEntryDescriptor = SinglePluginEntry::<DivaPluginStub>::DESCRIPTOR;
+clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
+static DIVA_STUB_ENTRY: PluginEntryDescriptor = clap_entry;
 
 struct MyHostShared;
 impl<'a> HostShared<'a> for MyHostShared {

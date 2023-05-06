@@ -5,12 +5,6 @@ use std::ptr::NonNull;
 
 pub mod plugin;
 
-/// Provides an implementation of this factory for a given type `I`.
-pub trait FactoryImplementation<I>: Factory + 'static {
-    /// The implementation of the factory.
-    const IMPLEMENTATION: &'static Self;
-}
-
 pub struct PluginFactories<'a> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
@@ -33,13 +27,13 @@ impl<'a> PluginFactories<'a> {
     }
 
     /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<F: FactoryImplementation<I>, I>(&mut self) -> &mut Self {
+    pub fn register<F: Factory>(&mut self, factory: &F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }
 
         if F::IDENTIFIER == self.requested {
-            self.found = NonNull::new(F::IMPLEMENTATION as *const _ as *mut _)
+            self.found = Some(NonNull::from(factory).cast())
         }
 
         self
