@@ -63,5 +63,6 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
     }
 }
 
+clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
 #[allow(unused)] // This is only used in doctests
-pub static DIVA_STUB_ENTRY: PluginEntryDescriptor = SinglePluginEntry::<DivaPluginStub>::DESCRIPTOR;
+pub static DIVA_STUB_ENTRY: PluginEntryDescriptor = clap_entry;

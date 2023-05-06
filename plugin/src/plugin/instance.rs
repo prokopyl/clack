@@ -16,7 +16,7 @@ pub(crate) struct PluginInstanceImpl<'a, P: Plugin<'a>> {
 }
 
 impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
-    fn get_plugin_desc(self, desc: &'static RawPluginDescriptor) -> clap_plugin {
+    fn get_plugin_desc(self, desc: &'a RawPluginDescriptor) -> clap_plugin {
         clap_plugin {
             desc,
             plugin_data: Box::into_raw(Box::new(self)).cast(),
@@ -159,7 +159,7 @@ impl<'a> PluginInstance<'a> {
 
     pub fn new<P: Plugin<'a>>(
         host_info: HostInfo<'a>,
-        descriptor: &'static RawPluginDescriptor,
+        descriptor: &'a RawPluginDescriptor,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };

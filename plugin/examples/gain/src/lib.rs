@@ -5,7 +5,7 @@ use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use std::ffi::CStr;
 
-use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
+use clack_plugin::{clack_export_entry, plugin::descriptor::PluginDescriptor, prelude::*};
 
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
@@ -207,7 +207,4 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     }
 }
 
-#[allow(non_upper_case_globals)]
-#[allow(unsafe_code)]
-#[no_mangle]
-pub static clap_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;
+clack_export_entry!(SinglePluginEntry<GainPlugin>);

@@ -1,123 +1,159 @@
-use crate::extensions::wrapper::panic::catch_unwind;
 use crate::factory::plugin::{PluginFactory, PluginFactoryImpl};
 use crate::factory::PluginFactories;
 use crate::host::HostInfo;
 use crate::plugin::descriptor::{PluginDescriptorWrapper, RawPluginDescriptor};
 use crate::plugin::{Plugin, PluginInstance};
-use clap_sys::version::CLAP_VERSION;
-use std::ffi::{c_void, CStr};
+use std::cell::UnsafeCell;
+use std::ffi::CStr;
 use std::marker::PhantomData;
-use std::sync::Once;
+use std::panic::AssertUnwindSafe;
 
+use crate::extensions::wrapper::panic::catch_unwind;
 pub use clack_common::bundle::*;
 
 pub trait PluginEntry: Sized {
-    #[inline]
-    #[allow(unused)]
-    fn new(plugin_path: &CStr) -> bool {
-        true
-    }
+    fn new(plugin_path: &CStr) -> Option<Self>;
 
-    fn declare_factories(builder: &mut PluginFactories);
+    fn declare_factories(&self, builder: &mut PluginFactories);
+}
 
-    const DESCRIPTOR: PluginEntryDescriptor = PluginEntryDescriptor {
-        clap_version: CLAP_VERSION,
-        init: Some(init::<Self>),
-        deinit: Some(de_init::<Self>),
-        get_factory: Some(get_factory::<Self>),
+#[macro_export]
+macro_rules! clack_export_entry {
+    ($plugin_ty:ty) => {
+        #[allow(non_upper_case_globals)]
+        #[allow(unsafe_code)]
+        #[no_mangle]
+        pub static clap_entry: $crate::bundle::PluginEntryDescriptor = {
+            static HOLDER: $crate::bundle::EntryHolder<$plugin_ty> =
+                $crate::bundle::EntryHolder::new();
+
+            unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
+                HOLDER.init(plugin_path)
+            }
+
+            unsafe extern "C" fn deinit() {
+                HOLDER.de_init()
+            }
+
+            unsafe extern "C" fn get_factory(
+                identifier: *const ::core::ffi::c_char,
+            ) -> *const ::core::ffi::c_void {
+                HOLDER.get_factory(identifier)
+            }
+
+            $crate::bundle::PluginEntryDescriptor {
+                clap_version: $crate::utils::ClapVersion::CURRENT.to_raw(),
+                init: Some(init),
+                deinit: Some(deinit),
+                get_factory: Some(get_factory),
+            }
+        };
     };
 }
-/*
-struct EntryHolder {
 
+#[doc(hidden)]
+pub struct EntryHolder<E> {
+    inner: UnsafeCell<Option<E>>,
 }
 
-impl EntryHolder {
-    const fn new (option: &'static u32) -> PluginEntryDescriptor {
-        unsafe extern "C" fn init(plugin_path: *const std::os::raw::c_char) -> bool {
-            let x = option;
-            todo!()
-        }
-        PluginEntryDescriptor {
-            clap_version: CLAP_VERSION,
-            init: Some(),
-            deinit: None,
-            get_factory: None,
+// SAFETY: TODO
+unsafe impl<E> Send for EntryHolder<E> {}
+unsafe impl<E> Sync for EntryHolder<E> {}
+
+#[doc(hidden)]
+impl<E: PluginEntry> EntryHolder<E> {
+    pub const fn new() -> Self {
+        Self {
+            inner: UnsafeCell::new(None),
         }
     }
-}*/
 
-unsafe extern "C" fn init<E: PluginEntry>(plugin_path: *const std::os::raw::c_char) -> bool {
-    catch_unwind(|| E::new(CStr::from_ptr(plugin_path))).unwrap_or(false)
-}
+    pub unsafe fn init(&self, plugin_path: *const core::ffi::c_char) -> bool {
+        let plugin_path = CStr::from_ptr(plugin_path);
+        let entry = catch_unwind(|| E::new(plugin_path));
 
-unsafe extern "C" fn de_init<E: PluginEntry>() {
-    // let _ = catch_unwind(|| E::de_init());
-}
+        if let Ok(Some(entry)) = entry {
+            *self.inner.get() = Some(entry);
+            true
+        } else {
+            false
+        }
+    }
 
-unsafe extern "C" fn get_factory<E: PluginEntry>(
-    identifier: *const std::os::raw::c_char,
-) -> *const c_void {
-    catch_unwind(|| {
+    pub unsafe fn de_init(&self) {
+        let _ = catch_unwind(AssertUnwindSafe(|| *self.inner.get() = None));
+    }
+
+    pub unsafe fn get_factory(
+        &self,
+        identifier: *const core::ffi::c_char,
+    ) -> *const core::ffi::c_void {
         if identifier.is_null() {
             return core::ptr::null();
         }
 
+        let Some(entry) = &*self.inner.get() else { return core::ptr::null() };
         let identifier = CStr::from_ptr(identifier);
-        let mut builder = PluginFactories::new(identifier);
-        E::declare_factories(&mut builder);
-        builder.found()
-    })
-    .unwrap_or(core::ptr::null())
+
+        catch_unwind(AssertUnwindSafe(|| {
+            let mut builder = PluginFactories::new(identifier);
+            entry.declare_factories(&mut builder);
+            builder.found()
+        }))
+        .unwrap_or(core::ptr::null())
+    }
 }
 
-pub struct SinglePluginEntry<'a, P: Plugin<'a>>(PhantomData<&'a P>);
-
-fn get_wrapper<'a, P: Plugin<'a>>() -> Option<&'static PluginDescriptorWrapper> {
-    static mut WRAPPER: Option<PluginDescriptorWrapper> = None;
-    static INIT: Once = Once::new();
-
-    INIT.call_once(|| {
-        // SAFETY: this static is guaranteed to be initialized only once
-        unsafe { WRAPPER = Some(PluginDescriptorWrapper::new(P::get_descriptor())) };
-    });
-
-    // SAFETY: this is only accessed and initialized by
-    unsafe { WRAPPER.as_ref() }
+pub struct SinglePluginEntry<'a, P: Plugin<'a>> {
+    plugin_factory: PluginFactory<SinglePluginFactory<'a, P>>,
 }
 
 impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
-    fn new(_plugin_path: &CStr) -> bool {
-        // Force initialization
-        get_wrapper::<P>().is_some()
+    fn new(_plugin_path: &CStr) -> Option<Self> {
+        Some(Self {
+            plugin_factory: PluginFactory::new(SinglePluginFactory {
+                descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
+                _plugin: PhantomData,
+            }),
+        })
     }
 
     #[inline]
-    fn declare_factories(builder: &mut PluginFactories) {
-        builder.register::<PluginFactory, Self>();
+    fn declare_factories(&self, builder: &mut PluginFactories) {
+        builder.register(&self.plugin_factory);
     }
 }
 
-impl<'a, P: Plugin<'a>> PluginFactoryImpl<'a> for SinglePluginEntry<'a, P> {
+struct SinglePluginFactory<'a, P: Plugin<'a>> {
+    descriptor: PluginDescriptorWrapper,
+    _plugin: PhantomData<AssertUnwindSafe<&'a P>>,
+}
+
+impl<'a, P: Plugin<'a>> PluginFactoryImpl<'a> for SinglePluginFactory<'a, P> {
     #[inline]
-    fn plugin_count() -> u32 {
+    fn plugin_count(&self) -> u32 {
         1
     }
 
     #[inline]
-    fn plugin_descriptor(index: u32) -> Option<&'static RawPluginDescriptor> {
+    fn plugin_descriptor(&self, index: u32) -> Option<&RawPluginDescriptor> {
         match index {
-            0 => Some(get_wrapper::<P>().unwrap().get_raw()),
+            0 => Some(self.descriptor.get_raw()),
             _ => None,
         }
     }
 
     #[inline]
-    fn create_plugin(host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
-        let descriptor = get_wrapper::<P>().unwrap();
-
-        if plugin_id == descriptor.descriptor().id() {
-            Some(PluginInstance::new::<P>(host_info, descriptor.get_raw()))
+    fn create_plugin(
+        &'a self,
+        host_info: HostInfo<'a>,
+        plugin_id: &CStr,
+    ) -> Option<PluginInstance<'a>> {
+        if plugin_id == self.descriptor.descriptor().id() {
+            Some(PluginInstance::new::<P>(
+                host_info,
+                self.descriptor.get_raw(),
+            ))
         } else {
             None
         }
