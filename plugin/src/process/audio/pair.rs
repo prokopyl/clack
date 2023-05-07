@@ -4,13 +4,13 @@ use crate::process::Audio;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::{Iter, IterMut};
 
-pub struct PairedPort<'a> {
+pub struct PortPair<'a> {
     input: Option<&'a clap_audio_buffer>,
     output: Option<&'a mut clap_audio_buffer>,
     frames_count: u32,
 }
 
-impl<'a> PairedPort<'a> {
+impl<'a> PortPair<'a> {
     #[inline]
     pub(crate) unsafe fn from_raw(
         input: Option<&'a clap_audio_buffer>,
@@ -19,7 +19,7 @@ impl<'a> PairedPort<'a> {
     ) -> Option<Self> {
         match (input, output) {
             (None, None) => None,
-            (input, output) => Some(PairedPort {
+            (input, output) => Some(PortPair {
                 input,
                 output,
                 frames_count,
@@ -186,13 +186,13 @@ impl<'a, S> ExactSizeIterator for PairedChannelsIter<'a, S> {
     }
 }
 
-pub struct PairedPortsIter<'a> {
+pub struct PortPairsIter<'a> {
     inputs: Iter<'a, clap_audio_buffer>,
     outputs: IterMut<'a, clap_audio_buffer>,
     frames_count: u32,
 }
 
-impl<'a> PairedPortsIter<'a> {
+impl<'a> PortPairsIter<'a> {
     #[inline]
     pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
         Self {
@@ -203,12 +203,12 @@ impl<'a> PairedPortsIter<'a> {
     }
 }
 
-impl<'a> Iterator for PairedPortsIter<'a> {
-    type Item = PairedPort<'a>;
+impl<'a> Iterator for PortPairsIter<'a> {
+    type Item = PortPair<'a>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        unsafe { PairedPort::from_raw(self.inputs.next(), self.outputs.next(), self.frames_count) }
+        unsafe { PortPair::from_raw(self.inputs.next(), self.outputs.next(), self.frames_count) }
     }
 
     #[inline]
@@ -217,7 +217,7 @@ impl<'a> Iterator for PairedPortsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PairedPortsIter<'a> {
+impl<'a> ExactSizeIterator for PortPairsIter<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.inputs.len().max(self.outputs.len())

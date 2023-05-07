@@ -3,6 +3,8 @@
 //! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::Plugin::process)
 //! method. See the [`Plugin`](crate::plugin::Plugin) trait documentation for examples on how these types interact.
 
+#![warn(missing_docs)]
+
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -78,12 +80,60 @@ impl<'a> Events<'a> {
 
 /// Input and output audio buffers to processed by the plugin.
 ///
-/// Audio buffers in CLAP follow the following structure:
+/// Audio data in CLAP follow the following tree structure:
 ///
 /// * Plugins may have an arbitrary amount of input and output ports;
 /// * Each port can hold either 32-bit, or 64-bit floating-point sample data;
 /// * Port sample data is split in multiple channels (1 for mono, 2 for stereo, etc.);
 /// * Each channel is a raw buffer (i.e. slice) of either [`f32`] or [`f64`] samples.
+///
+/// This structure applies both to inputs and outputs: the [`Audio`] struct allows to retrieve
+/// [`InputPort`]s and [`OutputPort`]s separately, but they can also be accessed together as
+/// Input/Output [`PortPair`]s. This allows for the common use-case of borrowing both an input
+/// and its matching output for processing, while also being safe to hosts using the same buffer for
+/// both.
+///
+/// # Example
+///
+/// The following example implements a gain plugin that amplifies every input channel by `2`, and
+/// writes the result to a matching output channel.
+///
+/// ```
+/// use clack_plugin::prelude::*;
+///
+/// pub fn process(mut audio: Audio) -> Result<ProcessStatus, PluginError> {
+///     for mut port_pair in &mut audio {
+///         // For this example, we'll only care about 32-bit sample data.
+///         let Some(channel_pairs) = port_pair.channels()?.into_f32() else { continue };
+///
+///         for channel_pair in channel_pairs {
+///             match channel_pair {
+///                 // If this input has no matching output, we simply do nothing with it.
+///                 ChannelPair::InputOnly(_) => {}
+///                 // If this output has no matching input, we fill it with silence.
+///                 ChannelPair::OutputOnly(buf) => buf.fill(0.0),
+///                 // If this is a separate pair of I/O buffers,
+///                 // we can copy the input to the outputs while multiplying
+///                 ChannelPair::InputOutput(input, output) => {
+///                     for (input, output) in input.iter().zip(output) {
+///                         *output = input * 2.0
+///                     }
+///                 }
+///                 // If the host sent us a single buffer to be processed in-place
+///                 // (i.e. input and output buffers point to the same location),
+///                 // then we can do the processing in-place directly.
+///                 ChannelPair::InPlace(buf) => {
+///                     for sample in buf {
+///                         *sample *= 2.0
+///                     }
+///                 }
+///             }
+///         }
+///     }
+///
+///     Ok(ProcessStatus::Continue)
+/// }
+/// ```
 ///
 pub struct Audio<'a> {
     inputs: &'a [clap_audio_buffer],
@@ -109,6 +159,12 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Retrieves the [`InputPort`] at a given index.
+    ///
+    /// This returns [`None`] if there is no input port at the given index.
+    ///
+    /// See also the [`input_port_count`](Audio::input_port_count) method to know how many input
+    /// ports are available, and the [`input_ports`](Audio::input_ports) method to get all input ports at once.
     #[inline]
     pub fn input_port(&self, index: usize) -> Option<InputPort> {
         self.inputs
@@ -116,16 +172,27 @@ impl<'a> Audio<'a> {
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
     }
 
+    /// Retrieves the number of available [`InputPort`]s.
     #[inline]
     pub fn input_port_count(&self) -> usize {
         self.inputs.len()
     }
 
+    /// Returns an iterator of all the available [`InputPort`]s at once.
+    ///
+    /// See also the [`input_port`](Audio::input_port) method to retrieve a single input port by
+    /// its index.
     #[inline]
-    pub fn input_ports(&self) -> InputPortsIter<'a> {
+    pub fn input_ports(&self) -> InputPortsIter {
         InputPortsIter::new(self)
     }
 
+    /// Retrieves the [`OutputPort`] at a given index.
+    ///
+    /// This returns [`None`] if there is no input port at the given index.
+    ///
+    /// See also the [`output_port_count`](Audio::output_port_count) method to know how many input
+    /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all input ports at once.
     #[inline]
     pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
         self.outputs
@@ -134,25 +201,31 @@ impl<'a> Audio<'a> {
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
+    /// Retrieves the number of available [`OutputPort`]s.
     #[inline]
     pub fn output_port_count(&self) -> usize {
         self.outputs.len()
     }
 
+    /// Returns an iterator of all the available [`OutputPort`]s at once.
+    ///
+    /// See also the [`output_port`](Audio::output_port) method to retrieve a single input port by
+    /// its index.
     #[inline]
     pub fn output_ports(&mut self) -> OutputPortsIter {
         OutputPortsIter::new(self)
     }
 
+    /// Retrieves the [`PortPair`] at a given index.
+    ///
+    /// This returns [`None`] if there is no available port at the given index.
+    ///
+    /// See also the [`port_pair_count`](Audio::port_pair_count) method to know how many port
+    /// port pairs are available, and the [`port_pairs`](Audio::port_pairs) method to get all port pairs at once.
     #[inline]
-    pub fn port_pairs(&mut self) -> PairedPortsIter {
-        PairedPortsIter::new(self)
-    }
-
-    #[inline]
-    pub fn port_pair(&mut self, index: usize) -> Option<PairedPort> {
+    pub fn port_pair(&mut self, index: usize) -> Option<PortPair> {
         unsafe {
-            PairedPort::from_raw(
+            PortPair::from_raw(
                 self.inputs.get(index),
                 self.outputs.get_mut(index),
                 self.frames_count,
@@ -160,13 +233,28 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Retrieves the number of available [`PortPair`]s.
+    ///
+    /// Because [`PortPair`] can be mismatched (i.e. have an input but no output, or vice-versa),
+    /// this is effectively equal to the maximum number of ports available, either on the input side
+    /// or the output side.
     #[inline]
     pub fn port_pair_count(&self) -> usize {
         self.input_port_count().max(self.output_port_count())
     }
 
+    /// Returns an iterator of all the available [`PortPair`]s at once.
+    ///
+    /// See also the [`port_pair`](Audio::port_pair) method to retrieve a single input port by
+    /// its index.
     #[inline]
-    pub fn get_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
+    pub fn port_pairs(&mut self) -> PortPairsIter {
+        PortPairsIter::new(self)
+    }
+
+    /// Returns a sub-range of ports as a new [`Audio`] struct, similar to a subslice of items.
+    #[inline]
+    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
         let inputs = self
             .inputs
             .get((range.start_bound().cloned(), range.end_bound().cloned()))
@@ -184,17 +272,20 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Returns the number of frames to process in this block.
+    ///
+    /// This will always match the number of samples of every audio buffer in this [`Audio`] struct.
     #[inline]
     pub fn frames_count(&self) -> u32 {
         self.frames_count
     }
 }
 
-impl<'a> IntoIterator for &'a mut Audio<'a> {
-    type Item = PairedPort<'a>;
-    type IntoIter = PairedPortsIter<'a>;
+impl<'buf: 'a, 'a> IntoIterator for &'a mut Audio<'buf> {
+    type Item = PortPair<'a>;
+    type IntoIter = PortPairsIter<'a>;
 
-    /// Returns a mutable iterator over all port pairs. This is equivalent to using
+    /// Returns an iterator of all the available [`PortPair`]s at once. This is equivalent to using
     /// [`port_pairs`](Audio::port_pairs).
     #[inline]
     fn into_iter(self) -> Self::IntoIter {

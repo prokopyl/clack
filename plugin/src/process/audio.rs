@@ -1,3 +1,5 @@
+//! Various types related to accessing [`Audio`](super::Audio) buffers.
+
 mod error;
 mod input;
 mod output;

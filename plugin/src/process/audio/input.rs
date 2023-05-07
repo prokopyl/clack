@@ -42,6 +42,7 @@ impl<'a> ExactSizeIterator for InputPortsIter<'a> {
     }
 }
 
+/// An Input audio port.
 #[derive(Copy, Clone)]
 pub struct InputPort<'a> {
     inner: &'a clap_audio_buffer,
