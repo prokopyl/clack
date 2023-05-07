@@ -93,6 +93,17 @@ impl<'a> Events<'a> {
 /// and its matching output for processing, while also being safe to hosts using the same buffer for
 /// both.
 ///
+/// For each port type (input, output, or paired), ports can be accessed either individually with
+/// an index, or all at once with an iterator. For instance, [`InputPort`]s can be accessed either
+/// one-at-a-time with [`Audio::input_port`], or with an iterator from [`Audio::input_ports`]. A
+/// [`Audio::input_port_count`] method is also available. The same methods are available for
+/// [`OutputPort`]s and [`PortPair`]s.
+///
+/// Note that because ports can individually hold either 32-bit or 64-bit sample data, an extra
+/// sample type detection step is necessary before the port's channels themselves can be accessed.
+/// This is done through the [`channels`](InputPort::channels) methods on each port type, and
+/// returns a [`SampleType`] enum indicating whether the port's buffers hold 32-bit or 64-bit samples.
+///
 /// # Example
 ///
 /// The following example implements a gain plugin that amplifies every input channel by `2`, and

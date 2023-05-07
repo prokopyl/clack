@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+/// Errors that can occur when accessing [`Audio`](crate::process::Audio) buffers.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum BufferError {
     InvalidChannelBuffer,
