@@ -1,9 +1,18 @@
 use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{BufferError, InputPort, OutputPort, SampleType};
 use crate::process::Audio;
+use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::{Iter, IterMut};
 
+/// A pair of Input and Output ports.
+///
+/// Note that in case of asymmetric port layouts (e.g. side-chain), there may not
+/// be an associated output port to an input port, or vice-versa. The same goes for
+/// paired channels.
+///
+/// In those case, a given pair will only contain one port instead of a full pair. However,
+/// a [`PortPair`] is always guaranteed to contain at least one port, be it an input or output.
 pub struct PortPair<'a> {
     input: Option<&'a clap_audio_buffer>,
     output: Option<&'a mut clap_audio_buffer>,
@@ -27,12 +36,18 @@ impl<'a> PortPair<'a> {
         }
     }
 
+    /// Gets the [`InputPort`] of this pair.
+    ///
+    /// If the ports are asymmetric and there is no input port, this returns [`None`].
     #[inline]
-    pub fn input(&self) -> Option<InputPort<'a>> {
+    pub fn input(&self) -> Option<InputPort> {
         self.input
             .map(|i| unsafe { InputPort::from_raw(i, self.frames_count) })
     }
 
+    /// Gets the [`OutputPort`] of this pair.
+    ///
+    /// If the ports are asymmetric and there is no output port, this returns [`None`].
     #[inline]
     pub fn output(&mut self) -> Option<OutputPort> {
         self.output
@@ -40,6 +55,40 @@ impl<'a> PortPair<'a> {
             .map(|i| unsafe { OutputPort::from_raw(i, self.frames_count) })
     }
 
+    /// Retrieves the port pair's channels.
+    ///
+    /// Because each port can hold either [`f32`] or [`f64`] sample data, this method returns a
+    /// [`SampleType`] enum of the paired channels, to indicate which one the ports holds.
+    ///
+    /// # Errors
+    ///
+    /// This method returns a [`BufferError::InvalidChannelBuffer`] if the host provided neither
+    /// [`f32`] or [`f64`] buffer type, which is invalid per the CLAP specification.
+    ///
+    /// Additionally, if the two port have different buffer sample types (i.e. one holds [`f32`]
+    /// and the other holds [`f64`], then a [`BufferError::MismatchedBufferPair`] error is returned.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_plugin::process::audio::{PairedChannels, PortPair, SampleType};
+    ///
+    /// # fn foo(port: PortPair) {
+    /// let mut port: PortPair = /* ... */
+    /// # port;
+    ///
+    /// // Decide what to do using by matching against every possible configuration
+    /// match port.channels().unwrap() {
+    ///     SampleType::F32(buf) => { /* Process the 32-bit buffers */ },
+    ///     SampleType::F64(buf) => { /* Process the 64-bit buffers */ },
+    ///     SampleType::Both(buf32, buf64) => { /* We have both types of buffers available */ }
+    /// }
+    ///
+    /// // If we're only interested in a single buffer type,
+    /// // we can use SampleType's helper methods:
+    /// let channels: PairedChannels<f32> = port.channels().unwrap().into_f32().unwrap();
+    /// # }
+    /// ```
     #[inline]
     pub fn channels(
         &mut self,
@@ -68,6 +117,11 @@ impl<'a> PortPair<'a> {
         ))
     }
 
+    /// The number of channels in this port pair.
+    ///
+    /// Since there may be more channels in one port than in the other, this method also counts
+    /// the partial [`ChannelPair`]s that can be returned, and therefore returns the maximum number
+    /// of channels between the two ports.  
     #[inline]
     pub fn channel_pair_count(&self) -> usize {
         let in_channels = self.input.map(|b| b.channel_count).unwrap_or(0);
@@ -75,8 +129,54 @@ impl<'a> PortPair<'a> {
 
         in_channels.max(out_channels) as usize
     }
+
+    /// Returns the number of frames to process in this block.
+    ///
+    /// This will always match the number of samples of every audio channel buffer. The two ports
+    /// *cannot* have different buffer sizes.
+    #[inline]
+    pub fn frames_count(&self) -> u32 {
+        self.frames_count
+    }
+
+    /// The latency from and to the audio interface for this port pair, in samples.
+    ///
+    /// This returns a tuple containing the latenciess for the input and output port,
+    /// respectively.
+    ///
+    /// If one port isn't present in this pair, then [`None`] is returned.
+    #[inline]
+    pub fn latencies(&self) -> (Option<u32>, Option<u32>) {
+        (
+            self.input.map(|i| i.latency),
+            self.output.as_ref().map(|o| o.latency),
+        )
+    }
+
+    /// The [`ConstantMask`]s for the two ports.
+    ///
+    /// This returns a tuple containing the [`ConstantMask`]s for the input and output port,
+    /// respectively.
+    ///
+    /// If one port isn't present in this pair, then [`ConstantMask::FULLY_CONSTANT`] is returned.
+    #[inline]
+    pub fn constant_masks(&self) -> (ConstantMask, ConstantMask) {
+        (
+            self.input
+                .map(|i| ConstantMask::from_bits(i.constant_mask))
+                .unwrap_or(ConstantMask::FULLY_CONSTANT),
+            self.output
+                .as_ref()
+                .map(|o| ConstantMask::from_bits(o.constant_mask))
+                .unwrap_or(ConstantMask::FULLY_CONSTANT),
+        )
+    }
 }
 
+/// An [`PortPair`]'s channels' data buffers, which contains samples of a given type `S`.
+///
+/// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
+/// [`PortPair::channels`].
 pub struct PairedChannels<'a, S> {
     input_data: &'a [*const S],
     output_data: &'a mut [*const S],
@@ -84,48 +184,58 @@ pub struct PairedChannels<'a, S> {
 }
 
 impl<'a, S> PairedChannels<'a, S> {
+    /// Returns the number of frames to process in this block.
+    ///
+    /// This will always match the number of samples of every audio channel buffer, from both
+    /// the input and output port.
     #[inline]
     pub fn frames_count(&self) -> u32 {
         self.frames_count
     }
 
+    /// The number of input channels.
     #[inline]
     pub fn input_channel_count(&self) -> usize {
         self.input_data.len()
     }
 
+    /// The number of output channels.
     #[inline]
     pub fn output_channel_count(&self) -> usize {
         self.output_data.len()
     }
 
+    /// The total number of channel pairs.
+    ///
+    /// Since there may be more channels in one port than in the other, this method also counts
+    /// the partial [`ChannelPair`]s that can be returned, and therefore returns the maximum number
+    /// of channels between the input and output ports.  
     #[inline]
     pub fn channel_pair_count(&self) -> usize {
         self.input_channel_count().max(self.output_channel_count())
     }
 
+    /// Retrieves the pair of sample buffers for the pair of channels at a given index.
+    ///
+    /// If there is no channel at the given index (i.e. `channel_index` is greater or equal than
+    /// [`channel_count`](Self::channel_count)), this returns [`None`].
+    ///
+    /// See [`ChannelPair`]'s documentation for examples on how to access sample buffers from it.
     #[inline]
     pub fn channel_pair(&mut self, index: usize) -> Option<ChannelPair<'a, S>> {
-        self.mismatched_channel_pair(index, index)
-    }
-
-    #[inline]
-    pub fn mismatched_channel_pair(
-        &mut self,
-        input_index: usize,
-        output_index: usize,
-    ) -> Option<ChannelPair<'a, S>> {
         let input = self
             .input_data
-            .get(input_index)
+            .get(index)
             .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) });
-        let output = self.output_data.get(output_index).map(|ptr| unsafe {
+
+        let output = self.output_data.get(index).map(|ptr| unsafe {
             core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
         });
 
         ChannelPair::from_optional_io(input, output)
     }
 
+    /// Gets an iterator over all of the ports' [`ChannelPair`]s.
     #[inline]
     pub fn iter_mut(&mut self) -> PairedChannelsIter<S> {
         PairedChannelsIter {
@@ -150,6 +260,7 @@ impl<'a, S> IntoIterator for PairedChannels<'a, S> {
     }
 }
 
+/// An iterator over all of a [`PortPair`]'s [`ChannelPair`]s.
 pub struct PairedChannelsIter<'a, S> {
     input_iter: Iter<'a, *const S>,
     output_iter: IterMut<'a, *const S>,
@@ -186,6 +297,7 @@ impl<'a, S> ExactSizeIterator for PairedChannelsIter<'a, S> {
     }
 }
 
+/// An iterator of all of the available [`PortPair`]s from an [`Audio`] struct.
 pub struct PortPairsIter<'a> {
     inputs: Iter<'a, clap_audio_buffer>,
     outputs: IterMut<'a, clap_audio_buffer>,
@@ -224,6 +336,9 @@ impl<'a> ExactSizeIterator for PortPairsIter<'a> {
     }
 }
 
+/// A pair of input and output channel buffers.
+///
+// TODO
 pub enum ChannelPair<'a, S> {
     InputOnly(&'a [S]),
     OutputOnly(&'a mut [S]),
