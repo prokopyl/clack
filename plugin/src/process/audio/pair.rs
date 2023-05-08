@@ -11,7 +11,7 @@ use std::slice::{Iter, IterMut};
 /// be an associated output port to an input port, or vice-versa. The same goes for
 /// paired channels.
 ///
-/// In those case, a given pair will only contain one port instead of a full pair. However,
+/// In those cases, a given pair will only contain one port instead of two. However,
 /// a [`PortPair`] is always guaranteed to contain at least one port, be it an input or output.
 pub struct PortPair<'a> {
     input: Option<&'a clap_audio_buffer>,
@@ -38,7 +38,7 @@ impl<'a> PortPair<'a> {
 
     /// Gets the [`InputPort`] of this pair.
     ///
-    /// If the ports are asymmetric and there is no input port, this returns [`None`].
+    /// If the port layout is asymmetric and there is no input port, this returns [`None`].
     #[inline]
     pub fn input(&self) -> Option<InputPort> {
         self.input
@@ -47,7 +47,7 @@ impl<'a> PortPair<'a> {
 
     /// Gets the [`OutputPort`] of this pair.
     ///
-    /// If the ports are asymmetric and there is no output port, this returns [`None`].
+    /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
     pub fn output(&mut self) -> Option<OutputPort> {
         self.output
@@ -66,7 +66,7 @@ impl<'a> PortPair<'a> {
     /// [`f32`] or [`f64`] buffer type, which is invalid per the CLAP specification.
     ///
     /// Additionally, if the two port have different buffer sample types (i.e. one holds [`f32`]
-    /// and the other holds [`f64`], then a [`BufferError::MismatchedBufferPair`] error is returned.
+    /// and the other holds [`f64`]), then a [`BufferError::MismatchedBufferPair`] error is returned.
     ///
     /// # Example
     ///
@@ -218,7 +218,7 @@ impl<'a, S> PairedChannels<'a, S> {
     /// Retrieves the pair of sample buffers for the pair of channels at a given index.
     ///
     /// If there is no channel at the given index (i.e. `channel_index` is greater or equal than
-    /// [`channel_count`](Self::channel_count)), this returns [`None`].
+    /// [`channel_pair_count`](Self::channel_pair_count)), this returns [`None`].
     ///
     /// See [`ChannelPair`]'s documentation for examples on how to access sample buffers from it.
     #[inline]
@@ -338,11 +338,22 @@ impl<'a> ExactSizeIterator for PortPairsIter<'a> {
 
 /// A pair of input and output channel buffers.
 ///
-// TODO
+/// Because port and channel layouts may differ between inputs and outputs, a [`ChannelPair`]
+/// may actually contain only an input or an output instead of both.
+///
+/// This enum also allows to check for the fairly common case where Host may re-use the same
+/// buffer for both the input and output, and expect the plugin to do in-place processing.
 pub enum ChannelPair<'a, S> {
+    /// There is only an input channel present, there was no matching output.
     InputOnly(&'a [S]),
+    /// There is only an output channel present, there was no matching input.
     OutputOnly(&'a mut [S]),
+    /// Both the input and output channels are present, and available separately.
     InputOutput(&'a [S], &'a mut [S]),
+    /// Both the input and output channels are present, but they actually share the same buffer.
+    ///
+    /// In this case, the slice is already filled with the input channel's data, and the host
+    /// considers the contents of this buffer after processing to be the output channel's data.
     InPlace(&'a mut [S]),
 }
 
@@ -364,6 +375,7 @@ impl<'a, S> ChannelPair<'a, S> {
         }
     }
 
+    /// Attempts to retrieve the input channel's buffer data, if the input channel is present.
     #[inline]
     pub fn input(&'a self) -> Option<&'a [S]> {
         match self {
@@ -373,6 +385,8 @@ impl<'a, S> ChannelPair<'a, S> {
         }
     }
 
+    /// Attempts to retrieve a read-only reference to the output channel's buffer data,
+    /// if the output channel is present.
     #[inline]
     pub fn output(&'a self) -> Option<&'a [S]> {
         match self {
@@ -381,6 +395,8 @@ impl<'a, S> ChannelPair<'a, S> {
         }
     }
 
+    /// Attempts to retrieve a read-write reference to the output channel's buffer data,
+    /// if the output channel is present.
     #[inline]
     pub fn output_mut(&'a mut self) -> Option<&'a mut [S]> {
         match self {

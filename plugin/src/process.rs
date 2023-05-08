@@ -3,7 +3,7 @@
 //! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::Plugin::process)
 //! method. See the [`Plugin`](crate::plugin::Plugin) trait documentation for examples on how these types interact.
 
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
