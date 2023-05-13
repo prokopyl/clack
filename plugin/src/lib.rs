@@ -23,6 +23,7 @@ pub mod prelude {
     pub use crate::extensions::PluginExtensions;
     pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
     pub use crate::plugin::{
+        descriptor::{PluginDescriptor, StaticPluginDescriptor},
         AudioConfiguration, Plugin, PluginError, PluginMainThread, PluginShared,
     };
     pub use crate::process::{
@@ -30,3 +31,6 @@ pub mod prelude {
         Audio, Events, Process, ProcessStatus,
     };
 }
+
+#[doc = include_str!("../../README.md")]
+const _MAIN_README_TEST: () = {};
