@@ -122,7 +122,7 @@ impl AudioPorts {
         self.resize_buffer_configs(iter.len());
         self.buffer_lists.clear();
 
-        let mut min_buffer_length = usize::MAX;
+        let mut min_channel_buffer_length = usize::MAX;
         let mut total = 0;
 
         for (i, port) in iter.enumerate() {
@@ -134,7 +134,8 @@ impl AudioPorts {
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
-                        min_buffer_length = min_buffer_length.min(channel.buffer.len());
+                        min_channel_buffer_length =
+                            min_channel_buffer_length.min(channel.buffer.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
@@ -145,7 +146,8 @@ impl AudioPorts {
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
-                        min_buffer_length = min_buffer_length.min(channel.buffer.len());
+                        min_channel_buffer_length =
+                            min_channel_buffer_length.min(channel.buffer.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
@@ -175,7 +177,7 @@ impl AudioPorts {
 
         InputAudioBuffers {
             buffers: &self.buffer_configs[..total],
-            min_buffer_length,
+            min_channel_buffer_length,
         }
     }
 
@@ -193,7 +195,7 @@ impl AudioPorts {
         self.resize_buffer_configs(iter.len());
         self.buffer_lists.clear();
 
-        let mut min_buffer_length = usize::MAX;
+        let mut min_channel_buffer_length = usize::MAX;
         let mut total = 0;
 
         for (i, port) in iter.enumerate() {
@@ -204,14 +206,14 @@ impl AudioPorts {
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
-                        min_buffer_length = min_buffer_length.min(channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
                         self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     false
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
-                        min_buffer_length = min_buffer_length.min(channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
                         self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     true
@@ -227,17 +229,17 @@ impl AudioPorts {
             descriptor.constant_mask = 0;
 
             if is_f64 {
-                descriptor.data64 = buffers.as_ptr().cast();
+                descriptor.data64 = buffers.as_mut_ptr().cast();
                 descriptor.data32 = core::ptr::null();
             } else {
                 descriptor.data64 = core::ptr::null();
-                descriptor.data32 = buffers.as_ptr() as *const *const _;
+                descriptor.data32 = buffers.as_mut_ptr() as *const *const _;
             }
         }
 
         OutputAudioBuffers {
-            output_data: &mut self.buffer_configs[..total],
-            min_buffer_length,
+            buffers: &mut self.buffer_configs[..total],
+            min_channel_buffer_length,
         }
     }
 
@@ -262,13 +264,42 @@ impl AudioPorts {
 }
 
 pub struct InputAudioBuffers<'a> {
-    pub(crate) buffers: &'a [clap_audio_buffer],
-    pub(crate) min_buffer_length: usize,
+    buffers: &'a [clap_audio_buffer],
+    min_channel_buffer_length: usize,
+}
+
+impl<'a> InputAudioBuffers<'a> {
+    #[inline]
+    pub fn as_raw_buffers(&self) -> &'a [clap_audio_buffer] {
+        self.buffers
+    }
+
+    #[inline]
+    pub fn min_channel_buffer_length(&self) -> usize {
+        self.min_channel_buffer_length
+    }
 }
 
 pub struct OutputAudioBuffers<'a> {
-    pub(crate) output_data: &'a mut [clap_audio_buffer],
-    pub(crate) min_buffer_length: usize,
+    buffers: &'a mut [clap_audio_buffer],
+    min_channel_buffer_length: usize,
+}
+
+impl<'a> OutputAudioBuffers<'a> {
+    #[inline]
+    pub fn as_raw_buffers(&mut self) -> &mut [clap_audio_buffer] {
+        self.buffers
+    }
+
+    #[inline]
+    pub fn into_raw_buffers(self) -> &'a mut [clap_audio_buffer] {
+        self.buffers
+    }
+
+    #[inline]
+    pub fn min_channel_buffer_length(&self) -> usize {
+        self.min_channel_buffer_length
+    }
 }
 
 #[cfg(test)]
@@ -290,7 +321,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_buffer_length, 4);
+        assert_eq!(buffers.min_channel_buffer_length, 4);
     }
 
     #[test]
@@ -305,8 +336,8 @@ mod test {
             ),
         }]);
 
-        assert_eq!(buffers.output_data.len(), 1);
-        assert_eq!(buffers.min_buffer_length, 4);
+        assert_eq!(buffers.buffers.len(), 1);
+        assert_eq!(buffers.min_channel_buffer_length, 4);
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
@@ -329,7 +360,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_buffer_length, 4);
+        assert_eq!(buffers.min_channel_buffer_length, 4);
     }
 
     #[test]
@@ -345,8 +376,8 @@ mod test {
             ),
         }]);
 
-        assert_eq!(buffers.output_data.len(), 1);
-        assert_eq!(buffers.min_buffer_length, 4);
+        assert_eq!(buffers.buffers.len(), 1);
+        assert_eq!(buffers.min_channel_buffer_length, 4);
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);

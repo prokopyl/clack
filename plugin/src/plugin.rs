@@ -48,8 +48,8 @@
 
 use crate::extensions::PluginExtensions;
 use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
-use crate::process::audio::Audio;
-use crate::process::events::ProcessEvents;
+use crate::process::Audio;
+use crate::process::Events;
 use crate::process::Process;
 use clack_common::process::ProcessStatus;
 
@@ -109,7 +109,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
     fn new(host: HostMainThreadHandle<'a>, shared: &'a S) -> Result<Self, PluginError>;
 
     /// This is called by the host on the main thread, in response to a previous call to
-    /// [`HostHandle::request_callback`](crate::host::HostHandle::request_callback).
+    /// [`HostHandle::request_callback`](HostHandle::request_callback).
     ///
     /// The default implementation of this method does nothing.
     #[inline]
@@ -215,9 +215,9 @@ pub trait Plugin<'a>: Sized + Send + 'a {
 
     fn process(
         &mut self,
-        process: &Process,
+        process: Process,
         audio: Audio,
-        events: ProcessEvents,
+        events: Events,
     ) -> Result<ProcessStatus, PluginError>;
 
     /// Deactivates the audio processor.

@@ -41,9 +41,9 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
 
     fn process(
         &mut self,
-        _process: &Process,
+        _process: Process,
         mut audio: Audio,
-        _events: ProcessEvents,
+        _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
         self.shared.host.request_callback();
 
@@ -52,8 +52,7 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
             _events.output.try_push(event).unwrap();
         }
 
-        let mut output_channels = audio.output(0).unwrap().channels_mut();
-
+        let mut output_channels = audio.output_port(0).unwrap().channels().unwrap();
         let output_buf = output_channels.as_f32_mut().unwrap().iter_mut();
 
         for channel in output_buf {

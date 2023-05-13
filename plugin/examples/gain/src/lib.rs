@@ -12,11 +12,10 @@ use clack_extensions::audio_ports::{
     PluginAudioPortsImpl,
 };
 use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
-use clack_plugin::process::audio::channels::SampleType;
+use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin<'a> {
-    latest_gain_value: i32,
     _host: HostAudioThreadHandle<'a>,
 }
 
@@ -41,36 +40,37 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         _shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
-        Ok(Self {
-            latest_gain_value: 0,
-            _host: host,
-        })
+        Ok(Self { _host: host })
     }
 
     fn process(
         &mut self,
-        _process: &Process,
+        _process: Process,
         mut audio: Audio,
-        _events: ProcessEvents,
+        _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
-        let io = if let Some(io) = audio.zip(0, 0) {
-            io
-        } else {
-            return Ok(ProcessStatus::ContinueIfNotQuiet);
-        };
+        for channel_pair in audio
+            .port_pairs()
+            // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
+            .filter_map(|mut p| p.channels().ok()?.into_f32())
+            .flatten()
+        {
+            let buf = match channel_pair {
+                ChannelPair::InputOnly(_) => continue, // Ignore extra inputs
+                ChannelPair::OutputOnly(o) => {
+                    // Just set extra outputs to 0
+                    o.fill(0.0);
+                    continue;
+                }
+                ChannelPair::InputOutput(i, o) => {
+                    o.copy_from_slice(i);
+                    o
+                }
+                ChannelPair::InPlace(o) => o,
+            };
 
-        match io {
-            SampleType::F32(io) => {
-                // Supports safe in_place processing
-                for (input, output) in io {
-                    output.set(input.get() * 2.0)
-                }
-            }
-            SampleType::F64(io) => {
-                // Supports safe in_place processing
-                for (input, output) in io {
-                    output.set(input.get() * 2.0)
-                }
+            for x in buf {
+                *x *= 2.0;
             }
         }
 

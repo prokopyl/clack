@@ -31,12 +31,12 @@ impl Error for StreamError {}
 
 /// A CLAP data stream that can be read from.
 ///
-/// This helper struct is designed to work with the standard [`Read`](std::io::Read) trait.
+/// This helper struct is designed to work with the standard [`Read`](Read) trait.
 #[repr(C)]
 pub struct InputStream<'a>(clap_istream, PhantomData<&'a clap_istream>);
 
 impl<'a> InputStream<'a> {
-    /// Creates a new input stream for an existing [reader](std::io::Read) implementation.
+    /// Creates a new input stream for an existing [reader](Read) implementation.
     pub fn from_reader<R: Read + Sized + 'a>(reader: &'a mut R) -> Self {
         Self(
             clap_istream {
@@ -80,12 +80,12 @@ impl<'a> Read for InputStream<'a> {
 
 /// A CLAP data stream that can be written to.
 ///
-/// This helper struct is designed to work with the standard [`Write`](std::io::Write) trait.
+/// This helper struct is designed to work with the standard [`Write`](Write) trait.
 #[repr(C)]
 pub struct OutputStream<'a>(clap_ostream, PhantomData<&'a clap_ostream>);
 
 impl<'a> OutputStream<'a> {
-    /// Creates a new output stream for an existing [write](std::io::Write) implementation.
+    /// Creates a new output stream for an existing [write](Write) implementation.
     pub fn from_writer<W: Write + Sized + 'a>(reader: &'a mut W) -> Self {
         Self(
             clap_ostream {

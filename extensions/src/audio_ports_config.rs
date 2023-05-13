@@ -95,7 +95,7 @@ pub struct MainPortInfo {
     /// The number of channels of this port.
     pub channel_count: u32,
     /// The type of this port.
-    pub port_type: AudioPortType<'static>,
+    pub port_type: Option<AudioPortType<'static>>,
 }
 
 #[cfg(feature = "clack-host")]
@@ -105,7 +105,7 @@ impl MainPortInfo {
         channel_count: u32,
         port_type: *const std::os::raw::c_char,
     ) -> Option<Self> {
-        use std::ptr::NonNull;
+        use core::ptr::NonNull;
 
         if !exists {
             return None;
@@ -113,7 +113,8 @@ impl MainPortInfo {
 
         Some(Self {
             channel_count,
-            port_type: AudioPortType(CStr::from_ptr(NonNull::new(port_type as *mut _)?.as_ptr())),
+            port_type: NonNull::new(port_type as *mut _)
+                .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr()))),
         })
     }
 }

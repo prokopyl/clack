@@ -78,7 +78,7 @@ impl<'a, P: Plugin<'a>> PluginWrapper<'a, P> {
         let pinned_self = Pin::get_unchecked_mut(self);
 
         let processor = P::activate(
-            host.to_audio_thread(),
+            host.as_audio_thread_unchecked(),
             pinned_self.main_thread.get_mut(),
             shared,
             audio_config,

@@ -193,8 +193,8 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         max_frame_count: Option<usize>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, HostError> {
-        let min_input_sample_count = audio_inputs.min_buffer_length;
-        let min_output_sample_count = audio_outputs.min_buffer_length;
+        let min_input_sample_count = audio_inputs.min_channel_buffer_length();
+        let min_output_sample_count = audio_outputs.min_channel_buffer_length();
 
         let mut frames_count = min_input_sample_count.min(min_output_sample_count);
         if let Some(max_frame_count) = max_frame_count {
@@ -207,10 +207,10 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
             transport: transport
                 .map(|e| e.as_raw_ref() as *const _)
                 .unwrap_or(core::ptr::null()),
-            audio_inputs: audio_inputs.buffers.as_ptr(),
-            audio_outputs: audio_outputs.output_data.as_mut_ptr(),
-            audio_inputs_count: audio_inputs.buffers.len() as u32,
-            audio_outputs_count: audio_outputs.output_data.len() as u32,
+            audio_inputs_count: audio_inputs.as_raw_buffers().len() as u32,
+            audio_outputs_count: audio_outputs.as_raw_buffers().len() as u32,
+            audio_inputs: audio_inputs.as_raw_buffers().as_ptr(),
+            audio_outputs: audio_outputs.as_raw_buffers().as_mut_ptr(),
             in_events: events_input.as_raw(),
             out_events: events_output.as_raw_mut() as *mut _,
         };

@@ -14,7 +14,7 @@ pub struct PluginAudioPorts(
 #[repr(C)]
 pub struct HostAudioPorts(
     clap_host_audio_ports,
-    PhantomData<*const clap_plugin_audio_ports>,
+    PhantomData<*const clap_host_audio_ports>,
 );
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -23,6 +23,15 @@ pub struct AudioPortType<'a>(pub &'a CStr);
 impl<'a> AudioPortType<'a> {
     pub const MONO: AudioPortType<'static> = AudioPortType(CLAP_PORT_MONO);
     pub const STEREO: AudioPortType<'static> = AudioPortType(CLAP_PORT_STEREO);
+
+    #[inline]
+    pub const fn from_channel_count(channel_count: u32) -> Option<Self> {
+        match channel_count {
+            1 => Some(Self::MONO),
+            2 => Some(Self::STEREO),
+            _ => None,
+        }
+    }
 }
 
 bitflags! {

@@ -121,15 +121,14 @@ impl<'a> AudioPortConfigWriter<'a> {
                 );
                 write(
                     addr_of_mut!((*buf).main_input_port_type),
-                    info.port_type.0.as_ptr(),
+                    info.port_type
+                        .map(|t| t.0.as_ptr())
+                        .unwrap_or(core::ptr::null()),
                 );
             } else {
                 write(addr_of_mut!((*buf).has_main_input), false);
                 write(addr_of_mut!((*buf).main_input_channel_count), 0);
-                write(
-                    addr_of_mut!((*buf).main_input_port_type),
-                    core::ptr::null_mut(),
-                );
+                write(addr_of_mut!((*buf).main_input_port_type), core::ptr::null());
             }
 
             if let Some(info) = data.main_output {
@@ -140,14 +139,16 @@ impl<'a> AudioPortConfigWriter<'a> {
                 );
                 write(
                     addr_of_mut!((*buf).main_output_port_type),
-                    info.port_type.0.as_ptr(),
+                    info.port_type
+                        .map(|t| t.0.as_ptr())
+                        .unwrap_or(core::ptr::null()),
                 );
             } else {
                 write(addr_of_mut!((*buf).has_main_output), false);
                 write(addr_of_mut!((*buf).main_output_channel_count), 0);
                 write(
                     addr_of_mut!((*buf).main_output_port_type),
-                    core::ptr::null_mut(),
+                    core::ptr::null(),
                 );
             }
         }

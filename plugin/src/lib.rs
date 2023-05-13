@@ -25,5 +25,8 @@ pub mod prelude {
     pub use crate::plugin::{
         AudioConfiguration, Plugin, PluginError, PluginMainThread, PluginShared,
     };
-    pub use crate::process::{audio::Audio, events::ProcessEvents, Process, ProcessStatus};
+    pub use crate::process::{
+        audio::{ChannelPair, SampleType},
+        Audio, Events, Process, ProcessStatus,
+    };
 }

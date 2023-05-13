@@ -3,7 +3,7 @@ use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::descriptor::RawPluginDescriptor;
 use crate::plugin::{AudioConfiguration, Plugin, PluginMainThread};
-use crate::process::Process;
+use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
@@ -46,13 +46,15 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
             return true; // TODO: revert
         }
 
-        data.plugin_data = Some(match PluginWrapper::new(data.host.to_main_thread()) {
-            Ok(d) => d,
-            Err(e) => {
-                super::logging::plugin_log::<P>(plugin, &e.into());
-                return false;
-            }
-        });
+        data.plugin_data = Some(
+            match PluginWrapper::new(data.host.as_main_thread_unchecked()) {
+                Ok(d) => d,
+                Err(e) => {
+                    super::logging::plugin_log::<P>(plugin, &e.into());
+                    return false;
+                }
+            },
+        );
 
         true
     }
@@ -110,13 +112,12 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         process: *const clap_process,
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
-        let (process, audio, events) = Process::from_raw(process);
         PluginWrapper::<P>::handle(plugin, |p| {
             Ok(P::process(
                 p.audio_processor()?.as_mut(),
-                process,
-                audio,
-                events,
+                Process::from_raw(&*process),
+                Audio::from_raw(&*process),
+                Events::from_raw(&*process),
             )?)
         })
         .map(|s| s as clap_process_status)

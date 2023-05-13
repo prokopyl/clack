@@ -39,9 +39,9 @@ impl<'a> Plugin<'a> for DivaPluginStub {
 
     fn process(
         &mut self,
-        _process: &Process,
+        _process: Process,
         _audio: Audio,
-        _events: ProcessEvents,
+        _events: Events,
     ) -> Result<ProcessStatus, PluginError> {
         unreachable!()
     }

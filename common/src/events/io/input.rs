@@ -12,9 +12,9 @@ use std::ops::{Index, Range};
 /// `InputEvents`s do not own the event data, they are only lightweight wrappers around a compatible
 /// event buffer (i.e. [`InputEventBuffer`]), see [`InputEvents::from_buffer`] as the default implementation.
 ///
-/// Unlike [`Vec`s](std::vec::Vec) or slices, `InputEvents`s only support retrieving an event from
+/// Unlike [`Vec`s](Vec) or slices, `InputEvents` only support retrieving an event from
 /// its index ([`get`](InputEvents::get)). It also implements a few extra features for convenience,
-/// such as [`Iterator`](core::iter::IntoIterator).
+/// such as [`Iterator`](IntoIterator).
 ///
 /// # Example
 ///```
@@ -109,9 +109,9 @@ impl<'a> IntoIterator for &'a InputEvents<'a> {
     }
 }
 
-impl<'a, I: InputEventBuffer> From<&'a mut I> for InputEvents<'a> {
+impl<'a, I: InputEventBuffer> From<&'a I> for InputEvents<'a> {
     #[inline]
-    fn from(implementation: &'a mut I) -> Self {
+    fn from(implementation: &'a I) -> Self {
         Self::from_buffer(implementation)
     }
 }
