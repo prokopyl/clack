@@ -1,5 +1,3 @@
-// use nih_plug::prelude::*;
-
 /*use clack_test_host::TestHost;
 use nih_plug::prelude::*;
 use std::sync::Arc;
@@ -209,7 +207,7 @@ impl ClapPlugin for Gain {
 
 nih_export_clap!(Gain);
 
-// #[test]
+#[test]
 fn it_works() {
     // Initialize host
     let mut host = TestHost::instantiate(&clap_entry);

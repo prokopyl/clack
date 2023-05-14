@@ -3,7 +3,6 @@ use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
 use clack_host::prelude::*;
-use clack_plugin::clack_export_entry;
 
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread;

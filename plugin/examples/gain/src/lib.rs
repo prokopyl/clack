@@ -5,7 +5,7 @@ use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use std::ffi::CStr;
 
-use clack_plugin::{clack_export_entry, plugin::descriptor::PluginDescriptor, prelude::*};
+use clack_plugin::prelude::*;
 
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
