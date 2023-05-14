@@ -46,7 +46,7 @@ impl<'a> PluginFactories<'a> {
     }
 
     /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<F: Factory>(&mut self, factory: &F) -> &mut Self {
+    pub fn register<F: Factory>(&mut self, factory: &'a F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }

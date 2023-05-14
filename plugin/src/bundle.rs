@@ -1,4 +1,4 @@
-use crate::factory::plugin::{PluginFactory, PluginFactoryImpl};
+use crate::factory::plugin::{PluginFactoryImpl, PluginFactoryWrapper};
 use crate::factory::PluginFactories;
 use crate::host::HostInfo;
 use crate::plugin::descriptor::{PluginDescriptorWrapper, RawPluginDescriptor};
@@ -14,17 +14,17 @@ pub use clack_common::bundle::*;
 pub trait PluginEntry: Sized + Send + Sync {
     fn new(plugin_path: &CStr) -> Option<Self>;
 
-    fn declare_factories(&self, builder: &mut PluginFactories);
+    fn declare_factories<'a>(&'a self, builder: &mut PluginFactories<'a>);
 }
 
 #[macro_export]
 macro_rules! clack_export_entry {
-    ($plugin_ty:ty) => {
+    ($entry_type:ty) => {
         #[allow(non_upper_case_globals)]
         #[allow(unsafe_code)]
         #[no_mangle]
         pub static clap_entry: $crate::bundle::PluginEntryDescriptor = {
-            static HOLDER: $crate::bundle::EntryHolder<$plugin_ty> =
+            static HOLDER: $crate::bundle::EntryHolder<$entry_type> =
                 $crate::bundle::EntryHolder::new();
 
             unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
@@ -105,13 +105,13 @@ impl<E: PluginEntry> EntryHolder<E> {
 }
 
 pub struct SinglePluginEntry<'a, P: Plugin<'a>> {
-    plugin_factory: PluginFactory<SinglePluginFactory<'a, P>>,
+    plugin_factory: PluginFactoryWrapper<SinglePluginFactory<'a, P>>,
 }
 
 impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
     fn new(_plugin_path: &CStr) -> Option<Self> {
         Some(Self {
-            plugin_factory: PluginFactory::new(SinglePluginFactory {
+            plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
                 descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
                 _plugin: PhantomData,
             }),
@@ -119,7 +119,7 @@ impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
     }
 
     #[inline]
-    fn declare_factories(&self, builder: &mut PluginFactories) {
+    fn declare_factories<'b>(&'b self, builder: &mut PluginFactories<'b>) {
         builder.register(&self.plugin_factory);
     }
 }

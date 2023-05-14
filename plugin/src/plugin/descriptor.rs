@@ -10,7 +10,7 @@ use std::os::raw::c_char;
 /// You don't need to inspect the pointers inside this struct, unless you want to perform the C FFI
 /// yourself.
 ///
-/// This struct is produced and consumed by [`PluginFactory`](crate::factory::plugin::PluginFactory) implementations.
+/// This struct is produced and consumed by [`PluginFactory`](crate::factory::plugin::PluginFactoryWrapper) implementations.
 ///
 /// See also the [`PluginDescriptorWrapper`] helper struct, to create [`RawPluginDescriptor`]s from
 /// [`PluginDescriptor`] implementations.

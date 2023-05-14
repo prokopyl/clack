@@ -8,16 +8,14 @@ use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use std::ffi::CStr;
 
 #[repr(C)]
-pub struct PluginFactory<F> {
+pub struct PluginFactoryWrapper<F> {
     _inner: clap_plugin_factory,
-    sentinel: u8,
     factory: F,
 }
 
-impl<'a, F: PluginFactoryImpl<'a>> PluginFactory<F> {
+impl<'a, F: PluginFactoryImpl<'a>> PluginFactoryWrapper<F> {
     pub const fn new(factory: F) -> Self {
         Self {
-            sentinel: 42,
             _inner: clap_plugin_factory {
                 get_plugin_count: Some(Self::get_plugin_count),
                 get_plugin_descriptor: Some(Self::get_plugin_descriptor),
@@ -25,6 +23,11 @@ impl<'a, F: PluginFactoryImpl<'a>> PluginFactory<F> {
             },
             factory,
         }
+    }
+
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const clap_plugin_factory {
+        &self._inner
     }
 
     unsafe extern "C" fn get_plugin_count(factory: *const clap_plugin_factory) -> u32 {
@@ -65,7 +68,7 @@ impl<'a, F: PluginFactoryImpl<'a>> PluginFactory<F> {
     }
 }
 
-unsafe impl<F> Factory for PluginFactory<F> {
+unsafe impl<F> Factory for PluginFactoryWrapper<F> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 }
 
