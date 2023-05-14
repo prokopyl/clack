@@ -5,6 +5,13 @@ use std::ptr::NonNull;
 
 pub mod plugin;
 
+pub unsafe trait FactoryImpl: Factory {
+    #[inline]
+    fn get_raw_factory_ptr(&self) -> NonNull<c_void> {
+        NonNull::from(self).cast()
+    }
+}
+
 pub struct PluginFactories<'a> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
@@ -27,13 +34,13 @@ impl<'a> PluginFactories<'a> {
     }
 
     /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<F: Factory>(&mut self, factory: &F) -> &mut Self {
+    pub fn register<F: FactoryImpl>(&mut self, factory: &F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }
 
         if F::IDENTIFIER == self.requested {
-            self.found = Some(NonNull::from(factory).cast())
+            self.found = Some(factory.get_raw_factory_ptr())
         }
 
         self

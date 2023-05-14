@@ -115,10 +115,7 @@ impl<'a> Plugin<'a> for MyGainPlugin {
     }
 }
 
-#[allow(non_upper_case_globals)]
-#[allow(unsafe_code)]
-#[no_mangle]
-pub static clap_entry: PluginEntryDescriptor = SinglePluginEntry::<MyGainPlugin>::DESCRIPTOR;
+clack_export_entry!(SinglePluginEntry<MyGainPlugin>);
 ```
 
 ## `clack-host` example

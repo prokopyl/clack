@@ -25,13 +25,25 @@ pub use clack_common::factory::*;
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use std::ffi::CStr;
+use std::ffi::{c_void, CStr};
+use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 mod plugin_descriptor;
 pub use plugin_descriptor::*;
 
-/// A [`Factory`] that exposes a list of [`PluginDescriptor`s](PluginDescriptor).
+/// A base trait for custom factory pointer types.
+pub trait FactoryPointer<'a>: Factory + Sized + 'a {
+    /// Creates a new factory pointer of this type from a raw factory pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller *MUST* ensure the given pointer points to the same type that is expected by this
+    /// pointer type. (e.g. the given pointer must point to a `clap_plugin_factory` to create a [`PluginFactory`].
+    unsafe fn from_raw(raw: NonNull<c_void>) -> Self;
+}
+
+/// A [`Factory`] pointer that exposes a list of [`PluginDescriptor`s](PluginDescriptor).
 ///
 /// # Example
 ///
@@ -57,22 +69,34 @@ pub use plugin_descriptor::*;
 /// }
 /// ```
 #[repr(C)]
-pub struct PluginFactory {
-    inner: clap_plugin_factory,
+#[derive(Copy, Clone)]
+pub struct PluginFactory<'a> {
+    inner: *const clap_plugin_factory,
+    _lifetime: PhantomData<&'a clap_plugin_factory>,
 }
 
-unsafe impl Factory for PluginFactory {
+unsafe impl<'a> Factory for PluginFactory<'a> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 }
 
-impl PluginFactory {
+impl<'a> FactoryPointer<'a> for PluginFactory<'a> {
+    #[inline]
+    unsafe fn from_raw(raw: NonNull<c_void>) -> Self {
+        Self {
+            inner: raw.as_ptr() as *const _,
+            _lifetime: PhantomData,
+        }
+    }
+}
+
+impl<'a> PluginFactory<'a> {
     /// Returns the number of plugin descriptors exposed by this plugin factory.
     #[inline]
     pub fn plugin_count(&self) -> u32 {
         // SAFETY: no special safety considerations
-        match self.inner.get_plugin_count {
+        match unsafe { (*self.inner).get_plugin_count } {
             None => 0,
-            Some(count) => unsafe { count(&self.inner) },
+            Some(count) => unsafe { count(self.inner) },
         }
     }
 
@@ -85,9 +109,9 @@ impl PluginFactory {
     /// See also the [`plugin_descriptors`](PluginFactory::plugin_descriptors) method for a
     /// convenient iterator of all the plugin descriptors exposed by this factory.
     #[inline]
-    pub fn plugin_descriptor(&self, index: u32) -> Option<PluginDescriptor> {
+    pub fn plugin_descriptor(&self, index: u32) -> Option<PluginDescriptor<'a>> {
         // SAFETY: descriptor is guaranteed not to outlive the entry
-        unsafe { (self.inner.get_plugin_descriptor?)(&self.inner, index).as_ref() }
+        unsafe { ((*self.inner).get_plugin_descriptor?)(self.inner, index).as_ref() }
             .map(PluginDescriptor::from_raw)
     }
 
@@ -100,9 +124,9 @@ impl PluginFactory {
     /// See also the [`plugin_descriptor`](PluginFactory::plugin_descriptor) method to retrieve
     /// a plugin descriptor at a specific index.
     #[inline]
-    pub fn plugin_descriptors(&self) -> PluginDescriptorsIter {
+    pub fn plugin_descriptors(&self) -> PluginDescriptorsIter<'a> {
         PluginDescriptorsIter {
-            factory: self,
+            factory: *self,
             count: self.plugin_count(),
             current_index: 0,
         }
@@ -113,11 +137,10 @@ impl PluginFactory {
         plugin_id: &CStr,
         host: *const clap_host,
     ) -> Result<NonNull<clap_plugin>, HostError> {
-        let plugin = NonNull::new((self
-            .inner
+        let plugin = NonNull::new(((*self.inner)
             .create_plugin
             .ok_or(HostError::NullFactoryCreatePluginFunction)?)(
-            &self.inner,
+            self.inner,
             host,
             plugin_id.as_ptr(),
         ) as *mut clap_plugin)
@@ -142,7 +165,7 @@ impl PluginFactory {
 ///
 /// See the [`PluginFactory::plugin_descriptors`] method that produces this iterator.
 pub struct PluginDescriptorsIter<'a> {
-    factory: &'a PluginFactory,
+    factory: PluginFactory<'a>,
     current_index: u32,
     count: u32,
 }
@@ -174,7 +197,7 @@ impl<'a> Iterator for PluginDescriptorsIter<'a> {
 
 /// Returns an iterator of all the [`PluginDescriptor`s](PluginDescriptor) exposed by this plugin
 /// factory.
-impl<'a> IntoIterator for &'a PluginFactory {
+impl<'a> IntoIterator for PluginFactory<'a> {
     type Item = PluginDescriptor<'a>;
     type IntoIter = PluginDescriptorsIter<'a>;
 

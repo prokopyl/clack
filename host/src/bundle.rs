@@ -48,7 +48,6 @@ use std::fmt::{Display, Formatter};
 use std::pin::Pin;
 use std::sync::Arc;
 
-use clack_common::factory::Factory;
 use entry::*;
 use selfie::Selfie;
 use std::ptr::NonNull;
@@ -58,7 +57,7 @@ mod entry;
 #[cfg(test)]
 mod diva_stub;
 
-use crate::factory::PluginFactory;
+use crate::factory::{FactoryPointer, PluginFactory};
 pub use clack_common::bundle::*;
 use clack_common::utils::ClapVersion;
 
@@ -207,9 +206,9 @@ impl PluginBundle {
     /// println!("Found {} plugins.", plugin_factory.plugin_count());
     /// # Ok(()) }
     /// ```
-    pub fn get_factory<F: Factory>(&self) -> Option<&F> {
+    pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
         let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
-        NonNull::new(ptr).map(|p| unsafe { F::from_factory_ptr(p) })
+        NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
     }
 
     /// Returns the [`PluginFactory`] exposed by this bundle, if it exists.
@@ -232,7 +231,7 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     #[inline]
-    pub fn get_plugin_factory(&self) -> Option<&PluginFactory> {
+    pub fn get_plugin_factory(&self) -> Option<PluginFactory> {
         self.get_factory()
     }
 
