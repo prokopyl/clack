@@ -1,4 +1,4 @@
-use crate::factory::{Factory, FactoryImpl};
+use crate::factory::Factory;
 use crate::host::HostInfo;
 use crate::plugin::descriptor::RawPluginDescriptor;
 use crate::plugin::PluginInstance;
@@ -68,8 +68,6 @@ impl<'a, F: PluginFactoryImpl<'a>> PluginFactory<F> {
 unsafe impl<F> Factory for PluginFactory<F> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 }
-
-unsafe impl<F> FactoryImpl for PluginFactory<F> {}
 
 pub trait PluginFactoryImpl<'a>: 'a {
     fn plugin_count(&self) -> u32;

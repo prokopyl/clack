@@ -1,11 +1,23 @@
-use clack_common::factory::Factory;
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
 pub mod plugin;
 
-pub unsafe trait FactoryImpl: Factory {
+/// A base trait for factory plugin-side implementations.
+///
+/// # Safety
+///
+/// Types implementing this trait and using the default implementation of
+/// [`get_raw_factory_ptr`](Factory::get_raw_factory_ptr)
+/// **MUST** be `#[repr(C)]` and have the same C-FFI representation as the CLAP factory struct
+/// matching the factory's [`IDENTIFIER`](Factory::IDENTIFIER).
+///
+/// Failure to do so will result in incorrect pointer casts and UB.
+pub unsafe trait Factory {
+    /// The standard identifier for this factory.
+    const IDENTIFIER: &'static CStr;
+
     #[inline]
     fn get_raw_factory_ptr(&self) -> NonNull<c_void> {
         NonNull::from(self).cast()
@@ -34,7 +46,7 @@ impl<'a> PluginFactories<'a> {
     }
 
     /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<F: FactoryImpl>(&mut self, factory: &F) -> &mut Self {
+    pub fn register<F: Factory>(&mut self, factory: &F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }

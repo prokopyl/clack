@@ -21,7 +21,7 @@
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
 //!    of multiple plugins. They can be loaded with the [`PluginBundle::load`](bundle::PluginBundle::load)
 //!    method. See the [`bundle`] module documentation for more information.
-//! 2. Bundles' entry points can expose multiple [factories](factory::Factory). These are singleton
+//! 2. Bundles' entry points can expose multiple [factories](factory::FactoryPointer). These are singleton
 //!    objects that can provide various functionality. The one of main interest is the
 //!    [`PluginFactory`](factory::PluginFactory), which exposes methods to list and instantiate plugins.
 //!    It can be retrieved from a [`PluginBundle`](bundle::PluginBundle) using the

@@ -5,10 +5,10 @@
 //! In CLAP, factories are singleton objects exposed by the [plugin bundle](crate::bundle)'s
 //! entry point, which can in turn expose various functionalities.
 //!
-//! Each factory type has a standard, unique [identifier](Factory::IDENTIFIER), which allows hosts
+//! Each factory type has a standard, unique [identifier](FactoryPointer::IDENTIFIER), which allows hosts
 //! to query plugins for known factory type implementations.
 //!
-//! In Clack, factories are represented by the [`Factory`] trait.
+//! In Clack, pointers to factories are represented by the [`FactoryPointer`] trait.
 //!
 //! See the [`PluginBundle::get_factory`](crate::bundle::PluginBundle::get_factory) method to
 //! retrieve a given factory type from a plugin bundle.
@@ -21,7 +21,6 @@
 //! list plugins.
 
 use crate::host::HostError;
-pub use clack_common::factory::*;
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
@@ -32,8 +31,15 @@ use std::ptr::NonNull;
 mod plugin_descriptor;
 pub use plugin_descriptor::*;
 
-/// A base trait for custom factory pointer types.
-pub trait FactoryPointer<'a>: Factory + Sized + 'a {
+/// A custom factory pointer type.
+///
+/// # Safety
+///
+/// Types implementing this trait **MUST** be expect the same C-FFI representation as the CLAP
+/// factory struct matching the factory's [`IDENTIFIER`](FactoryPointer::IDENTIFIER).
+pub unsafe trait FactoryPointer<'a>: Sized + 'a {
+    /// The standard identifier for this factory.
+    const IDENTIFIER: &'static CStr;
     /// Creates a new factory pointer of this type from a raw factory pointer.
     ///
     /// # Safety
@@ -43,7 +49,7 @@ pub trait FactoryPointer<'a>: Factory + Sized + 'a {
     unsafe fn from_raw(raw: NonNull<c_void>) -> Self;
 }
 
-/// A [`Factory`] pointer that exposes a list of [`PluginDescriptor`s](PluginDescriptor).
+/// A factory pointer that exposes a list of [`PluginDescriptor`s](PluginDescriptor).
 ///
 /// # Example
 ///
@@ -75,11 +81,9 @@ pub struct PluginFactory<'a> {
     _lifetime: PhantomData<&'a clap_plugin_factory>,
 }
 
-unsafe impl<'a> Factory for PluginFactory<'a> {
+unsafe impl<'a> FactoryPointer<'a> for PluginFactory<'a> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
-}
 
-impl<'a> FactoryPointer<'a> for PluginFactory<'a> {
     #[inline]
     unsafe fn from_raw(raw: NonNull<c_void>) -> Self {
         Self {

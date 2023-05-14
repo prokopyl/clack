@@ -9,7 +9,6 @@
 pub mod bundle;
 pub mod events;
 pub mod extensions;
-pub mod factory;
 pub mod process;
 pub mod stream;
 pub mod utils;

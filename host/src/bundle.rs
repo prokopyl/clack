@@ -7,7 +7,7 @@
 //! They expose a single [`PluginEntryDescriptor`], which, once initialized, acts as the entry
 //! point for the host to read into the bundle.
 //!
-//! CLAP plugin bundles expose implementations of various standard [factories](Factory), which are
+//! CLAP plugin bundles expose implementations of various standard [factories](FactoryPointer), which are
 //! singletons implementing various functionalities. The most relevant is the [`PluginFactory`],
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
@@ -63,7 +63,7 @@ use clack_common::utils::ClapVersion;
 
 /// A handle to a loaded CLAP plugin bundle file.
 ///
-/// This allows getting all of the [factories](Factory) exposed by the bundle, mainly the
+/// This allows getting all of the [factories](FactoryPointer) exposed by the bundle, mainly the
 /// [`PluginFactory`] which allows to list plugin instances.
 ///
 /// This is only a lightweight handle: plugin bundles are only loaded once, and the [`Clone`]
@@ -185,9 +185,9 @@ impl PluginBundle {
         }
     }
 
-    /// Returns the [`Factory`] of type `F` exposed by this bundle, if it exists.
+    /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.
     ///
-    /// If this bundle does not expose a [`Factory`] of the requested type, [`None`] is returned.
+    /// If this bundle does not expose a factory of the requested type, [`None`] is returned.
     ///
     /// If you are looking to fetch the bundle's [`PluginFactory`], you can also use the
     /// [`get_plugin_factory`](PluginBundle::get_plugin_factory) method, which is just a convenience

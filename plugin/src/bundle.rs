@@ -11,7 +11,7 @@ use std::panic::AssertUnwindSafe;
 use crate::extensions::wrapper::panic::catch_unwind;
 pub use clack_common::bundle::*;
 
-pub trait PluginEntry: Sized {
+pub trait PluginEntry: Sized + Send + Sync {
     fn new(plugin_path: &CStr) -> Option<Self>;
 
     fn declare_factories(&self, builder: &mut PluginFactories);
@@ -128,6 +128,9 @@ struct SinglePluginFactory<'a, P: Plugin<'a>> {
     descriptor: PluginDescriptorWrapper,
     _plugin: PhantomData<AssertUnwindSafe<&'a P>>,
 }
+
+unsafe impl<'a, P: Plugin<'a>> Send for SinglePluginFactory<'a, P> {}
+unsafe impl<'a, P: Plugin<'a>> Sync for SinglePluginFactory<'a, P> {}
 
 impl<'a, P: Plugin<'a>> PluginFactoryImpl<'a> for SinglePluginFactory<'a, P> {
     #[inline]
