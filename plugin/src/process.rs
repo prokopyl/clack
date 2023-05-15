@@ -146,6 +146,51 @@ impl<'a> Events<'a> {
 /// }
 /// ```
 ///
+/// The following example shows how to gather different inputs and outputs simultaneously, and here
+/// uses it to simply swap the left and right stereo channels.
+///
+/// ```
+/// use clack_plugin::prelude::*;
+///
+/// pub fn process(mut audio: Audio) -> Result<ProcessStatus, PluginError> {
+///     for mut port_pair in &mut audio {
+///         // For this example, we'll only care about 32-bit sample data.
+///         let Some(mut channel_pairs) = port_pair.channels()?.into_f32() else { continue; };
+///
+///         // Buffers to hold pointers to the left and right channels
+///         let mut input_channels: [Option<&[f32]>; 2] = [None, None];
+///         let mut output_channels: [Option<&mut [f32]>; 2] = [None, None];
+///
+///         // Before we can process the buffers, we need to check all the necessary channels
+///         // are present, in case the host messed up the port configuration.
+///         // (Yes, some do.)
+///         for ((channel_pair, in_ptr), out_ptr) in channel_pairs
+///             .iter_mut()
+///             .zip(&mut input_channels)
+///             .zip(&mut output_channels)
+///         {
+///             // A separate pair of channels is just what we want for this example!
+///             // However, a real plugin implementation would need to gracefully handle
+///             // the other cases, including having spare input buffers ready for
+///             // in-place processing.
+///             if let ChannelPair::InputOutput(input, output) = channel_pair {
+///                 *in_ptr = Some(input);
+///                 *out_ptr = Some(output);
+///             }
+///         }
+///
+///         // Channel swap! (assuming all channels are there)
+///         if let (Some(in_l), Some(out_r)) = (&input_channels[0], &mut output_channels[1]) {
+///             out_r.copy_from_slice(in_l)
+///         }
+///         if let (Some(in_r), Some(out_l)) = (&input_channels[1], &mut output_channels[0]) {
+///             out_l.copy_from_slice(in_r)
+///         }
+///     }
+///
+///     Ok(ProcessStatus::Continue)
+/// }
+/// ```
 pub struct Audio<'a> {
     inputs: &'a [clap_audio_buffer],
     outputs: &'a mut [clap_audio_buffer],
