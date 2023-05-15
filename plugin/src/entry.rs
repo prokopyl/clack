@@ -9,9 +9,9 @@ use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 
 use crate::extensions::wrapper::panic::catch_unwind;
-pub use clack_common::bundle::*;
+pub use clack_common::entry::*;
 
-pub trait PluginEntry: Sized + Send + Sync {
+pub trait Entry: Sized + Send + Sync {
     fn new(plugin_path: &CStr) -> Option<Self>;
 
     fn declare_factories<'a>(&'a self, builder: &mut PluginFactories<'a>);
@@ -23,9 +23,9 @@ macro_rules! clack_export_entry {
         #[allow(non_upper_case_globals)]
         #[allow(unsafe_code)]
         #[no_mangle]
-        pub static clap_entry: $crate::bundle::PluginEntryDescriptor = {
-            static HOLDER: $crate::bundle::EntryHolder<$entry_type> =
-                $crate::bundle::EntryHolder::new();
+        pub static clap_entry: $crate::entry::PluginEntryDescriptor = {
+            static HOLDER: $crate::entry::EntryHolder<$entry_type> =
+                $crate::entry::EntryHolder::new();
 
             unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
                 HOLDER.init(plugin_path)
@@ -41,7 +41,7 @@ macro_rules! clack_export_entry {
                 HOLDER.get_factory(identifier)
             }
 
-            $crate::bundle::PluginEntryDescriptor {
+            $crate::entry::PluginEntryDescriptor {
                 clap_version: $crate::utils::ClapVersion::CURRENT.to_raw(),
                 init: Some(init),
                 deinit: Some(deinit),
@@ -61,7 +61,7 @@ unsafe impl<E> Send for EntryHolder<E> {}
 unsafe impl<E> Sync for EntryHolder<E> {}
 
 #[doc(hidden)]
-impl<E: PluginEntry> EntryHolder<E> {
+impl<E: Entry> EntryHolder<E> {
     pub const fn new() -> Self {
         Self {
             inner: UnsafeCell::new(None),
@@ -69,6 +69,10 @@ impl<E: PluginEntry> EntryHolder<E> {
     }
 
     pub unsafe fn init(&self, plugin_path: *const core::ffi::c_char) -> bool {
+        if (*self.inner.get()).is_some() {
+            return true;
+        }
+
         let plugin_path = CStr::from_ptr(plugin_path);
         let entry = catch_unwind(|| E::new(plugin_path));
 
@@ -108,7 +112,7 @@ pub struct SinglePluginEntry<'a, P: Plugin<'a>> {
     plugin_factory: PluginFactoryWrapper<SinglePluginFactory<'a, P>>,
 }
 
-impl<'a, P: Plugin<'a>> PluginEntry for SinglePluginEntry<'a, P> {
+impl<'a, P: Plugin<'a>> Entry for SinglePluginEntry<'a, P> {
     fn new(_plugin_path: &CStr) -> Option<Self> {
         Some(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {

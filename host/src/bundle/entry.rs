@@ -1,5 +1,5 @@
 use crate::bundle::PluginBundleError;
-use clack_common::bundle::PluginEntryDescriptor;
+use clack_common::entry::PluginEntryDescriptor;
 use clack_common::utils::ClapVersion;
 use libloading::Library;
 use selfie::refs::RefType;

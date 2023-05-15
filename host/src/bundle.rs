@@ -58,7 +58,7 @@ mod entry;
 mod diva_stub;
 
 use crate::factory::{FactoryPointer, PluginFactory};
-pub use clack_common::bundle::*;
+pub use clack_common::entry::*;
 use clack_common::utils::ClapVersion;
 
 /// A handle to a loaded CLAP plugin bundle file.

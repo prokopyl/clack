@@ -4,7 +4,7 @@
 extern crate core;
 
 #[macro_use]
-pub mod bundle;
+pub mod entry;
 pub mod extensions;
 pub mod factory;
 pub mod host;
@@ -16,8 +16,8 @@ pub use clack_common::stream;
 pub use clack_common::utils;
 
 pub mod prelude {
-    pub use crate::bundle::{PluginEntry, PluginEntryDescriptor, SinglePluginEntry};
     pub use crate::clack_export_entry;
+    pub use crate::entry::{Entry, PluginEntryDescriptor, SinglePluginEntry};
     pub use crate::events::{
         io::{InputEvents, OutputEvents},
         UnknownEvent,
