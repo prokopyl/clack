@@ -1,7 +1,7 @@
 //! Types exposing data and metadata to be used by plugins during audio processing.
 //!
-//! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::Plugin::process)
-//! method. See the [`Plugin`](crate::plugin::Plugin) trait documentation for examples on how these types interact.
+//! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::PluginAudioProcessor::process)
+//! method. See the [`Plugin`](crate::plugin::PluginAudioProcessor) trait documentation for examples on how these types interact.
 
 #![deny(missing_docs)]
 

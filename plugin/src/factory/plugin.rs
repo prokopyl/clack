@@ -1,6 +1,6 @@
 use crate::factory::Factory;
 use crate::host::HostInfo;
-use crate::plugin::descriptor::RawPluginDescriptor;
+use crate::plugin::descriptor::PluginDescriptorWrapper;
 use crate::plugin::PluginInstance;
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
@@ -13,7 +13,7 @@ pub struct PluginFactoryWrapper<F> {
     factory: F,
 }
 
-impl<'a, F: PluginFactoryImpl<'a>> PluginFactoryWrapper<F> {
+impl<F: PluginFactory> PluginFactoryWrapper<F> {
     pub const fn new(factory: F) -> Self {
         Self {
             _inner: clap_plugin_factory {
@@ -43,7 +43,7 @@ impl<'a, F: PluginFactoryImpl<'a>> PluginFactoryWrapper<F> {
 
         match this.factory.plugin_descriptor(index) {
             None => core::ptr::null(),
-            Some(d) => d,
+            Some(d) => d.get_raw(),
         }
     }
 
@@ -72,10 +72,10 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 }
 
-pub trait PluginFactoryImpl<'a>: 'a {
+pub trait PluginFactory {
     fn plugin_count(&self) -> u32;
-    fn plugin_descriptor(&self, index: u32) -> Option<&RawPluginDescriptor>;
-    fn create_plugin(
+    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper>;
+    fn create_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,

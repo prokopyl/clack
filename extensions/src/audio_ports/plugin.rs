@@ -56,9 +56,9 @@ pub trait PluginAudioPortsImpl {
     fn get(&self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter);
 }
 
-impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPorts
+impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPorts
 where
-    P::MainThread: PluginAudioPortsImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
 {
     const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
         clap_plugin_audio_ports {
@@ -69,22 +69,22 @@ where
     );
 }
 
-unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin, is_input: bool) -> u32
+unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
-    P::MainThread: PluginAudioPortsImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count(is_input)))
         .unwrap_or(0)
 }
 
-unsafe extern "C" fn get<'a, P: Plugin<'a>>(
+unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
     is_input: bool,
     info: *mut clap_audio_port_info,
 ) -> bool
 where
-    P::MainThread: PluginAudioPortsImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if info.is_null() {

@@ -1,20 +1,20 @@
-use crate::factory::plugin::{PluginFactoryImpl, PluginFactoryWrapper};
-use crate::factory::PluginFactories;
-use crate::host::HostInfo;
-use crate::plugin::descriptor::{PluginDescriptorWrapper, RawPluginDescriptor};
-use crate::plugin::{Plugin, PluginInstance};
-use std::cell::UnsafeCell;
-use std::ffi::CStr;
-use std::marker::PhantomData;
-use std::panic::AssertUnwindSafe;
-
 use crate::extensions::wrapper::panic::catch_unwind;
+use crate::factory::Factory;
+use std::cell::UnsafeCell;
+use std::ffi::{c_void, CStr};
+use std::panic::AssertUnwindSafe;
+use std::ptr::NonNull;
+
 pub use clack_common::entry::*;
+
+mod single;
+
+pub use single::SinglePluginEntry;
 
 pub trait Entry: Sized + Send + Sync {
     fn new(plugin_path: &CStr) -> Option<Self>;
 
-    fn declare_factories<'a>(&'a self, builder: &mut PluginFactories<'a>);
+    fn declare_factories<'a>(&'a self, builder: &mut EntryFactoriesBuilder<'a>);
 }
 
 #[macro_export]
@@ -49,6 +49,41 @@ macro_rules! clack_export_entry {
             }
         };
     };
+}
+
+pub struct EntryFactoriesBuilder<'a> {
+    found: Option<NonNull<c_void>>,
+    requested: &'a CStr,
+}
+
+impl<'a> EntryFactoriesBuilder<'a> {
+    #[inline]
+    pub(crate) fn new(requested: &'a CStr) -> Self {
+        Self {
+            found: None,
+            requested,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn found(&self) -> *const c_void {
+        self.found
+            .map(|p| p.as_ptr())
+            .unwrap_or(core::ptr::null_mut())
+    }
+
+    /// Adds a given factory implementation to the list of extensions this plugin entry supports.
+    pub fn register_factory<F: Factory>(&mut self, factory: &'a F) -> &mut Self {
+        if self.found.is_some() {
+            return self;
+        }
+
+        if F::IDENTIFIER == self.requested {
+            self.found = Some(factory.get_raw_factory_ptr())
+        }
+
+        self
+    }
 }
 
 #[doc(hidden)]
@@ -100,69 +135,10 @@ impl<E: Entry> EntryHolder<E> {
         let identifier = CStr::from_ptr(identifier);
 
         catch_unwind(AssertUnwindSafe(|| {
-            let mut builder = PluginFactories::new(identifier);
+            let mut builder = EntryFactoriesBuilder::new(identifier);
             entry.declare_factories(&mut builder);
             builder.found()
         }))
         .unwrap_or(core::ptr::null())
-    }
-}
-
-pub struct SinglePluginEntry<'a, P: Plugin<'a>> {
-    plugin_factory: PluginFactoryWrapper<SinglePluginFactory<'a, P>>,
-}
-
-impl<'a, P: Plugin<'a>> Entry for SinglePluginEntry<'a, P> {
-    fn new(_plugin_path: &CStr) -> Option<Self> {
-        Some(Self {
-            plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
-                descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
-                _plugin: PhantomData,
-            }),
-        })
-    }
-
-    #[inline]
-    fn declare_factories<'b>(&'b self, builder: &mut PluginFactories<'b>) {
-        builder.register(&self.plugin_factory);
-    }
-}
-
-struct SinglePluginFactory<'a, P: Plugin<'a>> {
-    descriptor: PluginDescriptorWrapper,
-    _plugin: PhantomData<AssertUnwindSafe<&'a P>>,
-}
-
-unsafe impl<'a, P: Plugin<'a>> Send for SinglePluginFactory<'a, P> {}
-unsafe impl<'a, P: Plugin<'a>> Sync for SinglePluginFactory<'a, P> {}
-
-impl<'a, P: Plugin<'a>> PluginFactoryImpl<'a> for SinglePluginFactory<'a, P> {
-    #[inline]
-    fn plugin_count(&self) -> u32 {
-        1
-    }
-
-    #[inline]
-    fn plugin_descriptor(&self, index: u32) -> Option<&RawPluginDescriptor> {
-        match index {
-            0 => Some(self.descriptor.get_raw()),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    fn create_plugin(
-        &'a self,
-        host_info: HostInfo<'a>,
-        plugin_id: &CStr,
-    ) -> Option<PluginInstance<'a>> {
-        if plugin_id == self.descriptor.descriptor().id() {
-            Some(PluginInstance::new::<P>(
-                host_info,
-                self.descriptor.get_raw(),
-            ))
-        } else {
-            None
-        }
     }
 }

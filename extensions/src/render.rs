@@ -88,9 +88,9 @@ mod plugin {
         fn set(&mut self, mode: RenderMode) -> Result<(), PluginRenderError>;
     }
 
-    impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginRender
+    impl<P: Plugin> ExtensionImplementation<P> for PluginRender
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginRenderImpl,
+        for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_render {
@@ -99,12 +99,12 @@ mod plugin {
         });
     }
 
-    unsafe extern "C" fn set<P: for<'a> Plugin<'a>>(
+    unsafe extern "C" fn set<P: Plugin>(
         plugin: *const clap_plugin,
         mode: clap_plugin_render_mode,
     ) -> bool
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginRenderImpl,
+        for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             let mode = RenderMode::from_raw(mode).ok_or(PluginWrapperError::InvalidParameter(
@@ -116,11 +116,11 @@ mod plugin {
         .unwrap_or(false)
     }
 
-    unsafe extern "C" fn has_hard_realtime_requirement<P: for<'a> Plugin<'a>>(
+    unsafe extern "C" fn has_hard_realtime_requirement<P: Plugin>(
         plugin: *const clap_plugin,
     ) -> bool
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginRenderImpl,
+        for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin

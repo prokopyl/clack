@@ -83,9 +83,9 @@ mod plugin {
         fn get(&mut self) -> u32;
     }
 
-    impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginLatency
+    impl<P: Plugin> ExtensionImplementation<P> for PluginLatency
     where
-        P::MainThread: PluginLatencyImpl,
+        for<'a> P::MainThread<'a>: PluginLatencyImpl,
     {
         const IMPLEMENTATION: &'static Self = &PluginLatency {
             inner: clap_plugin_latency {
@@ -94,9 +94,9 @@ mod plugin {
         };
     }
 
-    unsafe extern "C" fn get<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> u32
+    unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
     where
-        P::MainThread: PluginLatencyImpl,
+        for<'a> P::MainThread<'a>: PluginLatencyImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().get()))
             .unwrap_or(0)

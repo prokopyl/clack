@@ -17,9 +17,9 @@ pub trait PluginStateImpl {
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
-impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
+impl<P: Plugin> ExtensionImplementation<P> for PluginState
 where
-    P::MainThread: PluginStateImpl,
+    for<'a> P::MainThread<'a>: PluginStateImpl,
 {
     const IMPLEMENTATION: &'static Self = &PluginState(
         clap_plugin_state {
@@ -30,12 +30,12 @@ where
     );
 }
 
-unsafe extern "C" fn load<'a, P: Plugin<'a>>(
+unsafe extern "C" fn load<P: Plugin>(
     plugin: *const clap_plugin,
     stream: *const clap_istream,
 ) -> bool
 where
-    P::MainThread: PluginStateImpl,
+    for<'a> P::MainThread<'a>: PluginStateImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
@@ -45,12 +45,12 @@ where
     .is_some()
 }
 
-unsafe extern "C" fn save<'a, P: Plugin<'a>>(
+unsafe extern "C" fn save<P: Plugin>(
     plugin: *const clap_plugin,
     stream: *const clap_ostream,
 ) -> bool
 where
-    P::MainThread: PluginStateImpl,
+    for<'a> P::MainThread<'a>: PluginStateImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));

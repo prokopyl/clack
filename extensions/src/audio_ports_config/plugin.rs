@@ -26,9 +26,9 @@ pub trait PluginAudioPortsConfigImpl {
     fn select(&mut self, config_id: u32) -> Result<(), AudioPortConfigSelectError>;
 }
 
-impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginAudioPortsConfig
+impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPortsConfig
 where
-    P::MainThread: PluginAudioPortsConfigImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &PluginAudioPortsConfig(clap_plugin_audio_ports_config {
@@ -38,20 +38,20 @@ where
     });
 }
 
-unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
-    P::MainThread: PluginAudioPortsConfigImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count())).unwrap_or(0)
 }
 
-unsafe extern "C" fn get<'a, P: Plugin<'a>>(
+unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
     config: *mut clap_audio_ports_config,
 ) -> bool
 where
-    P::MainThread: PluginAudioPortsConfigImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {
@@ -65,9 +65,9 @@ where
     .unwrap_or(false)
 }
 
-unsafe extern "C" fn select<'a, P: Plugin<'a>>(plugin: *const clap_plugin, config_id: u32) -> bool
+unsafe extern "C" fn select<P: Plugin>(plugin: *const clap_plugin, config_id: u32) -> bool
 where
-    P::MainThread: PluginAudioPortsConfigImpl,
+    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if p.is_active() {

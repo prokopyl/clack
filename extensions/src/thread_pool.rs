@@ -64,9 +64,9 @@ mod plugin {
         fn exec(&self, task_index: u32);
     }
 
-    impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginThreadPool
+    impl<P: Plugin> ExtensionImplementation<P> for PluginThreadPool
     where
-        for<'a> <P as Plugin<'a>>::Shared: PluginThreadPoolImpl,
+        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_thread_pool {
@@ -74,9 +74,9 @@ mod plugin {
         });
     }
 
-    unsafe extern "C" fn exec<P: for<'a> Plugin<'a>>(plugin: *const clap_plugin, task_index: u32)
+    unsafe extern "C" fn exec<P: Plugin>(plugin: *const clap_plugin, task_index: u32)
     where
-        for<'a> <P as Plugin<'a>>::Shared: PluginThreadPoolImpl,
+        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin.shared().exec(task_index);

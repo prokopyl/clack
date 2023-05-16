@@ -1,6 +1,6 @@
 //! Core types and traits to implement a Clack plugin.
 //!
-//! The [`Plugin`] trait is the main one required to be implemented for a Clack plugin. It
+//! The [`PluginAudioProcessor`] trait is the main one required to be implemented for a Clack plugin. It
 //! can also be associated to two more types, implementing [`PluginMainThread`] and [`PluginShared`],
 //! following the CLAP thread model, as described below.
 //!
@@ -10,19 +10,19 @@
 //! audio processing thread, those happening in the main thread, and thread-safe operations:
 //!
 //! * The *audio thread* (`[audio-thread]` in the CLAP specification): this is represented by a type
-//! implementing the main [`Plugin`] trait (also named the audio processor), which is [`Send`] but
+//! implementing the main [`PluginAudioProcessor`] trait (also named the audio processor), which is [`Send`] but
 //! [`!Sync`](Sync), and is the only one required to implement a Clack plugin.
 //!
 //!   This type handles all DSP in one of the host's audio threads, of which there may be
 //!   multiple, if the host uses a thread pool for example.
 //!
-//!   The host is free to [`Send`] the [`Plugin`] type between any of its audio threads, but any
+//!   The host is free to [`Send`] the [`PluginAudioProcessor`] type between any of its audio threads, but any
 //!   operation of this class is guaranteed to be exclusive (`&mut`) to a single audio thread.
 //!
 //!   One exception is for CLAP plugins' activation and deactivation (represented in Clack by the
 //!   plugin type's construction and destruction), which is guaranteed to happen in the Main Thread
-//!   instead. This allows the plugin's [`activate`](Plugin::activate) and
-//!   [`deactivate`](Plugin::deactivate) methods to receive temporary exclusive references to the
+//!   instead. This allows the plugin's [`activate`](PluginAudioProcessor::activate) and
+//!   [`deactivate`](PluginAudioProcessor::deactivate) methods to receive temporary exclusive references to the
 //!   main thread type during its construction and destruction.
 //!
 //! * The *main thread* (`[main-thread]` in the CLAP specification): this is represented by a type
@@ -132,15 +132,46 @@ impl<'a, S> PluginMainThread<'a, S> for () {
 pub struct AudioConfiguration {
     /// The audio's sample rate.
     pub sample_rate: f64,
-    /// The minimum amount of samples that will be [processed](Plugin::process) at once.
+    /// The minimum amount of samples that will be [processed](PluginAudioProcessor::process) at once.
     pub min_sample_count: u32,
-    /// The maximum amount of samples that will be [processed](Plugin::process) at once.
+    /// The maximum amount of samples that will be [processed](PluginAudioProcessor::process) at once.
     pub max_sample_count: u32,
+}
+
+pub trait Plugin {
+    /// The type holding the plugin's data and operations that belong to the audio thread.
+    ///
+    /// See the [module documentation](crate::plugin) for more information on the thread model.
+    type AudioProcessor<'a>: PluginAudioProcessor<'a, Self::Shared<'a>, Self::MainThread<'a>>;
+
+    /// The type holding the plugin's thread-safe data and operations.
+    ///
+    /// If not needed, the empty `()` type can be used instead.
+    ///
+    /// See the [module documentation](crate::plugin) for more information on the thread model.
+    type Shared<'a>: PluginShared<'a>;
+
+    /// The type holding the plugin's data and operations that belong to the main thread.
+    ///
+    /// If not needed, the empty `()` type can be used instead.
+    ///
+    /// See the [module documentation](crate::plugin) for more information on the thread model.
+    type MainThread<'a>: PluginMainThread<'a, Self::Shared<'a>>;
+
+    /// Creates a new Plugin Descriptor.
+    ///
+    /// This contains read-only data about the plugin, such as it's name, stable identifier, and more.
+    ///
+    /// See the [`PluginDescriptor`] trait's documentation for more information.
+    fn get_descriptor() -> Box<dyn PluginDescriptor>;
+
+    #[inline]
+    fn declare_extensions(_builder: &mut PluginExtensions<Self>, _shared: &Self::Shared<'_>) {}
 }
 
 /// The audio processor and main part of a plugin.
 ///
-/// This type implements all DSP-related operations, most notably [`process`](Plugin::process),
+/// This type implements all DSP-related operations, most notably [`process`](PluginAudioProcessor::process),
 /// which processes all input and output audio and events.
 ///
 /// The associated lifetime `'a` represents the lifetime of the plugin itself, as well as the
@@ -154,28 +185,9 @@ pub struct AudioConfiguration {
 /// to other threads. If they are not needed, the empty `()` type can be used instead, for convenience.
 ///
 /// See the [module documentation](crate::plugin) for more information on the thread model.
-pub trait Plugin<'a>: Sized + Send + 'a {
-    /// The type holding the plugin's thread-safe data and operations.
-    ///
-    /// If not needed, the empty `()` type can be used instead.
-    ///
-    /// See the [module documentation](crate::plugin) for more information on the thread model.
-    type Shared: PluginShared<'a>;
-
-    /// The type holding the plugin's data and operations that belong to the main thread.
-    ///
-    /// If not needed, the empty `()` type can be used instead.
-    ///
-    /// See the [module documentation](crate::plugin) for more information on the thread model.
-    type MainThread: PluginMainThread<'a, Self::Shared>;
-
-    /// Creates a new Plugin Descriptor.
-    ///
-    /// This contains read-only data about the plugin, such as it's name, stable identifier, and more.
-    ///
-    /// See the [`PluginDescriptor`] trait's documentation for more information.
-    fn get_descriptor() -> Box<dyn PluginDescriptor>;
-
+pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, S>>:
+    Sized + Send + 'a
+{
     /// Creates and activates the audio processor.
     ///
     /// This method serves as a constructor for the audio processor, in which it can perform
@@ -208,8 +220,8 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     /// other initialization the plugin may deem necessary.
     fn activate(
         host: HostAudioThreadHandle<'a>,
-        main_thread: &mut Self::MainThread,
-        shared: &'a Self::Shared,
+        main_thread: &mut M,
+        shared: &'a S,
         audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError>;
 
@@ -236,10 +248,10 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     /// This method is not realtime-safe: it may perform memory de-allocations of audio buffers, or
     /// any other de-initialization the plugin may deem necessary.
     #[inline]
-    fn deactivate(self, _main_thread: &mut Self::MainThread) {}
+    fn deactivate(self, _main_thread: &mut M) {}
 
     #[inline]
-    fn reset(&mut self, _main_thread: &mut Self::MainThread) {}
+    fn reset(&mut self, _main_thread: &mut M) {}
 
     #[inline]
     fn start_processing(&mut self) -> Result<(), PluginError> {
@@ -247,7 +259,4 @@ pub trait Plugin<'a>: Sized + Send + 'a {
     }
     #[inline]
     fn stop_processing(&mut self) {}
-
-    #[inline]
-    fn declare_extensions(_builder: &mut PluginExtensions<Self>, _shared: &Self::Shared) {}
 }

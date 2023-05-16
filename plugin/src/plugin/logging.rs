@@ -1,5 +1,5 @@
 use crate::extensions::wrapper::PluginWrapperError;
-use crate::plugin::{Plugin, PluginInstanceImpl};
+use crate::plugin::{Plugin, PluginBoxInner};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
@@ -9,13 +9,13 @@ use std::{error::Error, ffi::CString, fmt::Display, fmt::Write};
 pub type ClapLoggingFn =
     unsafe extern "C" fn(host: *const clap_host, severity: clap_log_severity, msg: *const c_char);
 
-unsafe fn get_logger<'a, P: Plugin<'a>>(
+unsafe fn get_logger<P: Plugin>(
     plugin: *const clap_plugin,
 ) -> Option<(*const clap_host, ClapLoggingFn)> {
     let host = plugin
         .as_ref()?
         .plugin_data
-        .cast::<PluginInstanceImpl<'a, P>>()
+        .cast::<PluginBoxInner<P>>()
         .as_ref()?
         .host()
         .as_raw();
@@ -30,7 +30,7 @@ fn log_display<D: Display>(message: &D) -> Result<CString, Box<dyn Error>> {
     Ok(CString::new(buf)?)
 }
 
-pub unsafe fn plugin_log<'a, P: Plugin<'a>>(plugin: *const clap_plugin, e: &PluginWrapperError) {
+pub unsafe fn plugin_log<P: Plugin>(plugin: *const clap_plugin, e: &PluginWrapperError) {
     if let Some((host, logger)) = get_logger::<P>(plugin) {
         match log_display(e) {
             Ok(cstr) => {

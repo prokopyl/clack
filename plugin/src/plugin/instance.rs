@@ -1,25 +1,29 @@
 use crate::extensions::wrapper::PluginWrapper;
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
-use crate::plugin::descriptor::RawPluginDescriptor;
-use crate::plugin::{AudioConfiguration, Plugin, PluginMainThread};
+use crate::plugin::descriptor::PluginDescriptorWrapper;
+use crate::plugin::{AudioConfiguration, Plugin, PluginAudioProcessor, PluginMainThread};
 use crate::process::{Audio, Events, Process};
-use clap_sys::plugin::clap_plugin;
+use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
-pub(crate) struct PluginInstanceImpl<'a, P: Plugin<'a>> {
+pub(crate) struct PluginBoxInner<'a, P: Plugin> {
     host: HostHandle<'a>,
     pub(crate) plugin_data: Option<PluginWrapper<'a, P>>,
 }
 
-impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
-    fn get_plugin_desc(self, desc: &'a RawPluginDescriptor) -> clap_plugin {
+impl<'a, P: Plugin> PluginBoxInner<'a, P> {
+    fn get_plugin_desc(host: HostHandle<'a>, desc: &'a clap_plugin_descriptor) -> clap_plugin {
         clap_plugin {
             desc,
-            plugin_data: Box::into_raw(Box::new(self)).cast(),
+            plugin_data: Box::into_raw(Box::new(Self {
+                host,
+                plugin_data: None,
+            }))
+            .cast(),
             init: Some(Self::init),
             destroy: Some(Self::destroy),
             activate: Some(Self::activate),
@@ -40,7 +44,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
 
     unsafe extern "C" fn init(plugin: *const clap_plugin) -> bool {
         // TODO: null check this
-        let data = &mut *((*plugin).plugin_data as *mut PluginInstanceImpl<'a, P>);
+        let data = &mut *((*plugin).plugin_data as *mut PluginBoxInner<'a, P>);
         if data.plugin_data.is_some() {
             eprintln!("Plugin is already initialized");
             return true; // TODO: revert
@@ -63,7 +67,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
         let plugin = Box::from_raw(plugin as *mut clap_plugin);
 
         if !plugin.plugin_data.is_null() {
-            let _ = Box::from_raw(plugin.plugin_data.cast::<PluginInstanceImpl<'a, P>>());
+            let _ = Box::from_raw(plugin.plugin_data.cast::<PluginBoxInner<'a, P>>());
         }
     }
 
@@ -95,14 +99,14 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
 
     unsafe extern "C" fn start_processing(plugin: *const clap_plugin) -> bool {
         PluginWrapper::<P>::handle(plugin, |p| {
-            Ok(P::start_processing(p.audio_processor()?.as_mut())?)
+            Ok(p.audio_processor()?.as_mut().start_processing()?)
         })
         .is_some()
     }
 
     unsafe extern "C" fn stop_processing(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle(plugin, |p| {
-            P::stop_processing(p.audio_processor()?.as_mut());
+            p.audio_processor()?.as_mut().stop_processing();
             Ok(())
         });
     }
@@ -113,8 +117,7 @@ impl<'a, P: Plugin<'a>> PluginInstanceImpl<'a, P> {
     ) -> clap_process_status {
         // SAFETY: process ptr is never accessed later, and is guaranteed to be valid and unique by the host
         PluginWrapper::<P>::handle(plugin, |p| {
-            Ok(P::process(
-                p.audio_processor()?.as_mut(),
+            Ok(p.audio_processor()?.as_mut().process(
                 Process::from_raw(&*process),
                 Audio::from_raw(&*process),
                 Events::from_raw(&*process),
@@ -157,18 +160,17 @@ impl<'a> PluginInstance<'a> {
         Box::into_raw(self.inner)
     }
 
-    pub fn new<P: Plugin<'a>>(
+    pub fn new<P: Plugin>(
         host_info: HostInfo<'a>,
-        descriptor: &'a RawPluginDescriptor,
+        descriptor: &'a PluginDescriptorWrapper,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
-        let data = PluginInstanceImpl::<'a, P> {
-            host,
-            plugin_data: None,
-        };
         Self {
-            inner: Box::new(PluginInstanceImpl::<P>::get_plugin_desc(data, descriptor)),
+            inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
+                host,
+                descriptor.get_raw(),
+            )),
             lifetime: PhantomData,
         }
     }

@@ -72,9 +72,11 @@ use clack_plugin::prelude::*;
 
 pub struct MyGainPlugin;
 
-impl<'a> Plugin<'a> for MyGainPlugin {
-    type Shared = ();
-    type MainThread = ();
+impl Plugin for MyGainPlugin {
+    type AudioProcessor<'a> = MyGainPluginAudioProcessor;
+
+    type Shared<'a> = ();
+    type MainThread<'a> = ();
 
     fn get_descriptor() -> Box<dyn PluginDescriptor> {
         Box::new(StaticPluginDescriptor {
@@ -83,7 +85,11 @@ impl<'a> Plugin<'a> for MyGainPlugin {
             ..Default::default()
         })
     }
+}
 
+pub struct MyGainPluginAudioProcessor;
+
+impl<'a> PluginAudioProcessor<'a, (), ()> for MyGainPluginAudioProcessor {
     fn activate(_host: HostAudioThreadHandle<'a>, _main_thread: &mut (), _shared: &'a (), _audio_config: AudioConfiguration) -> Result<Self, PluginError> {
         Ok(Self)
     }

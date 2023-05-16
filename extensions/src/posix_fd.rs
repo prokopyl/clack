@@ -242,24 +242,24 @@ mod plugin {
         fn on_fd(&mut self, fd: RawFd, flags: FdFlags);
     }
 
-    impl<H: for<'a> Plugin<'a>> ExtensionImplementation<H> for PluginPosixFd
+    impl<P: Plugin> ExtensionImplementation<P> for PluginPosixFd
     where
-        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImpl,
+        for<'a> P::MainThread<'a>: PluginPosixFdImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_posix_fd_support {
-            on_fd: Some(on_fd::<H>),
+            on_fd: Some(on_fd::<P>),
         });
     }
 
-    unsafe extern "C" fn on_fd<H: for<'a> Plugin<'a>>(
+    unsafe extern "C" fn on_fd<P: Plugin>(
         plugin: *const clap_plugin,
         fd: i32,
         flags: clap_posix_fd_flags,
     ) where
-        for<'a> <H as Plugin<'a>>::MainThread: PluginPosixFdImpl,
+        for<'a> P::MainThread<'a>: PluginPosixFdImpl,
     {
-        PluginWrapper::<H>::handle(plugin, |plugin| {
+        PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin
                 .main_thread()
                 .as_mut()

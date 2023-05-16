@@ -4,6 +4,7 @@ use std::ffi::CStr;
 
 use clack_host::prelude::*;
 
+pub struct DivaPluginStubAudioProcessor;
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread;
 
@@ -13,9 +14,10 @@ impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {
     }
 }
 
-impl<'a> Plugin<'a> for DivaPluginStub {
-    type Shared = ();
-    type MainThread = DivaPluginStubMainThread;
+impl Plugin for DivaPluginStub {
+    type AudioProcessor<'a> = DivaPluginStubAudioProcessor;
+    type Shared<'a> = ();
+    type MainThread<'a> = DivaPluginStubMainThread;
 
     fn get_descriptor() -> Box<dyn PluginDescriptor> {
         use clack_plugin::plugin::descriptor::features::*;
@@ -27,11 +29,13 @@ impl<'a> Plugin<'a> for DivaPluginStub {
             ..Default::default()
         })
     }
+}
 
+impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginStubAudioProcessor {
     fn activate(
         _host: HostAudioThreadHandle<'a>,
-        _main_thread: &mut Self::MainThread,
-        _shared: &'a Self::Shared,
+        _main_thread: &mut DivaPluginStubMainThread,
+        _shared: &'a (),
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
         unreachable!()
