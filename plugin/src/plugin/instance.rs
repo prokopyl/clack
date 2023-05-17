@@ -9,6 +9,7 @@ use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
 
 pub(crate) struct PluginBoxInner<'a, P: Plugin> {
     host: HostHandle<'a>,
@@ -149,6 +150,11 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     }
 }
 
+/// A wrapper around a [`Plugin`] instance.
+///
+/// This type is created with its [`new`](PluginInstance::new) method when the host wants to
+/// instantiate a given plugin type, and is what needs to be returned by the
+/// [`PluginFactory::instantiate_plugin`](crate::factory::plugin::PluginFactory::instantiate_plugin) method.
 pub struct PluginInstance<'a> {
     inner: Box<clap_plugin>,
     lifetime: PhantomData<&'a clap_plugin>,
@@ -157,9 +163,16 @@ pub struct PluginInstance<'a> {
 impl<'a> PluginInstance<'a> {
     #[inline]
     pub(crate) fn into_owned_ptr(self) -> *mut clap_plugin {
-        Box::into_raw(self.inner)
+        ManuallyDrop::new(self).inner.as_mut()
     }
 
+    /// Instantiates a plugin of a given implementation `P`.
+    ///
+    /// Instantiated plugins also require an [`HostInfo`] instance given by the host, and a
+    /// reference to the associated [`PluginDescriptorWrapper`].
+    ///
+    /// See the [`PluginFactory`](crate::factory::plugin::PluginFactory)'s trait documentation for
+    /// an usage example.
     pub fn new<P: Plugin>(
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptorWrapper,
@@ -169,9 +182,25 @@ impl<'a> PluginInstance<'a> {
         Self {
             inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
                 host,
-                descriptor.get_raw(),
+                descriptor.as_raw(),
             )),
             lifetime: PhantomData,
+        }
+    }
+
+    /// Returns a raw, C FFI-compatible reference to this plugin instance.
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin {
+        &self.inner
+    }
+}
+
+// In case the instance is dropped by a faulty plugin factory implementation.
+impl<'a> Drop for PluginInstance<'a> {
+    #[inline]
+    fn drop(&mut self) {
+        if let Some(destroy) = self.inner.destroy {
+            unsafe { destroy(self.inner.as_ref()) }
         }
     }
 }

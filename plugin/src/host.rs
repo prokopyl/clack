@@ -1,10 +1,11 @@
 use clack_common::extensions::{Extension, HostExtensionSide};
+use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
-use clap_sys::version::clap_version;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
+/// Various information about the host, provided at plugin instantiation time.
 #[derive(Copy, Clone)]
 pub struct HostInfo<'a> {
     raw: *const clap_host,
@@ -22,33 +23,41 @@ impl<'a> HostInfo<'a> {
         }
     }
 
+    /// The [`ClapVersion`] the host uses.
     #[inline]
-    pub fn clap_version(&self) -> clap_version {
-        self.as_raw().clap_version
+    pub fn clap_version(&self) -> ClapVersion {
+        ClapVersion::from_raw(self.as_raw().clap_version)
     }
 
-    pub fn name(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().name) }
-            .to_str()
-            .expect("Failed to read host name: invalid UTF-8 sequence")
+    /// An user-friendly name for the host.
+    ///
+    /// This should always be set by the host.
+    pub fn name(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().name as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn vendor(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().vendor) }
-            .to_str()
-            .expect("Failed to read host vendor: invalid UTF-8 sequence")
+    /// The host's vendor.
+    ///
+    /// This field is optional.
+    pub fn vendor(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().vendor as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn url(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().url) }
-            .to_str()
-            .expect("Failed to read host url: invalid UTF-8 sequence")
+    /// An URL to the host's webpage.
+    ///
+    /// This field is optional.
+    pub fn url(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().url as *mut _).map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn version(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().version) }
-            .to_str()
-            .expect("Failed to read host version: invalid UTF-8 sequence")
+    /// A version string for the host.
+    ///
+    /// This should always be set by the host.
+    pub fn version(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().version as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {

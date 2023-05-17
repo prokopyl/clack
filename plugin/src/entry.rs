@@ -1,3 +1,25 @@
+#![deny(missing_docs)]
+
+//! Types to expose and customize a CLAP bundle's entry.
+//!
+//! CLAP plugins are distributed in binary files called bundles, which are prebuilt
+//! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
+//! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
+//! point for the host to read into the bundle.
+//!
+//! A bundle's [`Entry`] is the only exposed symbol in the library. Once
+//! [initialized](Entry::new), its role is to expose a number of [factories](Factory), which are
+//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactory),
+//! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
+//! documentation to learn more about factories.
+//!
+//! An entry type can then be exposed to the host reading the bundle file by using the
+//! [`clack_export_entry`](crate::clack_export_entry) macro.
+//!
+//! See the [`Entry`] trait documentation for information and examples on how to implement your own
+//! entry type, or see the provided [`SinglePluginEntry`] convenience type if you only need to
+//! expose a single plugin type to the host.
+
 use crate::extensions::wrapper::panic::catch_unwind;
 use crate::factory::Factory;
 use std::cell::UnsafeCell;
@@ -115,7 +137,7 @@ pub mod prelude {
 ///
 ///     // Called when the host desires to create a new instance of one of our plugins.
 ///     // Which plugin it is, is determined by the given plugin_id.
-///     fn create_plugin<'a>(
+///     fn instantiate_plugin<'a>(
 ///         &'a self,
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,
@@ -132,6 +154,7 @@ pub mod prelude {
 ///     }
 /// }
 ///
+/// clack_export_entry!(MyEntry);
 /// ```
 pub trait Entry: Sized + Send + Sync + 'static {
     /// Instantiates the entry.
@@ -165,11 +188,45 @@ impl Display for EntryLoadError {
 
 impl Error for EntryLoadError {}
 
+/// Exposes a given [`Entry`] type to the host as *the* bundle's entry point.
+///
+/// This macro exports the standard CLAP symbol `clap_entry`, set to an [`EntryDescriptor`] which
+/// relies on the given `entry_type` for behavior.
+///
+/// Note this means you cannot call this macro twice in the same executable, as the produced symbols
+/// will conflict.
+///
+/// # Example
+///
+/// This example exposes a custom `MyEntry` entry type. See the [`Entry`] trait documentation for
+/// an example of how to actually implement it.
+///
+/// ```
+/// use std::ffi::CStr;
+/// use clack_plugin::entry::prelude::*;
+/// use clack_plugin::prelude::*;
+///
+/// pub struct MyEntry;
+///
+/// impl Entry for MyEntry {
+/// #    fn new(bundle_path: &CStr) -> Result<Self, EntryLoadError> {
+/// #        unreachable!()
+/// #    }
+///     /* ... */
+/// #    fn declare_factories<'a>(&'a self, builder: &mut EntryFactories<'a>) {
+/// #        unreachable!()
+/// #    }
+/// }
+///
+/// // The host will now see and use this entry.
+/// clack_export_entry!(MyEntry);
+/// ```
 #[macro_export]
 macro_rules! clack_export_entry {
     ($entry_type:ty) => {
         #[allow(non_upper_case_globals)]
         #[allow(unsafe_code)]
+        #[allow(warnings, unused)]
         #[no_mangle]
         pub static clap_entry: $crate::entry::EntryDescriptor = {
             static HOLDER: $crate::entry::EntryHolder<$entry_type> =

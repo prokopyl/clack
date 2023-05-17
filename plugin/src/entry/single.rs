@@ -3,6 +3,32 @@ use crate::prelude::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
+/// An [`Entry`] that only exposes a single plugin type to the host.
+///
+/// This entry type exists purely for convenience of the users in the common case of having a single
+/// plugin type to expose to the host.
+///
+/// If you actually need to expose more plugin types, or to customize the entry's behavior in some
+/// other way, see the [`Entry`] trait documentation for an example on how to implement your own
+/// custom entry.
+///
+/// # Example
+///
+/// ```
+/// use clack_plugin::prelude::*;
+///
+/// pub struct MyPlugin;
+///
+/// impl Plugin for MyPlugin {
+///     /* ... */
+/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
+/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
+/// #       unreachable!()
+/// #   }
+/// }
+///
+/// clack_export_entry!(SinglePluginEntry::<MyPlugin>);
+/// ```
 pub struct SinglePluginEntry<P> {
     plugin_factory: PluginFactoryWrapper<SinglePluginFactory<P>>,
 }
@@ -46,7 +72,7 @@ impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
     }
 
     #[inline]
-    fn create_plugin<'a>(
+    fn instantiate_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,

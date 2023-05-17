@@ -89,6 +89,7 @@ pub trait PluginDescriptor: 'static {
         None
     }
 
+    /// The number of features exposed by this descriptor.
     #[inline]
     fn features_count(&self) -> usize {
         0
@@ -202,8 +203,13 @@ impl PluginDescriptorWrapper {
     }
 
     #[inline]
-    pub(crate) fn get_raw(&self) -> &clap_plugin_descriptor {
+    pub fn as_raw(&self) -> &clap_plugin_descriptor {
         &self.raw_descriptor
+    }
+
+    #[inline]
+    pub fn id(&self) -> &CStr {
+        self.descriptor.id()
     }
 }
 
