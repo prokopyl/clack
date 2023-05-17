@@ -4,7 +4,7 @@ use std::ptr::NonNull;
 
 pub mod plugin;
 
-/// A base trait for factory plugin-side implementations.
+/// A base trait for plugin-side factory implementations.
 ///
 /// # Safety
 ///

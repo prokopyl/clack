@@ -72,4 +72,4 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
 
 clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
 #[allow(unused)] // This is only used in doctests
-pub static DIVA_STUB_ENTRY: PluginEntryDescriptor = clap_entry;
+pub static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;

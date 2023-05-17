@@ -52,7 +52,7 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
 }
 
 clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
-static DIVA_STUB_ENTRY: PluginEntryDescriptor = clap_entry;
+static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
 
 struct MyHostShared;
 impl<'a> HostShared<'a> for MyHostShared {

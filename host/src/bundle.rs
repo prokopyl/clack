@@ -4,7 +4,7 @@
 //!
 //! CLAP plugins are distributed in binary files called bundles, which are prebuilt
 //! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
-//! They expose a single [`PluginEntryDescriptor`], which, once initialized, acts as the entry
+//! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
 //! point for the host to read into the bundle.
 //!
 //! CLAP plugin bundles expose implementations of various standard [factories](FactoryPointer), which are
@@ -21,7 +21,7 @@
 //!   third-party CLAP bundles present anywhere on the file system, which is most likely the
 //!   functionality "CLAP plugin support" implies for most hosts.
 //!
-//! * From a static [`PluginEntryDescriptor`] reference, using [`PluginBundle::load_from_raw`].
+//! * From a static [`EntryDescriptor`] reference, using [`PluginBundle::load_from_raw`].
 //!   
 //!   This is a more advanced usage, and it allows to load plugins that have been statically built
 //!   into the host's binary (i.e. built-in plugins) without having to distribute them in separate
@@ -72,7 +72,7 @@ use clack_common::utils::ClapVersion;
 /// Plugin bundles are only unloaded when all handles are dropped and all associated instances
 /// are unloaded.
 ///
-/// A [`PluginBundle`] can also be loaded from a static [`PluginEntryDescriptor`] instead of a file.
+/// A [`PluginBundle`] can also be loaded from a static [`EntryDescriptor`] instead of a file.
 /// See [`PluginBundle::load_from_raw`].
 ///
 /// See the [module docs](crate::bundle) for more information about CLAP bundles.
@@ -130,7 +130,7 @@ impl PluginBundle {
         Ok(Self { inner })
     }
 
-    /// Loads a CLAP bundle from a `'static` [`PluginEntryDescriptor`].
+    /// Loads a CLAP bundle from a `'static` [`EntryDescriptor`].
     ///
     /// Note that CLAP plugins loaded this way still need a valid path, as they may perform various
     /// filesystem operations relative to their bundle files.
@@ -144,9 +144,9 @@ impl PluginBundle {
     ///
     /// Plugin entries must be initialized only once, which this function cannot enforce.
     /// Users of this function *must* ensure it is only called *once* for every
-    /// [`PluginEntryDescriptor`] it is called on.
+    /// [`EntryDescriptor`] it is called on.
     ///
-    /// Users of this function *must* also ensure the [`PluginEntryDescriptor`]'s fields are all
+    /// Users of this function *must* also ensure the [`EntryDescriptor`]'s fields are all
     /// valid as per the
     /// [CLAP specification](https://github.com/free-audio/clap/blob/main/include/clap/entry.h), as
     /// any undefined behavior may otherwise occur.
@@ -154,11 +154,11 @@ impl PluginBundle {
     /// # Example
     ///
     /// ```no_run
-    /// use clack_host::bundle::PluginEntryDescriptor;
+    /// use clack_host::bundle::EntryDescriptor;
     /// use clack_host::prelude::PluginBundle;
-    /// # pub fn foo(descriptor: &'static PluginEntryDescriptor) -> Result<(), Box<dyn std::error::Error>> {
+    /// # pub fn foo(descriptor: &'static EntryDescriptor) -> Result<(), Box<dyn std::error::Error>> {
     ///
-    /// let descriptor: &'static PluginEntryDescriptor = /* ... */
+    /// let descriptor: &'static EntryDescriptor = /* ... */
     /// # descriptor;
     ///
     /// let path = "/home/user/.clap/u-he/libdiva.so";
@@ -168,7 +168,7 @@ impl PluginBundle {
     /// # Ok(()) }
     #[inline]
     pub unsafe fn load_from_raw(
-        inner: &'static PluginEntryDescriptor,
+        inner: &'static EntryDescriptor,
         plugin_path: &str,
     ) -> Result<Self, PluginBundleError> {
         Ok(Self {
@@ -178,7 +178,7 @@ impl PluginBundle {
 
     /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
-    pub fn raw_entry(&self) -> &PluginEntryDescriptor {
+    pub fn raw_entry(&self) -> &EntryDescriptor {
         match &self.inner.as_ref().get_ref() {
             EntrySource::FromRaw(raw) => raw.entry(),
             EntrySource::FromLibrary(bundle) => bundle.with_referential(|e| e.entry()),

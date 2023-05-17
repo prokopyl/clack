@@ -1,5 +1,5 @@
 use crate::host::{TestHostAudioProcessor, TestHostImpl, TestHostMainThread, TestHostShared};
-use clack_host::bundle::PluginEntryDescriptor;
+use clack_host::bundle::EntryDescriptor;
 use clack_host::factory::{PluginDescriptor, PluginFactory};
 use clack_host::prelude::*;
 use selfie::refs::RefType;
@@ -26,7 +26,7 @@ pub struct TestHost {
 }
 
 impl TestHost {
-    pub fn instantiate(entry: &'static PluginEntryDescriptor) -> Self {
+    pub fn instantiate(entry: &'static EntryDescriptor) -> Self {
         // Initialize host with basic info
         let info = HostInfo::new("test", "", "", "").unwrap();
 

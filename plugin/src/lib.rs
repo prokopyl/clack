@@ -17,7 +17,7 @@ pub use clack_common::utils;
 
 pub mod prelude {
     pub use crate::clack_export_entry;
-    pub use crate::entry::{Entry, PluginEntryDescriptor, SinglePluginEntry};
+    pub use crate::entry::{Entry, EntryDescriptor, SinglePluginEntry};
     pub use crate::events::{
         io::{InputEvents, OutputEvents},
         UnknownEvent,

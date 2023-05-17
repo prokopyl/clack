@@ -1,5 +1,5 @@
 use crate::bundle::PluginBundleError;
-use clack_common::entry::PluginEntryDescriptor;
+use clack_common::entry::EntryDescriptor;
 use clack_common::utils::ClapVersion;
 use libloading::Library;
 use selfie::refs::RefType;
@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 
 pub struct PluginEntryLibrary {
     _library: Library,
-    entry_ptr: NonNull<PluginEntryDescriptor>,
+    entry_ptr: NonNull<EntryDescriptor>,
 }
 
 const SYMBOL_NAME: &[u8] = b"clap_entry\0";
@@ -20,10 +20,10 @@ impl PluginEntryLibrary {
         let library =
             unsafe { Library::new(path) }.map_err(PluginBundleError::LibraryLoadingError)?;
 
-        let symbol = unsafe { library.get::<*const PluginEntryDescriptor>(SYMBOL_NAME) }
+        let symbol = unsafe { library.get::<*const EntryDescriptor>(SYMBOL_NAME) }
             .map_err(PluginBundleError::LibraryLoadingError)?;
 
-        let entry_ptr = NonNull::new(*symbol as *mut PluginEntryDescriptor)
+        let entry_ptr = NonNull::new(*symbol as *mut EntryDescriptor)
             .ok_or(PluginBundleError::NullEntryPointer)?;
 
         Ok(Self {
@@ -33,13 +33,13 @@ impl PluginEntryLibrary {
     }
 
     #[inline]
-    pub fn entry(&self) -> &PluginEntryDescriptor {
+    pub fn entry(&self) -> &EntryDescriptor {
         unsafe { self.entry_ptr.as_ref() }
     }
 }
 
 impl Deref for PluginEntryLibrary {
-    type Target = PluginEntryDescriptor;
+    type Target = EntryDescriptor;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -54,14 +54,11 @@ unsafe impl Send for PluginEntryLibrary {}
 unsafe impl Sync for PluginEntryLibrary {}
 
 pub struct LoadedEntry<'a> {
-    entry: &'a PluginEntryDescriptor,
+    entry: &'a EntryDescriptor,
 }
 
 impl<'a> LoadedEntry<'a> {
-    pub unsafe fn load(
-        entry: &'a PluginEntryDescriptor,
-        path: &str,
-    ) -> Result<Self, PluginBundleError> {
+    pub unsafe fn load(entry: &'a EntryDescriptor, path: &str) -> Result<Self, PluginBundleError> {
         let plugin_version = ClapVersion::from_raw(entry.clap_version);
         if !plugin_version.is_compatible() {
             return Err(PluginBundleError::IncompatibleClapVersion { plugin_version });
@@ -79,7 +76,7 @@ impl<'a> LoadedEntry<'a> {
     }
 
     #[inline]
-    pub fn entry(&self) -> &'a PluginEntryDescriptor {
+    pub fn entry(&self) -> &'a EntryDescriptor {
         self.entry
     }
 }

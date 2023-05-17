@@ -1,8 +1,4 @@
-use crate::entry::EntryFactoriesBuilder;
-use crate::factory::plugin::{PluginFactory, PluginFactoryWrapper};
-use crate::host::HostInfo;
-use crate::plugin::descriptor::PluginDescriptorWrapper;
-use crate::plugin::{Plugin, PluginInstance};
+use crate::entry::prelude::*;
 use crate::prelude::*;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -12,8 +8,8 @@ pub struct SinglePluginEntry<P> {
 }
 
 impl<P: Plugin> Entry for SinglePluginEntry<P> {
-    fn new(_plugin_path: &CStr) -> Option<Self> {
-        Some(Self {
+    fn new(_plugin_path: &CStr) -> Result<Self, EntryLoadError> {
+        Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
                 descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
                 _plugin: PhantomData,
@@ -22,7 +18,7 @@ impl<P: Plugin> Entry for SinglePluginEntry<P> {
     }
 
     #[inline]
-    fn declare_factories<'a>(&'a self, builder: &mut EntryFactoriesBuilder<'a>) {
+    fn declare_factories<'a>(&'a self, builder: &mut EntryFactories<'a>) {
         builder.register_factory(&self.plugin_factory);
     }
 }

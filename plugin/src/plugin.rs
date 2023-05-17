@@ -98,7 +98,7 @@ impl<'a> PluginShared<'a> for () {
 /// at all times.
 ///
 /// See the [module documentation](crate::plugin) for more information on the thread model.
-pub trait PluginMainThread<'a, S>: Sized + 'a {
+pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
     /// Creates a new instance of the plugin's main thread.
     ///
     /// This struct receives an exclusive host handle that can be stored for the lifetime of the plugin.
@@ -116,7 +116,7 @@ pub trait PluginMainThread<'a, S>: Sized + 'a {
     fn on_main_thread(&mut self) {}
 }
 
-impl<'a, S> PluginMainThread<'a, S> for () {
+impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {
     #[inline]
     fn new(_host: HostMainThreadHandle<'a>, _shared: &'a S) -> Result<Self, PluginError> {
         Ok(())
@@ -138,7 +138,7 @@ pub struct AudioConfiguration {
     pub max_sample_count: u32,
 }
 
-pub trait Plugin {
+pub trait Plugin: 'static {
     /// The type holding the plugin's data and operations that belong to the audio thread.
     ///
     /// See the [module documentation](crate::plugin) for more information on the thread model.
@@ -259,4 +259,26 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     }
     #[inline]
     fn stop_processing(&mut self) {}
+}
+
+impl<'a, M: PluginMainThread<'a, S>, S: PluginShared<'a>> PluginAudioProcessor<'a, S, M> for () {
+    #[inline]
+    fn activate(
+        _host: HostAudioThreadHandle<'a>,
+        _main_thread: &mut M,
+        _shared: &'a S,
+        _audio_config: AudioConfiguration,
+    ) -> Result<Self, PluginError> {
+        Ok(())
+    }
+
+    #[inline]
+    fn process(
+        &mut self,
+        _process: Process,
+        _audio: Audio,
+        _events: Events,
+    ) -> Result<ProcessStatus, PluginError> {
+        Ok(ProcessStatus::Sleep)
+    }
 }
