@@ -20,7 +20,7 @@ unsafe fn get_logger<P: Plugin>(
         .host()
         .as_raw();
 
-    let log = ((*host).get_extension?)(host, CLAP_EXT_LOG.as_ptr()) as *mut clap_host_log;
+    let log = host.get_extension?(host, CLAP_EXT_LOG.as_ptr()) as *mut clap_host_log;
     Some((host, log.as_ref()?.log?))
 }
 
