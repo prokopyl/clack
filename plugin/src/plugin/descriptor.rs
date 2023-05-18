@@ -3,19 +3,6 @@ use clap_sys::version::CLAP_VERSION;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
-/// A raw, C-FFI compatible Plugin Descriptor.
-///
-/// This type contains pointers to the descriptor's strings.
-///
-/// You don't need to inspect the pointers inside this struct, unless you want to perform the C FFI
-/// yourself.
-///
-/// This struct is produced and consumed by [`PluginFactory`](crate::factory::plugin::PluginFactory) implementations.
-///
-/// See also the [`PluginDescriptorWrapper`] helper struct, to create [`RawPluginDescriptor`]s from
-/// [`PluginDescriptor`] implementations.
-pub type RawPluginDescriptor = clap_plugin_descriptor;
-
 /// Represents a type that can provide metadata about a given Plugin, such as its ID, name, version,
 /// and more.
 ///
@@ -102,6 +89,7 @@ pub trait PluginDescriptor: 'static {
         None
     }
 
+    /// The number of features exposed by this descriptor.
     #[inline]
     fn features_count(&self) -> usize {
         0
@@ -215,12 +203,19 @@ impl PluginDescriptorWrapper {
     }
 
     #[inline]
-    pub fn get_raw(&self) -> &RawPluginDescriptor {
+    pub fn as_raw(&self) -> &clap_plugin_descriptor {
         &self.raw_descriptor
+    }
+
+    #[inline]
+    pub fn id(&self) -> &CStr {
+        self.descriptor.id()
     }
 }
 
+// SAFETY: the whole struct is immutable.
 unsafe impl Send for PluginDescriptorWrapper {}
+// SAFETY: the whole struct is immutable.
 unsafe impl Sync for PluginDescriptorWrapper {}
 
 /// A set of standard plugin features meant to be used for a plugin descriptor's features.

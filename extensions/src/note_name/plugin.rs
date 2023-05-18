@@ -16,9 +16,9 @@ pub trait PluginNoteNameImpl {
     fn get(&self, index: usize, writer: &mut NoteNameWriter);
 }
 
-impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginNoteName
+impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
 where
-    P::MainThread: PluginNoteNameImpl,
+    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: &'static Self = &Self(clap_plugin_note_name {
@@ -27,20 +27,20 @@ where
     });
 }
 
-unsafe extern "C" fn count<'a, P: Plugin<'a>>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
-    P::MainThread: PluginNoteNameImpl,
+    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count() as u32)).unwrap_or(0)
 }
 
-unsafe extern "C" fn get<'a, P: Plugin<'a>>(
+unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
     config: *mut clap_note_name,
 ) -> bool
 where
-    P::MainThread: PluginNoteNameImpl,
+    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {

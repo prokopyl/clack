@@ -2,7 +2,9 @@ use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor}
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
-pub struct DivaPluginStub<'a> {
+pub struct DivaPluginStub;
+
+pub struct DivaPluginStubAudioProcessor<'a> {
     shared: &'a DivaPluginStubShared<'a>,
 }
 pub struct DivaPluginStubShared<'a> {
@@ -15,9 +17,10 @@ impl<'a> PluginShared<'a> for DivaPluginStubShared<'a> {
     }
 }
 
-impl<'a> Plugin<'a> for DivaPluginStub<'a> {
-    type Shared = DivaPluginStubShared<'a>;
-    type MainThread = ();
+impl Plugin for DivaPluginStub {
+    type AudioProcessor<'a> = DivaPluginStubAudioProcessor<'a>;
+    type Shared<'a> = DivaPluginStubShared<'a>;
+    type MainThread<'a> = ();
 
     fn get_descriptor() -> Box<dyn PluginDescriptor> {
         use clack_plugin::plugin::descriptor::features::*;
@@ -29,11 +32,15 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
             ..Default::default()
         })
     }
+}
 
+impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
+    for DivaPluginStubAudioProcessor<'a>
+{
     fn activate(
         _host: HostAudioThreadHandle<'a>,
-        _main_thread: &mut Self::MainThread,
-        shared: &'a Self::Shared,
+        _main_thread: &mut (),
+        shared: &'a DivaPluginStubShared<'a>,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
         Ok(Self { shared })
@@ -47,7 +54,6 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
     ) -> Result<ProcessStatus, PluginError> {
         self.shared.host.request_callback();
 
-        #[cfg(not(miri))]
         for event in _events.input {
             _events.output.try_push(event).unwrap();
         }
@@ -64,5 +70,6 @@ impl<'a> Plugin<'a> for DivaPluginStub<'a> {
     }
 }
 
+clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
 #[allow(unused)] // This is only used in doctests
-pub static DIVA_STUB_ENTRY: PluginEntryDescriptor = SinglePluginEntry::<DivaPluginStub>::DESCRIPTOR;
+pub static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;

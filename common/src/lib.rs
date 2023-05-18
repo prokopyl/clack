@@ -6,10 +6,9 @@
 //! All modules of this crate are re-exported in the `clack-host` and `clack-plugin` crates. Most users
 //! should not have to use `clack-common` directly.
 
-pub mod bundle;
+pub mod entry;
 pub mod events;
 pub mod extensions;
-pub mod factory;
 pub mod process;
 pub mod stream;
 pub mod utils;

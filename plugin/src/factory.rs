@@ -1,47 +1,67 @@
-use clack_common::factory::Factory;
+//! Factory types and associated utilities.
+//!
+//! In CLAP, factories are singleton objects exposed by the plugin bundle's
+//! [entry point](crate::entry), which can in turn expose various functionalities.
+//!
+//! Each factory type has a standard, unique [identifier](Factory::IDENTIFIER), which allows hosts
+//! to query plugins for known factory type implementations.
+//!
+//! In Clack, factory implementations are represented by the [`Factory`] trait.
+//!
+//! The main factory type (and, at the time of this writing, the only stable standard one), is the
+//! [`PluginFactory`](plugin::PluginFactory), which enables hosts to list all the plugin
+//! implementations present in a bundle.
+//!
+//! See the [`Entry`](crate::entry::Entry) trait documentation for an example on how to create a
+//! custom entry and plugin factory.
+
 use core::ffi::c_void;
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
 pub mod plugin;
 
-/// Provides an implementation of this factory for a given type `I`.
-pub trait FactoryImplementation<I>: Factory + 'static {
-    /// The implementation of the factory.
-    const IMPLEMENTATION: &'static Self;
-}
+/// A base trait for plugin-side factory implementations.
+///
+/// # Safety
+///
+/// Types implementing this trait and using the default implementation of
+/// [`get_raw_factory_ptr`](Factory::get_raw_factory_ptr)
+/// **MUST** be `#[repr(C)]` and have the same C-FFI representation as the CLAP factory struct
+/// matching the factory's [`IDENTIFIER`](Factory::IDENTIFIER).
+///
+/// Failure to do so will result in incorrect pointer casts and UB.
+///
+/// # Example
+///
+/// This example shows how to implement the [`Factory`] trait for a custom Plugin Factory type,
+/// wrapping the raw type from `clap-sys`.
+///
+/// Values of this custom factory type will then be able to be used in the
+/// [`EntryFactories::register_factory`](crate::entry::EntryFactories::register_factory) method,
+/// which will make them available to the host.
+///
+/// ```
+/// use clack_plugin::factory::Factory;
+/// use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
+/// use std::ffi::CStr;
+///
+/// #[repr(C)]
+/// pub struct MyPluginFactory(clap_plugin_factory);
+///
+/// unsafe impl Factory for MyPluginFactory {
+///     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
+/// }
+/// ```
+pub unsafe trait Factory {
+    /// The standard identifier for this factory.
+    const IDENTIFIER: &'static CStr;
 
-pub struct PluginFactories<'a> {
-    found: Option<NonNull<c_void>>,
-    requested: &'a CStr,
-}
-
-impl<'a> PluginFactories<'a> {
+    /// Returns this factory as a C FFI-compatible raw pointer.
+    ///
+    /// The default implementation simply casts the given reference.
     #[inline]
-    pub(crate) fn new(requested: &'a CStr) -> Self {
-        Self {
-            found: None,
-            requested,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn found(&self) -> *const c_void {
-        self.found
-            .map(|p| p.as_ptr())
-            .unwrap_or(core::ptr::null_mut())
-    }
-
-    /// Adds a given factory implementation to the list of extensions this plugin entry supports.
-    pub fn register<F: FactoryImplementation<I>, I>(&mut self) -> &mut Self {
-        if self.found.is_some() {
-            return self;
-        }
-
-        if F::IDENTIFIER == self.requested {
-            self.found = NonNull::new(F::IMPLEMENTATION as *const _ as *mut _)
-        }
-
-        self
+    fn get_raw_factory_ptr(&self) -> NonNull<c_void> {
+        NonNull::from(self).cast()
     }
 }

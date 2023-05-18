@@ -60,6 +60,13 @@ impl<E> EventHeader<E> {
 }
 
 impl EventHeader<()> {
+    /// Gets an untyped event header from a raw header.
+    #[inline]
+    pub const fn from_raw(header: &clap_event_header) -> &Self {
+        // SAFETY: This EventHeader's type is (), i.e. untyped.
+        unsafe { Self::from_raw_unchecked(header) }
+    }
+
     #[inline]
     pub const fn space_id(&self) -> Option<EventSpaceId> {
         EventSpaceId::new(self.inner.space_id)

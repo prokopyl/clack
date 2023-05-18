@@ -29,7 +29,7 @@
 //! // For implementors of the extensions (here, on the plugin side):
 //! // first define a trait the extension has to implement
 //! use clack_common::stream::{InputStream, OutputStream};
-//! use clack_plugin::plugin::PluginError;
+//! use clack_plugin::plugin::{Plugin, PluginError};
 //!
 //! pub trait PluginStateImplementation {
 //!     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
@@ -38,11 +38,11 @@
 //! // Then, implement the ExtensionImplementation trait for the given implementors
 //! // to provide the C FFI-compatible struct.
 //!
-//! impl<'a, P: Plugin<'a>> ExtensionImplementation<P> for PluginState
+//! impl<P: Plugin> ExtensionImplementation<P> for PluginState
 //! where
 //!     // In this case, all of the CLAP State methods belong to the main thread.
 //!     // Other extensions may have other requirements, possibly split between multiple threads.
-//!     P::MainThread: PluginStateImplementation,
+//!     for<'a> P::MainThread<'a>: PluginStateImplementation,
 //! {
 //!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
 //!         # save: Some(save),
@@ -57,12 +57,12 @@
 //! // Finally, implement the C FFI functions that will be exposed to the host.
 //! use clap_sys::stream::clap_istream;
 //!
-//! unsafe extern "C" fn load<'a, P: Plugin<'a>>(
+//! unsafe extern "C" fn load<P: Plugin>(
 //!     plugin: *const clap_plugin,
 //!     stream: *const clap_istream,
 //! ) -> bool
 //! where
-//!     P::MainThread: PluginStateImplementation,
+//!     for<'a> P::MainThread<'a>: PluginStateImplementation,
 //! {
 //!     PluginWrapper::<P>::handle(plugin, |p| {
 //!         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
@@ -91,13 +91,13 @@ pub use clack_common::extensions::*;
 /// Plugins can declare the different extensions they support by using the
 /// [`register`](PluginExtensions::register) method on this struct, during a call to
 /// [`declare_extensions`](Plugin::declare_extensions).
-pub struct PluginExtensions<'a, P> {
+pub struct PluginExtensions<'a, P: ?Sized> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
     plugin_type: PhantomData<P>,
 }
 
-impl<'a, 'b, P: Plugin<'b>> PluginExtensions<'a, P> {
+impl<'a, P: Plugin> PluginExtensions<'a, P> {
     #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {

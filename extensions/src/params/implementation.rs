@@ -113,7 +113,7 @@ pub trait PluginMainThreadParams {
     );
 }
 
-pub trait PluginParamsImpl {
+pub trait PluginAudioProcessorParams {
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,
@@ -121,45 +121,41 @@ pub trait PluginParamsImpl {
     );
 }
 
-unsafe extern "C" fn count<'a, P: PluginParamsImpl + Plugin<'a>>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    PluginWrapper::<P>::handle(plugin, |p| {
-        Ok(P::MainThread::count(p.main_thread().as_ref()))
-    })
-    .unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count())).unwrap_or(0)
 }
 
-unsafe extern "C" fn get_info<'a, P: PluginParamsImpl + Plugin<'a>>(
+unsafe extern "C" fn get_info<P: Plugin>(
     plugin: *const clap_plugin,
     param_index: u32,
     value: *mut clap_param_info,
 ) -> bool
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let mut info = ParamInfoWriter::new(value);
     PluginWrapper::<P>::handle(plugin, |p| {
-        P::MainThread::get_info(p.main_thread().as_ref(), param_index, &mut info);
+        p.main_thread().as_ref().get_info(param_index, &mut info);
         Ok(())
     })
     .is_some()
         && info.initialized
 }
 
-unsafe extern "C" fn get_value<'a, P: PluginParamsImpl + Plugin<'a>>(
+unsafe extern "C" fn get_value<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: *mut f64,
 ) -> bool
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    let val = PluginWrapper::<P>::handle(plugin, |p| {
-        Ok(P::MainThread::get_value(p.main_thread().as_ref(), param_id))
-    })
-    .flatten();
+    let val =
+        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().get_value(param_id)))
+            .flatten();
 
     match val {
         None => false,
@@ -170,7 +166,7 @@ where
     }
 }
 
-unsafe extern "C" fn value_to_text<'a, P: PluginParamsImpl + Plugin<'a>>(
+unsafe extern "C" fn value_to_text<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: f64,
@@ -178,37 +174,35 @@ unsafe extern "C" fn value_to_text<'a, P: PluginParamsImpl + Plugin<'a>>(
     size: u32,
 ) -> bool
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let buf = core::slice::from_raw_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
-        P::MainThread::value_to_text(p.main_thread().as_ref(), param_id, value, &mut writer)
+        p.main_thread()
+            .as_ref()
+            .value_to_text(param_id, value, &mut writer)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
     .is_some()
         && writer.finish()
 }
 
-unsafe extern "C" fn text_to_value<'a, P: PluginParamsImpl + Plugin<'a>>(
+unsafe extern "C" fn text_to_value<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     display: *const std::os::raw::c_char,
     value: *mut f64,
 ) -> bool
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let display = CStr::from_ptr(display).to_bytes();
 
     let val = PluginWrapper::<P>::handle(plugin, |p| {
         let display = core::str::from_utf8(display)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
-        Ok(P::MainThread::text_to_value(
-            p.main_thread().as_ref(),
-            param_id,
-            display,
-        ))
+        Ok(p.main_thread().as_ref().text_to_value(param_id, display))
     })
     .flatten();
 
@@ -221,12 +215,13 @@ where
     }
 }
 
-unsafe extern "C" fn flush<'a, P: PluginParamsImpl + Plugin<'a>>(
+unsafe extern "C" fn flush<P: Plugin>(
     plugin: *const clap_plugin,
     input_parameter_changes: *const clap_input_events,
     output_parameter_changes: *const clap_output_events,
 ) where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,
 {
     let input_parameter_changes = InputEvents::from_raw(&*input_parameter_changes);
     let output_parameter_changes =
@@ -234,25 +229,22 @@ unsafe extern "C" fn flush<'a, P: PluginParamsImpl + Plugin<'a>>(
 
     PluginWrapper::<P>::handle(plugin, |p| {
         if let Ok(mut audio) = p.audio_processor() {
-            P::flush(
-                audio.as_mut(),
-                input_parameter_changes,
-                output_parameter_changes,
-            );
+            audio
+                .as_mut()
+                .flush(input_parameter_changes, output_parameter_changes);
         } else {
-            P::MainThread::flush(
-                p.main_thread().as_mut(),
-                input_parameter_changes,
-                output_parameter_changes,
-            );
+            p.main_thread()
+                .as_mut()
+                .flush(input_parameter_changes, output_parameter_changes);
         }
         Ok(())
     });
 }
 
-impl<'a, P: PluginParamsImpl + Plugin<'a>> ExtensionImplementation<P> for super::PluginParams
+impl<P: Plugin> ExtensionImplementation<P> for super::PluginParams
 where
-    P::MainThread: PluginMainThreadParams,
+    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,
 {
     const IMPLEMENTATION: &'static Self = &super::PluginParams(clap_plugin_params {
         count: Some(count::<P>),

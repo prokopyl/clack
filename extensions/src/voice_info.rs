@@ -158,21 +158,21 @@ mod plugin {
         fn get(&self) -> Option<VoiceInfo>;
     }
 
-    impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginVoiceInfo
+    impl<P: Plugin> ExtensionImplementation<P> for PluginVoiceInfo
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImpl,
+        for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
     {
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_voice_info {
             get: Some(get::<P>),
         });
     }
 
-    unsafe extern "C" fn get<P: for<'a> Plugin<'a>>(
+    unsafe extern "C" fn get<P: Plugin>(
         plugin: *const clap_plugin,
         info: *mut clap_voice_info,
     ) -> bool
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginVoiceInfoImpl,
+        for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| match plugin.main_thread().as_mut().get() {
             None => Ok(false),

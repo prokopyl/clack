@@ -21,7 +21,7 @@
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
 //!    of multiple plugins. They can be loaded with the [`PluginBundle::load`](bundle::PluginBundle::load)
 //!    method. See the [`bundle`] module documentation for more information.
-//! 2. Bundles' entry points can expose multiple [factories](factory::Factory). These are singleton
+//! 2. Bundles' entry points can expose multiple [factories](factory::FactoryPointer). These are singleton
 //!    objects that can provide various functionality. The one of main interest is the
 //!    [`PluginFactory`](factory::PluginFactory), which exposes methods to list and instantiate plugins.
 //!    It can be retrieved from a [`PluginBundle`](bundle::PluginBundle) using the
@@ -245,10 +245,8 @@
 //! assert_eq!(&[42.0f32, 69.0, 21.0, 34.5], &output_audio_buffers[1]);
 //!
 //! // The input note event has been passed through
-//! # #[cfg(not(miri))] {
 //! assert_eq!(output_events_buffer.get(0).unwrap(), &note_on_event);
 //! assert_eq!(output_events_buffer.len(), 1);
-//! # }
 //!
 //! // Step 9: stop and deactivate the plugin.
 //!
@@ -269,6 +267,7 @@ pub use clack_common::events;
 pub use clack_common::stream;
 pub use clack_common::utils;
 
+/// A helpful prelude re-exporting all the types related to host implementation.
 pub mod prelude {
     pub use crate::{
         bundle::PluginBundle,

@@ -5,7 +5,7 @@ use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
 use std::ffi::CStr;
 
-use clack_plugin::{plugin::descriptor::PluginDescriptor, prelude::*};
+use clack_plugin::prelude::*;
 
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
@@ -15,13 +15,12 @@ use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
 use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
-pub struct GainPlugin<'a> {
-    _host: HostAudioThreadHandle<'a>,
-}
+pub struct GainPlugin;
 
-impl<'a> Plugin<'a> for GainPlugin<'a> {
-    type Shared = GainPluginShared<'a>;
-    type MainThread = GainPluginMainThread<'a>;
+impl Plugin for GainPlugin {
+    type AudioProcessor<'a> = GainPluginAudioProcessor<'a>;
+    type Shared<'a> = GainPluginShared<'a>;
+    type MainThread<'a> = GainPluginMainThread<'a>;
 
     fn get_descriptor() -> Box<dyn PluginDescriptor> {
         use clack_plugin::plugin::descriptor::features::*;
@@ -34,6 +33,20 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
         })
     }
 
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
+        builder
+            .register::<PluginParams>()
+            .register::<PluginAudioPorts>();
+    }
+}
+
+pub struct GainPluginAudioProcessor<'a> {
+    _host: HostAudioThreadHandle<'a>,
+}
+
+impl<'a> PluginAudioProcessor<'a, GainPluginShared<'a>, GainPluginMainThread<'a>>
+    for GainPluginAudioProcessor<'a>
+{
     fn activate(
         host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
@@ -76,15 +89,9 @@ impl<'a> Plugin<'a> for GainPlugin<'a> {
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
     }
-
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
-        builder
-            .register::<PluginParams>()
-            .register::<PluginAudioPorts>();
-    }
 }
 
-impl<'a> PluginParamsImpl for GainPlugin<'a> {
+impl<'a> PluginAudioProcessorParams for GainPluginAudioProcessor<'a> {
     fn flush(
         &mut self,
         _input_parameter_changes: &InputEvents,
@@ -207,7 +214,4 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     }
 }
 
-#[allow(non_upper_case_globals)]
-#[allow(unsafe_code)]
-#[no_mangle]
-pub static clap_entry: PluginEntryDescriptor = SinglePluginEntry::<GainPlugin>::DESCRIPTOR;
+clack_export_entry!(SinglePluginEntry<GainPlugin>);

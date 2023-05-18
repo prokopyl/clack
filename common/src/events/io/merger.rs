@@ -41,7 +41,7 @@ where
         }
 
         match (&self.event_1, &self.event_2) {
-            (Some(e1), Some(e2)) if e1.header <= e2.header => {
+            (Some(e1), Some(e2)) if e1.header() <= e2.header() => {
                 replace(&mut self.event_1, self.iter_1.next())
             }
             (Some(_), None) => replace(&mut self.event_1, self.iter_1.next()),
@@ -52,7 +52,6 @@ where
 }
 
 #[cfg(test)]
-#[cfg(not(miri))] // TODO: MIRI does not support C-style inheritance casts
 mod test {
     use crate::events::event_types::MidiEvent;
     use crate::events::io::merger::EventMerger;

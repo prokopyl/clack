@@ -164,9 +164,9 @@ mod plugin {
         fn get(&self) -> TailLength;
     }
 
-    impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginTail
+    impl<P: Plugin> ExtensionImplementation<P> for PluginTail
     where
-        P: PluginTailImpl,
+        for<'a> P::AudioProcessor<'a>: PluginTailImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &Self(clap_plugin_tail {
@@ -174,9 +174,9 @@ mod plugin {
         });
     }
 
-    unsafe extern "C" fn get<P: for<'a> Plugin<'a>>(plugin: *const clap_plugin) -> u32
+    unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
     where
-        P: PluginTailImpl,
+        for<'a> P::AudioProcessor<'a>: PluginTailImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin.audio_processor()?.as_ref().get().to_raw())

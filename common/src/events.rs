@@ -34,13 +34,13 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     type EventSpace: EventSpace<'a>;
 
     #[inline]
-    fn raw_header(&self) -> &clap_event_header {
-        unsafe { &*(self as *const Self as *const _) }
+    fn raw_header(&self) -> *const clap_event_header {
+        self as *const Self as *const _
     }
 
     #[inline]
     fn header(&self) -> &EventHeader<Self> {
-        unsafe { EventHeader::from_raw_unchecked(self.raw_header()) }
+        unsafe { EventHeader::from_raw_unchecked(&*self.raw_header()) }
     }
 
     #[inline]
@@ -49,11 +49,11 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     }
 }
 
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Debug)]
 pub struct UnknownEvent<'a> {
-    header: EventHeader,
     _sysex_lifetime: PhantomData<&'a u8>,
+    data: [u8],
 }
 
 impl<'a> UnknownEvent<'a> {
@@ -64,19 +64,21 @@ impl<'a> UnknownEvent<'a> {
     /// they are immediately preceding the rest of the event struct matching the event and space IDs
     /// in the header.
     #[inline]
-    pub const unsafe fn from_raw(header: &clap_event_header) -> &Self {
-        // SAFETY: EventHeader is repr(C) and ABI compatible
-        &*(header as *const _ as *const _)
+    pub const unsafe fn from_raw<'e>(header: *const clap_event_header) -> &'e Self {
+        let data = core::slice::from_raw_parts(header as *const _, (*header).size as usize);
+        // SAFETY: The caller guarantees the right number of bytes is available after the given pointer in the size field.
+        Self::from_bytes_unchecked(data)
     }
 
     #[inline]
-    pub const fn as_raw(&self) -> &clap_event_header {
-        self.header.as_raw()
+    pub const fn as_raw(&self) -> *const clap_event_header {
+        self.data.as_ptr() as *const clap_event_header
     }
 
     #[inline]
     pub const fn header(&self) -> &EventHeader {
-        &self.header
+        // SAFETY: Pointer is guaranteed to be valid from constructors
+        unsafe { EventHeader::from_raw(&*self.as_raw()) }
     }
 
     #[inline]
@@ -84,7 +86,7 @@ impl<'a> UnknownEvent<'a> {
         &self,
         space_id: EventSpaceId<E::EventSpace>,
     ) -> Option<&E> {
-        let raw = self.header.as_raw();
+        let raw = self.header().as_raw();
         if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
             || raw.size != core::mem::size_of::<E>() as u32
@@ -121,7 +123,7 @@ impl<'a> UnknownEvent<'a> {
     where
         'a: 's,
     {
-        if space_id.id() != self.header.space_id()?.id() {
+        if space_id.id() != self.header().space_id()?.id() {
             return None;
         }
 
@@ -130,11 +132,7 @@ impl<'a> UnknownEvent<'a> {
 
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
-        // SAFETY: any data can be safely transmuted to a slice of bytes. This type also ensures
-        // the size field is correct
-        unsafe {
-            core::slice::from_raw_parts(self as *const _ as *const _, self.header.size() as usize)
-        }
+        &self.data
     }
 
     /// Retrieves an event from a byte buffer, without performing any checks.
@@ -144,8 +142,8 @@ impl<'a> UnknownEvent<'a> {
     /// The caller must ensure the byte buffer is properly aligned, and that is also contains a
     /// valid event header as well as the remaining of the event struct.
     #[inline]
-    pub unsafe fn from_bytes_unchecked(bytes: &[u8]) -> &UnknownEvent {
-        &*(bytes.as_ptr() as *const _)
+    pub const unsafe fn from_bytes_unchecked(bytes: &[u8]) -> &UnknownEvent {
+        &*(bytes as *const [u8] as *const _)
     }
 }
 

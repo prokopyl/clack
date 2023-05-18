@@ -130,9 +130,9 @@ mod plugin {
         fn on_timer(&mut self, timer_id: TimerId);
     }
 
-    impl<P: for<'a> Plugin<'a>> ExtensionImplementation<P> for PluginTimer
+    impl<P: Plugin> ExtensionImplementation<P> for PluginTimer
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginTimerImpl,
+        for<'a> P::MainThread<'a>: PluginTimerImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: &'static Self = &PluginTimer(clap_plugin_timer_support {
@@ -140,9 +140,9 @@ mod plugin {
         });
     }
 
-    unsafe extern "C" fn on_timer<P: for<'a> Plugin<'a>>(plugin: *const clap_plugin, timer_id: u32)
+    unsafe extern "C" fn on_timer<P: Plugin>(plugin: *const clap_plugin, timer_id: u32)
     where
-        for<'a> <P as Plugin<'a>>::MainThread: PluginTimerImpl,
+        for<'a> P::MainThread<'a>: PluginTimerImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin.main_thread().as_mut().on_timer(TimerId(timer_id));

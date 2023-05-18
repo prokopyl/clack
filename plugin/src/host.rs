@@ -1,10 +1,13 @@
+//! Types and handles for plugins to interact with the host.
+
 use clack_common::extensions::{Extension, HostExtensionSide};
+use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
-use clap_sys::version::clap_version;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
+/// Various information about the host, provided at plugin instantiation time.
 #[derive(Copy, Clone)]
 pub struct HostInfo<'a> {
     raw: *const clap_host,
@@ -12,8 +15,11 @@ pub struct HostInfo<'a> {
 }
 
 impl<'a> HostInfo<'a> {
+    /// Creates a new [`HostInfo`] type from a given raw, C FFI compatible pointer.
+    ///
     /// # Safety
-    /// Pointer must be valid
+    /// Pointer must be valid for the duration of the `'a` lifetime. Moreover, the contents of
+    /// the `clap_host` struct must all also be valid.
     #[inline]
     pub unsafe fn from_raw(raw: *const clap_host) -> Self {
         Self {
@@ -22,33 +28,41 @@ impl<'a> HostInfo<'a> {
         }
     }
 
+    /// The [`ClapVersion`] the host uses.
     #[inline]
-    pub fn clap_version(&self) -> clap_version {
-        self.as_raw().clap_version
+    pub fn clap_version(&self) -> ClapVersion {
+        ClapVersion::from_raw(self.as_raw().clap_version)
     }
 
-    pub fn name(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().name) }
-            .to_str()
-            .expect("Failed to read host name: invalid UTF-8 sequence")
+    /// An user-friendly name for the host.
+    ///
+    /// This should always be set by the host.
+    pub fn name(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().name as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn vendor(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().vendor) }
-            .to_str()
-            .expect("Failed to read host vendor: invalid UTF-8 sequence")
+    /// The host's vendor.
+    ///
+    /// This field is optional.
+    pub fn vendor(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().vendor as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn url(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().url) }
-            .to_str()
-            .expect("Failed to read host url: invalid UTF-8 sequence")
+    /// An URL to the host's webpage.
+    ///
+    /// This field is optional.
+    pub fn url(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().url as *mut _).map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn version(&self) -> &'a str {
-        unsafe { CStr::from_ptr(self.as_raw().version) }
-            .to_str()
-            .expect("Failed to read host version: invalid UTF-8 sequence")
+    /// A version string for the host.
+    ///
+    /// This should always be set by the host.
+    pub fn version(&self) -> Option<&'a CStr> {
+        NonNull::new(self.as_raw().version as *mut _)
+            .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
@@ -73,6 +87,10 @@ impl<'a> HostInfo<'a> {
     }
 }
 
+/// A thread-safe handle to the host.
+///
+/// This can be used to fetch information about the host, scan available extensions, or perform
+/// requests to the host.
 #[derive(Copy, Clone)]
 pub struct HostHandle<'a> {
     raw: *const clap_host,
@@ -83,6 +101,7 @@ unsafe impl<'a> Send for HostHandle<'a> {}
 unsafe impl<'a> Sync for HostHandle<'a> {}
 
 impl<'a> HostHandle<'a> {
+    /// Returns host information.
     #[inline]
     pub fn info(&self) -> HostInfo<'a> {
         HostInfo {
@@ -91,30 +110,39 @@ impl<'a> HostHandle<'a> {
         }
     }
 
+    /// Returns a raw, C FFI-compatible reference to the host handle.
     #[inline]
-    pub fn as_raw(&self) -> *const clap_host {
-        self.raw
+    pub fn as_raw(&self) -> &'a clap_host {
+        unsafe { &*self.raw }
     }
 
+    /// Requests the host to [deactivate](crate::plugin::PluginAudioProcessor::deactivate) and then
+    /// [re-activate](crate::plugin::PluginAudioProcessor::activate) the plugin.
+    /// The operation may be delayed by the host.
     #[inline]
     pub fn request_restart(&self) {
-        if let Some(request_restart) = unsafe { (*self.as_raw()).request_restart } {
+        if let Some(request_restart) = self.as_raw().request_restart {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_restart(self.raw) }
         }
     }
 
+    /// Requests the host to [activate](crate::plugin::PluginAudioProcessor::activate) the plugin,
+    /// and start audio processing.
+    /// This is useful if you have external IO and need to wake the plugin up from "sleep".
     #[inline]
     pub fn request_process(&self) {
-        if let Some(request_process) = unsafe { (*self.as_raw()).request_process } {
+        if let Some(request_process) = self.as_raw().request_process {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_process(self.raw) }
         }
     }
 
+    /// Requests the host to schedule a call to the
+    /// [on_main_thread](crate::plugin::PluginMainThread::on_main_thread) method on the main thread.
     #[inline]
     pub fn request_callback(&self) {
-        if let Some(request_callback) = unsafe { (*self.as_raw()).request_callback } {
+        if let Some(request_callback) = self.as_raw().request_callback {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_callback(self.raw) }
         }
@@ -171,11 +199,6 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
-        self.shared().extension()
-    }
-
-    #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         unsafe { &*self.raw }
     }
@@ -203,11 +226,6 @@ impl<'a> HostAudioThreadHandle<'a> {
             raw: self.raw,
             _lifetime: PhantomData,
         }
-    }
-
-    #[inline]
-    pub fn extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
-        self.shared().extension()
     }
 
     #[inline]
