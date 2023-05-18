@@ -1,3 +1,5 @@
+//! Various CLAP-related utilities.
+
 mod panic {
     #[cfg(not(test))]
     #[allow(unused)]

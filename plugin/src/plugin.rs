@@ -246,12 +246,14 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     /// # Realtime Safety
     ///
     /// This method is not realtime-safe: it may perform memory de-allocations of audio buffers, or
-    /// any other de-initialization the plugin may deem necessary.
+    /// any other un-initialization the plugin may deem necessary.
+    #[allow(unused)]
     #[inline]
-    fn deactivate(self, _main_thread: &mut M) {}
+    fn deactivate(self, main_thread: &mut M) {}
 
+    #[allow(unused)]
     #[inline]
-    fn reset(&mut self, _main_thread: &mut M) {}
+    fn reset(&mut self, main_thread: &mut M) {}
 
     #[inline]
     fn start_processing(&mut self) -> Result<(), PluginError> {

@@ -15,6 +15,7 @@ pub use clack_common::events;
 pub use clack_common::stream;
 pub use clack_common::utils;
 
+/// A helpful prelude re-exporting all the types related to plugin implementation.
 pub mod prelude {
     pub use crate::clack_export_entry;
     pub use crate::entry::{Entry, EntryDescriptor, SinglePluginEntry};

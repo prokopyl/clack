@@ -267,6 +267,7 @@ pub use clack_common::events;
 pub use clack_common::stream;
 pub use clack_common::utils;
 
+/// A helpful prelude re-exporting all the types related to host implementation.
 pub mod prelude {
     pub use crate::{
         bundle::PluginBundle,
