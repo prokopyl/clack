@@ -1,4 +1,4 @@
-/*use clack_test_host::TestHost;
+use clack_test_host::TestHost;
 use nih_plug::prelude::*;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -230,4 +230,3 @@ fn it_works() {
 
     host.deactivate();
 }
-*/
