@@ -11,6 +11,7 @@ pub struct CpalAudioOutputBuffers {
     input_channels: Vec<f32>,
     muxed: Vec<f32>,
     channel_count: usize,
+    frame_count: usize,
 }
 
 impl CpalAudioOutputBuffers {
@@ -22,23 +23,24 @@ impl CpalAudioOutputBuffers {
             input_channels: vec![0.0; frame_count * channel_count],
             muxed: vec![0.0; frame_count * channel_count],
             channel_count,
+            frame_count,
         }
     }
 
-    pub fn ensure_buffer_size_matches(&mut self, actual_frame_count: usize) {
-        let total_length = actual_frame_count * self.channel_count;
-
-        if self.input_channels.len() != total_length {
-            self.input_channels.resize(total_length, 0.0);
+    pub fn ensure_buffer_size_matches(&mut self, total_buffer_size: usize) {
+        if self.input_channels.len() != total_buffer_size {
+            self.input_channels.resize(total_buffer_size, 0.0);
         }
 
-        if self.output_channels.len() != total_length {
-            self.output_channels.resize(total_length, 0.0);
+        if self.output_channels.len() != total_buffer_size {
+            self.output_channels.resize(total_buffer_size, 0.0);
         }
 
-        if self.muxed.len() != total_length {
-            self.muxed.resize(total_length, 0.0);
+        if self.muxed.len() != total_buffer_size {
+            self.muxed.resize(total_buffer_size, 0.0);
         }
+
+        self.frame_count = total_buffer_size / self.channel_count;
     }
 
     pub fn plugin_buffers(&mut self) -> (InputAudioBuffers, OutputAudioBuffers) {
@@ -50,7 +52,7 @@ impl CpalAudioOutputBuffers {
                 latency: 0,
                 channels: AudioPortBufferType::f32_input_only(
                     self.input_channels
-                        .chunks_exact_mut(self.channel_count)
+                        .chunks_exact_mut(self.frame_count)
                         .map(|buffer| InputChannel {
                             buffer,
                             is_constant: true,
@@ -60,7 +62,7 @@ impl CpalAudioOutputBuffers {
             self.output_ports.with_output_buffers([AudioPortBuffer {
                 latency: 0,
                 channels: AudioPortBufferType::f32_output_only(
-                    self.output_channels.chunks_exact_mut(self.channel_count),
+                    self.output_channels.chunks_exact_mut(self.frame_count),
                 ),
             }]),
         )

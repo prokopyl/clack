@@ -47,6 +47,7 @@
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::gui::*;
 use std::cmp::Ordering;
+use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -202,6 +203,8 @@ impl Display for GuiError {
         }
     }
 }
+
+impl Error for GuiError {}
 
 /// The size of a given GUI Window, in pixels.
 ///

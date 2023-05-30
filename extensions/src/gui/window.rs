@@ -38,6 +38,14 @@ impl Window {
         unsafe { self.raw.specific.ptr }
     }
 
+    /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
+    ///
+    /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+    #[inline]
+    pub fn from_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
+        Self::from_raw_window_handle(window.raw_window_handle())
+    }
+
     /// Creates a [`Window`] from a [`RawWindowHandle`].
     ///
     /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
