@@ -3,6 +3,7 @@ members = [
     "common",
     "plugin/examples/gain",
     "host",
+    "host/examples/cpal",
     "plugin",
     "extensions",
     "test-host"

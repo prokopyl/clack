@@ -270,6 +270,14 @@ pub struct InputAudioBuffers<'a> {
 
 impl<'a> InputAudioBuffers<'a> {
     #[inline]
+    pub const fn empty() -> Self {
+        Self {
+            buffers: &[],
+            min_channel_buffer_length: 0,
+        }
+    }
+
+    #[inline]
     pub fn as_raw_buffers(&self) -> &'a [clap_audio_buffer] {
         self.buffers
     }
@@ -286,6 +294,14 @@ pub struct OutputAudioBuffers<'a> {
 }
 
 impl<'a> OutputAudioBuffers<'a> {
+    #[inline]
+    pub fn empty() -> Self {
+        Self {
+            buffers: &mut [],
+            min_channel_buffer_length: 0,
+        }
+    }
+
     #[inline]
     pub fn as_raw_buffers(&mut self) -> &mut [clap_audio_buffer] {
         self.buffers

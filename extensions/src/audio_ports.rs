@@ -3,6 +3,7 @@ use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide
 use clap_sys::ext::audio_ports::*;
 use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 #[repr(C)]
@@ -76,6 +77,7 @@ unsafe impl Extension for HostAudioPorts {
 unsafe impl Send for HostAudioPorts {}
 unsafe impl Sync for HostAudioPorts {}
 
+#[derive(Clone)]
 pub struct AudioPortInfoData<'a> {
     pub id: u32, // TODO: ClapId
     pub name: &'a [u8],
@@ -107,6 +109,19 @@ impl<'a> AudioPortInfoData<'a> {
                 Some(raw.in_place_pair)
             },
         }
+    }
+}
+
+impl<'a> Debug for AudioPortInfoData<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioPortInfoData")
+            .field("id", &self.id)
+            .field("name", &String::from_utf8_lossy(self.name))
+            .field("channel_count", &self.channel_count)
+            .field("flags", &self.flags)
+            .field("port_type", &self.port_type)
+            .field("in_place_pair", &self.in_place_pair)
+            .finish()
     }
 }
 
