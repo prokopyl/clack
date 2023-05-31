@@ -12,6 +12,9 @@ use clack_extensions::gui::{
     GuiApiType, GuiError, GuiSize, HostGui, HostGuiImpl, PluginGui, Window as ClapWindow,
 };
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
+use clack_extensions::params::{
+    HostParams, HostParamsImplMainThread, HostParamsImplShared, ParamClearFlags, ParamRescanFlags,
+};
 use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, TimerError, TimerId};
 use clack_host::prelude::*;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -67,6 +70,7 @@ enum MainThreadMessage {
     RunOnMainThread,
     GuiClosed { was_destroyed: bool },
     WindowClosing,
+    Tick,
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
@@ -134,8 +138,25 @@ impl<'a> CpalHostMainThread<'a> {
         let window = Window::open_as_if_parented(options, move |_| HostWindowHandler { sender });
 
         gui.set_parent(plugin, &ClapWindow::from_window(&window).unwrap())?;
+        gui.show(plugin)?;
 
         Ok(window)
+    }
+
+    fn destroy_gui(&mut self) {
+        let gui = self.shared.gui.unwrap();
+        let plugin = self.plugin.as_mut().unwrap();
+
+        gui.destroy(plugin);
+    }
+
+    fn tick_timers(&mut self) {
+        let Some(timer) = self.timer_support else { return };
+        let plugin = self.plugin.as_mut().unwrap();
+
+        for triggered in self.timers.tick_all() {
+            timer.on_timer(plugin, triggered);
+        }
     }
 }
 
@@ -144,6 +165,12 @@ impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
         if let Some(gui) = self.shared.gui {
             self.available_gui_api = gui
                 .get_preferred_api(&instance)
+                .map(|(ty, floating)| {
+                    if floating {
+                        return (ty, floating);
+                    }
+                    (ty, gui.is_api_supported(&instance, ty, true))
+                })
                 .or_else(|| {
                     let platform = GuiApiType::default_for_current_platform()?;
                     if gui.is_api_supported(&instance, platform, true) {
@@ -176,9 +203,25 @@ impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
     }
 }
 
+impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
+    fn rescan(&mut self, flags: ParamRescanFlags) {
+        // todo!()
+    }
+
+    fn clear(&mut self, param_id: u32, flags: ParamClearFlags) {
+        todo!()
+    }
+}
+
+impl<'a> HostParamsImplShared for CpalHostShared<'a> {
+    fn request_flush(&self) {
+        todo!()
+    }
+}
+
 impl<'a> HostGuiImpl for CpalHostShared<'a> {
     fn resize_hints_changed(&self) {
-        todo!()
+        // todo!()
     }
 
     fn request_resize(&self, _new_size: GuiSize) -> Result<(), GuiError> {
@@ -209,7 +252,8 @@ impl Host for CpalHost {
         builder
             .register::<HostLog>()
             .register::<HostGui>()
-            .register::<HostTimer>();
+            .register::<HostTimer>()
+            .register::<HostParams>();
     }
 }
 
@@ -250,10 +294,32 @@ pub fn run(bundle_path: &Path, plugin_id: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_gui_floating(
-    instance: PluginInstance<CpalHost>,
+    mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
 ) -> Result<(), Box<dyn Error>> {
-    todo!();
+    let main_thread = instance.main_thread_host_data_mut();
+    let (api, _) = main_thread.available_gui_api.as_ref().unwrap();
+    println!("Opening GUI type: {api:?} in floating mode");
+    let gui = main_thread.shared.gui.unwrap();
+    let plugin = main_thread.plugin.as_mut().unwrap();
+
+    gui.create(plugin, GuiApiType(api), false)?;
+    gui.show(plugin)?;
+
+    for message in receiver {
+        match message {
+            MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+            MainThreadMessage::Tick => instance.main_thread_host_data_mut().tick_timers(),
+            MainThreadMessage::GuiClosed { was_destroyed } => {
+                println!("Window closed!");
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    instance.main_thread_host_data_mut().destroy_gui();
+
     Ok(())
 }
 
@@ -278,6 +344,7 @@ fn run_gui_embedded(
         }
     }
 
+    instance.main_thread_host_data_mut().destroy_gui();
     window.close();
     Ok(())
 }
@@ -316,12 +383,16 @@ struct HostWindowHandler {
 }
 
 impl WindowHandler for HostWindowHandler {
-    fn on_frame(&mut self, _window: &mut Window) {}
+    fn on_frame(&mut self, _window: &mut Window) {
+        self.sender.send(MainThreadMessage::Tick).unwrap();
+    }
 
     fn on_event(&mut self, _window: &mut Window, event: Event) -> EventStatus {
         match event {
             Event::Window(WindowEvent::WillClose) => {
                 self.sender.send(MainThreadMessage::WindowClosing).unwrap();
+                // Just let some time for the parent window to be closed
+                std::thread::sleep(Duration::from_millis(100));
                 EventStatus::Captured
             }
             _ => EventStatus::Ignored,
