@@ -329,6 +329,12 @@ impl<'a> GuiApiType<'a> {
         self == &Self::WIN32 || self == &Self::COCOA || self == &Self::X11
     }
 
+    /// Determines whether this GUI API uses physical pixels or logical pixels.
+    /// Returns `true` the API uses logical pixels, `false` if it uses physical pixels.
+    pub fn uses_logical_size(&self) -> bool {
+        self == &Self::COCOA
+    }
+
     /// Returns the default API type for the platform this executable is compiled for.
     ///
     /// This returns [`WIN32`](Self::WIN32) on Windows, [`COCOA`](Self::COCOA) on MacOS, and

@@ -1,7 +1,7 @@
 use crate::gui::GuiApiType;
 use clap_sys::ext::gui::{clap_window, clap_window_handle};
 use raw_window_handle::{
-    AppKitHandle, HasRawWindowHandle, RawWindowHandle, Win32Handle, XlibHandle,
+    AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle, XlibWindowHandle,
 };
 use std::ffi::{c_void, CStr};
 
@@ -81,15 +81,15 @@ unsafe impl HasRawWindowHandle for Window {
         let api_type = self.api_type();
 
         if api_type == GuiApiType::WIN32 {
-            let mut handle = Win32Handle::empty();
+            let mut handle = Win32WindowHandle::empty();
             handle.hwnd = unsafe { self.raw.specific.win32 };
             RawWindowHandle::Win32(handle)
         } else if api_type == GuiApiType::COCOA {
-            let mut handle = AppKitHandle::empty();
+            let mut handle = AppKitWindowHandle::empty();
             handle.ns_view = unsafe { self.raw.specific.cocoa };
             RawWindowHandle::AppKit(handle)
         } else if api_type == GuiApiType::X11 {
-            let mut handle = XlibHandle::empty();
+            let mut handle = XlibWindowHandle::empty();
             handle.window = unsafe { self.raw.specific.x11 };
             RawWindowHandle::Xlib(handle)
         } else {

@@ -1,13 +1,8 @@
-use crate::buffers::CpalAudioOutputBuffers;
 use crate::stream::activate_to_stream;
-use baseview::{
-    Event, EventStatus, Size, Window, WindowEvent, WindowHandle, WindowHandler, WindowOpenOptions,
-    WindowScalePolicy,
-};
 use clack_extensions::audio_ports::{
-    AudioPortInfoBuffer, HostAudioPorts, HostAudioPortsImpl, PluginAudioPorts, RescanType,
+    AudioPortInfoBuffer, HostAudioPortsImpl, PluginAudioPorts, RescanType,
 };
-use clack_extensions::audio_ports_config::{AudioPortsConfigBuffer, PluginAudioPortsConfig};
+use clack_extensions::audio_ports_config::PluginAudioPortsConfig;
 use clack_extensions::gui::{
     GuiApiType, GuiError, GuiSize, HostGui, HostGuiImpl, PluginGui, Window as ClapWindow,
 };
@@ -17,14 +12,17 @@ use clack_extensions::params::{
 };
 use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, TimerError, TimerId};
 use clack_host::prelude::*;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{BufferSize, SampleRate, StreamConfig};
+use cpal::traits::StreamTrait;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::CString;
 use std::path::Path;
 use std::time::{Duration, Instant};
+use winit::dpi::PhysicalSize;
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::{EventLoopBuilder, EventLoopWindowTarget};
+use winit::window::{Window, WindowBuilder};
 
 pub struct CpalHost;
 pub struct CpalHostShared<'a> {
@@ -101,6 +99,7 @@ pub struct CpalHostMainThread<'a> {
     pub available_gui_api: Option<(CString, bool)>,
     timer_support: Option<&'a PluginTimer>,
     timers: Timers,
+    gui_open: bool,
 }
 
 impl<'a> CpalHostMainThread<'a> {
@@ -111,6 +110,7 @@ impl<'a> CpalHostMainThread<'a> {
             available_gui_api: None,
             timer_support: None,
             timers: Timers::new(),
+            gui_open: false,
         }
     }
 
@@ -118,7 +118,10 @@ impl<'a> CpalHostMainThread<'a> {
         self.available_gui_api.as_ref().map(|(_, float)| (*float))
     }
 
-    fn open_embedding_window(&mut self) -> Result<WindowHandle, Box<dyn Error>> {
+    fn open_embedding_window(
+        &mut self,
+        event_loop: &EventLoopWindowTarget<MainThreadMessage>,
+    ) -> Result<Window, Box<dyn Error>> {
         let gui = self.shared.gui.unwrap();
         let (api, _) = self.available_gui_api.as_ref().unwrap();
         let plugin = self.plugin.as_mut().unwrap();
@@ -128,26 +131,33 @@ impl<'a> CpalHostMainThread<'a> {
             height: 480,
         });
 
-        let options = WindowOpenOptions {
-            title: "Clack CPAL plugin!".to_string(),
-            size: Size::new(initial_size.width as f64, initial_size.height as f64),
-            scale: WindowScalePolicy::SystemScaleFactor,
-        };
+        // TODO: resizeable & stuff
+        // let resizeable = gui.can_resize(plugin);
 
-        let sender = self.shared.sender.clone();
-        let window = Window::open_as_if_parented(options, move |_| HostWindowHandler { sender });
+        let window = WindowBuilder::new()
+            .with_title("Clack CPAL plugin!")
+            .with_inner_size(PhysicalSize {
+                height: initial_size.height,
+                width: initial_size.width,
+            })
+            .build(event_loop)?;
 
         gui.set_parent(plugin, &ClapWindow::from_window(&window).unwrap())?;
         gui.show(plugin)?;
+        self.gui_open = true;
 
         Ok(window)
     }
 
     fn destroy_gui(&mut self) {
+        if !self.gui_open {
+            return;
+        }
         let gui = self.shared.gui.unwrap();
         let plugin = self.plugin.as_mut().unwrap();
 
         gui.destroy(plugin);
+        self.gui_open = false;
     }
 
     fn tick_timers(&mut self) {
@@ -287,7 +297,6 @@ pub fn run(bundle_path: &Path, plugin_id: &str) -> Result<(), Box<dyn Error>> {
 
     run_ui(instance, receiver)?;
 
-    println!("DONE");
     stream.pause()?;
 
     Ok(())
@@ -331,22 +340,49 @@ fn run_gui_embedded(
     let (api, _) = main_thread.available_gui_api.as_ref().unwrap();
     println!("Opening GUI type: {api:?} in embedded mode");
 
-    let mut window = main_thread.open_embedding_window()?;
+    let event_loop = EventLoopBuilder::with_user_event().build();
 
-    for message in receiver {
-        match message {
-            MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-            MainThreadMessage::WindowClosing => {
-                println!("Window closed!");
-                break;
+    // TODO: handle events
+    let mut window = Some(main_thread.open_embedding_window(&event_loop)?);
+
+    event_loop.run(move |event, target, control_flow| {
+        while let Ok(message) = receiver.try_recv() {
+            match message {
+                MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+                MainThreadMessage::WindowClosing => {
+                    println!("Window closed!");
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        match event {
+            Event::WindowEvent { event, window_id } => match event {
+                WindowEvent::CloseRequested | WindowEvent::Destroyed => {
+                    println!("Received close {window_id:?}");
+                    instance.main_thread_host_data_mut().destroy_gui();
+                    window.take(); // Drop the window
+                    control_flow.set_exit();
+                    return;
+                }
+                _ => {}
+            },
+            Event::LoopDestroyed => {
+                instance.main_thread_host_data_mut().destroy_gui();
             }
             _ => {}
         }
-    }
 
-    instance.main_thread_host_data_mut().destroy_gui();
-    window.close();
-    Ok(())
+        let main_thread = instance.main_thread_host_data_mut();
+        main_thread.tick_timers();
+        control_flow.set_wait_timeout(
+            main_thread
+                .timers
+                .smallest_duration()
+                .unwrap_or(Duration::from_millis(60)),
+        );
+    });
 }
 
 fn run_cli(
@@ -376,28 +412,6 @@ fn host_info() -> HostInfo {
         "0.0.0",
     )
     .unwrap()
-}
-
-struct HostWindowHandler {
-    sender: Sender<MainThreadMessage>,
-}
-
-impl WindowHandler for HostWindowHandler {
-    fn on_frame(&mut self, _window: &mut Window) {
-        self.sender.send(MainThreadMessage::Tick).unwrap();
-    }
-
-    fn on_event(&mut self, _window: &mut Window, event: Event) -> EventStatus {
-        match event {
-            Event::Window(WindowEvent::WillClose) => {
-                self.sender.send(MainThreadMessage::WindowClosing).unwrap();
-                // Just let some time for the parent window to be closed
-                std::thread::sleep(Duration::from_millis(100));
-                EventStatus::Captured
-            }
-            _ => EventStatus::Ignored,
-        }
-    }
 }
 
 struct AudioPortsConfig {
@@ -439,6 +453,7 @@ impl AudioPortsConfig {
 
 struct Timers {
     latest_id: u32,
+    smallest_duration: Option<u32>,
     timers: HashMap<TimerId, Timer>,
 }
 
@@ -447,6 +462,7 @@ impl Timers {
         Self {
             latest_id: 0,
             timers: HashMap::new(),
+            smallest_duration: None,
         }
     }
 
@@ -463,11 +479,27 @@ impl Timers {
         let id = TimerId(self.latest_id);
         self.timers.insert(id, Timer::new(id, interval));
 
+        match self.smallest_duration {
+            None => self.smallest_duration = Some(interval),
+            Some(smallest) if smallest > interval => self.smallest_duration = Some(interval),
+            _ => {}
+        }
+
         id
     }
 
     fn unregister(&mut self, id: TimerId) -> bool {
-        self.timers.remove(&id).is_some()
+        if self.timers.remove(&id).is_some() {
+            self.smallest_duration = self.timers.values().map(|t| t.interval).min();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn smallest_duration(&self) -> Option<Duration> {
+        self.smallest_duration
+            .map(|i| Duration::from_millis(i as u64))
     }
 }
 

@@ -4,7 +4,6 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-baseview = { git = "https://github.com/RustAudio/baseview.git", rev = "c129b12ead4f5ac02126f559ceb8ce43cc982200" }
 clack-host = { path = "../.." }
 clack-extensions = { path = "../../../extensions", features = ["clack-host", "audio-ports", "audio-ports-config", "gui", "log", "params", "timer"] }
 cpal = "0.15.2"
@@ -13,3 +12,4 @@ clap = { version = "4.3.0", features = ["derive"] }
 directories = "5.0.1"
 rayon = "1.7.0"
 walkdir = "2.3.3"
+winit = "0.28.6"
