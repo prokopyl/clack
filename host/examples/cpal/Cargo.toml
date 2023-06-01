@@ -12,4 +12,4 @@ clap = { version = "4.3.0", features = ["derive"] }
 directories = "5.0.1"
 rayon = "1.7.0"
 walkdir = "2.3.3"
-winit = "0.28.6"
+winit = { version = "0.28.6", features = ["x11"] }
