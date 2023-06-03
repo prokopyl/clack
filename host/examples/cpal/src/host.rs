@@ -261,7 +261,6 @@ fn run_gui_floating(
     for message in receiver {
         match message {
             MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-            MainThreadMessage::Tick => instance.main_thread_host_data_mut().tick_timers(),
             MainThreadMessage::GuiClosed { was_destroyed } => {
                 println!("Window closed!");
                 break;
@@ -292,6 +291,7 @@ fn run_gui_embedded(
         while let Ok(message) = receiver.try_recv() {
             match message {
                 MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+                // TODO: handle those messages too
                 MainThreadMessage::WindowClosing => {
                     println!("Window closed!");
                     break;

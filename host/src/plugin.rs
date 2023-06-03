@@ -135,7 +135,7 @@ impl<H: Host> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn main_thread_plugin_data(&self) -> PluginMainThreadHandle {
+    pub fn main_thread_plugin_data(&mut self) -> PluginMainThreadHandle {
         PluginMainThreadHandle::new((self.inner.raw_instance() as *const _) as *mut _)
     }
 }

@@ -1,5 +1,3 @@
-extern crate core;
-
 mod buffers;
 mod discovery;
 mod host;

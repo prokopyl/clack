@@ -9,6 +9,9 @@ use cpal::{
 };
 use std::error::Error;
 
+mod config;
+use config::*;
+
 pub fn activate_to_stream(
     instance: &mut PluginInstance<CpalHost>,
 ) -> Result<Stream, Box<dyn Error>> {
@@ -19,14 +22,22 @@ pub fn activate_to_stream(
     let default_config = output_device.default_output_config()?;
     default_config.buffer_size();
 
+    let best = find_device_best_output_configs(&output_device)?;
+    for config in best {
+        println!("Supported output configuration: {config:?}");
+    }
+
+    let plugin_ports = find_config_from_ports(&instance.main_thread_plugin_data(), false);
+    println!("Plugin port setup: {plugin_ports:?}");
+
     let config = StreamConfig {
         channels: 2,
         buffer_size: BufferSize::Fixed(1024),
-        sample_rate: SampleRate(44_000),
+        sample_rate: SampleRate(44_100),
     };
 
     let plugin_config = PluginAudioConfiguration {
-        sample_rate: 44_000.0,
+        sample_rate: 44_100.0,
         frames_count_range: 1024..=1024,
     };
 
