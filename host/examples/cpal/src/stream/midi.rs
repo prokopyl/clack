@@ -12,7 +12,7 @@ struct MidiEventMessage {
 }
 
 pub struct MidiReceiver {
-    connection: MidiInputConnection<()>,
+    _connection: MidiInputConnection<()>,
     consumer: Consumer<MidiEventMessage>,
     abandoned: bool,
     clap_events_buffer: EventBuffer,
@@ -31,15 +31,21 @@ impl MidiReceiver {
             return Ok(None);
         }
 
-        for x in &ports {
-            let Ok(port_name) = input.port_name(x) else { continue };
-            println!("Found MIDI port: {port_name}")
-        }
-
-        let selected_port = &ports[1];
+        // PANIC: we checked ports wasn't empty above
+        let selected_port = ports.last().unwrap();
         let port_name = input.port_name(selected_port)?;
 
-        println!("MIDI device found! Using '{port_name}' as input.");
+        if ports.len() > 1 {
+            println!("Found multiple MIDI input ports:");
+            for x in &ports {
+                let Ok(port_name) = input.port_name(x) else { continue };
+                println!("\t > {port_name}")
+            }
+
+            println!("\t * Using the latest MIDI device as input: {port_name}");
+        } else {
+            println!("MIDI device found! Using '{port_name}' as input.");
+        }
 
         let (mut producer, consumer) = RingBuffer::new(128);
         let connection = input.connect(
@@ -58,7 +64,7 @@ impl MidiReceiver {
 
         Ok(Some(Self {
             clap_events_buffer: EventBuffer::with_capacity(128),
-            connection,
+            _connection: connection,
             consumer,
             sample_rate,
             abandoned: false,

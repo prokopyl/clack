@@ -31,7 +31,7 @@ impl Timers {
         self.latest_id += 1;
         let id = TimerId(self.latest_id);
 
-        println!("Registered new Timer with ID ({id}), running every {interval}ms.");
+        println!("Plugin registered new Timer with ID ({id}), running every {interval}ms.");
         self.timers.insert(id, Timer::new(id, interval));
 
         match self.smallest_duration {

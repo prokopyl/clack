@@ -78,10 +78,10 @@ unsafe impl Send for AudioPorts {}
 unsafe impl Sync for AudioPorts {}
 
 impl AudioPorts {
-    pub fn with_capacity(channel_count: usize, port_count: usize) -> Self {
+    pub fn with_capacity(total_channel_count: usize, port_count: usize) -> Self {
         let mut bufs = Self {
             buffer_configs: Vec::with_capacity(port_count),
-            buffer_lists: Vec::with_capacity(port_count * channel_count),
+            buffer_lists: Vec::with_capacity(total_channel_count),
         };
         bufs.resize_buffer_configs(port_count);
 

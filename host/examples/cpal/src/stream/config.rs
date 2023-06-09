@@ -1,11 +1,16 @@
+use crate::host::CpalHost;
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoBuffer, AudioPortType, PluginAudioPorts,
 };
-use clack_host::prelude::{PluginAudioConfiguration, PluginMainThreadHandle};
+use clack_host::prelude::{PluginAudioConfiguration, PluginInstance, PluginMainThreadHandle};
 use cpal::traits::DeviceTrait;
-use cpal::{Device, SampleFormat, StreamConfig, SupportedStreamConfigRange};
+use cpal::{
+    BufferSize, Device, SampleFormat, SampleRate, StreamConfig, SupportedBufferSize,
+    SupportedStreamConfigRange,
+};
 use std::cmp::Ordering;
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 pub fn find_device_best_output_configs(
     device: &Device,
@@ -100,8 +105,22 @@ pub struct AudioPortsConfig {
 }
 
 impl AudioPortsConfig {
+    pub fn empty() -> Self {
+        AudioPortsConfig {
+            main_port_index: 0,
+            ports: vec![],
+        }
+    }
+
     pub fn main_port(&self) -> &AudioPortInfo {
         &self.ports[self.main_port_index as usize]
+    }
+
+    pub fn total_channel_count(&self) -> usize {
+        self.ports
+            .iter()
+            .map(|p| p.port_layout.channel_count() as usize)
+            .sum()
     }
 }
 
@@ -113,6 +132,7 @@ impl Default for AudioPortsConfig {
             ports: vec![AudioPortInfo {
                 id: None,
                 port_layout: AudioPortLayout::Stereo,
+                name: "Default".into(),
             }],
         }
     }
@@ -122,13 +142,34 @@ impl Default for AudioPortsConfig {
 pub struct AudioPortInfo {
     pub id: Option<u32>,
     pub port_layout: AudioPortLayout,
+    pub name: String,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum AudioPortLayout {
     Mono,
     Stereo,
-    Unsupported { channel_count: usize },
+    Unsupported { channel_count: u16 },
+}
+
+impl AudioPortLayout {
+    pub fn channel_count(&self) -> u16 {
+        match self {
+            AudioPortLayout::Mono => 1,
+            AudioPortLayout::Stereo => 2,
+            AudioPortLayout::Unsupported { channel_count } => *channel_count,
+        }
+    }
+}
+
+impl Display for AudioPortLayout {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AudioPortLayout::Mono => f.write_str("mono"),
+            AudioPortLayout::Stereo => f.write_str("stereo"),
+            AudioPortLayout::Unsupported { channel_count } => write!(f, "{channel_count}-channels"),
+        }
+    }
 }
 
 pub fn find_config_from_ports(plugin: &PluginMainThreadHandle, is_input: bool) -> AudioPortsConfig {
@@ -151,7 +192,7 @@ pub fn find_config_from_ports(plugin: &PluginMainThreadHandle, is_input: bool) -
             Some(l) if l == AudioPortType::MONO => AudioPortLayout::Mono,
             Some(l) if l == AudioPortType::STEREO => AudioPortLayout::Stereo,
             _ => AudioPortLayout::Unsupported {
-                channel_count: info.channel_count as usize,
+                channel_count: info.channel_count as u16,
             },
         };
 
@@ -163,10 +204,14 @@ pub fn find_config_from_ports(plugin: &PluginMainThreadHandle, is_input: bool) -
         discovered_ports.push(AudioPortInfo {
             id: Some(info.id),
             port_layout,
+            name: String::from_utf8_lossy(info.name).into_owned(),
         })
     }
 
     if discovered_ports.is_empty() {
+        if is_input {
+            return AudioPortsConfig::empty();
+        }
         eprintln!("Warning: Plugin's audio port extension returned NO port at all? Using default stereo configuration instead.");
         return AudioPortsConfig::default();
     }
@@ -199,15 +244,91 @@ pub fn find_config_from_ports(plugin: &PluginMainThreadHandle, is_input: bool) -
     }
 }
 
-/*
 pub struct FullAudioConfig {
-    output_channel_count: u8,
-    buffer_size: usize,
-    sample_rate: u32,
-    plugin_ports_config: AudioPortsConfig,
+    pub plugin_input_port_config: AudioPortsConfig,
+    pub plugin_output_port_config: AudioPortsConfig,
+    pub output_channel_count: usize,
+    pub buffer_size: u32,
+    pub sample_rate: u32,
+    pub sample_format: SampleFormat,
 }
 
-pub fn find_matching_output_config() -> FullAudioConfig {
-    todo!()
+impl FullAudioConfig {
+    pub fn negociate_from(
+        device: &Device,
+        instance: &mut PluginInstance<CpalHost>,
+    ) -> Result<Self, Box<dyn Error>> {
+        let best = find_device_best_output_configs(device)?;
+
+        let input_ports = find_config_from_ports(&instance.main_thread_plugin_data(), true);
+        let output_ports = find_config_from_ports(&instance.main_thread_plugin_data(), false);
+
+        Ok(find_matching_output_config(
+            &best,
+            output_ports,
+            input_ports,
+        ))
+    }
+
+    pub fn as_cpal_stream_config(&self) -> StreamConfig {
+        StreamConfig {
+            channels: self.output_channel_count as u16,
+            buffer_size: BufferSize::Fixed(self.buffer_size),
+            sample_rate: SampleRate(self.sample_rate),
+        }
+    }
+
+    pub fn as_clack_plugin_config(&self) -> PluginAudioConfiguration {
+        PluginAudioConfiguration {
+            sample_rate: self.sample_rate as f64,
+            frames_count_range: self.sample_rate..=self.sample_rate,
+        }
+    }
 }
-*/
+
+impl Display for FullAudioConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} channels at {:.1}kHz, with buffer length of {}, fed from plugin's \"{}\" port ({})",
+            self.output_channel_count,
+            self.sample_rate as f64 / 1_000.0,
+            self.buffer_size,
+            &self.plugin_output_port_config.main_port().name,
+            self.plugin_output_port_config.main_port().port_layout
+        )
+    }
+}
+
+pub fn find_matching_output_config(
+    ordered_stream_configs: &[SupportedStreamConfigRange],
+    plugin_config: AudioPortsConfig,
+    input_config: AudioPortsConfig,
+) -> FullAudioConfig {
+    let plugin_channel_count = plugin_config.main_port().port_layout.channel_count();
+
+    let matching_config = ordered_stream_configs
+        .iter()
+        .find(|c| c.channels() == plugin_channel_count);
+
+    let best_stream_config = matching_config
+        .or_else(|| ordered_stream_configs.first())
+        .expect("No config supported by output device");
+
+    let buffer_size = match best_stream_config.buffer_size() {
+        SupportedBufferSize::Range { min, max } => 1024.clamp(*min, *max),
+        SupportedBufferSize::Unknown => 1024,
+    };
+
+    FullAudioConfig {
+        output_channel_count: best_stream_config.channels() as usize,
+        buffer_size,
+        sample_rate: 44_100.clamp(
+            best_stream_config.min_sample_rate().0,
+            best_stream_config.max_sample_rate().0,
+        ),
+        plugin_output_port_config: plugin_config,
+        plugin_input_port_config: input_config,
+        sample_format: best_stream_config.sample_format(),
+    }
+}

@@ -1,4 +1,3 @@
-mod buffers;
 mod discovery;
 mod host;
 mod stream;
@@ -23,7 +22,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-    // discovery::scan_for_plugin_id("foo");
 }
 
 fn run_from_path(path: &Path) -> Result<(), Box<dyn Error>> {
@@ -36,7 +34,7 @@ fn run_from_path(path: &Path) -> Result<(), Box<dyn Error>> {
     );
 
     for x in &plugins {
-        println!("\t {x}")
+        println!("\t > {x}")
     }
 
     if plugins.len() == 1 {

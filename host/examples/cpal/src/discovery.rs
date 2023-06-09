@@ -129,8 +129,14 @@ pub fn list_plugins_in_bundle(bundle_path: &Path) -> Result<Vec<PluginDescriptor
         .filter_map(|p| {
             Some(PluginDescriptor {
                 id: p.id()?.to_str().ok()?.to_string(),
-                version: p.version().map(|v| v.to_string_lossy().to_string()),
-                name: p.name().map(|v| v.to_string_lossy().to_string()),
+                version: p
+                    .version()
+                    .filter(|s| !s.to_bytes().is_empty())
+                    .map(|v| v.to_string_lossy().to_string()),
+                name: p
+                    .name()
+                    .filter(|s| !s.to_bytes().is_empty())
+                    .map(|v| v.to_string_lossy().to_string()),
             })
         })
         .collect())

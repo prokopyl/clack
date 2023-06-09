@@ -223,11 +223,6 @@ pub fn run(bundle_path: &Path, plugin_id: &str) -> Result<(), Box<dyn Error>> {
         &host_info,
     )?;
 
-    AudioPortsConfig::from_plugin(
-        instance.main_thread_host_data().plugin.as_ref().unwrap(),
-        instance.shared_host_data().audio_ports,
-    );
-
     let run_ui = match instance
         .main_thread_host_data()
         .gui
@@ -351,41 +346,4 @@ fn host_info() -> HostInfo {
         "0.0.0",
     )
     .unwrap()
-}
-
-struct AudioPortsConfig {
-    input_channel_counts: Vec<usize>,
-    output_channel_counts: Vec<usize>,
-}
-
-impl AudioPortsConfig {
-    fn from_plugin(handle: &PluginMainThreadHandle, ports: Option<&PluginAudioPorts>) -> Self {
-        println!("Scanning plugin ports:");
-        let Some(ports) = ports else {
-            println!("No ports extension available: assuming single stereo port for input and output");
-            return Self {
-                input_channel_counts: vec![2],
-                output_channel_counts: vec![2],
-            }
-        };
-
-        let input_channel_counts = vec![];
-        let mut buf = AudioPortInfoBuffer::new();
-        let count = ports.count(handle, true);
-
-        for i in 0..count {
-            let config = ports.get(handle, i, true, &mut buf).unwrap();
-            println!("config: {config:?}");
-        }
-        let count = ports.count(handle, false);
-        for i in 0..count {
-            let config = ports.get(handle, i, false, &mut buf).unwrap();
-            println!("config: {config:?}");
-        }
-
-        Self {
-            input_channel_counts,
-            output_channel_counts: vec![],
-        }
-    }
 }
