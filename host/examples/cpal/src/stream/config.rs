@@ -1,9 +1,9 @@
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoBuffer, AudioPortType, PluginAudioPorts,
 };
-use clack_host::prelude::PluginMainThreadHandle;
+use clack_host::prelude::{PluginAudioConfiguration, PluginMainThreadHandle};
 use cpal::traits::DeviceTrait;
-use cpal::{Device, SampleFormat, SupportedStreamConfigRange};
+use cpal::{Device, SampleFormat, StreamConfig, SupportedStreamConfigRange};
 use std::cmp::Ordering;
 use std::error::Error;
 
@@ -48,7 +48,7 @@ fn compare_devices_configs(
 ) -> Ordering {
     // We always favor Stereo to Mono
     match first.channels().cmp(&second.channels()) {
-        c @ (Ordering::Less | Ordering::Greater) => return c.reverse(),
+        o @ (Ordering::Less | Ordering::Greater) => return o.reverse(),
         Ordering::Equal => {}
     }
 
@@ -56,10 +56,16 @@ fn compare_devices_configs(
     match sample_type_preference(first.sample_format())
         .cmp(&sample_type_preference(second.sample_format()))
     {
-        c @ (Ordering::Less | Ordering::Greater) => return c,
+        o @ (Ordering::Less | Ordering::Greater) => return o,
         Ordering::Equal => {}
     }
 
+    // Once we filtered out anything below 44.1kHz, we favor the smallest minimum sample rate
+    // to avoid overkill ones for this example
+    match first.min_sample_rate().cmp(&second.min_sample_rate()) {
+        o @ (Ordering::Less | Ordering::Greater) => return o,
+        Ordering::Equal => {}
+    }
     // Use the default
     first.cmp_default_heuristics(second).reverse()
 }
@@ -192,3 +198,16 @@ pub fn find_config_from_ports(plugin: &PluginMainThreadHandle, is_input: bool) -
         ports: discovered_ports,
     }
 }
+
+/*
+pub struct FullAudioConfig {
+    output_channel_count: u8,
+    buffer_size: usize,
+    sample_rate: u32,
+    plugin_ports_config: AudioPortsConfig,
+}
+
+pub fn find_matching_output_config() -> FullAudioConfig {
+    todo!()
+}
+*/

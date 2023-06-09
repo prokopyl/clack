@@ -10,7 +10,10 @@ use cpal::{
 use std::error::Error;
 
 mod config;
+mod midi;
+
 use config::*;
+use midi::*;
 
 pub fn activate_to_stream(
     instance: &mut PluginInstance<CpalHost>,
@@ -20,7 +23,6 @@ pub fn activate_to_stream(
 
     let output_device = cpal_host.default_output_device().unwrap();
     let default_config = output_device.default_output_config()?;
-    default_config.buffer_size();
 
     let best = find_device_best_output_configs(&output_device)?;
     for config in best {
@@ -29,6 +31,8 @@ pub fn activate_to_stream(
 
     let plugin_ports = find_config_from_ports(&instance.main_thread_plugin_data(), false);
     println!("Plugin port setup: {plugin_ports:?}");
+
+    let midi = MidiReceiver::new(44_100)?;
 
     let config = StreamConfig {
         channels: 2,
@@ -45,7 +49,7 @@ pub fn activate_to_stream(
         .activate(|_, _, _| (), plugin_config)?
         .start_processing()?;
 
-    let audio_processor = StreamAudioProcessor::new(plugin_audio_processor, 2, 1024);
+    let audio_processor = StreamAudioProcessor::new(plugin_audio_processor, midi, 2, 1024);
 
     let stream = build_output_stream_for_sample_type(
         &output_device,
@@ -109,18 +113,21 @@ fn make_stream_runner<S: FromSample<f32>>(
 struct StreamAudioProcessor {
     audio_processor: StartedPluginAudioProcessor<CpalHost>,
     buffers: CpalAudioOutputBuffers,
+    midi_receiver: Option<MidiReceiver>,
     steady_counter: i64,
 }
 
 impl StreamAudioProcessor {
     pub fn new(
         plugin_instance: StartedPluginAudioProcessor<CpalHost>,
+        midi_receiver: Option<MidiReceiver>,
         channel_count: usize,
         expected_buffer_size: usize,
     ) -> Self {
         Self {
             audio_processor: plugin_instance,
             buffers: CpalAudioOutputBuffers::with_capacity(channel_count, expected_buffer_size),
+            midi_receiver,
             steady_counter: 0,
         }
     }
@@ -130,10 +137,18 @@ impl StreamAudioProcessor {
 
         let (ins, mut outs) = self.buffers.plugin_buffers();
 
+        let sample_count = data.len() as u64;
+
+        let events = if let Some(midi) = self.midi_receiver.as_mut() {
+            midi.receive_all_events(sample_count)
+        } else {
+            InputEvents::empty()
+        };
+
         match self.audio_processor.process(
             &ins,
             &mut outs,
-            &InputEvents::empty(),
+            &events,
             &mut OutputEvents::void(),
             self.steady_counter,
             None,

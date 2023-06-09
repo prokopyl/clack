@@ -36,12 +36,10 @@ impl EventBuffer {
     }
 
     #[inline]
-    pub fn with_capacity(event_headers: usize) -> Self {
+    pub fn with_capacity(events: usize) -> Self {
         Self {
-            headers: Vec::with_capacity(
-                event_headers * core::mem::size_of::<CoreEventSpace<'static>>(),
-            ),
-            indexes: Vec::with_capacity(event_headers),
+            headers: Vec::with_capacity(events * core::mem::size_of::<CoreEventSpace<'static>>()),
+            indexes: Vec::with_capacity(events),
         }
     }
 
