@@ -6,7 +6,6 @@ use cpal::{
     BuildStreamError, Device, FromSample, OutputCallbackInfo, SampleFormat, Stream, StreamConfig,
 };
 use std::error::Error;
-use std::time::Instant;
 
 mod buffers;
 mod config;

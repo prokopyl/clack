@@ -14,6 +14,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
 use std::time::Duration;
+use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
@@ -62,6 +63,7 @@ impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
 enum MainThreadMessage {
     RunOnMainThread,
     GuiClosed { was_destroyed: bool },
+    GuiRequestResized { new_size: GuiSize },
     WindowClosing,
     Tick,
 }
@@ -114,6 +116,13 @@ impl<'a> CpalHostMainThread<'a> {
         for triggered in self.timers.tick_all() {
             timer.on_timer(plugin, triggered);
         }
+    }
+
+    fn resize_gui(&mut self, size: PhysicalSize<u32>, scale_factor: f64) -> Size {
+        self.gui
+            .as_mut()
+            .unwrap()
+            .resize(size, scale_factor, self.plugin.as_mut().unwrap())
     }
 
     fn destroy_gui(&mut self) {
@@ -171,16 +180,19 @@ impl<'a> HostGuiImpl for CpalHostShared<'a> {
         // todo!()
     }
 
-    fn request_resize(&self, _new_size: GuiSize) -> Result<(), GuiError> {
-        todo!()
+    fn request_resize(&self, new_size: GuiSize) -> Result<(), GuiError> {
+        self.sender
+            .send(MainThreadMessage::GuiRequestResized { new_size })
+            .map_err(|_| GuiError::RequestResizeError)
     }
 
     fn request_show(&self) -> Result<(), GuiError> {
-        todo!()
+        // We never hide the window, so showing it again does nothing.
+        Ok(())
     }
 
     fn request_hide(&self) -> Result<(), GuiError> {
-        todo!()
+        Ok(())
     }
 
     fn closed(&self, was_destroyed: bool) {
@@ -276,6 +288,8 @@ fn run_gui_embedded(
 
     let mut window = Some(gui.open_embedded(plugin, &event_loop)?);
 
+    let uses_logical_pixels = gui.compatible_api().unwrap().0.uses_logical_size();
+
     // Note: some plugins (JUCE?) segfault if left open for a couple minutes and the process exit()s
     // for some reason. Possibly because the library gets unloaded while a background thread is still running.
 
@@ -283,6 +297,23 @@ fn run_gui_embedded(
         while let Ok(message) = receiver.try_recv() {
             match message {
                 MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
+                MainThreadMessage::GuiRequestResized { new_size } => {
+                    let new_size: Size = if uses_logical_pixels {
+                        LogicalSize {
+                            width: new_size.width,
+                            height: new_size.height,
+                        }
+                        .into()
+                    } else {
+                        PhysicalSize {
+                            width: new_size.width,
+                            height: new_size.height,
+                        }
+                        .into()
+                    };
+
+                    window.as_mut().unwrap().set_inner_size(new_size);
+                }
                 // TODO: handle those messages too
                 MainThreadMessage::WindowClosing => {
                     println!("Window closed!");
@@ -303,6 +334,18 @@ fn run_gui_embedded(
                 WindowEvent::Destroyed => {
                     control_flow.set_exit();
                     return;
+                }
+                WindowEvent::Resized(size) => {
+                    let window = window.as_ref().unwrap();
+                    let scale_factor = window.scale_factor();
+
+                    let actual_size = instance
+                        .main_thread_host_data_mut()
+                        .resize_gui(size, scale_factor);
+
+                    if actual_size != size.into() {
+                        window.set_inner_size(actual_size);
+                    }
                 }
                 _ => {}
             },

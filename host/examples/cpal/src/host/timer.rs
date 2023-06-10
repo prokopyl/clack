@@ -45,7 +45,7 @@ impl Timers {
 
     pub fn unregister(&mut self, id: TimerId) -> bool {
         if self.timers.remove(&id).is_some() {
-            println!("Plugin unregistered Timer with id {id}.");
+            println!("Plugin unregistered Timer with ID ({id}).");
             self.smallest_duration = self.timers.values().map(|t| t.interval).min();
             true
         } else {

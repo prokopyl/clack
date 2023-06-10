@@ -245,7 +245,7 @@ impl GuiSize {
     /// This may be useful in case [`u64`]s are better to store than a pair of [`u32`], e.g. with
     /// Atomics.
     ///
-    /// Use [`from_u64`](GuiSize::from_u64) to unpack this value.
+    /// Use [`from_u64`](GuiSize::unpack_from_u64) to unpack this value.
     ///
     /// # Example
     ///
@@ -253,18 +253,18 @@ impl GuiSize {
     /// use clack_extensions::gui::GuiSize;
     ///
     /// let ui_size = GuiSize { width: 42, height: 69 };
-    /// let packed = ui_size.to_u64();
+    /// let packed = ui_size.pack_to_u64();
     ///
-    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// assert_eq!(ui_size, GuiSize::unpack_from_u64(packed));
     /// ```
     #[inline]
-    pub fn to_u64(self) -> u64 {
+    pub fn pack_to_u64(self) -> u64 {
         self.width as u64 + ((self.height as u64) << u32::BITS)
     }
 
     /// Unpacks a single [`u64`] value into a new [`GuiSize`].
     ///
-    /// Use [`to_u64`](GuiSize::to_u64) create the packed [`u64`] value.
+    /// Use [`to_u64`](GuiSize::pack_to_u64) create the packed [`u64`] value.
     ///
     /// # Example
     ///
@@ -272,12 +272,12 @@ impl GuiSize {
     /// use clack_extensions::gui::GuiSize;
     ///
     /// let ui_size = GuiSize { width: 42, height: 69 };
-    /// let packed = ui_size.to_u64();
+    /// let packed = ui_size.pack_to_u64();
     ///
-    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// assert_eq!(ui_size, GuiSize::unpack_from_u64(packed));
     /// ```
     #[inline]
-    pub fn from_u64(raw: u64) -> Self {
+    pub fn unpack_from_u64(raw: u64) -> Self {
         GuiSize {
             width: raw as u32,
             height: (raw >> u32::BITS) as u32,
@@ -342,7 +342,7 @@ impl<'a> GuiApiType<'a> {
     /// Returns `true` if this GUI API supports opening in an embedded window, `false` otherwise.
     /// As of now, only [Wayland](Self::WAYLAND) does not support window embedding.
     pub fn supports_embedding(&self) -> bool {
-        self == &Self::WAYLAND
+        self != &Self::WAYLAND
     }
 
     /// Matches this GUI API to one of the standard APIs.
