@@ -1,10 +1,8 @@
+use crate::discovery::FoundBundlePlugin;
 use crate::host::gui::Gui;
 use crate::host::timer::Timers;
 use crate::stream::activate_to_stream;
-use clack_extensions::audio_ports::{
-    AudioPortInfoBuffer, HostAudioPortsImpl, PluginAudioPorts, RescanType,
-};
-use clack_extensions::audio_ports_config::PluginAudioPortsConfig;
+use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
 use clack_extensions::gui::{GuiError, GuiSize, HostGui, HostGuiImpl, PluginGui};
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_extensions::params::{
@@ -15,7 +13,6 @@ use clack_host::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
-use std::path::Path;
 use std::time::Duration;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
@@ -29,7 +26,6 @@ pub struct CpalHostShared<'a> {
     plugin: Option<PluginSharedHandle<'a>>,
     gui: Option<&'a PluginGui>,
     audio_ports: Option<&'a PluginAudioPorts>,
-    audio_ports_config: Option<&'a PluginAudioPortsConfig>,
 }
 
 impl<'a> CpalHostShared<'a> {
@@ -39,7 +35,6 @@ impl<'a> CpalHostShared<'a> {
             plugin: None,
             gui: None,
             audio_ports: None,
-            audio_ports_config: None,
         }
     }
 }
@@ -208,17 +203,15 @@ impl Host for CpalHost {
     }
 }
 
-pub fn run(bundle_path: &Path, plugin_id: &str) -> Result<(), Box<dyn Error>> {
-    let bundle = PluginBundle::load(bundle_path)?;
-
+pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     let host_info = host_info();
-    let plugin_id = CString::new(plugin_id)?;
+    let plugin_id = CString::new(plugin.plugin.id.as_str())?;
     let (sender, receiver) = unbounded();
 
     let mut instance = PluginInstance::<CpalHost>::new(
         |_| CpalHostShared::new(sender.clone()),
         |shared| CpalHostMainThread::new(shared),
-        &bundle,
+        &plugin.bundle,
         &plugin_id,
         &host_info,
     )?;

@@ -7,32 +7,24 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
 
-pub struct FoundBundle {
-    bundle: PluginBundle,
-    path: PathBuf,
+pub struct FoundBundlePlugin {
+    pub bundle: PluginBundle,
+    pub path: PathBuf,
+    pub plugin: PluginDescriptor,
 }
 
-pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundle> {
+pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
     let standard_paths = standard_clap_paths();
 
-    println!("Scanning the following directories for CLAP plugins:");
+    println!("Scanning the following directories for CLAP plugin with ID {id}:");
     for path in &standard_paths {
-        println!("\t{}", path.display())
+        println!("\t - {}", path.display())
     }
 
     let found_bundles = walk_paths(&standard_paths);
-    println!("Found {} potential CLAP bundles:", found_bundles.len());
-    for x in &found_bundles {
-        println!("Found {}", x.path().display())
-    }
+    println!("\t * Found {} potential CLAP bundles.", found_bundles.len());
 
-    println!("Scanning bundles for plugins…");
-    scan_plugins(&found_bundles);
-    // Step 2: Walkdir over each to find `.clap` files.
-    // Step 3: for each one of them, load the dylib and filter on available plugins
-    // Step 4: collect them all into vec
-    // todo!()
-    vec![]
+    scan_plugins(&found_bundles, id)
 }
 
 //
@@ -87,16 +79,28 @@ fn walk_paths(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
         .collect()
 }
 
-fn scan_plugins(bundles: &[DirEntry]) {
-    bundles.par_iter().for_each(|p| scan_plugin(p.path()));
+fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugin> {
+    bundles
+        .par_iter()
+        .filter_map(|p| scan_plugin(p.path(), searched_id))
+        .collect()
 }
 
-fn scan_plugin(path: &Path) {
-    let Ok(bundle) = PluginBundle::load(path) else { return; };
-    for plugin in bundle.get_plugin_factory().unwrap().plugin_descriptors() {
-        let Some(id) = plugin.id() else { continue };
-        println!("Found {} at {}", id.to_string_lossy(), path.display());
+fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
+    let Ok(bundle) = PluginBundle::load(path) else { return None; };
+    for plugin in bundle.get_plugin_factory()?.plugin_descriptors() {
+        let Some(plugin) = PluginDescriptor::try_from(plugin) else { continue };
+
+        if plugin.id == searched_id {
+            return Some(FoundBundlePlugin {
+                plugin,
+                bundle,
+                path: path.to_path_buf(),
+            });
+        }
     }
+
+    None
 }
 
 #[derive(Debug)]
@@ -104,6 +108,22 @@ pub struct PluginDescriptor {
     pub id: String,
     pub name: Option<String>,
     pub version: Option<String>,
+}
+
+impl PluginDescriptor {
+    pub fn try_from(p: clack_host::factory::PluginDescriptor) -> Option<Self> {
+        Some(PluginDescriptor {
+            id: p.id()?.to_str().ok()?.to_string(),
+            version: p
+                .version()
+                .filter(|s| !s.to_bytes().is_empty())
+                .map(|v| v.to_string_lossy().to_string()),
+            name: p
+                .name()
+                .filter(|s| !s.to_bytes().is_empty())
+                .map(|v| v.to_string_lossy().to_string()),
+        })
+    }
 }
 
 impl Display for PluginDescriptor {
@@ -120,24 +140,19 @@ impl Display for PluginDescriptor {
 }
 
 /// Lists all plugins in a given bundle.
-pub fn list_plugins_in_bundle(bundle_path: &Path) -> Result<Vec<PluginDescriptor>, DiscoveryError> {
+pub fn list_plugins_in_bundle(
+    bundle_path: &Path,
+) -> Result<Vec<FoundBundlePlugin>, DiscoveryError> {
     let bundle = PluginBundle::load(bundle_path)?;
     let Some(plugin_factory) = bundle.get_plugin_factory() else { return Err(DiscoveryError::MissingPluginFactory) };
 
     Ok(plugin_factory
         .plugin_descriptors()
-        .filter_map(|p| {
-            Some(PluginDescriptor {
-                id: p.id()?.to_str().ok()?.to_string(),
-                version: p
-                    .version()
-                    .filter(|s| !s.to_bytes().is_empty())
-                    .map(|v| v.to_string_lossy().to_string()),
-                name: p
-                    .name()
-                    .filter(|s| !s.to_bytes().is_empty())
-                    .map(|v| v.to_string_lossy().to_string()),
-            })
+        .filter_map(PluginDescriptor::try_from)
+        .map(|plugin| FoundBundlePlugin {
+            bundle: bundle.clone(),
+            path: bundle_path.to_path_buf(),
+            plugin,
         })
         .collect())
 }
@@ -164,3 +179,22 @@ impl Display for DiscoveryError {
 }
 
 impl Error for DiscoveryError {}
+
+pub fn load_plugin_id_from_path(
+    bundle_path: &Path,
+    id: &str,
+) -> Result<Option<FoundBundlePlugin>, DiscoveryError> {
+    let bundle = PluginBundle::load(bundle_path)?;
+    let Some(plugin_factory) = bundle.get_plugin_factory() else { return Err(DiscoveryError::MissingPluginFactory) };
+
+    Ok(plugin_factory
+        .plugin_descriptors()
+        .filter_map(PluginDescriptor::try_from)
+        .filter(|p| p.id == id)
+        .next()
+        .map(|plugin| FoundBundlePlugin {
+            plugin,
+            bundle,
+            path: bundle_path.to_path_buf(),
+        }))
+}
