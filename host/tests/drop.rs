@@ -1,0 +1,196 @@
+use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
+use clack_plugin::prelude::*;
+use std::ffi::CStr;
+
+use clack_host::prelude::*;
+use serial_test::serial;
+
+pub struct DivaPluginStubAudioProcessor {
+    processing: bool,
+}
+
+pub struct DivaPluginStub;
+pub struct DivaPluginStubMainThread {
+    active: bool,
+}
+
+impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {
+    fn new(_host: HostMainThreadHandle<'a>, _shared: &'a ()) -> Result<Self, PluginError> {
+        Ok(Self { active: false })
+    }
+}
+
+impl Plugin for DivaPluginStub {
+    type AudioProcessor<'a> = DivaPluginStubAudioProcessor;
+    type Shared<'a> = ();
+    type MainThread<'a> = DivaPluginStubMainThread;
+
+    fn get_descriptor() -> Box<dyn PluginDescriptor> {
+        use clack_plugin::plugin::descriptor::features::*;
+
+        Box::new(StaticPluginDescriptor {
+            id: CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
+            name: CStr::from_bytes_with_nul(b"Diva\0").unwrap(),
+            features: Some(&[SYNTHESIZER, STEREO]),
+            ..Default::default()
+        })
+    }
+}
+
+impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginStubAudioProcessor {
+    fn activate(
+        _host: HostAudioThreadHandle<'a>,
+        main_thread: &mut DivaPluginStubMainThread,
+        _shared: &'a (),
+        _audio_config: AudioConfiguration,
+    ) -> Result<Self, PluginError> {
+        assert!(!main_thread.active);
+        main_thread.active = true;
+
+        Ok(Self { processing: false })
+    }
+
+    fn process(
+        &mut self,
+        _process: Process,
+        _audio: Audio,
+        _events: Events,
+    ) -> Result<ProcessStatus, PluginError> {
+        assert!(self.processing);
+
+        Ok(ProcessStatus::Sleep)
+    }
+
+    fn deactivate(self, main_thread: &mut DivaPluginStubMainThread) {
+        assert!(!self.processing);
+        assert!(main_thread.active);
+        main_thread.active = false;
+    }
+
+    fn start_processing(&mut self) -> Result<(), PluginError> {
+        assert!(!self.processing);
+        self.processing = true;
+        Ok(())
+    }
+
+    fn stop_processing(&mut self) {
+        assert!(self.processing);
+        self.processing = false;
+    }
+}
+
+impl Drop for DivaPluginStubAudioProcessor {
+    fn drop(&mut self) {
+        assert!(!self.processing);
+    }
+}
+
+impl Drop for DivaPluginStubMainThread {
+    fn drop(&mut self) {
+        assert!(!self.active);
+    }
+}
+
+clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
+static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
+
+struct MyHostShared;
+impl<'a> HostShared<'a> for MyHostShared {
+    fn request_restart(&self) {
+        unreachable!()
+    }
+    fn request_process(&self) {
+        unreachable!()
+    }
+    fn request_callback(&self) {
+        unreachable!()
+    }
+}
+
+struct MyHost;
+impl Host for MyHost {
+    type Shared<'a> = MyHostShared;
+
+    type MainThread<'a> = ();
+    type AudioProcessor<'a> = ();
+}
+
+fn instantiate() -> PluginInstance<MyHost> {
+    let bundle = unsafe {
+        PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
+    };
+    let host_info =
+        HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2").unwrap();
+
+    let plugin_instance = PluginInstance::<MyHost>::new(
+        |_| MyHostShared,
+        |_| (),
+        &bundle,
+        CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
+        &host_info,
+    );
+
+    plugin_instance.unwrap()
+}
+
+#[test]
+#[serial]
+pub fn handles_normal_deactivate() {
+    let mut instance = instantiate();
+    let config = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        frames_count_range: 5..=5,
+    };
+
+    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    instance.deactivate(processor);
+}
+
+#[test]
+#[serial]
+pub fn handles_try_deactivate() {
+    let mut instance = instantiate();
+    let config = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        frames_count_range: 5..=5,
+    };
+
+    let processor = instance.activate(|_, _, _| (), config).unwrap();
+
+    assert!(instance.try_deactivate().is_err());
+    drop(processor);
+
+    instance.try_deactivate().unwrap();
+}
+
+#[test]
+#[serial]
+pub fn stops_when_dropping() {
+    let mut instance = instantiate();
+    let config = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        frames_count_range: 5..=5,
+    };
+
+    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = processor.start_processing().unwrap();
+
+    drop(processor);
+    drop(instance);
+}
+
+#[test]
+#[serial]
+pub fn works_with_reverse_drop() {
+    let mut instance = instantiate();
+    let config = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        frames_count_range: 5..=5,
+    };
+
+    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = processor.start_processing().unwrap();
+
+    drop(instance);
+    drop(processor);
+}

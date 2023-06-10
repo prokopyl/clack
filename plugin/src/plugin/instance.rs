@@ -95,7 +95,10 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     }
 
     unsafe extern "C" fn reset(plugin: *const clap_plugin) {
-        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.reset());
+        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
+            p.audio_processor()?.as_mut().reset();
+            Ok(())
+        });
     }
 
     unsafe extern "C" fn start_processing(plugin: *const clap_plugin) -> bool {

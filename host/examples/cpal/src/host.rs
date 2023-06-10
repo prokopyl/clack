@@ -16,6 +16,7 @@ use std::ffi::CString;
 use std::time::Duration;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
+use winit::platform::run_return::EventLoopExtRunReturn;
 
 mod gui;
 mod timer;
@@ -269,13 +270,16 @@ fn run_gui_embedded(
     let main_thread = instance.main_thread_host_data_mut();
     println!("Opening GUI in embedded mode");
 
-    let event_loop = EventLoop::new();
+    let mut event_loop = EventLoop::new();
     let gui = main_thread.gui.as_mut().unwrap();
     let plugin = main_thread.plugin.as_mut().unwrap();
 
     let mut window = Some(gui.open_embedded(plugin, &event_loop)?);
 
-    event_loop.run(move |event, _target, control_flow| {
+    // Note: some plugins (JUCE?) segfault if left open for a couple minutes and the process exit()s
+    // for some reason. Possibly because the library gets unloaded while a background thread is still running.
+
+    event_loop.run_return(move |event, _target, control_flow| {
         while let Ok(message) = receiver.try_recv() {
             match message {
                 MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
@@ -290,10 +294,14 @@ fn run_gui_embedded(
 
         match event {
             Event::WindowEvent { event, window_id } => match event {
-                WindowEvent::CloseRequested | WindowEvent::Destroyed => {
+                WindowEvent::CloseRequested => {
                     println!("Received close {window_id:?}");
                     instance.main_thread_host_data_mut().destroy_gui();
                     window.take(); // Drop the window
+                    return;
+                }
+                WindowEvent::Destroyed => {
+                    println!("Received destroyed");
                     control_flow.set_exit();
                     return;
                 }
@@ -314,6 +322,8 @@ fn run_gui_embedded(
                 .unwrap_or(Duration::from_millis(60)),
         );
     });
+
+    Ok(())
 }
 
 fn run_cli(

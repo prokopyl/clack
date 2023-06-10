@@ -359,7 +359,7 @@ impl<'a> GuiApiType<'a> {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///
     /// assert_eq!(
-    ///     GuiApiType(CStr::from_bytes_with_nul(b"win32\0")?).to_standard_api().unwrap().0.to_bytes(),
+    ///     GuiApiType(CStr::from_bytes_with_nul(b"win32\0")?).to_standard_api(),
     ///     Some(GuiApiType::WIN32)
     /// );
     /// assert_eq!(

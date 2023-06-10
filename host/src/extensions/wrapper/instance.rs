@@ -197,6 +197,11 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
             return;
         }
 
+        // Check if instance hasn't been properly deactivate
+        if self.wrapper().is_active() {
+            let _ = self.deactivate_with(|_, _| ());
+        }
+
         unsafe {
             if let Some(destroy) = (*self.instance).destroy {
                 destroy(self.raw_instance_mut() as *mut _)

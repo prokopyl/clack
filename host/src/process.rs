@@ -178,7 +178,7 @@ impl<'a, H: 'a + Host> From<StoppedPluginAudioProcessor<H>> for PluginAudioProce
 }
 
 pub struct StartedPluginAudioProcessor<H: Host> {
-    inner: Arc<PluginInstanceInner<H>>,
+    inner: Option<Arc<PluginInstanceInner<H>>>,
 }
 
 impl<H: Host> StartedPluginAudioProcessor<H> {
@@ -215,7 +215,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
             out_events: events_output.as_raw_mut() as *mut _,
         };
 
-        let instance = self.inner.raw_instance();
+        let instance = self.inner.as_ref().unwrap().raw_instance();
 
         let status = ProcessStatus::from_raw(unsafe {
             (instance.process.ok_or(HostError::NullProcessFunction)?)(instance, &process)
@@ -228,16 +228,17 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn stop_processing(self) -> StoppedPluginAudioProcessor<H> {
+    pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<H> {
+        let inner = self.inner.take().unwrap();
         // SAFETY: this is called on the audio thread
-        unsafe { self.inner.stop_processing() };
+        unsafe { inner.stop_processing() };
 
-        StoppedPluginAudioProcessor { inner: self.inner }
+        StoppedPluginAudioProcessor { inner }
     }
 
     #[inline]
     pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
-        self.inner.wrapper().shared()
+        self.inner.as_ref().unwrap().wrapper().shared()
     }
 
     #[inline]
@@ -245,7 +246,15 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { self.inner.wrapper().audio_processor().unwrap().as_ref() }
+        unsafe {
+            self.inner
+                .as_ref()
+                .unwrap()
+                .wrapper()
+                .audio_processor()
+                .unwrap()
+                .as_ref()
+        }
     }
 
     #[inline]
@@ -253,17 +262,36 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { self.inner.wrapper().audio_processor().unwrap().as_mut() }
+        unsafe {
+            self.inner
+                .as_ref()
+                .unwrap()
+                .wrapper()
+                .audio_processor()
+                .unwrap()
+                .as_mut()
+        }
     }
 
     #[inline]
     pub fn shared_plugin_handle(&mut self) -> PluginSharedHandle {
-        PluginSharedHandle::new((self.inner.raw_instance() as *const _) as *mut _)
+        PluginSharedHandle::new((self.inner.as_ref().unwrap().raw_instance() as *const _) as *mut _)
     }
 
     #[inline]
     pub fn audio_processor_plugin_handle(&mut self) -> PluginAudioProcessorHandle {
-        PluginAudioProcessorHandle::new((self.inner.raw_instance() as *const _) as *mut _)
+        PluginAudioProcessorHandle::new(
+            (self.inner.as_ref().unwrap().raw_instance() as *const _) as *mut _,
+        )
+    }
+}
+
+impl<H: Host> Drop for StartedPluginAudioProcessor<H> {
+    fn drop(&mut self) {
+        if let Some(inner) = self.inner.take() {
+            // SAFETY: this is called on the audio thread
+            unsafe { inner.stop_processing() };
+        }
     }
 }
 
@@ -283,7 +311,9 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     ) -> Result<StartedPluginAudioProcessor<H>, ProcessingStartError<H>> {
         // SAFETY: this is called on the audio thread
         match unsafe { self.inner.start_processing() } {
-            Ok(()) => Ok(StartedPluginAudioProcessor { inner: self.inner }),
+            Ok(()) => Ok(StartedPluginAudioProcessor {
+                inner: Some(self.inner),
+            }),
             Err(_) => Err(ProcessingStartError { processor: self }),
         }
     }
