@@ -20,9 +20,16 @@ pub struct CpalAudioOutputBuffers {
 
 impl CpalAudioOutputBuffers {
     pub fn from_config(config: FullAudioConfig) -> Self {
+        if config.output_channel_count > 2 {
+            panic!(
+                "Unsupported {}-channel layout: this example only supports mono or stereo output.",
+                config.output_channel_count
+            )
+        }
+
         let total_input_channel_count = config.plugin_input_port_config.total_channel_count();
         let total_output_channel_count = config.plugin_output_port_config.total_channel_count();
-        let frame_count = config.buffer_size as usize;
+        let frame_count = config.max_buffer_size as usize;
 
         Self {
             input_ports: AudioPorts::with_capacity(
@@ -137,15 +144,32 @@ impl CpalAudioOutputBuffers {
     pub fn write_to<S: FromSample<f32>>(&mut self, destination: &mut [S]) {
         let main_output = &self.output_port_channels
             [self.config.plugin_output_port_config.main_port_index as usize];
+        let muxed = &mut self.muxed[..destination.len()];
 
-        // TODO: handle channels mismatched
-        mux(
-            main_output,
-            &mut self.muxed,
-            self.config.output_channel_count as usize,
-        );
+        let plugin_output_channel_count = self
+            .config
+            .plugin_output_port_config
+            .main_port()
+            .port_layout
+            .channel_count();
 
-        for (out, muxed) in destination.iter_mut().zip(&self.muxed) {
+        match (
+            plugin_output_channel_count,
+            self.config.output_channel_count,
+        ) {
+            // Mono-to-mono: we do a simple copy
+            (1, 1) => muxed.copy_from_slice(main_output),
+            // Stereo (or anything)-to-mono: we'll mix all the channels down to mono
+            (n, 1) => mix_mono(main_output, muxed, n as usize),
+            // Mono-to-Stereo: use the same samples for each channel
+            (1, 2) => mono_to_multi(main_output, muxed, 2),
+            // Stereo-to-stereo: Mux. If there are more source channels, we'll take only the first two.
+            (_, 2) => mux(main_output, muxed, 2),
+
+            (_, _) => unreachable!(),
+        }
+
+        for (out, muxed) in destination.iter_mut().zip(muxed) {
             *out = muxed.to_sample();
         }
     }
@@ -162,6 +186,31 @@ fn mux(channels_buffer: &[f32], output: &mut [f32], channel_count: usize) {
         let position = (channel_number * single_channel_len) + channel_buffer_index;
 
         *output_sample = channels_buffer[position]
+    }
+}
+
+fn mix_mono(channels_buffer: &[f32], mono_output: &mut [f32], channel_count: usize) {
+    assert!(channel_count > 0);
+    assert!(channels_buffer.len() >= mono_output.len() * channel_count);
+
+    let single_channel_len = channels_buffer.len() / channel_count;
+    for (index, output_sample) in mono_output.iter_mut().enumerate() {
+        let mut total = 0.0;
+        for channel_number in 0..channel_count {
+            let position = (channel_number * single_channel_len) + index;
+            total += channels_buffer[position]
+        }
+        *output_sample = total / (channel_count as f32);
+    }
+}
+
+fn mono_to_multi(mono_input: &[f32], multi_output: &mut [f32], channel_count: usize) {
+    assert!(channel_count > 0);
+
+    for (output_samples, input_sample) in
+        multi_output.chunks_exact_mut(channel_count).zip(mono_input)
+    {
+        output_samples.fill(*input_sample)
     }
 }
 

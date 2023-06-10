@@ -6,6 +6,7 @@ use cpal::{
     BuildStreamError, Device, FromSample, OutputCallbackInfo, SampleFormat, Stream, StreamConfig,
 };
 use std::error::Error;
+use std::time::Instant;
 
 mod buffers;
 mod config;
@@ -134,13 +135,13 @@ impl StreamAudioProcessor {
             &events,
             &mut OutputEvents::void(),
             self.steady_counter,
-            None,
+            Some(sample_count),
             None,
         ) {
             Ok(_) => self.buffers.write_to(data),
-            Err(e) => return eprintln!("{e}"),
+            Err(e) => eprintln!("{e}"),
         }
 
-        self.steady_counter += data.len() as i64;
+        self.steady_counter += sample_count as i64;
     }
 }

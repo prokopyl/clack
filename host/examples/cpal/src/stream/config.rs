@@ -248,7 +248,8 @@ pub struct FullAudioConfig {
     pub plugin_input_port_config: AudioPortsConfig,
     pub plugin_output_port_config: AudioPortsConfig,
     pub output_channel_count: usize,
-    pub buffer_size: u32,
+    pub min_buffer_size: u32,
+    pub max_buffer_size: u32,
     pub sample_rate: u32,
     pub sample_format: SampleFormat,
 }
@@ -273,7 +274,7 @@ impl FullAudioConfig {
     pub fn as_cpal_stream_config(&self) -> StreamConfig {
         StreamConfig {
             channels: self.output_channel_count as u16,
-            buffer_size: BufferSize::Fixed(self.buffer_size),
+            buffer_size: BufferSize::Fixed(self.max_buffer_size),
             sample_rate: SampleRate(self.sample_rate),
         }
     }
@@ -281,7 +282,7 @@ impl FullAudioConfig {
     pub fn as_clack_plugin_config(&self) -> PluginAudioConfiguration {
         PluginAudioConfiguration {
             sample_rate: self.sample_rate as f64,
-            frames_count_range: self.sample_rate..=self.sample_rate,
+            frames_count_range: self.min_buffer_size..=self.max_buffer_size,
         }
     }
 }
@@ -290,10 +291,11 @@ impl Display for FullAudioConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} channels at {:.1}kHz, with buffer length of {}, fed from plugin's \"{}\" port ({})",
+            "{} channels at {:.1}kHz, with buffer length of {}-{}, fed from plugin's \"{}\" port ({})",
             self.output_channel_count,
             self.sample_rate as f64 / 1_000.0,
-            self.buffer_size,
+            self.min_buffer_size,
+            self.max_buffer_size,
             &self.plugin_output_port_config.main_port().name,
             self.plugin_output_port_config.main_port().port_layout
         )
@@ -315,14 +317,15 @@ pub fn find_matching_output_config(
         .or_else(|| ordered_stream_configs.first())
         .expect("No config supported by output device");
 
-    let buffer_size = match best_stream_config.buffer_size() {
-        SupportedBufferSize::Range { min, max } => 1024.clamp(*min, *max),
-        SupportedBufferSize::Unknown => 1024,
+    let (min_buffer_size, max_buffer_size) = match best_stream_config.buffer_size() {
+        SupportedBufferSize::Range { min, max } => (*min, 1024.clamp(*min, *max)),
+        SupportedBufferSize::Unknown => (1, 1024),
     };
 
     FullAudioConfig {
         output_channel_count: best_stream_config.channels() as usize,
-        buffer_size,
+        min_buffer_size,
+        max_buffer_size,
         sample_rate: 44_100.clamp(
             best_stream_config.min_sample_rate().0,
             best_stream_config.max_sample_rate().0,

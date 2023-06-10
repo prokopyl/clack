@@ -89,7 +89,7 @@ impl<'a> HostShared<'a> for CpalHostShared<'a> {
 }
 
 pub struct CpalHostMainThread<'a> {
-    shared: &'a CpalHostShared<'a>,
+    _shared: &'a CpalHostShared<'a>,
     plugin: Option<PluginMainThreadHandle<'a>>,
     timer_support: Option<&'a PluginTimer>,
     timers: Timers,
@@ -99,7 +99,7 @@ pub struct CpalHostMainThread<'a> {
 impl<'a> CpalHostMainThread<'a> {
     fn new(shared: &'a CpalHostShared) -> Self {
         Self {
-            shared,
+            _shared: shared,
             plugin: None,
             timer_support: None,
             timers: Timers::new(),
@@ -293,15 +293,14 @@ fn run_gui_embedded(
         }
 
         match event {
-            Event::WindowEvent { event, window_id } => match event {
+            Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => {
-                    println!("Received close {window_id:?}");
+                    println!("Plugin window closed, stopping.");
                     instance.main_thread_host_data_mut().destroy_gui();
                     window.take(); // Drop the window
                     return;
                 }
                 WindowEvent::Destroyed => {
-                    println!("Received destroyed");
                     control_flow.set_exit();
                     return;
                 }
