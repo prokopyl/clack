@@ -25,6 +25,7 @@ impl<'a> OutputAudioPortInfo<'a> {
         self.buffer.constant_mask & (1 << channel_index) != 0
     }
 
+    // TODO: use ConstantMask
     #[inline]
     pub fn channel_constants(&self) -> impl Iterator<Item = bool> + '_ {
         (0..self.channel_count()).map(|c| self.is_channel_constant(c))

@@ -51,12 +51,12 @@ impl<'a> HostLogImpl for CpalHostShared<'a> {
 }
 
 impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
-    fn is_rescan_flag_supported(&self, flag: RescanType) -> bool {
-        true
+    fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
+        false
     }
 
-    fn rescan(&mut self, flag: RescanType) {
-        todo!()
+    fn rescan(&mut self, _flag: RescanType) {
+        // We don't support audio ports changing on the fly
     }
 }
 
@@ -64,8 +64,6 @@ enum MainThreadMessage {
     RunOnMainThread,
     GuiClosed { was_destroyed: bool },
     GuiRequestResized { new_size: GuiSize },
-    WindowClosing,
-    Tick,
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
@@ -76,7 +74,7 @@ impl<'a> HostShared<'a> for CpalHostShared<'a> {
     }
 
     fn request_restart(&self) {
-        todo!()
+        // We don't support restarting plugins
     }
 
     fn request_process(&self) {
@@ -160,24 +158,22 @@ impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
 }
 
 impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
-    fn rescan(&mut self, flags: ParamRescanFlags) {
-        // todo!()
+    fn rescan(&mut self, _flags: ParamRescanFlags) {
+        // We don't track param values at all
     }
 
-    fn clear(&mut self, param_id: u32, flags: ParamClearFlags) {
-        todo!()
-    }
+    fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
 }
 
 impl<'a> HostParamsImplShared for CpalHostShared<'a> {
     fn request_flush(&self) {
-        todo!()
+        // Can never flush events when not processing: we're never not processing
     }
 }
 
 impl<'a> HostGuiImpl for CpalHostShared<'a> {
     fn resize_hints_changed(&self) {
-        // todo!()
+        // We don't support any resize hints
     }
 
     fn request_resize(&self, new_size: GuiSize) -> Result<(), GuiError> {
@@ -247,7 +243,7 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// TODO: not properly tested
+// Note: not very-well tested
 fn run_gui_floating(
     mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
@@ -262,7 +258,7 @@ fn run_gui_floating(
     for message in receiver {
         match message {
             MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-            MainThreadMessage::GuiClosed { was_destroyed } => {
+            MainThreadMessage::GuiClosed { .. } => {
                 println!("Window closed!");
                 break;
             }
@@ -314,11 +310,6 @@ fn run_gui_embedded(
 
                     window.as_mut().unwrap().set_inner_size(new_size);
                 }
-                // TODO: handle those messages too
-                MainThreadMessage::WindowClosing => {
-                    println!("Window closed!");
-                    break;
-                }
                 _ => {}
             }
         }
@@ -364,6 +355,9 @@ fn run_gui_embedded(
                 .unwrap_or(Duration::from_millis(60)),
         );
     });
+
+    // Just to let any eventual background thread properly close (looking at you JUCE)
+    std::thread::sleep(Duration::from_millis(100));
 
     Ok(())
 }

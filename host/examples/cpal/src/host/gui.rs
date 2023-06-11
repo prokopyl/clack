@@ -1,6 +1,7 @@
 use clack_extensions::gui::{GuiApiType, GuiError, GuiSize, PluginGui, Window as ClapWindow};
 use clack_host::prelude::*;
 use std::error::Error;
+use std::ffi::CStr;
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::{Window, WindowBuilder};
@@ -98,6 +99,10 @@ impl<'a> Gui<'a> {
     pub fn open_floating(&mut self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
         let Some((api, true)) = self.compatible_api else { panic!("Called open_floating on incompatible plugin") };
         self.gui.create(plugin, api, true)?;
+        self.gui.suggest_title(
+            plugin,
+            CStr::from_bytes_with_nul(b"Clack CPAL plugin!\0").unwrap(),
+        );
         self.gui.show(plugin)?;
 
         Ok(())
@@ -134,7 +139,8 @@ impl<'a> Gui<'a> {
             .build(event_loop)?;
 
         gui.set_parent(plugin, &ClapWindow::from_window(&window).unwrap())?;
-        gui.show(plugin)?;
+        // Some plugins don't show anything until this is called, others return an error.
+        let _ = gui.show(plugin);
         self.is_open = true;
 
         Ok(window)

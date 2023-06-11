@@ -1,8 +1,8 @@
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
-use directories::BaseDirs;
 use rayon::prelude::*;
 use std::error::Error;
+use std::ffi::{OsStr, OsString};
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
@@ -48,8 +48,29 @@ pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
 fn standard_clap_paths() -> Vec<PathBuf> {
     let mut paths = vec![];
 
-    if let Some(dirs) = BaseDirs::new() {
-        paths.push(dirs.home_dir().join(".clap"))
+    if let Some(home_dir) = dirs::home_dir() {
+        paths.push(home_dir.join(".clap"));
+
+        #[cfg(target_os = "macos")]
+        {
+            paths.push(home_dir.join("Library/Audio/Plug-Ins/CLAP"));
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        if let Some(val) = std::env::var_os("CommonProgramFiles") {
+            paths.push(PathBuf::from(val).join("CLAP"))
+        }
+
+        if let Some(dir) = dirs::config_local_dir() {
+            paths.push(dir.join("Programs\\Common\\CLAP"));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        paths.push(PathBuf::from("/Library/Audio/Plug-Ins/CLAP"));
     }
 
     #[cfg(target_family = "unix")]
@@ -57,7 +78,24 @@ fn standard_clap_paths() -> Vec<PathBuf> {
         paths.push("/usr/lib/clap".into())
     }
 
-    // TODO: windows, macOS, ENV
+    #[cfg(target_family = "unix")]
+    fn split_path(path: &OsStr) -> impl Iterator<Item = OsString> + '_ {
+        use std::os::unix::ffi::OsStrExt;
+        path.as_bytes()
+            .split(|c| *c == b':')
+            .map(|bytes| OsStr::from_bytes(bytes).to_os_string())
+    }
+
+    #[cfg(target_os = "windows")]
+    fn split_path(path: &OsStr) -> impl Iterator<Item = OsString> + '_ {
+        use std::os::windows::ffi::*;
+        let buf: Vec<u16> = path.encode_wide().collect();
+        buf.split(|c| *c == b';').map(OsString::from_wide)
+    }
+
+    if let Some(env_var) = std::env::var_os("CLAP_PATH") {
+        paths.extend(split_path(&env_var).map(PathBuf::from))
+    }
 
     paths
 }
@@ -190,8 +228,7 @@ pub fn load_plugin_id_from_path(
     Ok(plugin_factory
         .plugin_descriptors()
         .filter_map(PluginDescriptor::try_from)
-        .filter(|p| p.id == id)
-        .next()
+        .find(|p| p.id == id)
         .map(|plugin| FoundBundlePlugin {
             plugin,
             bundle,

@@ -9,10 +9,10 @@ clack-extensions = { path = "../../../extensions", features = ["clack-host", "au
 cpal = "0.15.2"
 crossbeam-channel = "0.5.8"
 clap = { version = "4.3.0", features = ["derive"] }
-directories = "5.0.1"
+dirs = "5.0.1"
 midir = "0.9.1"
 rayon = "1.7.0"
 rtrb = "0.2.3"
 walkdir = "2.3.3"
-winit = { version = "0.28.6", features = ["x11"] }
+winit = { version = "0.28.6", default-features = false,  features = ["x11"] }
 wmidi = "4.0.6"

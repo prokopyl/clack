@@ -1,9 +1,12 @@
-use clack_host::events::event_types::{NoteChokeEvent, NoteEvent, NoteOffEvent, NoteOnEvent};
+use clack_host::events::event_types::{
+    MidiEvent, NoteChokeEvent, NoteEvent, NoteOffEvent, NoteOnEvent,
+};
 use clack_host::events::{Event, EventFlags};
 use clack_host::prelude::{EventBuffer, EventHeader, InputEvents};
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rtrb::{Consumer, RingBuffer};
 use std::error::Error;
+use std::io::Read;
 use wmidi::{MidiMessage, Velocity};
 
 struct MidiEventMessage {
@@ -151,6 +154,18 @@ fn push_midi_to_buffer(message: MidiMessage, timestamp: u32, buffer: &mut EventB
                 .as_unknown(),
             );
         }
-        _ => {}
+        m => {
+            let mut buf = [0; 3];
+            if m.copy_to_slice(&mut buf).is_ok() {
+                buffer.push(
+                    MidiEvent::new(
+                        EventHeader::new_core(timestamp, EventFlags::IS_LIVE),
+                        0,
+                        buf,
+                    )
+                    .as_unknown(),
+                )
+            }
+        }
     }
 }
