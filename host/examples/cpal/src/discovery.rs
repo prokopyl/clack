@@ -79,7 +79,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
     }
 
     #[cfg(target_family = "unix")]
-    fn split_path(path: &OsStr) -> impl Iterator<Item = OsString> + '_ {
+    fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
         use std::os::unix::ffi::OsStrExt;
         path.as_bytes()
             .split(|c| *c == b':')
@@ -87,14 +87,16 @@ fn standard_clap_paths() -> Vec<PathBuf> {
     }
 
     #[cfg(target_os = "windows")]
-    fn split_path(path: &OsStr) -> impl Iterator<Item = OsString> + '_ {
+    fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
         use std::os::windows::ffi::*;
         let buf: Vec<u16> = path.encode_wide().collect();
-        buf.split(|c| *c == b';'.into()).map(OsString::from_wide)
+        buf.split(|c| *c == b';'.into())
+            .map(OsString::from_wide)
+            .collect::<Vec<_>>()
     }
 
     if let Some(env_var) = std::env::var_os("CLAP_PATH") {
-        paths.extend(split_path(&env_var).map(PathBuf::from))
+        paths.extend(split_path(&env_var).into_iter().map(PathBuf::from))
     }
 
     paths
