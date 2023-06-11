@@ -62,7 +62,7 @@ impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
 
 enum MainThreadMessage {
     RunOnMainThread,
-    GuiClosed { was_destroyed: bool },
+    GuiClosed,
     GuiRequestResized { new_size: GuiSize },
 }
 
@@ -191,10 +191,8 @@ impl<'a> HostGuiImpl for CpalHostShared<'a> {
         Ok(())
     }
 
-    fn closed(&self, was_destroyed: bool) {
-        self.sender
-            .send(MainThreadMessage::GuiClosed { was_destroyed })
-            .unwrap();
+    fn closed(&self, _was_destroyed: bool) {
+        self.sender.send(MainThreadMessage::GuiClosed).unwrap();
     }
 }
 

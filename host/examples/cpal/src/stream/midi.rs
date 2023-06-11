@@ -6,7 +6,6 @@ use clack_host::prelude::{EventBuffer, EventHeader, InputEvents};
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rtrb::{Consumer, RingBuffer};
 use std::error::Error;
-use std::io::Read;
 use wmidi::{MidiMessage, Velocity};
 
 struct MidiEventMessage {
