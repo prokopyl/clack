@@ -90,7 +90,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
     fn split_path(path: &OsStr) -> impl Iterator<Item = OsString> + '_ {
         use std::os::windows::ffi::*;
         let buf: Vec<u16> = path.encode_wide().collect();
-        buf.split(|c| *c == b';').map(OsString::from_wide)
+        buf.split(|c| *c == b';'.into()).map(OsString::from_wide)
     }
 
     if let Some(env_var) = std::env::var_os("CLAP_PATH") {
