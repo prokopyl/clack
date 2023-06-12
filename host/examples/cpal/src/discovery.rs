@@ -7,12 +7,18 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
 
+/// The descriptor of a plugin that was found, alongside the bundle it was loaded from, as well
+/// as its path.
 pub struct FoundBundlePlugin {
-    pub bundle: PluginBundle,
-    pub path: PathBuf,
+    /// The plugin's descriptor.
     pub plugin: PluginDescriptor,
+    /// The bundle the descriptor was loaded from.
+    pub bundle: PluginBundle,
+    /// The path of the bundle's file.
+    pub path: PathBuf,
 }
 
+/// Scans the CLAP standard paths for all the plugin descriptors that match the given ID.
 pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
     let standard_paths = standard_clap_paths();
 
@@ -21,30 +27,13 @@ pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
         println!("\t - {}", path.display())
     }
 
-    let found_bundles = walk_paths(&standard_paths);
+    let found_bundles = search_for_potential_bundles(&standard_paths);
     println!("\t * Found {} potential CLAP bundles.", found_bundles.len());
 
     scan_plugins(&found_bundles, id)
 }
 
-//
-// Linux
-//   - ~/.clap
-//   - /usr/lib/clap
-//
-// Windows
-//   - %COMMONPROGRAMFILES%\CLAP
-//   - %LOCALAPPDATA%\Programs\Common\CLAP
-//
-// MacOS
-//   - /Library/Audio/Plug-Ins/CLAP
-//   - ~/Library/Audio/Plug-Ins/CLAP
-//
-// In addition to the OS-specific default locations above, a CLAP host must query the environment
-// for a CLAP_PATH variable, which is a list of directories formatted in the same manner as the host
-// OS binary search path (PATH on Unix, separated by `:` and Path on Windows, separated by ';', as
-// of this writing).
-//
+/// Returns a list of all the standard CLAP search paths, per the CLAP specification.
 fn standard_clap_paths() -> Vec<PathBuf> {
     let mut paths = vec![];
 
@@ -78,6 +67,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
         paths.push("/usr/lib/clap".into())
     }
 
+    /// Splits a PATH-like variable
     #[cfg(target_family = "unix")]
     fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
         use std::os::unix::ffi::OsStrExt;
@@ -86,6 +76,7 @@ fn standard_clap_paths() -> Vec<PathBuf> {
             .map(|bytes| OsStr::from_bytes(bytes).to_os_string())
     }
 
+    /// Splits a PATH-like variable
     #[cfg(target_os = "windows")]
     fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
         use std::os::windows::ffi::*;
@@ -102,11 +93,16 @@ fn standard_clap_paths() -> Vec<PathBuf> {
     paths
 }
 
+/// Returns `true` if the given entry could refer to a CLAP bundle.
+///
+/// CLAP bundles are files that end with the `.clap` extension.
 fn is_clap_bundle(dir_entry: &DirEntry) -> bool {
     dir_entry.file_type().is_file() && dir_entry.file_name().to_string_lossy().ends_with(".clap")
 }
 
-fn walk_paths(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
+/// Search the given directories' contents, and returns a list of all the files that could be CLAP
+/// bundles.
+fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
     search_dirs
         .iter()
         .flat_map(|path| {
@@ -119,6 +115,7 @@ fn walk_paths(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
         .collect()
 }
 
+/// Loads all of the given bundles, and returns a list of all the plugins that match the given ID.
 fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
@@ -126,6 +123,8 @@ fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugi
         .collect()
 }
 
+/// Scans a given bundle, looking for a plugin matching the given ID.
+/// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
 fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
     let Ok(bundle) = PluginBundle::load(path) else { return None; };
     for plugin in bundle.get_plugin_factory()?.plugin_descriptors() {
@@ -143,14 +142,23 @@ fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
     None
 }
 
+/// Simple description of a plugin.
+///
+/// This is a simplified and owned version of Clack's `PluginDescriptor`.
 #[derive(Debug)]
 pub struct PluginDescriptor {
+    /// The ID of the plugin.
     pub id: String,
+    /// (Optional) the user-friendly name of this plugin.
     pub name: Option<String>,
+    /// (Optional) the version of this plugin.
     pub version: Option<String>,
 }
 
 impl PluginDescriptor {
+    /// Reads the description from a given plugin descriptor.
+    ///
+    /// If the plugin somehow doesn't have a valid ID, this returns `None`.
     pub fn try_from(p: clack_host::factory::PluginDescriptor) -> Option<Self> {
         Some(PluginDescriptor {
             id: p.id()?.to_str().ok()?.to_string(),
@@ -197,9 +205,12 @@ pub fn list_plugins_in_bundle(
         .collect())
 }
 
+/// Errors that happened during discovery.
 #[derive(Debug)]
 pub enum DiscoveryError {
+    /// Unable to load a CLAP bundle.
     LoadError(PluginBundleError),
+    /// The CLAP bundle has no plugin factory.
     MissingPluginFactory,
 }
 
@@ -220,6 +231,7 @@ impl Display for DiscoveryError {
 
 impl Error for DiscoveryError {}
 
+/// Loads a specific ID from a specific bundle's path.
 pub fn load_plugin_id_from_path(
     bundle_path: &Path,
     id: &str,

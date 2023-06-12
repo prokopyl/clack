@@ -1,32 +1,62 @@
+#![doc = include_str!("../README.md")]
+#![deny(missing_docs, clippy::missing_docs_in_private_items)]
+
+/// Procedures for discovering and loading CLAP plugin bundles.
 mod discovery;
+/// The host implementation in itself, for actually running a plugin.
 mod host;
-mod stream;
 
 use clap::Parser;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
+use std::process::exit;
 
+/// A simple CLI host to load and run a single CLAP plugin.
+///
+/// At least one of the `--plugin-id` (`-p`) or the `--bundle-path` (`-b`) parameters *must* be used
+/// to specify which plugin to load.
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(about, long_about)]
 struct Cli {
-    #[arg(short = 'f')]
-    bundle_file: Option<PathBuf>,
-    #[arg(short = 'p')]
+    /// Loads the plugin found in the CLAP bundle at the given path.
+    ///
+    /// If the bundle contains multiple plugins, this should be used in conjunction with the
+    /// `--plugin-id` (`-p`) parameter to specify which one to load.
+    #[arg(short = 'f', long = "bundle-path")]
+    bundle_path: Option<PathBuf>,
+    /// Loads the CLAP plugin with the given unique ID.
+    ///
+    /// This will start to scan the filesystem in the standard CLAP paths, and load all CLAP bundles
+    /// found in those paths to search for the plugin matching the given ID.
+    ///
+    /// If multiple plugins matching the given ID were found on the filesystem, this should be used
+    /// in conjunction with the `--bundle-path` (`-b`) parameter to specify which file to load the
+    /// plugin from.
+    #[arg(short = 'p', long = "plugin-id")]
     plugin_id: Option<String>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let args = Cli::parse();
 
-    match (&args.bundle_file, &args.plugin_id) {
-        (Some(f), None) => run_from_path(f),
-        (None, Some(p)) => run_from_id(p),
-        (Some(f), Some(p)) => run_specific(f, p),
+    // Select the loading strategy depending on the given arguments
+    let result = match (&args.bundle_path, &args.plugin_id) {
+        (Some(path), None) => run_from_path(path),
+        (None, Some(id)) => run_from_id(id),
+        (Some(path), Some(id)) => run_specific(path, id),
         (None, None) => Err(MainError::UnspecifiedOptions.into()),
+    };
+
+    if let Err(e) = result {
+        eprintln!("{e}");
+        exit(1);
     }
 }
 
+/// Loads the plugin contained in a bundle, given through its path.
+///
+/// Returns an error if there is more than one plugin in the bundle.
 fn run_from_path(path: &Path) -> Result<(), Box<dyn Error>> {
     let plugins = discovery::list_plugins_in_bundle(path)?;
 
@@ -52,6 +82,9 @@ fn run_from_path(path: &Path) -> Result<(), Box<dyn Error>> {
     }
 }
 
+/// Scans the filesystem to find a plugin with a given ID.
+///
+/// Returns an error if there is more than one plugin with this ID on the system.
 fn run_from_id(id: &str) -> Result<(), Box<dyn Error>> {
     let plugins = discovery::scan_for_plugin_id(id);
 
@@ -73,6 +106,9 @@ fn run_from_id(id: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
+/// Loads a specific plugin matching the given ID, from a specific bundle's path.
+///
+/// Returns an error if that specific plugin isn't present in the bundle file.
 fn run_specific(path: &Path, id: &str) -> Result<(), Box<dyn Error>> {
     let bundle = discovery::load_plugin_id_from_path(path, id)?;
 
@@ -83,13 +119,20 @@ fn run_specific(path: &Path, id: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
+/// Errors raised here.
 #[derive(Clone, Debug)]
 enum MainError {
+    /// No options were given through the CLI. At least one is needed to know which plugin to load.
     UnspecifiedOptions,
+    /// There is no CLAP plugin in the bundle at this path.
     NoPluginInPath(PathBuf),
+    /// No CLAP plugin with the given ID was found in the filesystem.
     NoPluginWithId(String),
+    /// No CLAP plugin with the given ID was found in the bundle at the given path.
     NoPluginInPathWithId(PathBuf, String),
+    /// There are multiple plugins in the given bundle, user needs to decide which one to load.
     MultiplePluginsInPath(PathBuf),
+    /// There are multiple plugins with the given ID in the filesystem, user needs to decide which one to load.
     MultiplePluginsWithId(String),
 }
 

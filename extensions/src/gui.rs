@@ -285,6 +285,24 @@ impl GuiSize {
     }
 }
 
+/// A configuration for a plugin GUI.
+///
+/// This is used to negotiate and specify how a plugin's GUI should be setup between the plugin
+/// and the host.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct GuiConfiguration<'a> {
+    /// The type of GUI to use.
+    pub api_type: GuiApiType<'a>,
+    /// Whether or not the GUI window should be floating.
+    ///
+    /// If this is `true`, the plugin's will create its own window floating above the host's.
+    /// That window will be managed entirely by the plugin, with little to no control from the host.
+    ///
+    /// If this is `false`, the plugin's GUI will be embedded into a window provided by the host.
+    /// The host will have full control over the window.
+    pub is_floating: bool,
+}
+
 /// A type of GUI API used to display windows to the user.
 ///
 /// This is a simple wrapper around a C string constant, which can hold custom values as well as

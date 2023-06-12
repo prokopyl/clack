@@ -1,24 +1,39 @@
-use crate::stream::config::FullAudioConfig;
+use crate::host::audio::config::FullAudioConfig;
 use clack_host::prelude::{
     AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
     OutputAudioBuffers,
 };
 use cpal::{FromSample, Sample};
 
-pub struct CpalAudioOutputBuffers {
+/// Holds ll of the audio buffer this host will have to deal with.
+pub struct HostAudioBuffers {
+    /// The audio configuration these buffers will be based on.
     config: FullAudioConfig,
 
+    /// Buffers for the plugin's input ports information.
     input_ports: AudioPorts,
+    /// Buffers for the plugin's output ports information.
     output_ports: AudioPorts,
 
+    /// List of channel buffers for each input port.
+    ///
+    /// Note that all buffers for each channel are laid out continuously in a single allocation.
     input_port_channels: Box<[Vec<f32>]>,
+    /// List of channel buffers for each output port.
+    ///
+    /// Note that all buffers for each channel are laid out continuously in a single allocation.
     output_port_channels: Box<[Vec<f32>]>,
 
+    /// The mixed or muxed output data, ready to be sent to CPAL's interleaved buffer.
     muxed: Vec<f32>,
+
+    /// The actual size of the channel buffers. This may differ from the initial configuraiton, as
+    /// CPAL can still request any buffer size.
     actual_frame_count: usize,
 }
 
-impl CpalAudioOutputBuffers {
+impl HostAudioBuffers {
+    /// Initialises the audio buffers for the given audio configuration.
     pub fn from_config(config: FullAudioConfig) -> Self {
         if config.output_channel_count > 2 {
             panic!(
@@ -29,7 +44,7 @@ impl CpalAudioOutputBuffers {
 
         let total_input_channel_count = config.plugin_input_port_config.total_channel_count();
         let total_output_channel_count = config.plugin_output_port_config.total_channel_count();
-        let frame_count = config.max_buffer_size as usize;
+        let frame_count = config.max_likely_buffer_size as usize;
 
         Self {
             input_ports: AudioPorts::with_capacity(
@@ -58,11 +73,12 @@ impl CpalAudioOutputBuffers {
         }
     }
 
-    pub fn ensure_buffer_size_matches(&mut self, total_buffer_size: usize) {
-        // println!("{}", total_buffer_size);
-        let current_frame_count = self.cpal_buf_len_to_sample_count(total_buffer_size);
+    /// Ensure the internal buffer sizes match the given size of the actual CPAL buffer before
+    /// processing.
+    pub fn ensure_buffer_size_matches(&mut self, cpal_buffer_size: usize) {
+        let current_frame_count = self.cpal_buf_len_to_frame_count(cpal_buffer_size);
 
-        if self.actual_frame_count < current_frame_count {
+        if current_frame_count > self.actual_frame_count {
             println!("Warn: Expected buffer of length {} at most, but CPAL provided buffer of length {}. Reallocating.", self.actual_frame_count, current_frame_count);
             self.actual_frame_count = current_frame_count;
 
@@ -93,15 +109,18 @@ impl CpalAudioOutputBuffers {
         }
     }
 
-    pub fn cpal_buf_len_to_sample_count(&self, buf_len: usize) -> usize {
+    /// Returns the number of frames a CPAL buffer of a given length actually holds, depending
+    /// on the number of channels this has been configured with.
+    pub fn cpal_buf_len_to_frame_count(&self, buf_len: usize) -> usize {
         buf_len / self.config.output_channel_count
     }
 
-    pub fn plugin_buffers(
+    /// Prepares the plugin's input and output buffers.
+    pub fn prepare_plugin_buffers(
         &mut self,
         cpal_buf_len: usize,
     ) -> (InputAudioBuffers, OutputAudioBuffers) {
-        let sample_count = self.cpal_buf_len_to_sample_count(cpal_buf_len);
+        let sample_count = self.cpal_buf_len_to_frame_count(cpal_buf_len);
         assert!(sample_count <= self.actual_frame_count);
 
         // just in case
@@ -141,7 +160,9 @@ impl CpalAudioOutputBuffers {
         )
     }
 
-    pub fn write_to<S: FromSample<f32>>(&mut self, destination: &mut [S]) {
+    /// Writes the internal output buffer to the given CPAL buffer, also performing any downmixing
+    /// or interleaving if necessary.
+    pub fn write_to_cpal_buffer<S: FromSample<f32>>(&mut self, destination: &mut [S]) {
         let main_output = &self.output_port_channels
             [self.config.plugin_output_port_config.main_port_index as usize];
         let muxed = &mut self.muxed[..destination.len()];
@@ -175,6 +196,10 @@ impl CpalAudioOutputBuffers {
     }
 }
 
+/// Muxes (i.e. interleaves) the samples from the internal distinct channel buffers.
+///
+/// This means a buffer for two `l` and `r` channels containing `[l, l, l, r, r, r]` will result
+/// in having `[l, r, l, r, l, r]` in the output, as CPAL expects.
 fn mux(channels_buffer: &[f32], output: &mut [f32], channel_count: usize) {
     assert!(channels_buffer.len() >= output.len());
 
@@ -189,6 +214,7 @@ fn mux(channels_buffer: &[f32], output: &mut [f32], channel_count: usize) {
     }
 }
 
+/// Downmixes the given channels buffer to output a single mono channel.
 fn mix_mono(channels_buffer: &[f32], mono_output: &mut [f32], channel_count: usize) {
     assert!(channel_count > 0);
     assert!(channels_buffer.len() >= mono_output.len() * channel_count);
@@ -204,6 +230,8 @@ fn mix_mono(channels_buffer: &[f32], mono_output: &mut [f32], channel_count: usi
     }
 }
 
+/// Takes a mono input channel, and replicates it across multiple output channels.
+/// This works for mono-to-stereo, but also for any arbitrary amount of channels.
 fn mono_to_multi(mono_input: &[f32], multi_output: &mut [f32], channel_count: usize) {
     assert!(channel_count > 0);
 

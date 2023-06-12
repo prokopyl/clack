@@ -100,13 +100,13 @@ impl HostGui {
 #[allow(unused)]
 pub trait PluginGuiImpl {
     /// Indicate whether a particular API is supported.
-    fn is_api_supported(&self, api: GuiApiType, is_floating: bool) -> bool;
+    fn is_api_supported(&self, configuration: GuiConfiguration) -> bool;
 
     /// Provide a hint to the host if the plugin prefers to use an API (and/or float state).
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    fn get_preferred_api(&self) -> Option<(GuiApiType, bool)>;
+    fn get_preferred_api(&self) -> Option<GuiConfiguration>;
 
     /// Create and allocate all resources needed for the GUI
     ///
@@ -114,7 +114,7 @@ pub trait PluginGuiImpl {
     /// its window to stay above the parent window via [`Self::set_transient`].
     ///
     /// If `is_floating` is false, the plugin must embed its window in the parent (host).
-    fn create(&mut self, api: GuiApiType, is_floating: bool) -> Result<(), GuiError>;
+    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), GuiError>;
 
     /// Free all resources associated with the GUI
     fn destroy(&mut self);
@@ -212,7 +212,10 @@ where
         Ok(plugin
             .main_thread()
             .as_ref()
-            .is_api_supported(GuiApiType(CStr::from_ptr(api)), is_floating))
+            .is_api_supported(GuiConfiguration {
+                api_type: GuiApiType(CStr::from_ptr(api)),
+                is_floating,
+            }))
     })
     .unwrap_or(false)
 }
@@ -220,21 +223,24 @@ where
 unsafe extern "C" fn get_preferred_api<P: Plugin>(
     plugin: *const clap_plugin,
     api: *mut *const c_char,
-    is_floating: *mut bool,
+    floating: *mut bool,
 ) -> bool
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if api.is_null() || is_floating.is_null() {
+        if api.is_null() || floating.is_null() {
             return Err(PluginWrapperError::NulPtr("get_preferred_api output"));
         }
 
         match plugin.main_thread().as_ref().get_preferred_api() {
             None => Ok(false),
-            Some((preferred_api, wants_to_float)) => {
-                *api = preferred_api.0.as_ptr();
-                *is_floating = wants_to_float;
+            Some(GuiConfiguration {
+                api_type,
+                is_floating,
+            }) => {
+                *api = api_type.0.as_ptr();
+                *floating = is_floating;
 
                 Ok(true)
             }
@@ -255,7 +261,10 @@ where
         Ok(plugin
             .main_thread()
             .as_mut()
-            .create(GuiApiType(CStr::from_ptr(api)), is_floating)
+            .create(GuiConfiguration {
+                api_type: GuiApiType(CStr::from_ptr(api)),
+                is_floating,
+            })
             .is_ok())
     })
     .unwrap_or(false)

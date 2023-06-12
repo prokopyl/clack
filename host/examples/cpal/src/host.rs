@@ -1,14 +1,12 @@
 use crate::discovery::FoundBundlePlugin;
-use crate::host::gui::Gui;
-use crate::host::timer::Timers;
-use crate::stream::activate_to_stream;
+
 use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
-use clack_extensions::gui::{GuiError, GuiSize, HostGui, HostGuiImpl, PluginGui};
+use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_extensions::params::{
     HostParams, HostParamsImplMainThread, HostParamsImplShared, ParamClearFlags, ParamRescanFlags,
 };
-use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, TimerError, TimerId};
+use clack_extensions::timer::{HostTimer, PluginTimer};
 use clack_host::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
@@ -19,18 +17,62 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
+/// Audio related routines and utilities.
+mod audio;
+/// GUI handling.
 mod gui;
+/// A Timer implementation.
 mod timer;
 
+use audio::*;
+use gui::*;
+use timer::*;
+
+/// Messages that can be sent to the main thread from any of the plugin's threads.
+enum MainThreadMessage {
+    /// Request to run the "on_main_thread" callback.
+    RunOnMainThread,
+    /// Informs the host that the plugin's floating window has been closed.
+    GuiClosed,
+    /// The plugin requests that the window it's GUI is embedded in to be resized to a given size.
+    GuiRequestResized {
+        /// The size of the window the plugin's GUI would like to have.
+        new_size: GuiSize,
+    },
+}
+
+/// Our host implementation.
 pub struct CpalHost;
+
+impl Host for CpalHost {
+    type Shared<'a> = CpalHostShared<'a>;
+    type MainThread<'a> = CpalHostMainThread<'a>;
+    type AudioProcessor<'a> = ();
+
+    fn declare_extensions(builder: &mut HostExtensions<Self>, _shared: &Self::Shared<'_>) {
+        builder
+            .register::<HostLog>()
+            .register::<HostGui>()
+            .register::<HostTimer>()
+            .register::<HostParams>();
+    }
+}
+
+/// Data, accessible by all of the plugin's threads.
 pub struct CpalHostShared<'a> {
+    /// The sender side of the channel to the main thread.
     sender: Sender<MainThreadMessage>,
+    /// The plugin's own shared handle.
+    /// (this is unused in this example, but this is kept here for demonstration purposes).
     plugin: Option<PluginSharedHandle<'a>>,
+    /// A handle to the plugin's GUI extension, if it supports it.
     gui: Option<&'a PluginGui>,
+    /// A handle to the plugin's Audio Ports extension, if it supports it.
     audio_ports: Option<&'a PluginAudioPorts>,
 }
 
 impl<'a> CpalHostShared<'a> {
+    /// Initializes the shared data.
     fn new(sender: Sender<MainThreadMessage>) -> Self {
         Self {
             sender,
@@ -39,31 +81,6 @@ impl<'a> CpalHostShared<'a> {
             audio_ports: None,
         }
     }
-}
-
-impl<'a> HostLogImpl for CpalHostShared<'a> {
-    fn log(&self, severity: LogSeverity, message: &str) {
-        if severity.to_raw() <= LogSeverity::Debug.to_raw() {
-            return;
-        };
-        eprintln!("[{severity}] {message}")
-    }
-}
-
-impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
-    fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
-        false
-    }
-
-    fn rescan(&mut self, _flag: RescanType) {
-        // We don't support audio ports changing on the fly
-    }
-}
-
-enum MainThreadMessage {
-    RunOnMainThread,
-    GuiClosed,
-    GuiRequestResized { new_size: GuiSize },
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
@@ -88,15 +105,25 @@ impl<'a> HostShared<'a> for CpalHostShared<'a> {
     }
 }
 
+/// Data only accessible by the main thread.
 pub struct CpalHostMainThread<'a> {
+    /// A reference to shared host data.
+    /// (this is unused in this example, but this is kept here for demonstration purposes).
     _shared: &'a CpalHostShared<'a>,
+    /// A handle to the plugin's own main thread data.
     plugin: Option<PluginMainThreadHandle<'a>>,
+
+    /// A handle to the plugin's Timer extension, if it supports it.
+    /// This is placed here, since only the main thread will ever use that extension.
     timer_support: Option<&'a PluginTimer>,
+    /// The timer implementation.
     timers: Timers,
+    /// The GUI implementation, if supported.
     gui: Option<Gui<'a>>,
 }
 
 impl<'a> CpalHostMainThread<'a> {
+    /// Initializes the main thread data.
     fn new(shared: &'a CpalHostShared) -> Self {
         Self {
             _shared: shared,
@@ -105,29 +132,6 @@ impl<'a> CpalHostMainThread<'a> {
             timers: Timers::new(),
             gui: None,
         }
-    }
-
-    fn tick_timers(&mut self) {
-        let Some(timer) = self.timer_support else { return };
-        let plugin = self.plugin.as_mut().unwrap();
-
-        for triggered in self.timers.tick_all() {
-            timer.on_timer(plugin, triggered);
-        }
-    }
-
-    fn resize_gui(&mut self, size: PhysicalSize<u32>, scale_factor: f64) -> Size {
-        self.gui
-            .as_mut()
-            .unwrap()
-            .resize(size, scale_factor, self.plugin.as_mut().unwrap())
-    }
-
-    fn destroy_gui(&mut self) {
-        self.gui
-            .as_mut()
-            .unwrap()
-            .destroy(self.plugin.as_mut().unwrap())
     }
 }
 
@@ -143,73 +147,15 @@ impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
     }
 }
 
-impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
-    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, TimerError> {
-        Ok(self.timers.register_new(period_ms))
-    }
-
-    fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError> {
-        if self.timers.unregister(timer_id) {
-            Ok(())
-        } else {
-            Err(TimerError::UnregisterError)
-        }
-    }
-}
-
-impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
-    fn rescan(&mut self, _flags: ParamRescanFlags) {
-        // We don't track param values at all
-    }
-
-    fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
-}
-
-impl<'a> HostParamsImplShared for CpalHostShared<'a> {
-    fn request_flush(&self) {
-        // Can never flush events when not processing: we're never not processing
-    }
-}
-
-impl<'a> HostGuiImpl for CpalHostShared<'a> {
-    fn resize_hints_changed(&self) {
-        // We don't support any resize hints
-    }
-
-    fn request_resize(&self, new_size: GuiSize) -> Result<(), GuiError> {
-        self.sender
-            .send(MainThreadMessage::GuiRequestResized { new_size })
-            .map_err(|_| GuiError::RequestResizeError)
-    }
-
-    fn request_show(&self) -> Result<(), GuiError> {
-        // We never hide the window, so showing it again does nothing.
-        Ok(())
-    }
-
-    fn request_hide(&self) -> Result<(), GuiError> {
-        Ok(())
-    }
-
-    fn closed(&self, _was_destroyed: bool) {
-        self.sender.send(MainThreadMessage::GuiClosed).unwrap();
-    }
-}
-
-impl Host for CpalHost {
-    type Shared<'a> = CpalHostShared<'a>;
-    type MainThread<'a> = CpalHostMainThread<'a>;
-    type AudioProcessor<'a> = ();
-
-    fn declare_extensions(builder: &mut HostExtensions<Self>, _shared: &Self::Shared<'_>) {
-        builder
-            .register::<HostLog>()
-            .register::<HostGui>()
-            .register::<HostTimer>()
-            .register::<HostParams>();
-    }
-}
-
+/// Runs a given plugin.
+///
+/// This sets up everything, instantiates the plugin, and creates and connects the audio and MIDI
+/// streams.
+///
+/// If the plugin has a GUI this host supports, this opens its, and keeps the host and streams
+/// running until the window is closed.
+///
+/// Otherwise, the plugin runs headless, and will keep running until the process is killed.
 pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     let host_info = host_info();
     let plugin_id = CString::new(plugin.plugin.id.as_str())?;
@@ -241,6 +187,9 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Runs the UI in a floating-window mode.
+///
+/// This blocks until the window is closed.
 // Note: not very-well tested
 fn run_gui_floating(
     mut instance: PluginInstance<CpalHost>,
@@ -269,6 +218,9 @@ fn run_gui_floating(
     Ok(())
 }
 
+/// Runs the UI in an embedded-window mode.
+///
+/// This blocks until the window is closed.
 fn run_gui_embedded(
     mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
@@ -282,10 +234,7 @@ fn run_gui_embedded(
 
     let mut window = Some(gui.open_embedded(plugin, &event_loop)?);
 
-    let uses_logical_pixels = gui.compatible_api().unwrap().0.uses_logical_size();
-
-    // Note: some plugins (JUCE?) segfault if left open for a couple minutes and the process exit()s
-    // for some reason. Possibly because the library gets unloaded while a background thread is still running.
+    let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
 
     event_loop.run_return(move |event, _target, control_flow| {
         while let Ok(message) = receiver.try_recv() {
@@ -360,6 +309,9 @@ fn run_gui_embedded(
     Ok(())
 }
 
+/// Runs the plugin heedlessly, without an UI event loop.
+///
+/// This blocks forever, until the process is killed.
 fn run_cli(
     mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
@@ -375,6 +327,7 @@ fn run_cli(
     Ok(())
 }
 
+/// Information about this host.
 fn host_info() -> HostInfo {
     HostInfo::new(
         "Clack example CPAL host",
@@ -383,4 +336,41 @@ fn host_info() -> HostInfo {
         "0.0.0",
     )
     .unwrap()
+}
+
+impl<'a> HostLogImpl for CpalHostShared<'a> {
+    fn log(&self, severity: LogSeverity, message: &str) {
+        if severity <= LogSeverity::Debug {
+            return;
+        };
+        // Note: writing to stdout isn't realtime-safe, and should ideally be avoided.
+        // This is only "good enough™" for an example.
+        // A mpsc ringbuffer with support for dynamically-sized messages (`?Sized`) should be used to
+        // send the logs the main thread without allocating or blocking.
+        eprintln!("[{severity}] {message}")
+    }
+}
+
+impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
+    fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
+        false
+    }
+
+    fn rescan(&mut self, _flag: RescanType) {
+        // We don't support audio ports changing on the fly
+    }
+}
+
+impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
+    fn rescan(&mut self, _flags: ParamRescanFlags) {
+        // We don't track param values at all
+    }
+
+    fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
+}
+
+impl<'a> HostParamsImplShared for CpalHostShared<'a> {
+    fn request_flush(&self) {
+        // Can never flush events when not processing: we're never not processing
+    }
 }

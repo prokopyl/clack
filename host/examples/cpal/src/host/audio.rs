@@ -7,14 +7,18 @@ use cpal::{
 };
 use std::error::Error;
 
+/// Handling of audio buffers.
 mod buffers;
+/// Negociation for audio stream and port configuration.
 mod config;
+/// MIDI handling.
 mod midi;
 
 use buffers::*;
 use config::*;
 use midi::*;
 
+/// Activates the given plugin instance, and outputs its processed audio to a new CPAL stream.
 pub fn activate_to_stream(
     instance: &mut PluginInstance<CpalHost>,
 ) -> Result<Stream, Box<dyn Error>> {
@@ -23,7 +27,7 @@ pub fn activate_to_stream(
 
     let output_device = cpal_host.default_output_device().unwrap();
 
-    let config = FullAudioConfig::negociate_from(&output_device, instance)?;
+    let config = FullAudioConfig::find_best_from(&output_device, instance)?;
     println!("Using negociated audio output settings: {config}");
 
     let midi = MidiReceiver::new(44_100)?;
@@ -36,7 +40,7 @@ pub fn activate_to_stream(
     let cpal_config = config.as_cpal_stream_config();
     let audio_processor = StreamAudioProcessor::new(plugin_audio_processor, midi, config);
 
-    let stream = build_output_stream_for_sample_type(
+    let stream = build_output_stream_for_sample_format(
         &output_device,
         audio_processor,
         &cpal_config,
@@ -46,15 +50,16 @@ pub fn activate_to_stream(
     Ok(stream)
 }
 
-fn build_output_stream_for_sample_type(
+/// Builds the output stream, with the data processing matching the given sample format.
+fn build_output_stream_for_sample_format(
     device: &Device,
     processor: StreamAudioProcessor,
     config: &StreamConfig,
-    sample_type: SampleFormat,
+    sample_format: SampleFormat,
 ) -> Result<Stream, BuildStreamError> {
     let err = |e| eprintln!("{e}");
 
-    match sample_type {
+    match sample_format {
         SampleFormat::I8 => {
             device.build_output_stream(config, make_stream_runner::<i8>(processor), err, None)
         }
@@ -89,20 +94,27 @@ fn build_output_stream_for_sample_type(
     }
 }
 
+/// Creates a stream runner closure that processes the given sample type.
 fn make_stream_runner<S: FromSample<f32>>(
     mut audio_processor: StreamAudioProcessor,
 ) -> impl FnMut(&mut [S], &OutputCallbackInfo) {
     move |data, _info| audio_processor.process(data)
 }
 
+/// Holds all of the data, buffers and state that are going to live and get used on the audio thread.
 struct StreamAudioProcessor {
+    /// The plugin's audio processor.
     audio_processor: StartedPluginAudioProcessor<CpalHost>,
-    buffers: CpalAudioOutputBuffers,
+    /// The audio buffers.
+    buffers: HostAudioBuffers,
+    /// The MIDI event receiver.
     midi_receiver: Option<MidiReceiver>,
+    /// A steady frame counter, used by the plugin's process() method.
     steady_counter: i64,
 }
 
 impl StreamAudioProcessor {
+    /// Initializes the audio thread data.
     pub fn new(
         plugin_instance: StartedPluginAudioProcessor<CpalHost>,
         midi_receiver: Option<MidiReceiver>,
@@ -110,17 +122,25 @@ impl StreamAudioProcessor {
     ) -> Self {
         Self {
             audio_processor: plugin_instance,
-            buffers: CpalAudioOutputBuffers::from_config(config),
+            buffers: HostAudioBuffers::from_config(config),
             midi_receiver,
             steady_counter: 0,
         }
     }
 
+    /// Processes the given output buffer using the loaded plugin.
+    ///
+    /// Because CPAL gives different, arbitrary buffer lengths for each process call, this method
+    /// first ensures the host internal buffers are big enough, and resizes and reallocates them if
+    /// necessary.
+    ///
+    /// This methods also collects all of the MIDI events that have been received since the last
+    /// process call., and feeds them to the plugin.
     pub fn process<S: FromSample<f32>>(&mut self, data: &mut [S]) {
         self.buffers.ensure_buffer_size_matches(data.len());
-        let sample_count = self.buffers.cpal_buf_len_to_sample_count(data.len());
+        let sample_count = self.buffers.cpal_buf_len_to_frame_count(data.len());
 
-        let (ins, mut outs) = self.buffers.plugin_buffers(data.len());
+        let (ins, mut outs) = self.buffers.prepare_plugin_buffers(data.len());
 
         let events = if let Some(midi) = self.midi_receiver.as_mut() {
             midi.receive_all_events(sample_count as u64)
@@ -137,7 +157,7 @@ impl StreamAudioProcessor {
             Some(sample_count),
             None,
         ) {
-            Ok(_) => self.buffers.write_to(data),
+            Ok(_) => self.buffers.write_to_cpal_buffer(data),
             Err(e) => eprintln!("{e}"),
         }
 

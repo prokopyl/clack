@@ -8,20 +8,43 @@ use rtrb::{Consumer, RingBuffer};
 use std::error::Error;
 use wmidi::{MidiMessage, Velocity};
 
+/// A MIDI message that was received at a given time.
 struct MidiEventMessage {
+    /// A micro-timestamp of when the event occurred.
+    ///
+    /// This is given by `midir` and is unrelated to the audio frame counter. It is based off an
+    /// arbitrary start time. The only guarantee is that this timestamp is steadily increasing.
     timestamp: u64,
+    /// The MIDI event. This is 'static to make it simpler to share across threads, meaning we
+    /// don't support MIDI SysEx messages.
     midi_event: MidiMessage<'static>,
 }
 
+/// A receiver for the MIDI event stream.
+///
+/// This is to be held by the audio thread, and will collect events from the MIDI thread.
 pub struct MidiReceiver {
+    /// The input connection to the MIDI device.
+    /// This isn't used directly, but must be kept alive to ensure keep the connection open.
     _connection: MidiInputConnection<()>,
+    /// The consumer side of the ring buffer the MIDI thread sends event through.
     consumer: Consumer<MidiEventMessage>,
+    /// Whether or not the ringbuffer has already been abandoned by the MIDI thread, i.e. the
+    /// connection unexpectedly closed.
+    ///
+    /// This is used to shut down all notes when a device is disconnected.
     abandoned: bool,
+    /// The buffer holding CLAP events to be fed to the plugin.
     clap_events_buffer: EventBuffer,
+    /// The audio sample rate. This is used to calculate the event's sample time from the device
+    /// timestamp.
     sample_rate: u64,
 }
 
 impl MidiReceiver {
+    /// Connects to a MIDI device and starts receiving events.
+    ///
+    /// This selects the last MIDI device that was plugged in, if any.
     pub fn new(sample_rate: u64) -> Result<Option<Self>, Box<dyn Error>> {
         let mut input = MidiInput::new("Clack Host")?;
         input.ignore(Ignore::Sysex | Ignore::Time | Ignore::ActiveSense);
@@ -73,6 +96,11 @@ impl MidiReceiver {
         }))
     }
 
+    /// Receives all of the MIDI events since the last call to the method.
+    ///
+    /// Event's timestamps are interpolated to sample time between 0 and the given sample count.
+    ///
+    /// This returns a Clack input event buffer handle, ready to feed to the plugin.
     pub fn receive_all_events(&mut self, sample_count: u64) -> InputEvents {
         self.clap_events_buffer.clear();
 
@@ -114,6 +142,11 @@ impl MidiReceiver {
     }
 }
 
+/// Interpolates the given timestamp to a sample timestamp.
+///
+/// This takes the first received event timestamp as sample time 0, then interpolates to a maximum
+/// of sample_count, according to the given sample_rate. This ensures most MIDI events are orderly
+/// distributed in the sample range.
 fn micro_timestamp_to_sample_time(
     timestamp: u64,
     first_event_timestamp: u64,
@@ -127,11 +160,12 @@ fn micro_timestamp_to_sample_time(
     relative_sample.min(sample_count)
 }
 
-fn push_midi_to_buffer(message: MidiMessage, timestamp: u32, buffer: &mut EventBuffer) {
+/// Pushes a MIDI event to the given Clack event buffer.
+fn push_midi_to_buffer(message: MidiMessage, sample_time: u32, buffer: &mut EventBuffer) {
     match message {
         MidiMessage::NoteOff(channel, note, velocity) => buffer.push(
             NoteOffEvent(NoteEvent::new(
-                EventHeader::new_core(timestamp, EventFlags::IS_LIVE),
+                EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
                 -1,
                 0,
                 note as i16,
@@ -143,7 +177,7 @@ fn push_midi_to_buffer(message: MidiMessage, timestamp: u32, buffer: &mut EventB
         MidiMessage::NoteOn(channel, note, velocity) => {
             buffer.push(
                 NoteOnEvent(NoteEvent::new(
-                    EventHeader::new_core(timestamp, EventFlags::IS_LIVE),
+                    EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
                     -1,
                     0,
                     note as i16,
@@ -158,7 +192,7 @@ fn push_midi_to_buffer(message: MidiMessage, timestamp: u32, buffer: &mut EventB
             if m.copy_to_slice(&mut buf).is_ok() {
                 buffer.push(
                     MidiEvent::new(
-                        EventHeader::new_core(timestamp, EventFlags::IS_LIVE),
+                        EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
                         0,
                         buf,
                     )

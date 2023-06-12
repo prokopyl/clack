@@ -13,7 +13,7 @@ mod host;
 pub use host::*;
 
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum LogSeverity {
     Debug = 0,
     Info = 1,
