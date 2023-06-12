@@ -1,4 +1,5 @@
 use crate::events::io::implementation::{raw_output_events, OutputEventBuffer};
+use crate::events::io::void_output_events;
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_output_events;
 use std::error::Error;
@@ -89,6 +90,17 @@ impl<'a> OutputEvents<'a> {
         }
     }
 
+    /// Creates a void "list" which ignores every event that is pushed to it.
+    ///
+    /// This can be useful if you do not intend to support output events at all.
+    #[inline]
+    pub const fn void() -> Self {
+        Self {
+            inner: void_output_events(),
+            _lifetime: PhantomData,
+        }
+    }
+
     /// Appends a copy of the given event to the list.
     ///
     /// Note that the event is not guaranteed to be added at the end of the list: in order to
@@ -149,5 +161,14 @@ impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
         for event in iter {
             self.try_push(event);
         }
+    }
+}
+
+#[derive(Copy, Clone)]
+struct VoidEvents;
+impl OutputEventBuffer for VoidEvents {
+    #[inline]
+    fn try_push(&mut self, _event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
+        Ok(())
     }
 }

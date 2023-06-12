@@ -1,23 +1,12 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::Cookie;
-use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value, CLAP_EVENT_DONT_RECORD,
-    CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END,
-    CLAP_EVENT_PARAM_MOD, CLAP_EVENT_PARAM_VALUE,
+    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
+    CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
+    CLAP_EVENT_PARAM_VALUE,
 };
 use std::fmt::{Debug, Formatter};
-
-bitflags! {
-    #[repr(C)]
-    pub struct ParamEventFlags: u32 {
-        const IS_LIVE = CLAP_EVENT_IS_LIVE;
-        const BEGIN_ADJUST = CLAP_EVENT_PARAM_GESTURE_BEGIN as u32;
-        const END_ADJUST = CLAP_EVENT_PARAM_GESTURE_END as u32;
-        const DONT_RECORD = CLAP_EVENT_DONT_RECORD;
-    }
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

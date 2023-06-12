@@ -6,12 +6,15 @@ impl PluginGui {
     pub fn is_api_supported(
         &self,
         plugin: &PluginMainThreadHandle,
-        api: GuiApiType,
-        is_floating: bool,
+        configuration: GuiConfiguration,
     ) -> bool {
         match self.inner.is_api_supported {
             Some(is_api_supported) => unsafe {
-                is_api_supported(plugin.as_raw(), api.0.as_ptr(), is_floating)
+                is_api_supported(
+                    plugin.as_raw(),
+                    configuration.api_type.0.as_ptr(),
+                    configuration.is_floating,
+                )
             },
             None => false,
         }
@@ -20,7 +23,7 @@ impl PluginGui {
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    pub fn get_preferred_api(&self, plugin: &PluginMainThreadHandle) -> Option<(GuiApiType, bool)> {
+    pub fn get_preferred_api(&self, plugin: &PluginMainThreadHandle) -> Option<GuiConfiguration> {
         let mut api_type = core::ptr::null();
         let mut is_floating = true;
 
@@ -30,7 +33,10 @@ impl PluginGui {
 
         if success && !api_type.is_null() {
             let api_type = unsafe { GuiApiType(CStr::from_ptr(api_type)) };
-            Some((api_type, is_floating))
+            Some(GuiConfiguration {
+                api_type,
+                is_floating,
+            })
         } else {
             None
         }
@@ -45,14 +51,13 @@ impl PluginGui {
     pub fn create(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        api: GuiApiType,
-        is_floating: bool,
+        configuration: GuiConfiguration,
     ) -> Result<(), GuiError> {
         let success = unsafe {
             self.inner.create.ok_or(GuiError::CreateError)?(
                 plugin.as_raw(),
-                api.0.as_ptr(),
-                is_floating,
+                configuration.api_type.0.as_ptr(),
+                configuration.is_floating,
             )
         };
 

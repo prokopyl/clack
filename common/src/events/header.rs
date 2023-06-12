@@ -122,17 +122,12 @@ impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
 use crate::events::spaces::CoreEventSpace;
 use crate::events::spaces::EventSpaceId;
 use crate::events::Event;
-use clap_sys::events::{
-    CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE, CLAP_EVENT_PARAM_GESTURE_BEGIN,
-    CLAP_EVENT_PARAM_GESTURE_END,
-};
+use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
 
 bitflags! {
     #[repr(C)]
     pub struct EventFlags: u32 {
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
-        const BEGIN_ADJUST = CLAP_EVENT_PARAM_GESTURE_BEGIN as u32;
-        const END_ADJUST = CLAP_EVENT_PARAM_GESTURE_END as u32;
         const DONT_RECORD = CLAP_EVENT_DONT_RECORD;
     }
 }

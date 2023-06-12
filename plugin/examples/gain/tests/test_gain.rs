@@ -46,13 +46,13 @@ pub fn it_works() {
         &[&b"synthesizer"[..], &b"stereo"[..]]
     );
 
-    let plugin = host.plugin();
-    let ports_ext = plugin
-        .shared_plugin_data()
-        .get_extension::<PluginAudioPorts>()
-        .unwrap();
+    let plugin = host.plugin_mut();
 
     let plugin_main_thread = plugin.main_thread_plugin_data();
+    let ports_ext = plugin_main_thread
+        .shared()
+        .get_extension::<PluginAudioPorts>()
+        .unwrap();
     assert_eq!(1, ports_ext.count(&plugin_main_thread, true));
     assert_eq!(1, ports_ext.count(&plugin_main_thread, false));
 

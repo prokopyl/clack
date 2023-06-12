@@ -13,7 +13,7 @@ pub trait OutputEventBuffer: Sized {
     fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError>;
 }
 
-pub(crate) fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
+pub(crate) const fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
     clap_input_events {
         ctx: buffer as *const I as *mut I as *mut _,
         size: Some(size::<I>),
@@ -28,6 +28,12 @@ pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_ou
     }
 }
 
+pub(crate) const fn void_output_events() -> clap_output_events {
+    clap_output_events {
+        ctx: core::ptr::null_mut(),
+        try_push: Some(void_push),
+    }
+}
 unsafe extern "C" fn size<I: InputEventBuffer>(list: *const clap_input_events) -> u32 {
     handle_panic(|| I::len(&*((*list).ctx as *const _))).unwrap_or(0)
 }
@@ -56,6 +62,13 @@ unsafe extern "C" fn try_push<O: OutputEventBuffer>(
         .is_ok()
     })
     .unwrap_or(false)
+}
+
+unsafe extern "C" fn void_push(
+    _list: *const clap_output_events,
+    _event: *const clap_event_header,
+) -> bool {
+    true
 }
 
 impl<T: Event<'static>, const N: usize> InputEventBuffer for [T; N] {

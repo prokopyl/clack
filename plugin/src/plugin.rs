@@ -253,7 +253,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
 
     #[allow(unused)]
     #[inline]
-    fn reset(&mut self, main_thread: &mut M) {}
+    fn reset(&mut self) {}
 
     #[inline]
     fn start_processing(&mut self) -> Result<(), PluginError> {

@@ -107,21 +107,6 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         }
     }
 
-    /// # Safety
-    /// Caller must ensure this method is only called on main thread and has exclusivity
-    pub(crate) unsafe fn reset(self: Pin<&mut Self>) -> Result<(), PluginWrapperError> {
-        // SAFETY: we only update the fields, we don't move the struct
-        let pinned_self = Pin::get_unchecked_mut(self);
-
-        if let Some(processor) = &mut pinned_self.audio_processor {
-            if let Some(processor_inner) = processor.get().as_mut() {
-                P::AudioProcessor::reset(processor_inner, pinned_self.main_thread.get_mut());
-            }
-        }
-
-        Ok(())
-    }
-
     /// Returns if the current plugin has been activated or not.
     #[inline]
     pub fn is_active(&self) -> bool {

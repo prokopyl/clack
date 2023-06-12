@@ -45,6 +45,13 @@ unsafe impl Extension for PluginTimer {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct TimerId(pub u32);
 
+impl Display for TimerId {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// Errors that can occur while setting up Timers.
 // TODO: make global Clack error type all of these can be turned into
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

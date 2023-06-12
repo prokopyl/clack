@@ -54,11 +54,16 @@ impl<'a> InputEvents<'a> {
     }
 
     #[inline]
-    pub fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
+    pub const fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
         Self {
             inner: raw_input_events(buffer),
             _lifetime: PhantomData,
         }
+    }
+
+    #[inline]
+    pub const fn empty() -> Self {
+        Self::from_buffer::<[&UnknownEvent<'static>; 0]>(&[])
     }
 
     /// Returns the number of events in the list.

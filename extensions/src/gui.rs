@@ -47,6 +47,7 @@
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
 use clap_sys::ext::gui::*;
 use std::cmp::Ordering;
+use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -203,6 +204,8 @@ impl Display for GuiError {
     }
 }
 
+impl Error for GuiError {}
+
 /// The size of a given GUI Window, in pixels.
 ///
 /// Note that the used [`GuiApiType`] is responsible to define if it is using logical or physical pixels.
@@ -242,7 +245,7 @@ impl GuiSize {
     /// This may be useful in case [`u64`]s are better to store than a pair of [`u32`], e.g. with
     /// Atomics.
     ///
-    /// Use [`from_u64`](GuiSize::from_u64) to unpack this value.
+    /// Use [`from_u64`](GuiSize::unpack_from_u64) to unpack this value.
     ///
     /// # Example
     ///
@@ -250,18 +253,18 @@ impl GuiSize {
     /// use clack_extensions::gui::GuiSize;
     ///
     /// let ui_size = GuiSize { width: 42, height: 69 };
-    /// let packed = ui_size.to_u64();
+    /// let packed = ui_size.pack_to_u64();
     ///
-    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// assert_eq!(ui_size, GuiSize::unpack_from_u64(packed));
     /// ```
     #[inline]
-    pub fn to_u64(self) -> u64 {
+    pub fn pack_to_u64(self) -> u64 {
         self.width as u64 + ((self.height as u64) << u32::BITS)
     }
 
     /// Unpacks a single [`u64`] value into a new [`GuiSize`].
     ///
-    /// Use [`to_u64`](GuiSize::to_u64) create the packed [`u64`] value.
+    /// Use [`to_u64`](GuiSize::pack_to_u64) create the packed [`u64`] value.
     ///
     /// # Example
     ///
@@ -269,17 +272,35 @@ impl GuiSize {
     /// use clack_extensions::gui::GuiSize;
     ///
     /// let ui_size = GuiSize { width: 42, height: 69 };
-    /// let packed = ui_size.to_u64();
+    /// let packed = ui_size.pack_to_u64();
     ///
-    /// assert_eq!(ui_size, GuiSize::from_u64(packed));
+    /// assert_eq!(ui_size, GuiSize::unpack_from_u64(packed));
     /// ```
     #[inline]
-    pub fn from_u64(raw: u64) -> Self {
+    pub fn unpack_from_u64(raw: u64) -> Self {
         GuiSize {
             width: raw as u32,
             height: (raw >> u32::BITS) as u32,
         }
     }
+}
+
+/// A configuration for a plugin GUI.
+///
+/// This is used to negotiate and specify how a plugin's GUI should be setup between the plugin
+/// and the host.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct GuiConfiguration<'a> {
+    /// The type of GUI to use.
+    pub api_type: GuiApiType<'a>,
+    /// Whether or not the GUI window should be floating.
+    ///
+    /// If this is `true`, the plugin's will create its own window floating above the host's.
+    /// That window will be managed entirely by the plugin, with little to no control from the host.
+    ///
+    /// If this is `false`, the plugin's GUI will be embedded into a window provided by the host.
+    /// The host will have full control over the window.
+    pub is_floating: bool,
 }
 
 /// A type of GUI API used to display windows to the user.
@@ -296,7 +317,8 @@ impl<'a> GuiApiType<'a> {
     ///
     /// See <https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent> to learn
     /// more about embedding using the Win32 API.
-    pub const WIN32: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") });
+    pub const WIN32: GuiApiType<'static> =
+        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") });
 
     /// Represents the Cocoa API used by MacOS.
     ///
@@ -304,7 +326,8 @@ impl<'a> GuiApiType<'a> {
     ///
     /// The `set_scale` method should not be called with this GUI API, as it is all handled by the
     /// OS directly.
-    pub const COCOA: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") });
+    pub const COCOA: GuiApiType<'static> =
+        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") });
 
     /// Represents the X11 API, used by various Unix OSes.
     ///
@@ -312,18 +335,74 @@ impl<'a> GuiApiType<'a> {
     ///
     /// See <https://specifications.freedesktop.org/xembed-spec/xembed-spec-latest.html> to learn more
     /// about embedding using the X11 API.
-    pub const X11: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") });
+    pub const X11: GuiApiType<'static> =
+        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") });
 
     /// Represents the Wayland API, used by various, newer Unix OSes.
     ///
     /// This API uses physical size for pixels.
     ///
     /// This API does *not* support embedding as of now. You can still use floating windows.
-    pub const WAYLAND: Self = Self(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
+    pub const WAYLAND: GuiApiType<'static> =
+        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
 
     /// Whether or not this API type can provide a [`RawWindowHandle`](raw_window_handle::RawWindowHandle).
     pub fn can_provide_raw_window_handle(&self) -> bool {
         self == &Self::WIN32 || self == &Self::COCOA || self == &Self::X11
+    }
+
+    /// Determines whether this GUI API uses physical pixels or logical pixels.
+    /// Returns `true` the API uses logical pixels, `false` if it uses physical pixels.
+    pub fn uses_logical_size(&self) -> bool {
+        self == &Self::COCOA
+    }
+
+    /// Returns `true` if this GUI API supports opening in an embedded window, `false` otherwise.
+    /// As of now, only [Wayland](Self::WAYLAND) does not support window embedding.
+    pub fn supports_embedding(&self) -> bool {
+        self != &Self::WAYLAND
+    }
+
+    /// Matches this GUI API to one of the standard APIs.
+    ///
+    /// If the value matches one of the [`WIN32`](Self::WIN32), [`COCOA`](Self::COCOA),
+    /// [`X11`](Self::X11), or [`WAYLAND`](Self::WAYLAND) constants, then that constant is
+    /// returned. Otherwise, [`None`] is returned.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use core::ffi::CStr;
+    /// use clack_extensions::gui::GuiApiType;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///
+    /// assert_eq!(
+    ///     GuiApiType(CStr::from_bytes_with_nul(b"win32\0")?).to_standard_api(),
+    ///     Some(GuiApiType::WIN32)
+    /// );
+    /// assert_eq!(
+    ///     GuiApiType(CStr::from_bytes_with_nul(b"x11\0")?).to_standard_api(),
+    ///     Some(GuiApiType::X11)
+    /// );
+    /// assert_eq!(
+    ///     GuiApiType(CStr::from_bytes_with_nul(b"custom\0")?).to_standard_api(),
+    ///     None
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_standard_api(&self) -> Option<GuiApiType<'static>> {
+        if self == &Self::WIN32 {
+            Some(Self::WIN32)
+        } else if self == &Self::COCOA {
+            Some(Self::COCOA)
+        } else if self == &Self::X11 {
+            Some(Self::X11)
+        } else if self == &Self::WAYLAND {
+            Some(Self::WAYLAND)
+        } else {
+            None
+        }
     }
 
     /// Returns the default API type for the platform this executable is compiled for.

@@ -1,0 +1,18 @@
+[package]
+name = "clack-host-cpal"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+clack-host = { path = "../.." }
+clack-extensions = { path = "../../../extensions", features = ["clack-host", "audio-ports", "gui", "log", "params", "timer"] }
+cpal = "0.15.2"
+crossbeam-channel = "0.5.8"
+clap = { version = "4.3.0", features = ["derive"] }
+dirs = "5.0.1"
+midir = "0.9.1"
+rayon = "1.7.0"
+rtrb = "0.2.3"
+walkdir = "2.3.3"
+winit = { version = "0.28.6", default-features = false,  features = ["x11"] }
+wmidi = "4.0.6"

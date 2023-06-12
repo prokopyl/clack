@@ -163,6 +163,11 @@ impl TestHost {
         &self.plugin
     }
 
+    #[inline]
+    pub fn plugin_mut(&mut self) -> &mut PluginInstance<TestHostImpl> {
+        &mut self.plugin
+    }
+
     pub fn deactivate(&mut self) {
         self.plugin.deactivate(self.processor.take().unwrap());
     }
