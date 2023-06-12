@@ -8,21 +8,22 @@ CLAP hosts. A common, separate `clack-extensions` crate implements all the stand
 
 ## Who is this crate for?
 
-This is a disclaimer: if you just want to make an audio plugin or host in Rust that supports CLAP, chances are Clack
-may not be a very good fit for you. 
-
-Clack is designed as a very low-level library, and will expose every single one of the CLAP API's details to you, and
-let you deal with them. You will probably be better served with high-level, opinionated libraries
-such as [NIH-Plug](https://github.com/robbert-vdh/nih-plug) or [Dropseed](https://github.com/MeadowlarkDAW/dropseed),
-if you want to make a CLAP-supporting plugin or host, respectively.
-
 Clack is first and foremost designed to provide a common, safe and lightweight foundation for higher-level libraries
-and tools be built on top of (like [Dropseed](https://github.com/MeadowlarkDAW/dropseed) is!). However, it is also
-absolutely possible to create fully-featured plugins and hosts using only Clack if you so choose,
-or if you do need low-level control and access to the CLAP API.
+and tools be built on top of. However, it is also absolutely possible to create fully-featured plugins and hosts using
+only Clack if you so choose, or if you do need low-level control and access to the CLAP API.
 
-To help you figure out if CLAP is too low-level for you, feel free to take a look at the list of features and
-examples below!
+Because Clack is designed as a very low-level library, it will expose every single one of the CLAP API's details to you,
+and let you deal with them. If you want to make a "normal" plugin, you may be better served with high-level, opinionated
+libraries such as [NIH-Plug](https://github.com/robbert-vdh/nih-plug), which takes care of much of the "plumbing"
+for you, has many built-in features, and will also give you VST3 and Standalone support for free.
+
+As for making CLAP hosts in Rust however, there is (to the author's knowledge) no higher-level alternative
+available and functional yet. You can check out the
+[Clack host example](https://github.com/prokopyl/clack/tree/main/host/examples/cpal) to learn more about how to make a
+CLAP host using Clack, as well as the snippets below and in the `clack-host` documentation.
+
+To learn more about how to make plugins using Clack, check out the examples below, as well as the `clack-plugin`
+documentation.
 
 ## Features
 
@@ -129,7 +130,10 @@ clack_export_entry!(SinglePluginEntry<MyGainPlugin>);
 This example implements a very simple host, which loads a specific plugin and processes a couple of
 samples with it.
 
-See the `clack-host` crate documentation for more details and examples.
+For a more featured and functional example, check out the
+[CPAL-based host example](https://github.com/prokopyl/clack/tree/main/host/examples/cpal).
+
+More details and short examples are also available in the `clack-host` crate documentation.
 
 ```rust
 use clack_host::events::event_types::*;
