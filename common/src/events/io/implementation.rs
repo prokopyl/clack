@@ -4,12 +4,12 @@ use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
 
 #[allow(clippy::len_without_is_empty)] // This is not necessary, the trait is intended for FFI
-pub trait InputEventBuffer: Sized {
+pub trait InputEventBuffer {
     fn len(&self) -> u32;
     fn get(&self, index: u32) -> Option<&UnknownEvent>;
 }
 
-pub trait OutputEventBuffer: Sized {
+pub trait OutputEventBuffer {
     fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError>;
 }
 
@@ -108,7 +108,7 @@ impl<'a, const N: usize> InputEventBuffer for [&UnknownEvent<'a>; N] {
     }
 }
 
-impl<'a> InputEventBuffer for &[&UnknownEvent<'a>] {
+impl<'a> InputEventBuffer for [&UnknownEvent<'a>] {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent<'a>]>::len(self);

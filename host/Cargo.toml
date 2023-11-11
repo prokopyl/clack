@@ -17,3 +17,4 @@ clack-extensions = { path = "../extensions", features = ["clack-host", "latency"
 clack-test-host = { path = "../test-host" }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
 serial_test = "2.0.0"
+static_assertions = "1.1.0"

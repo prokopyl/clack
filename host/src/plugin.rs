@@ -2,6 +2,7 @@ use crate::bundle::PluginBundle;
 use crate::host::{Host, HostInfo};
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::extensions::wrapper::instance::PluginInstanceInner;
@@ -13,6 +14,7 @@ pub use handle::*;
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {
     inner: Arc<PluginInstanceInner<H>>,
+    _no_send: PhantomData<*const ()>,
 }
 
 impl<H: Host> PluginInstance<H> {
@@ -35,7 +37,10 @@ impl<H: Host> PluginInstance<H> {
             host.clone(),
         )?;
 
-        Ok(Self { inner })
+        Ok(Self {
+            inner,
+            _no_send: PhantomData,
+        })
     }
 
     pub fn activate<FA>(
@@ -138,4 +143,12 @@ impl<H: Host> PluginInstance<H> {
     pub fn main_thread_plugin_data(&mut self) -> PluginMainThreadHandle {
         PluginMainThreadHandle::new((self.inner.raw_instance() as *const _) as *mut _)
     }
+}
+
+#[cfg(test)]
+mod test {
+    extern crate static_assertions as sa;
+    use super::*;
+
+    sa::assert_not_impl_any!(PluginInstance<()>: Send, Sync);
 }

@@ -32,7 +32,7 @@ use std::ops::{Index, Range};
 #[repr(C)]
 pub struct InputEvents<'a> {
     inner: clap_input_events,
-    _lifetime: PhantomData<&'a clap_input_events>,
+    _lifetime: PhantomData<(&'a clap_input_events, *const ())>,
 }
 
 impl<'a> InputEvents<'a> {
@@ -162,4 +162,12 @@ impl<'a> DoubleEndedIterator for InputEventsIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.range.next_back().and_then(|i| self.list.get(i))
     }
+}
+
+#[cfg(test)]
+mod test {
+    extern crate static_assertions as sa;
+    use super::*;
+
+    sa::assert_not_impl_any!(InputEvents<'static>: Send, Sync);
 }

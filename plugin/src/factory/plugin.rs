@@ -142,7 +142,7 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///     }
 /// }
 /// ```
-pub trait PluginFactory {
+pub trait PluginFactory: Send + Sync {
     /// Returns the number of plugins exposed by this factory.
     fn plugin_count(&self) -> u32;
     /// Returns the [`PluginDescriptorWrapper`] wrapping the descriptor of a plugin that is assigned

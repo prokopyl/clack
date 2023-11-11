@@ -10,7 +10,7 @@ use std::os::raw::c_char;
 /// mandatory, and should not be blank. All of the other fields are optional and can return [`None`].
 ///
 /// See the documentation of each individual method to learn about the available metadata.
-pub trait PluginDescriptor: 'static {
+pub trait PluginDescriptor: Send + Sync + 'static {
     /// The unique identifier of a plugin. This field is **mandatory**, and should not be blank.
     ///
     /// This identifier should be as globally-unique as possible to any users that might load this

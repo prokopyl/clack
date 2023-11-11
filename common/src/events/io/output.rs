@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 /// the list ([`try_push`](OutputEvents::try_push)).
 ///
 /// This type also implements a few extra features based on these operations for convenience,
-/// such as [`Iterator`](IntoIterator) or [`Extend`](Extend).
+/// such as the [`Extend`](Extend) trait.
 ///
 /// # Example
 ///```
@@ -37,7 +37,7 @@ use std::marker::PhantomData;
 #[repr(C)]
 pub struct OutputEvents<'a> {
     inner: clap_output_events,
-    _lifetime: PhantomData<&'a clap_output_events>,
+    _lifetime: PhantomData<(&'a clap_output_events, *const ())>,
 }
 
 impl<'a> OutputEvents<'a> {
@@ -171,4 +171,12 @@ impl OutputEventBuffer for VoidEvents {
     fn try_push(&mut self, _event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod test {
+    extern crate static_assertions as sa;
+    use super::*;
+
+    sa::assert_not_impl_any!(OutputEvents<'static>: Send, Sync);
 }

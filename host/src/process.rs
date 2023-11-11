@@ -8,8 +8,10 @@ use crate::process::PluginAudioProcessor::*;
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::process::clap_process;
+use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::marker::PhantomData;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -179,6 +181,7 @@ impl<'a, H: 'a + Host> From<StoppedPluginAudioProcessor<H>> for PluginAudioProce
 
 pub struct StartedPluginAudioProcessor<H: Host> {
     inner: Option<Arc<PluginInstanceInner<H>>>,
+    _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
 impl<H: Host> StartedPluginAudioProcessor<H> {
@@ -233,7 +236,10 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         // SAFETY: this is called on the audio thread
         unsafe { inner.stop_processing() };
 
-        StoppedPluginAudioProcessor { inner }
+        StoppedPluginAudioProcessor {
+            inner,
+            _no_sync: PhantomData,
+        }
     }
 
     #[inline]
@@ -297,12 +303,16 @@ impl<H: Host> Drop for StartedPluginAudioProcessor<H> {
 
 pub struct StoppedPluginAudioProcessor<H: Host> {
     pub(crate) inner: Arc<PluginInstanceInner<H>>,
+    _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
 impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     #[inline]
     pub(crate) fn new(inner: Arc<PluginInstanceInner<H>>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            _no_sync: PhantomData,
+        }
     }
 
     #[inline]
@@ -313,6 +323,7 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
         match unsafe { self.inner.start_processing() } {
             Ok(()) => Ok(StartedPluginAudioProcessor {
                 inner: Some(self.inner),
+                _no_sync: PhantomData,
             }),
             Err(_) => Err(ProcessingStartError { processor: self }),
         }
@@ -374,3 +385,12 @@ impl<H: Host> Display for ProcessingStartError<H> {
 }
 
 impl<H: Host> Error for ProcessingStartError<H> {}
+
+#[cfg(test)]
+mod test {
+    extern crate static_assertions as sa;
+    use super::*;
+
+    sa::assert_not_impl_any!(StartedPluginAudioProcessor<()>: Sync);
+    sa::assert_not_impl_any!(StoppedPluginAudioProcessor<()>: Sync);
+}

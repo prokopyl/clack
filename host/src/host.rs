@@ -299,3 +299,13 @@ pub trait Host: 'static {
 
 impl<'a> HostAudioProcessor<'a> for () {}
 impl<'a> HostMainThread<'a> for () {}
+impl<'a> HostShared<'a> for () {
+    fn request_restart(&self) {}
+    fn request_process(&self) {}
+    fn request_callback(&self) {}
+}
+impl Host for () {
+    type Shared<'a> = ();
+    type MainThread<'a> = ();
+    type AudioProcessor<'a> = ();
+}

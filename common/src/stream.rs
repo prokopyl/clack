@@ -23,7 +23,7 @@ impl StreamError {
 impl Display for StreamError {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Clap stream error (code: {})", self.code)
+        write!(f, "CLAP stream error (code: {})", self.code)
     }
 }
 
@@ -33,7 +33,7 @@ impl Error for StreamError {}
 ///
 /// This helper struct is designed to work with the standard [`Read`](Read) trait.
 #[repr(C)]
-pub struct InputStream<'a>(clap_istream, PhantomData<&'a clap_istream>);
+pub struct InputStream<'a>(clap_istream, PhantomData<(&'a mut clap_istream, *const ())>);
 
 impl<'a> InputStream<'a> {
     /// Creates a new input stream for an existing [reader](Read) implementation.
@@ -82,14 +82,14 @@ impl<'a> Read for InputStream<'a> {
 ///
 /// This helper struct is designed to work with the standard [`Write`](Write) trait.
 #[repr(C)]
-pub struct OutputStream<'a>(clap_ostream, PhantomData<&'a clap_ostream>);
+pub struct OutputStream<'a>(clap_ostream, PhantomData<(&'a mut clap_ostream, *const ())>);
 
 impl<'a> OutputStream<'a> {
     /// Creates a new output stream for an existing [write](Write) implementation.
-    pub fn from_writer<W: Write + Sized + 'a>(reader: &'a mut W) -> Self {
+    pub fn from_writer<W: Write + Sized + 'a>(writer: &'a mut W) -> Self {
         Self(
             clap_ostream {
-                ctx: reader as *mut W as *mut _,
+                ctx: writer as *mut W as *mut _,
                 write: Some(write::<W>),
             },
             PhantomData,
@@ -179,8 +179,12 @@ fn handle_interrupted<F: FnMut() -> std::io::Result<usize>>(
 
 #[cfg(test)]
 mod test {
+    extern crate static_assertions as sa;
     use super::*;
     use std::io::Cursor;
+
+    sa::assert_not_impl_any!(InputStream: Send, Sync);
+    sa::assert_not_impl_any!(OutputStream: Send, Sync);
 
     #[test]
     fn input_streams_work() {
