@@ -1,4 +1,5 @@
 use crate::events::io::TryPushError;
+use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, UnknownEvent};
 use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
@@ -71,6 +72,39 @@ unsafe extern "C" fn void_push(
     true
 }
 
+impl<T: Event<'static>> InputEventBuffer for T {
+    #[inline]
+    fn len(&self) -> u32 {
+        1
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
+        match index {
+            0 => Some(self.as_unknown()),
+            _ => None,
+        }
+    }
+}
+
+impl<T: Event<'static>> InputEventBuffer for Option<T> {
+    #[inline]
+    fn len(&self) -> u32 {
+        match self.is_some() {
+            true => 1,
+            false => 0,
+        }
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
+        match index {
+            0 => self.as_ref().map(|e| e.as_unknown()),
+            _ => None,
+        }
+    }
+}
+
 impl<T: Event<'static>, const N: usize> InputEventBuffer for [T; N] {
     #[inline]
     fn len(&self) -> u32 {
@@ -80,6 +114,19 @@ impl<T: Event<'static>, const N: usize> InputEventBuffer for [T; N] {
     #[inline]
     fn get(&self, index: u32) -> Option<&UnknownEvent> {
         self.as_slice().get(index as usize).map(|e| e.as_unknown())
+    }
+}
+
+impl<T: Event<'static>> InputEventBuffer for [T] {
+    #[inline]
+    fn len(&self) -> u32 {
+        let len = <[T]>::len(self);
+        len.min((u32::MAX - 1) as usize) as u32
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
+        <[T]>::get(self, index as usize).map(|e| e.as_unknown())
     }
 }
 
@@ -93,6 +140,21 @@ impl<'a, T: Event<'a>> InputEventBuffer for &'a [T] {
     #[inline]
     fn get(&self, index: u32) -> Option<&UnknownEvent> {
         <[T]>::get(self, index as usize).map(|e| e.as_unknown())
+    }
+}
+
+impl<'a> InputEventBuffer for UnknownEvent<'a> {
+    #[inline]
+    fn len(&self) -> u32 {
+        1
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
+        match index {
+            0 => Some(self),
+            _ => None,
+        }
     }
 }
 
@@ -118,5 +180,22 @@ impl<'a> InputEventBuffer for [&UnknownEvent<'a>] {
     #[inline]
     fn get(&self, index: u32) -> Option<&UnknownEvent> {
         <[&UnknownEvent<'a>]>::get(self, index as usize).copied()
+    }
+}
+
+impl<T: Event<'static, EventSpace = CoreEventSpace<'static>> + Clone> OutputEventBuffer
+    for Option<T>
+{
+    fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
+        if self.is_some() {
+            return Err(TryPushError);
+        };
+
+        if let Some(event) = event.as_event::<T>() {
+            *self = Some(event.clone());
+            Ok(())
+        } else {
+            Err(TryPushError)
+        }
     }
 }
