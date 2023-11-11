@@ -70,7 +70,9 @@ pub mod tests {
         let mut total = 0;
 
         for channel in channels {
-            let ChannelPair::InputOutput(i, o) = channel else { panic!("Expected I/O channel") };
+            let ChannelPair::InputOutput(i, o) = channel else {
+                panic!("Expected I/O channel")
+            };
             o.copy_from_slice(i);
             total += 1;
             constant_mask.set_channel_constant(total, false);
@@ -103,7 +105,9 @@ pub mod tests {
 
         for i in 0..port.channel_pair_count() {
             let channel = channels.channel_pair(i).unwrap();
-            let ChannelPair::InputOutput(input, output) = channel else { panic!("Expected I/O channel") };
+            let ChannelPair::InputOutput(input, output) = channel else {
+                panic!("Expected I/O channel")
+            };
             output.copy_from_slice(input);
 
             constant_mask.set_channel_constant(i as u64, false);

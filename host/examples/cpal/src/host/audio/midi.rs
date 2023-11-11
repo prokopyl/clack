@@ -63,7 +63,9 @@ impl MidiReceiver {
         if ports.len() > 1 {
             println!("Found multiple MIDI input ports:");
             for x in &ports {
-                let Ok(port_name) = input.port_name(x) else { continue };
+                let Ok(port_name) = input.port_name(x) else {
+                    continue;
+                };
                 println!("\t > {port_name}")
             }
 
@@ -77,8 +79,12 @@ impl MidiReceiver {
             selected_port,
             "Clack Host MIDI input",
             move |timestamp, data, ()| {
-                let Ok(midi_event) = MidiMessage::try_from(data) else { return };
-                let Some(midi_event) = midi_event.drop_unowned_sysex() else { return };
+                let Ok(midi_event) = MidiMessage::try_from(data) else {
+                    return;
+                };
+                let Some(midi_event) = midi_event.drop_unowned_sysex() else {
+                    return;
+                };
                 let _ = producer.push(MidiEventMessage {
                     timestamp,
                     midi_event,

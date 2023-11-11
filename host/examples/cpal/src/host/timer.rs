@@ -23,7 +23,9 @@ impl<'a> CpalHostMainThread<'a> {
     /// Ticks all of the registered timers, and run the plugin's callback for all timers that were
     /// triggered.
     pub fn tick_timers(&mut self) {
-        let Some(timer) = self.timer_support else { return };
+        let Some(timer) = self.timer_support else {
+            return;
+        };
         let plugin = self.plugin.as_mut().unwrap();
 
         for triggered in self.timers.tick_all() {

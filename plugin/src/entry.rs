@@ -342,7 +342,9 @@ impl<E: Entry> EntryHolder<E> {
             return core::ptr::null();
         }
 
-        let Some(entry) = &*self.inner.get() else { return core::ptr::null() };
+        let Some(entry) = &*self.inner.get() else {
+            return core::ptr::null();
+        };
         let identifier = CStr::from_ptr(identifier);
 
         catch_unwind(AssertUnwindSafe(|| {

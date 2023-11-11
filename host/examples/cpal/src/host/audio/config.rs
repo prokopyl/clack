@@ -289,7 +289,9 @@ pub fn get_config_from_ports(
     let mut discovered_ports = vec![];
 
     for i in 0..ports.count(plugin, is_input) {
-        let Some(info) = ports.get(plugin, i, is_input, &mut buffer) else { continue };
+        let Some(info) = ports.get(plugin, i, is_input, &mut buffer) else {
+            continue;
+        };
         // If no port type is specified, we try to assume it from the channel count
         let port_type = info
             .port_type

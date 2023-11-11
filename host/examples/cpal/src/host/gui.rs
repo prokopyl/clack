@@ -137,7 +137,9 @@ impl<'a> Gui<'a> {
     /// This returns a Logical Size if the current platform uses logical pixels, or a Physical Size
     /// otherwise.
     pub fn gui_size_to_winit_size(&self, size: GuiSize) -> Size {
-        let Some(GuiConfiguration { api_type, .. }) = self.configuration else { panic!("Called gui_size_to_winit_size on incompatible plugin") };
+        let Some(GuiConfiguration { api_type, .. }) = self.configuration else {
+            panic!("Called gui_size_to_winit_size on incompatible plugin")
+        };
 
         if api_type.uses_logical_size() {
             LogicalSize {
@@ -163,7 +165,9 @@ impl<'a> Gui<'a> {
 
     /// Opens the plugin's GUI in floating mode.
     pub fn open_floating(&mut self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
-        let Some(configuration) = self.configuration else { panic!("Called open_floating on incompatible plugin") };
+        let Some(configuration) = self.configuration else {
+            panic!("Called open_floating on incompatible plugin")
+        };
         if !configuration.is_floating {
             panic!("Called open_floating on incompatible plugin")
         };
@@ -185,7 +189,9 @@ impl<'a> Gui<'a> {
         event_loop: &EventLoopWindowTarget<()>,
     ) -> Result<Window, Box<dyn Error>> {
         let gui = self.plugin_gui;
-        let Some(configuration) = self.configuration else { panic!("Called open_embedded on incompatible plugin") };
+        let Some(configuration) = self.configuration else {
+            panic!("Called open_embedded on incompatible plugin")
+        };
         if configuration.is_floating {
             panic!("Called open_embedded on incompatible plugin")
         };
