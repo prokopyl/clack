@@ -175,6 +175,3 @@ mod host {
         }
     }
 }
-
-#[cfg(feature = "clack-host")]
-pub use host::*;

@@ -53,6 +53,8 @@ jobs:
         args: --all --all-features -- -D warnings
   miri:
     runs-on: ubuntu-latest
+    env:
+      MIRIFLAGS: "-Zmiri-tree-borrows"
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
