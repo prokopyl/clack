@@ -31,7 +31,7 @@ impl Error for StreamError {}
 
 /// A CLAP data stream that can be read from.
 ///
-/// This helper struct is designed to work with the standard [`Read`](Read) trait.
+/// This helper struct is designed to work with the standard [`Read`] trait.
 #[repr(C)]
 pub struct InputStream<'a>(clap_istream, PhantomData<(&'a mut clap_istream, *const ())>);
 
@@ -80,7 +80,7 @@ impl<'a> Read for InputStream<'a> {
 
 /// A CLAP data stream that can be written to.
 ///
-/// This helper struct is designed to work with the standard [`Write`](Write) trait.
+/// This helper struct is designed to work with the standard [`Write`] trait.
 #[repr(C)]
 pub struct OutputStream<'a>(clap_ostream, PhantomData<(&'a mut clap_ostream, *const ())>);
 

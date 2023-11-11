@@ -7,7 +7,7 @@ use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
-use std::ffi::{c_void, CStr};
+use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 pub struct ParamInfoWriter<'a> {
@@ -29,13 +29,12 @@ impl<'a> ParamInfoWriter<'a> {
         let buf = self.inner.as_mut_ptr();
 
         unsafe {
-            (core::ptr::addr_of_mut!((*buf).id) as *mut u32).write(param.id);
-            (core::ptr::addr_of_mut!((*buf).flags) as *mut u32).write(param.flags.bits());
-            (core::ptr::addr_of_mut!((*buf).min_value) as *mut f64).write(param.min_value);
-            (core::ptr::addr_of_mut!((*buf).max_value) as *mut f64).write(param.max_value);
-            (core::ptr::addr_of_mut!((*buf).default_value) as *mut f64).write(param.default_value);
-            (core::ptr::addr_of_mut!((*buf).cookie) as *mut *mut c_void)
-                .write(param.cookie.as_raw());
+            core::ptr::addr_of_mut!((*buf).id).write(param.id);
+            core::ptr::addr_of_mut!((*buf).flags).write(param.flags.bits());
+            core::ptr::addr_of_mut!((*buf).min_value).write(param.min_value);
+            core::ptr::addr_of_mut!((*buf).max_value).write(param.max_value);
+            core::ptr::addr_of_mut!((*buf).default_value).write(param.default_value);
+            core::ptr::addr_of_mut!((*buf).cookie).write(param.cookie.as_raw());
 
             write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name.as_bytes());
             write_to_array_buf(

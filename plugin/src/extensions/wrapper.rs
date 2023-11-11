@@ -336,7 +336,7 @@ pub enum PluginWrapperError {
     DeactivationRequiredForFunction(&'static str),
     /// The plugin panicked during a function call.
     Panic,
-    /// A given [`PluginError`](PluginError) was raised during a function call.
+    /// A given [`PluginError`] was raised during a function call.
     Plugin(PluginError),
     /// Bad UTF-8.
     StringEncoding(std::str::Utf8Error),
