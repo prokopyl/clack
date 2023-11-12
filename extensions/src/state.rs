@@ -64,7 +64,7 @@
 //!
 //! // Implement our helper functions for loading and saving state.
 //!
-//! impl<'a> MyHostMainThread {
+//! impl<'a> MyHostMainThread<'a> {
 //!     /// This loads the plugin's state from the given raw byte array
 //!     pub fn load_state(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
 //!         let plugin = self.plugin.as_mut()
@@ -72,7 +72,7 @@
 //!         let state_ext = self.shared.state_ext
 //!             .expect("Plugin does not implement State extension");
 //!
-//!         let reader = Cursor::new(data);
+//!         let mut reader = Cursor::new(data);
 //!         state_ext.load(plugin, &mut reader)?;
 //!
 //!         Ok(())
@@ -91,9 +91,10 @@
 //!         Ok(buffer)
 //!     }
 //! }
-//!
-//! let plugin_instance: PluginInstance<MyHost> = /* ... */
-//! # clack_extensions::__doc_utils::get_working_instance(|_| MyHostShared { state_ext: None }, |shared| MyHostMainThread { is_state_dirty: false, shared, plugin: None })?;
+//! # pub fn main() -> Result<(), Box<dyn Error>> {
+//! # mod utils { include!("./__doc_utils.rs"); }
+//! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
+//! # utils::get_working_instance(|_| MyHostShared { state_ext: None }, |shared| MyHostMainThread { is_state_dirty: false, shared, plugin: None })?;
 //!
 //! // We just loaded our plugin, but we have a preset to initialize it to.
 //! let preset_data = b"I'm a totally legit preset.";
@@ -102,6 +103,7 @@
 //! // Some time passes, user interacts with the plugin, etc.
 //! // Now the user wants to save the state.
 //! let saved_state: Vec<u8> = plugin_instance.main_thread_host_data_mut().save_state()?;
+//! # Ok(()) }
 //! ```
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};

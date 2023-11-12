@@ -166,7 +166,8 @@ pub trait Plugin: 'static {
     fn get_descriptor() -> Box<dyn PluginDescriptor>;
 
     #[inline]
-    fn declare_extensions(_builder: &mut PluginExtensions<Self>, _shared: &Self::Shared<'_>) {}
+    #[allow(unused_variables)]
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, shared: &Self::Shared<'_>) {}
 }
 
 /// The audio processor and main part of a plugin.
