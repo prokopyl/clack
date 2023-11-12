@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 impl PluginState {
     pub fn load<R: Read>(
         &self,
-        plugin: PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         reader: &mut R,
     ) -> Result<(), StateError> {
         let mut stream = InputStream::from_reader(reader);
@@ -22,7 +22,7 @@ impl PluginState {
 
     pub fn save<W: Write>(
         &self,
-        plugin: PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         writer: &mut W,
     ) -> Result<(), StateError> {
         let mut stream = OutputStream::from_writer(writer);

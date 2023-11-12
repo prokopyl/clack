@@ -36,3 +36,7 @@ pub mod timer;
 pub mod voice_info;
 
 pub(crate) mod utils;
+
+#[cfg(test)]
+#[doc(hidden)]
+pub mod __doc_utils;
