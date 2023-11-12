@@ -1,7 +1,7 @@
 use crate::discovery::FoundBundlePlugin;
 
 use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
-use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
+use clack_extensions::gui::{GuiSize, HostGui};
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_extensions::params::{
     HostParams, HostParamsImplMainThread, HostParamsImplShared, ParamClearFlags, ParamRescanFlags,
@@ -11,6 +11,7 @@ use clack_host::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
+use std::sync::OnceLock;
 use std::time::Duration;
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event::{Event, WindowEvent};
@@ -58,17 +59,24 @@ impl Host for CpalHost {
     }
 }
 
+/// Contains all the callbacks that the plugin gave us to call.
+/// (This is unused in this example, but this is kept here for demonstration purposes)
+#[allow(dead_code)]
+struct PluginCallbacks<'a> {
+    /// The plugin's own shared handle.
+    handle: PluginSharedHandle<'a>,
+    /// A handle to the plugin's Audio Ports extension, if it supports it.
+    audio_ports: Option<&'a PluginAudioPorts>,
+}
+
 /// Data, accessible by all of the plugin's threads.
 pub struct CpalHostShared<'a> {
     /// The sender side of the channel to the main thread.
     sender: Sender<MainThreadMessage>,
-    /// The plugin's own shared handle.
-    /// (this is unused in this example, but this is kept here for demonstration purposes).
-    plugin: Option<PluginSharedHandle<'a>>,
-    /// A handle to the plugin's GUI extension, if it supports it.
-    gui: Option<&'a PluginGui>,
-    /// A handle to the plugin's Audio Ports extension, if it supports it.
-    audio_ports: Option<&'a PluginAudioPorts>,
+    /// The plugin callbacks.
+    /// This is stored in a separate, thread-safe lock because the instantiated method might be
+    /// called concurrently with any other thread-safe host methods.  
+    plugin: OnceLock<PluginCallbacks<'a>>,
 }
 
 impl<'a> CpalHostShared<'a> {
@@ -76,18 +84,17 @@ impl<'a> CpalHostShared<'a> {
     fn new(sender: Sender<MainThreadMessage>) -> Self {
         Self {
             sender,
-            plugin: None,
-            gui: None,
-            audio_ports: None,
+            plugin: OnceLock::new(),
         }
     }
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
-    fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {
-        self.gui = instance.get_extension();
-        self.audio_ports = instance.get_extension();
-        self.plugin = Some(instance);
+    fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+        let _ = self.plugin.set(PluginCallbacks {
+            handle: instance,
+            audio_ports: instance.get_extension(),
+        });
     }
 
     fn request_restart(&self) {
@@ -124,7 +131,7 @@ pub struct CpalHostMainThread<'a> {
 
 impl<'a> CpalHostMainThread<'a> {
     /// Initializes the main thread data.
-    fn new(shared: &'a CpalHostShared) -> Self {
+    fn new(shared: &'a CpalHostShared<'a>) -> Self {
         Self {
             _shared: shared,
             plugin: None,
