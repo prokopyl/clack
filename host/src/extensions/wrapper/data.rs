@@ -63,7 +63,7 @@ impl<'a, H: Host> HostData<'a, H> {
             let previous = d.replace_audio_processor(Some(audio_processor(
                 PluginAudioProcessorHandle::new(instance as *const _ as *mut _),
                 self.shared().cast().as_ref(),
-                self.main_thread().as_mut(),
+                self.main_thread().cast().as_mut(),
             )));
 
             if previous.is_some() {
@@ -104,15 +104,15 @@ impl<'shared, H: Host> ReferentialHostData<'shared, H> {
     }
 
     #[inline]
-    fn main_thread(&self) -> NonNull<H::MainThread<'shared>> {
+    fn main_thread(&self) -> NonNull<H::MainThread<'_>> {
         // SAFETY: the pointer comes from UnsafeCell, it cannot be null
-        unsafe { NonNull::new_unchecked(self.main_thread.get()) }
+        unsafe { NonNull::new_unchecked(self.main_thread.get().cast()) }
     }
 
     #[inline]
-    fn audio_processor(&self) -> Option<NonNull<H::AudioProcessor<'shared>>> {
+    fn audio_processor(&self) -> Option<NonNull<H::AudioProcessor<'_>>> {
         // SAFETY: &self guarantees at least shared access to the outer Option
-        let data = unsafe { &*self.audio_processor.get() };
+        let data: &Option<H::AudioProcessor<'_>> = unsafe { &*(self.audio_processor.get().cast()) };
 
         data.as_ref().map(NonNull::from)
     }
