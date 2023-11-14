@@ -4,6 +4,7 @@ use crate::host::{Host, HostError, HostMainThread, HostShared};
 use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
+use selfie::Selfie;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -72,7 +73,8 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        self.data.main_thread()
+        let self1 = &self.data;
+        self1.inner.with_referential(|d| d.main_thread().cast())
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
@@ -95,7 +97,8 @@ impl<H: Host> HostWrapper<H> {
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
     #[inline]
     pub fn shared(&self) -> &<H as Host>::Shared<'_> {
-        unsafe { self.data.shared().cast().as_ref() }
+        // SAFETY: TODO
+        unsafe { shrink_shared_ref::<H>(self.data.inner.owned()) }
     }
 
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Box<Self>>
@@ -104,15 +107,31 @@ impl<H: Host> HostWrapper<H> {
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
         Box::pin(Self {
-            data: HostData::new(shared(&()), |s| main_thread(s)),
+            data: HostData {
+                inner: Selfie::new(Box::pin(shared(&())), |s| {
+                    // SAFETY: TODO
+                    let shared = unsafe { shrink_shared_ref::<H>(s) };
+                    ReferentialHostData::new(shared, main_thread(shared))
+                }),
+            },
         })
     }
 
-    pub(crate) fn instantiated(&self, instance: *mut clap_plugin) {
-        // SAFETY: TODO?
-        unsafe { self.data.shared().as_ref() }.instantiated(PluginSharedHandle::new(instance));
-        unsafe { self.data.main_thread().as_mut() }
-            .instantiated(PluginMainThreadHandle::new(instance));
+    pub(crate) fn instantiated(self: Pin<&mut Self>, instance: *mut clap_plugin) {
+        // SAFETY: we only update the fields, we don't move them
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        pinned_self
+            .data
+            .inner
+            .owned()
+            .instantiated(PluginSharedHandle::new(instance));
+
+        pinned_self.data.inner.with_referential_mut(|d| {
+            d.main_thread
+                .get_mut()
+                .instantiated(PluginMainThreadHandle::new(instance))
+        })
     }
 
     #[inline]
@@ -203,6 +222,17 @@ impl From<HostError> for HostWrapperError {
 
 /// # Safety
 /// The user MUST ensure the Shared ref lives long enough
-unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(_shared: &H) -> &'a H {
-    &*(_shared as *const _)
+unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(shared: &H) -> &'a H {
+    &*(shared as *const _)
+}
+
+/// # Safety
+/// The user MUST prevent this reference to be written anywhere
+unsafe fn shrink_shared_ref<'a, 'instance, H: Host>(
+    shared: &'a H::Shared<'instance>,
+) -> &'a H::Shared<'a> {
+    let original_ptr = shared as *const H::Shared<'instance>;
+    let transmuted_ptr: *const H::Shared<'a> = core::mem::transmute(original_ptr);
+
+    &*transmuted_ptr
 }

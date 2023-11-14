@@ -10,37 +10,9 @@ pub(crate) struct HostData<'plugin, H>
 where
     H: Host,
 {
-    pub(crate) inner:
-        Selfie<'plugin, Box<UnsafeCell<<H as Host>::Shared<'plugin>>>, ReferentialHostDataRef<H>>,
+    pub(crate) inner: Selfie<'plugin, Box<<H as Host>::Shared<'plugin>>, ReferentialHostDataRef<H>>,
 }
 
-impl<'a, H: Host> HostData<'a, H> {
-    pub fn new<FH>(shared: <H as Host>::Shared<'a>, main_thread: FH) -> Self
-    where
-        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
-    {
-        Self {
-            inner: Selfie::new(Box::pin(UnsafeCell::new(shared)), |s| {
-                // SAFETY: TODO
-                let shared = unsafe { &*s.get().cast() };
-                ReferentialHostData::new(shared, main_thread(shared))
-            }),
-        }
-    }
-
-    #[inline]
-    pub fn shared(&self) -> NonNull<<H as Host>::Shared<'a>> {
-        // SAFETY: Pointer is from the UnsafeCell, which cannot be null
-        unsafe { NonNull::new_unchecked(self.inner.owned().get()) }
-    }
-
-    #[inline]
-    pub fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        self.inner.with_referential(|d| d.main_thread().cast())
-    }
-}
-
-// TODO: move UnsafeCells up
 pub(crate) struct ReferentialHostData<'shared, H: Host> {
     shared: &'shared H::Shared<'shared>,
     pub(crate) main_thread: UnsafeCell<H::MainThread<'shared>>,

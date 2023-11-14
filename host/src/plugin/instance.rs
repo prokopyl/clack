@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
-    instance: *mut clap_plugin,
+    plugin_ptr: *mut clap_plugin,
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
@@ -31,7 +31,7 @@ impl<H: Host> PluginInstanceInner<H> {
         let mut instance = Arc::new(Self {
             host_wrapper,
             host_descriptor,
-            instance: core::ptr::null_mut(),
+            plugin_ptr: core::ptr::null_mut(),
             _plugin_bundle: entry.clone(),
         });
 
@@ -53,8 +53,11 @@ impl<H: Host> PluginInstanceInner<H> {
                 return Err(HostError::InstantiationFailed);
             }
 
-            instance.host_wrapper.instantiated(plugin_instance_ptr);
-            instance.instance = plugin_instance_ptr;
+            instance
+                .host_wrapper
+                .as_mut()
+                .instantiated(plugin_instance_ptr);
+            instance.plugin_ptr = plugin_instance_ptr;
         }
 
         Ok(instance)
@@ -67,12 +70,12 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
-        unsafe { &*self.instance }
+        unsafe { &*self.plugin_ptr }
     }
 
     #[inline]
     pub fn raw_instance_mut(&mut self) -> &mut clap_plugin {
-        unsafe { &mut *self.instance }
+        unsafe { &mut *self.plugin_ptr }
     }
 
     pub fn activate<FA>(
@@ -95,11 +98,11 @@ impl<H: Host> PluginInstanceInner<H> {
         // FIXME: reentrancy if activate() calls audio_processor methods
         self.host_wrapper
             .as_mut()
-            .setup_audio_processor(audio_processor, self.instance)?;
+            .setup_audio_processor(audio_processor, self.plugin_ptr)?;
 
         let success = unsafe {
             activate(
-                self.instance,
+                self.plugin_ptr,
                 configuration.sample_rate,
                 *configuration.frames_count_range.start(),
                 *configuration.frames_count_range.end(),
@@ -126,8 +129,8 @@ impl<H: Host> PluginInstanceInner<H> {
             return Err(HostError::DeactivatedPlugin);
         }
 
-        if let Some(deactivate) = unsafe { *self.instance }.deactivate {
-            unsafe { deactivate(self.instance) };
+        if let Some(deactivate) = unsafe { *self.plugin_ptr }.deactivate {
+            unsafe { deactivate(self.plugin_ptr) };
         }
 
         self.host_wrapper.as_mut().deactivate(drop)
@@ -135,8 +138,8 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if let Some(start_processing) = (*self.instance).start_processing {
-            if start_processing(self.instance) {
+        if let Some(start_processing) = (*self.plugin_ptr).start_processing {
+            if start_processing(self.plugin_ptr) {
                 return Ok(());
             }
 
@@ -148,15 +151,15 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub unsafe fn stop_processing(&self) {
-        if let Some(stop_processing) = (*self.instance).stop_processing {
-            stop_processing(self.instance)
+        if let Some(stop_processing) = (*self.plugin_ptr).stop_processing {
+            stop_processing(self.plugin_ptr)
         }
     }
 
     #[inline]
     pub unsafe fn on_main_thread(&self) {
-        if let Some(on_main_thread) = (*self.instance).on_main_thread {
-            on_main_thread(self.instance)
+        if let Some(on_main_thread) = (*self.plugin_ptr).on_main_thread {
+            on_main_thread(self.plugin_ptr)
         }
     }
 }
@@ -165,7 +168,7 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
         // Happens only if instantiate didn't complete
-        if self.instance.is_null() {
+        if self.plugin_ptr.is_null() {
             return;
         }
 
@@ -175,7 +178,7 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
         }
 
         unsafe {
-            if let Some(destroy) = (*self.instance).destroy {
+            if let Some(destroy) = (*self.plugin_ptr).destroy {
                 destroy(self.raw_instance_mut() as *mut _)
             }
         }
