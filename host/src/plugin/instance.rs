@@ -1,9 +1,6 @@
-use crate::bundle::PluginBundle;
 use crate::extensions::wrapper::descriptor::RawHostDescriptor;
-use crate::extensions::wrapper::{HostError, HostWrapper};
-use crate::host::{Host, HostInfo};
-use crate::plugin::PluginAudioProcessorHandle;
-use crate::process::PluginAudioConfiguration;
+use crate::extensions::wrapper::HostWrapper;
+use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
@@ -13,7 +10,7 @@ pub struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     instance: *mut clap_plugin,
-    _plugin_bundle: PluginBundle, // Keep the DLL/.SO alive while plugin is instantiated
+    _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
 impl<H: Host> PluginInstanceInner<H> {
@@ -90,12 +87,12 @@ impl<H: Host> PluginInstanceInner<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        if self.wrapper().is_active() {
+        if self.host_wrapper.is_active() {
             return Err(HostError::AlreadyActivatedPlugin);
         }
 
         unsafe {
-            self.wrapper()
+            self.host_wrapper
                 .activate(audio_processor, self.raw_instance())
         };
 
@@ -111,7 +108,7 @@ impl<H: Host> PluginInstanceInner<H> {
         };
 
         if !success {
-            unsafe { self.wrapper().deactivate(|_, _| ()) };
+            let _ = unsafe { self.host_wrapper.deactivate(|_, _| ()) };
             return Err(HostError::ActivationFailed);
         }
 
@@ -134,7 +131,7 @@ impl<H: Host> PluginInstanceInner<H> {
             unsafe { deactivate(self.instance) };
         }
 
-        Ok(unsafe { self.wrapper().deactivate(drop) })
+        self.host_wrapper.deactivate(drop)
     }
 
     #[inline]

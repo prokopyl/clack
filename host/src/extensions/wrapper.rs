@@ -23,8 +23,6 @@ mod panic {
     }
 }
 
-pub(crate) mod instance;
-
 pub(crate) mod descriptor;
 
 pub(crate) mod data;
@@ -90,9 +88,8 @@ impl<H: Host> HostWrapper<H> {
         &self,
     ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
         self.data
-            .audio_processor()
-            .map(|a| a.cast())
-            .ok_or(HostError::DeactivatedPlugin)
+            .inner
+            .with_referential(|d| d.audio_processor().ok_or(HostError::DeactivatedPlugin))
     }
 
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
@@ -119,7 +116,11 @@ impl<H: Host> HostWrapper<H> {
     }
 
     #[inline]
-    pub(crate) unsafe fn activate<FA>(&self, audio_processor: FA, instance: &clap_plugin)
+    pub(crate) unsafe fn activate<FA>(
+        &mut self,
+        audio_processor: FA,
+        instance: *const clap_plugin,
+    ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
@@ -127,23 +128,33 @@ impl<H: Host> HostWrapper<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        self.data.activate(audio_processor, instance)
+        //SAFETY: TODO
+        self.data.inner.with_referential_mut(move |d|
+            // SAFETY: TODO
+            d.set_new_audio_processor(move |shared, main_thread| {
+                let (handle, shared, main_thread) =
+                    dumb_down_audio_processor_refs::<H>(instance, shared, main_thread);
+                audio_processor(handle, shared, main_thread)
+            }))
     }
 
     #[inline]
-    pub(crate) unsafe fn deactivate<T>(
-        &self,
+    pub(crate) fn deactivate<T>(
+        &mut self,
         drop: impl for<'s> FnOnce(
             <H as Host>::AudioProcessor<'s>,
             &mut <H as Host>::MainThread<'s>,
         ) -> T,
-    ) -> T {
-        self.data.deactivate(drop)
+    ) -> Result<T, HostError> {
+        self.data.inner.with_referential_mut(|d| unsafe {
+            let main_thread = d.main_thread().as_mut();
+            Ok(drop(d.remove_audio_processor()?, main_thread))
+        })
     }
 
     #[inline]
     pub(crate) fn is_active(&self) -> bool {
-        self.data.is_active()
+        self.data.inner.with_referential(|d| d.is_active())
     }
 
     unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
@@ -179,4 +190,16 @@ impl From<HostError> for HostWrapperError {
     fn from(e: HostError) -> Self {
         Self::HostError(e)
     }
+}
+
+fn dumb_down_audio_processor_refs<'instance, 'x, H: Host>(
+    _instance: *const clap_plugin,
+    _shared: &H::Shared<'instance>,
+    _main_thread: &'x mut H::MainThread<'instance>,
+) -> (
+    PluginAudioProcessorHandle<'instance>,
+    &'instance H::Shared<'instance>,
+    &'x mut H::MainThread<'instance>,
+) {
+    todo!()
 }
