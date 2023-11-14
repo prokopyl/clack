@@ -87,19 +87,18 @@ impl<H: Host> PluginInstanceInner<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        if self.host_wrapper.is_active() {
-            return Err(HostError::AlreadyActivatedPlugin);
-        }
+        let activate = self
+            .raw_instance()
+            .activate
+            .ok_or(HostError::NullActivateFunction)?;
 
-        unsafe {
-            self.host_wrapper
-                .activate(audio_processor, self.raw_instance())
-        };
+        // FIXME: reentrancy if activate() calls audio_processor methods
+        self.host_wrapper
+            .as_mut()
+            .setup_audio_processor(audio_processor, self.instance)?;
 
         let success = unsafe {
-            ((*self.instance)
-                .activate
-                .ok_or(HostError::NullActivateFunction)?)(
+            activate(
                 self.instance,
                 configuration.sample_rate,
                 *configuration.frames_count_range.start(),
@@ -108,7 +107,7 @@ impl<H: Host> PluginInstanceInner<H> {
         };
 
         if !success {
-            let _ = unsafe { self.host_wrapper.deactivate(|_, _| ()) };
+            let _ = self.host_wrapper.as_mut().deactivate(|_, _| ());
             return Err(HostError::ActivationFailed);
         }
 
@@ -131,7 +130,7 @@ impl<H: Host> PluginInstanceInner<H> {
             unsafe { deactivate(self.instance) };
         }
 
-        self.host_wrapper.deactivate(drop)
+        self.host_wrapper.as_mut().deactivate(drop)
     }
 
     #[inline]

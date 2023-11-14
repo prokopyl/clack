@@ -116,10 +116,10 @@ impl<H: Host> HostWrapper<H> {
     }
 
     #[inline]
-    pub(crate) unsafe fn activate<FA>(
-        &mut self,
+    pub(crate) fn setup_audio_processor<FA>(
+        self: Pin<&mut Self>,
         audio_processor: FA,
-        instance: *const clap_plugin,
+        instance: *mut clap_plugin,
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
@@ -128,25 +128,34 @@ impl<H: Host> HostWrapper<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        //SAFETY: TODO
-        self.data.inner.with_referential_mut(move |d|
-            // SAFETY: TODO
+        // SAFETY: we only update the fields, we don't move the struct
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        pinned_self.data.inner.with_referential_mut(move |d| {
             d.set_new_audio_processor(move |shared, main_thread| {
-                let (handle, shared, main_thread) =
-                    dumb_down_audio_processor_refs::<H>(instance, shared, main_thread);
-                audio_processor(handle, shared, main_thread)
-            }))
+                // SAFETY: shared is guaranteed to outlive all of its borrowers
+                let shared = unsafe { extend_shared_ref(shared) };
+                audio_processor(
+                    PluginAudioProcessorHandle::new(instance),
+                    shared,
+                    main_thread,
+                )
+            })
+        })
     }
 
     #[inline]
     pub(crate) fn deactivate<T>(
-        &mut self,
+        self: Pin<&mut Self>,
         drop: impl for<'s> FnOnce(
             <H as Host>::AudioProcessor<'s>,
             &mut <H as Host>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
-        self.data.inner.with_referential_mut(|d| unsafe {
+        // SAFETY: we only update the fields, we don't move the struct
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        pinned_self.data.inner.with_referential_mut(|d| unsafe {
             let main_thread = d.main_thread().as_mut();
             Ok(drop(d.remove_audio_processor()?, main_thread))
         })
@@ -192,14 +201,8 @@ impl From<HostError> for HostWrapperError {
     }
 }
 
-fn dumb_down_audio_processor_refs<'instance, 'x, H: Host>(
-    _instance: *const clap_plugin,
-    _shared: &H::Shared<'instance>,
-    _main_thread: &'x mut H::MainThread<'instance>,
-) -> (
-    PluginAudioProcessorHandle<'instance>,
-    &'instance H::Shared<'instance>,
-    &'x mut H::MainThread<'instance>,
-) {
-    todo!()
+/// # Safety
+/// The user MUST ensure the Shared ref lives long enough
+unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(_shared: &H) -> &'a H {
+    &*(_shared as *const _)
 }
