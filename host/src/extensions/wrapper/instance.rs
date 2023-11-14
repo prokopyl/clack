@@ -5,33 +5,9 @@ use crate::host::{Host, HostInfo};
 use crate::plugin::PluginAudioProcessorHandle;
 use crate::process::PluginAudioConfiguration;
 use clap_sys::plugin::clap_plugin;
-use stable_deref_trait::StableDeref;
 use std::ffi::CStr;
-use std::marker::PhantomData;
-use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::Arc;
-
-pub struct RawPluginInstanceRef(PhantomData<clap_plugin>);
-
-impl Default for RawPluginInstanceRef {
-    #[inline]
-    fn default() -> Self {
-        Self(PhantomData)
-    }
-}
-
-impl Deref for RawPluginInstanceRef {
-    type Target = ();
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &()
-    }
-}
-
-// SAFETY: this derefs to nothing
-unsafe impl StableDeref for RawPluginInstanceRef {}
 
 pub struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
@@ -52,7 +28,7 @@ impl<H: Host> PluginInstanceInner<H> {
         FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
-        let host_wrapper = Box::pin(HostWrapper::new(shared, main_thread));
+        let host_wrapper = HostWrapper::new(shared, main_thread);
         let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
 
         let mut instance = Arc::new(Self {
