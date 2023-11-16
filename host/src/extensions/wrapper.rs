@@ -1,10 +1,12 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
-use crate::host::{Host, HostError, HostMainThread, HostShared};
-use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
+use crate::prelude::*;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
+use selfie::refs::RefType;
 use selfie::Selfie;
+use std::cell::UnsafeCell;
+use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -26,11 +28,8 @@ mod panic {
 
 pub(crate) mod descriptor;
 
-pub(crate) mod data;
-use data::*;
-
 pub struct HostWrapper<H: Host> {
-    data: HostData<'static, H>,
+    inner: Selfie<'static, Box<<H as Host>::Shared<'static>>, ReferentialHostDataRef<H>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -73,8 +72,7 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        let self1 = &self.data;
-        self1.inner.with_referential(|d| d.main_thread().cast())
+        self.inner.with_referential(|d| d.main_thread().cast())
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
@@ -89,8 +87,7 @@ impl<H: Host> HostWrapper<H> {
     pub unsafe fn audio_processor(
         &self,
     ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
-        self.data
-            .inner
+        self.inner
             .with_referential(|d| d.audio_processor().ok_or(HostError::DeactivatedPlugin))
     }
 
@@ -98,7 +95,7 @@ impl<H: Host> HostWrapper<H> {
     #[inline]
     pub fn shared(&self) -> &<H as Host>::Shared<'_> {
         // SAFETY: TODO
-        unsafe { shrink_shared_ref::<H>(self.data.inner.owned()) }
+        unsafe { shrink_shared_ref::<H>(self.inner.owned()) }
     }
 
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Box<Self>>
@@ -107,13 +104,11 @@ impl<H: Host> HostWrapper<H> {
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
         Box::pin(Self {
-            data: HostData {
-                inner: Selfie::new(Box::pin(shared(&())), |s| {
-                    // SAFETY: TODO
-                    let shared = unsafe { shrink_shared_ref::<H>(s) };
-                    ReferentialHostData::new(shared, main_thread(shared))
-                }),
-            },
+            inner: Selfie::new(Box::pin(shared(&())), |s| {
+                // SAFETY: TODO
+                let shared = unsafe { shrink_shared_ref::<H>(s) };
+                ReferentialHostData::new(shared, main_thread(shared))
+            }),
         })
     }
 
@@ -122,12 +117,11 @@ impl<H: Host> HostWrapper<H> {
         let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
 
         pinned_self
-            .data
             .inner
             .owned()
             .instantiated(PluginSharedHandle::new(instance));
 
-        pinned_self.data.inner.with_referential_mut(|d| {
+        pinned_self.inner.with_referential_mut(|d| {
             d.main_thread
                 .get_mut()
                 .instantiated(PluginMainThreadHandle::new(instance))
@@ -150,7 +144,7 @@ impl<H: Host> HostWrapper<H> {
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
 
-        pinned_self.data.inner.with_referential_mut(move |d| {
+        pinned_self.inner.with_referential_mut(move |d| {
             d.set_new_audio_processor(move |shared, main_thread| {
                 // SAFETY: shared is guaranteed to outlive all of its borrowers
                 let shared = unsafe { extend_shared_ref(shared) };
@@ -174,7 +168,7 @@ impl<H: Host> HostWrapper<H> {
         // SAFETY: we only update the fields, we don't move the struct
         let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
 
-        pinned_self.data.inner.with_referential_mut(|d| unsafe {
+        pinned_self.inner.with_referential_mut(|d| unsafe {
             let main_thread = d.main_thread().as_mut();
             Ok(drop(d.remove_audio_processor()?, main_thread))
         })
@@ -182,7 +176,7 @@ impl<H: Host> HostWrapper<H> {
 
     #[inline]
     pub(crate) fn is_active(&self) -> bool {
-        self.data.inner.with_referential(|d| d.is_active())
+        self.inner.with_referential(|d| d.is_active())
     }
 
     unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
@@ -235,4 +229,74 @@ unsafe fn shrink_shared_ref<'a, 'instance, H: Host>(
     let transmuted_ptr: *const H::Shared<'a> = core::mem::transmute(original_ptr);
 
     &*transmuted_ptr
+}
+
+struct ReferentialHostData<'shared, H: Host> {
+    shared: &'shared H::Shared<'shared>,
+    pub(crate) main_thread: UnsafeCell<H::MainThread<'shared>>,
+    audio_processor: Option<UnsafeCell<H::AudioProcessor<'shared>>>,
+}
+
+impl<'shared, H: Host> ReferentialHostData<'shared, H> {
+    #[inline]
+    fn new(shared: &'shared H::Shared<'shared>, main_thread: H::MainThread<'shared>) -> Self {
+        Self {
+            shared,
+            main_thread: UnsafeCell::new(main_thread),
+            audio_processor: None,
+        }
+    }
+
+    #[inline]
+    fn main_thread(&self) -> NonNull<H::MainThread<'shared>> {
+        // SAFETY: the pointer comes from UnsafeCell, it cannot be null
+        unsafe { NonNull::new_unchecked(self.main_thread.get().cast()) }
+    }
+
+    #[inline]
+    fn audio_processor(&self) -> Option<NonNull<H::AudioProcessor<'_>>> {
+        self.audio_processor
+            .as_ref()
+            // SAFETY: pointer cannot be null as it comes from ce cell
+            .map(|cell| unsafe { NonNull::new_unchecked(cell.get().cast()) })
+    }
+
+    #[inline]
+    fn is_active(&self) -> bool {
+        self.audio_processor.is_some()
+    }
+
+    fn set_new_audio_processor<
+        FA: FnOnce(
+            &'shared H::Shared<'shared>,
+            &mut H::MainThread<'shared>,
+        ) -> H::AudioProcessor<'shared>,
+    >(
+        &mut self,
+        audio_processor: FA,
+    ) -> Result<(), HostError> {
+        match &mut self.audio_processor {
+            Some(_) => Err(HostError::AlreadyActivatedPlugin),
+            None => {
+                self.audio_processor = Some(UnsafeCell::new(audio_processor(
+                    self.shared,
+                    self.main_thread.get_mut(),
+                )));
+                Ok(())
+            }
+        }
+    }
+
+    fn remove_audio_processor(&mut self) -> Result<H::AudioProcessor<'shared>, HostError> {
+        self.audio_processor
+            .take()
+            .map(|cell| cell.into_inner())
+            .ok_or(HostError::DeactivatedPlugin)
+    }
+}
+
+struct ReferentialHostDataRef<H>(PhantomData<H>);
+
+impl<'shared, H: Host> RefType<'shared> for ReferentialHostDataRef<H> {
+    type Ref = ReferentialHostData<'shared, H>;
 }
