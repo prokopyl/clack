@@ -1,4 +1,3 @@
-use clack_extensions::state::*;
 use clack_host::prelude::*;
 use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
@@ -55,13 +54,13 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
 clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
 static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
 
-struct MyHostShared<'a> {
-    state_ext: OnceLock<Option<&'a PluginState>>,
+struct MyHostShared {
+    state_ext: OnceLock<bool>,
 }
 
-impl<'a> HostShared<'a> for MyHostShared<'a> {
+impl<'a> HostShared<'a> for MyHostShared {
     fn instantiated(&self, _instance: PluginSharedHandle<'a>) {
-        match self.state_ext.set(None) {
+        match self.state_ext.set(true) {
             Ok(_) => {}
             Err(_) => panic!("Failed to set state ext"),
         };
@@ -79,26 +78,14 @@ impl<'a> HostShared<'a> for MyHostShared<'a> {
 }
 
 struct MyHostMainThread<'a> {
-    shared: &'a MyHostShared<'a>,
+    shared: &'a MyHostShared,
 }
 
 impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {}
 
-impl<'a> Drop for MyHostShared<'a> {
-    fn drop(&mut self) {
-        println!("DROPPED SHARED")
-    }
-}
-
-impl<'a> Drop for MyHostMainThread<'a> {
-    fn drop(&mut self) {
-        println!("DROPPED MAIN THREAD")
-    }
-}
-
 struct MyHost;
 impl Host for MyHost {
-    type Shared<'a> = MyHostShared<'a>;
+    type Shared<'a> = MyHostShared;
 
     type MainThread<'a> = MyHostMainThread<'a>;
     type AudioProcessor<'a> = ();

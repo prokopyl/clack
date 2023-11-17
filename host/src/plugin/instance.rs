@@ -73,11 +73,6 @@ impl<H: Host> PluginInstanceInner<H> {
         unsafe { &*self.plugin_ptr }
     }
 
-    #[inline]
-    pub fn raw_instance_mut(&mut self) -> &mut clap_plugin {
-        unsafe { &mut *self.plugin_ptr }
-    }
-
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,
@@ -172,14 +167,14 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
             return;
         }
 
-        // Check if instance hasn't been properly deactivate
-        if self.wrapper().is_active() {
+        // Check if instance hasn't been properly deactivated
+        if self.host_wrapper.is_active() {
             let _ = self.deactivate_with(|_, _| ());
         }
 
         unsafe {
             if let Some(destroy) = (*self.plugin_ptr).destroy {
-                destroy(self.raw_instance_mut() as *mut _)
+                destroy(self.plugin_ptr)
             }
         }
     }
