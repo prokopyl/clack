@@ -9,6 +9,7 @@ pub enum PluginError {
     AudioBufferError(BufferError),
     Io(std::io::Error),
     Custom(Box<dyn Error + 'static>),
+    Message(&'static str),
 }
 
 impl Display for PluginError {
@@ -24,6 +25,7 @@ impl Display for PluginError {
             PluginError::Custom(e) => std::fmt::Display::fmt(&e, f),
             PluginError::Io(e) => std::fmt::Display::fmt(&e, f),
             PluginError::AudioBufferError(e) => std::fmt::Display::fmt(&e, f),
+            PluginError::Message(msg) => f.write_str(msg),
         }
     }
 }
