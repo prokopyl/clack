@@ -1,15 +1,14 @@
-use crate::bundle::PluginBundle;
-use crate::host::{Host, HostInfo};
+use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::extensions::wrapper::instance::PluginInstanceInner;
-use crate::prelude::*;
-
 mod handle;
+pub(crate) mod instance;
+
 pub use handle::*;
+use instance::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {

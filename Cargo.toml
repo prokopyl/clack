@@ -9,3 +9,6 @@ members = [
     "extensions",
     "test-host"
 ]
+
+[workspace.dependencies]
+selfie = { git = 'https://github.com/prokopyl/selfie', rev = '726013fc94835b6f24918ba822a49e5c3b2a3b25' }

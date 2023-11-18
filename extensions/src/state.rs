@@ -14,6 +14,7 @@
 //! ```
 //! use std::error::Error;
 //! use std::io::Cursor;
+//! use std::sync::OnceLock;
 //! use clack_extensions::state::{HostState, HostStateImpl, PluginState};
 //! use clack_host::prelude::*;
 //!
@@ -30,12 +31,12 @@
 //! }
 //!
 //! struct MyHostShared<'a> {
-//!     state_ext: Option<&'a PluginState>
+//!     state_ext: OnceLock<Option<&'a PluginState>>
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
-//!     fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {
-//!         self.state_ext = instance.get_extension()
+//!     fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+//!         let _ = self.state_ext.set(instance.get_extension());
 //!     }
 //!     # fn request_restart(&self) { unimplemented!() }
 //!     # fn request_process(&self) { unimplemented!() }
@@ -70,6 +71,8 @@
 //!         let plugin = self.plugin.as_mut()
 //!             .expect("Plugin is not yet instantiated");
 //!         let state_ext = self.shared.state_ext
+//!             .get()
+//!             .expect("Plugin is not yet instantiated")
 //!             .expect("Plugin does not implement State extension");
 //!
 //!         let mut reader = Cursor::new(data);
@@ -83,6 +86,8 @@
 //!         let plugin = self.plugin.as_mut()
 //!             .expect("Plugin is not yet instantiated");
 //!         let state_ext = self.shared.state_ext
+//!             .get()
+//!             .expect("Plugin is not yet instantiated")
 //!             .expect("Plugin does not implement State extension");
 //!
 //!         let mut buffer = Vec::new();
@@ -94,7 +99,7 @@
 //! # pub fn main() -> Result<(), Box<dyn Error>> {
 //! # mod utils { include!("./__doc_utils.rs"); }
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
-//! # utils::get_working_instance(|_| MyHostShared { state_ext: None }, |shared| MyHostMainThread { is_state_dirty: false, shared, plugin: None })?;
+//! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared, plugin: None })?;
 //!
 //! // We just loaded our plugin, but we have a preset to initialize it to.
 //! let preset_data = b"I'm a totally legit preset.";

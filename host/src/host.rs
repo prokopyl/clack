@@ -84,6 +84,7 @@
 //! use clack_extensions::log::*;
 //!
 //! use std::sync::atomic::{AtomicBool, Ordering};
+//! use std::sync::OnceLock;
 //! use std::ffi::CStr;
 //!
 //! #[derive(Default)]
@@ -97,13 +98,13 @@
 //!     // Queried extensions
 //!     // Note this may be None even after instantiation,
 //!     // in case the extension isn't supported by the plugin.
-//!     latency_extension: Option<&'a PluginLatency>
+//!     latency_extension: OnceLock<Option<&'a PluginLatency>>
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
 //!     // Once the plugin is fully instantiated, we can query its extensions
-//!     fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {
-//!         self.latency_extension = instance.get_extension();
+//!     fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+//!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
 //!     
 //!     fn request_restart(&self) { self.restart_requested.store(true, Ordering::SeqCst) }
@@ -134,7 +135,7 @@
 //!
 //! impl<'a> HostLatencyImpl for MyHostMainThread<'a> {
 //!     fn changed(&mut self) {
-//!         if let (Some(latency), Some(instance)) = (self.shared.latency_extension, &mut self.instance) {
+//!         if let (Some(Some(latency)), Some(instance)) = (self.shared.latency_extension.get(), &mut self.instance) {
 //!             self.reported_latency = Some(latency.get(instance));
 //!         }   
 //!     }
@@ -248,7 +249,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// plugin instance's lifetime.
     #[inline]
     #[allow(unused)]
-    fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {}
+    fn instantiated(&self, instance: PluginSharedHandle<'a>) {}
 
     /// Called by the plugin when it requests to be deactivated and then restarted by the host.
     ///

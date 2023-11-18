@@ -48,7 +48,7 @@ impl TestHost {
             |_| TestHostShared,
             |_| TestHostMainThread,
             entry_and_descriptor.owned(),
-            entry_and_descriptor.referential().id().unwrap(),
+            entry_and_descriptor.with_referential(|d| d.id().unwrap()),
             &info,
         )
         .unwrap();
@@ -66,7 +66,7 @@ impl TestHost {
     }
 
     pub fn descriptor(&self) -> PluginDescriptor {
-        self.entry_and_descriptor.referential()
+        self.entry_and_descriptor.with_referential(|d| *d)
     }
 
     pub fn bundle(&self) -> &PluginBundle {

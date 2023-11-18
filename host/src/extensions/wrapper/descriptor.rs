@@ -4,7 +4,7 @@ use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use std::ffi::{c_void, CStr};
 
-pub struct RawHostDescriptor {
+pub(crate) struct RawHostDescriptor {
     raw: clap_host,
     _host_info: HostInfo,
 }
@@ -33,12 +33,12 @@ impl RawHostDescriptor {
     }
 
     #[inline]
-    pub fn raw(&self) -> *const clap_host {
+    pub(crate) fn raw(&self) -> *const clap_host {
         &self.raw
     }
 
     #[inline]
-    pub fn set_wrapper<H: Host>(&mut self, wrapper: &HostWrapper<H>) {
+    pub(crate) fn set_wrapper<H: Host>(&mut self, wrapper: &HostWrapper<H>) {
         self.raw.host_data = wrapper as *const _ as *mut _
     }
 }

@@ -9,4 +9,4 @@ rust-version = "1.59"
 [dependencies]
 "clack-host" = { path = "../host" }
 "clack-extensions" = { path = "../extensions", features = ["audio-ports", "params", "state", "clack-plugin"] }
-selfie = "0.0.2"
+selfie = { workspace = true }

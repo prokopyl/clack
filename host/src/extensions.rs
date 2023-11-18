@@ -72,6 +72,7 @@
 //! This example implements a host supporting the `Latency` extension.
 //!
 //! ```
+//! use std::sync::OnceLock;
 //! use clack_host::prelude::*;
 //! use clack_extensions::latency::*;
 //!
@@ -80,13 +81,13 @@
 //!     // Queried extension
 //!     // Note this may be None even after instantiation,
 //!     // in case the extension isn't supported by the plugin.
-//!     latency_extension: Option<&'a PluginLatency>
+//!     latency_extension: OnceLock<Option<&'a PluginLatency>>
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
 //!     // Once the plugin is fully instantiated, we can query its extensions
-//!     fn instantiated(&mut self, instance: PluginSharedHandle<'a>) {
-//!         self.latency_extension = instance.get_extension();
+//!     fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+//!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
 //!     
 //!     /* ... */
@@ -114,7 +115,7 @@
 //!     // This method is called by the plugin whenever its latency changed.
 //!     fn changed(&mut self) {
 //!         // Ensure that the plugin is instantiated and supports the Latency extension.
-//!         if let (Some(latency), Some(instance)) = (self.shared.latency_extension, &mut self.instance) {
+//!         if let (Some(Some(latency)), Some(instance)) = (self.shared.latency_extension.get(), &mut self.instance) {
 //!             self.reported_latency = Some(latency.get(instance));
 //!         }   
 //!     }

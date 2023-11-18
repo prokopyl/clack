@@ -1,10 +1,9 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
-use crate::host::{Host, HostError, HostMainThread, HostShared};
-use crate::plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle};
+use crate::prelude::*;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use selfie::Selfie;
+use std::cell::UnsafeCell;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -24,16 +23,12 @@ mod panic {
     }
 }
 
-pub(crate) mod instance;
-use instance::*;
-
 pub(crate) mod descriptor;
 
-pub(crate) mod data;
-use data::*;
-
 pub struct HostWrapper<H: Host> {
-    data: Selfie<'static, RawPluginInstanceRef, HostDataRef<H>>,
+    audio_processor: Option<UnsafeCell<<H as Host>::AudioProcessor<'static>>>,
+    main_thread: Option<UnsafeCell<<H as Host>::MainThread<'static>>>,
+    shared: Pin<Box<<H as Host>::Shared<'static>>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -66,8 +61,7 @@ impl<H: Host> HostWrapper<H> {
         }
     }
 
-    /// Returns a raw, non-null pointer to the host's main thread ([`MainThread`](Host::MainThread))
-    /// struct.
+    /// Returns a raw, non-null pointer to the host's ([`MainThread`](Host::MainThread)) struct.
     ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
@@ -76,7 +70,7 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        self.data.with_referential(|d| d.main_thread().cast())
+        NonNull::new_unchecked(self.main_thread.as_ref().unwrap_unchecked().get()).cast()
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
@@ -91,45 +85,59 @@ impl<H: Host> HostWrapper<H> {
     pub unsafe fn audio_processor(
         &self,
     ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
-        self.data.with_referential(|d| {
-            d.audio_processor()
-                .map(|a| a.cast())
-                .ok_or(HostError::DeactivatedPlugin)
-        })
+        match &self.audio_processor {
+            None => Err(HostError::DeactivatedPlugin),
+            Some(ap) => Ok(NonNull::new_unchecked(ap.get()).cast()),
+        }
     }
 
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
     #[inline]
     pub fn shared(&self) -> &<H as Host>::Shared<'_> {
-        // SAFETY: TODO
-        self.data
-            .with_referential(|d| unsafe { d.shared().cast().as_ref() })
+        // SAFETY: This type guarantees shared is never used mutably
+        unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
 
-    pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Self
+    pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Box<Self>>
     where
         FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
-        let instance_ptr = Pin::new(RawPluginInstanceRef::default());
+        let mut wrapper = Box::pin(Self {
+            audio_processor: None,
+            main_thread: None,
+            shared: Box::pin(shared(&())),
+        });
 
-        Self {
-            data: Selfie::new(instance_ptr, |_| {
-                HostData::new(shared(&()), |s| main_thread(s))
-            }),
-        }
+        let pinned_wrapper = unsafe { Pin::get_unchecked_mut(wrapper.as_mut()) };
+        pinned_wrapper.main_thread = Some(UnsafeCell::new(main_thread(unsafe {
+            // SAFETY: This type guarantees main thread data cannot outlive shared
+            extend_shared_ref(&pinned_wrapper.shared)
+        })));
+
+        wrapper
     }
 
-    pub(crate) fn instantiated(&self, instance: *mut clap_plugin) {
-        self.data.with_referential(|d| {
-            // SAFETY: TODO?
-            unsafe { d.shared().as_mut() }.instantiated(PluginSharedHandle::new(instance));
-            unsafe { d.main_thread().as_mut() }.instantiated(PluginMainThreadHandle::new(instance));
-        });
+    pub(crate) fn instantiated(self: Pin<&mut Self>, instance: *mut clap_plugin) {
+        // SAFETY: we only update the fields, we don't move them
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        // SAFETY: At this point there is no way main_thread could not have been set.
+        unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }
+            .get_mut()
+            .instantiated(PluginMainThreadHandle::new(instance));
+
+        pinned_self
+            .shared
+            .instantiated(PluginSharedHandle::new(instance));
     }
 
     #[inline]
-    pub(crate) unsafe fn activate<FA>(&self, audio_processor: FA, instance: &clap_plugin)
+    pub(crate) fn setup_audio_processor<FA>(
+        self: Pin<&mut Self>,
+        audio_processor: FA,
+        instance: *mut clap_plugin,
+    ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
@@ -137,24 +145,47 @@ impl<H: Host> HostWrapper<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        self.data
-            .with_referential(|d| d.activate(audio_processor, instance))
+        // SAFETY: we only update the fields, we don't move the struct
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        match &mut pinned_self.audio_processor {
+            Some(_) => Err(HostError::AlreadyActivatedPlugin),
+            None => {
+                pinned_self.audio_processor = Some(UnsafeCell::new(audio_processor(
+                    PluginAudioProcessorHandle::new(instance),
+                    unsafe { extend_shared_ref(&pinned_self.shared) },
+                    // SAFETY: At this point there is no way main_thread could not have been set.
+                    unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }.get_mut(),
+                )));
+                Ok(())
+            }
+        }
     }
 
     #[inline]
-    pub(crate) unsafe fn deactivate<T>(
-        &self,
+    pub(crate) fn deactivate<T>(
+        self: Pin<&mut Self>,
         drop: impl for<'s> FnOnce(
             <H as Host>::AudioProcessor<'s>,
             &mut <H as Host>::MainThread<'s>,
         ) -> T,
-    ) -> T {
-        self.data.with_referential(|d| d.deactivate(drop))
+    ) -> Result<T, HostError> {
+        // SAFETY: we only update the fields, we don't move the struct
+        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+
+        match pinned_self.audio_processor.take() {
+            None => Err(HostError::DeactivatedPlugin),
+            Some(cell) => Ok(drop(
+                cell.into_inner(),
+                // SAFETY: At this point there is no way main_thread could not have been set.
+                unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }.get_mut(),
+            )),
+        }
     }
 
     #[inline]
     pub(crate) fn is_active(&self) -> bool {
-        self.data.with_referential(|d| d.is_active())
+        self.audio_processor.is_some()
     }
 
     unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
@@ -190,4 +221,21 @@ impl From<HostError> for HostWrapperError {
     fn from(e: HostError) -> Self {
         Self::HostError(e)
     }
+}
+
+/// # Safety
+/// The user MUST ensure the Shared ref lives long enough
+unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(shared: &H) -> &'a H {
+    &*(shared as *const _)
+}
+
+/// # Safety
+/// The user MUST prevent this reference to be written anywhere
+unsafe fn shrink_shared_ref<'a, 'instance, H: Host>(
+    shared: &'a H::Shared<'instance>,
+) -> &'a H::Shared<'a> {
+    let original_ptr = shared as *const H::Shared<'instance>;
+    let transmuted_ptr: *const H::Shared<'a> = core::mem::transmute(original_ptr);
+
+    &*transmuted_ptr
 }
