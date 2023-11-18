@@ -1,4 +1,5 @@
 use crate::events::io::implementation::{raw_input_events, InputEventBuffer};
+use crate::events::io::EventBatcher;
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_input_events;
 use std::marker::PhantomData;
@@ -101,6 +102,21 @@ impl<'a> InputEvents<'a> {
             range: 0..self.len(),
         }
     }
+
+    #[inline]
+    pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter> {
+        let len = self.len();
+        if range.start > len || range.end > len {
+            None
+        } else {
+            Some(InputEventsIter { list: self, range })
+        }
+    }
+
+    #[inline]
+    pub fn batch(&self) -> EventBatcher {
+        EventBatcher::new(self)
+    }
 }
 
 impl<'a> IntoIterator for &'a InputEvents<'a> {
@@ -133,8 +149,18 @@ impl<'a> Index<usize> for InputEvents<'a> {
 
 /// Immutable [`InputEvents`] iterator.
 pub struct InputEventsIter<'a> {
-    list: &'a InputEvents<'a>,
-    range: Range<u32>,
+    pub(crate) list: &'a InputEvents<'a>,
+    pub(crate) range: Range<u32>,
+}
+
+impl<'a> Clone for InputEventsIter<'a> {
+    #[inline]
+    fn clone(&self) -> Self {
+        InputEventsIter {
+            list: self.list,
+            range: self.range.start..self.range.end,
+        }
+    }
 }
 
 impl<'a> Iterator for InputEventsIter<'a> {
