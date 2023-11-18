@@ -216,9 +216,9 @@ impl<'a, S> OutputChannels<'a, S> {
     /// the index `mid` itself) and the second will contain all channels with
     /// indices from `[mid, channel_count)`.
     ///
-    /// Unlike [`slice::split_at_mut`](core::slice::split_at_mut), this method does not panic if
+    /// Unlike [`slice::split_at_mut`], this method does not panic if
     /// `mid` is larger than `channel_count`.
-    /// The second [`OutputChannels`] only be empty in this case.
+    /// The second [`OutputChannels`] will only be empty in this case.
     #[inline]
     pub fn split_at_mut(&mut self, mid: u32) -> (OutputChannels<S>, OutputChannels<S>) {
         let mid = mid as usize;
