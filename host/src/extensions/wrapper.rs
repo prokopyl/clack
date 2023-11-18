@@ -28,7 +28,7 @@ pub(crate) mod descriptor;
 pub struct HostWrapper<H: Host> {
     audio_processor: Option<UnsafeCell<<H as Host>::AudioProcessor<'static>>>,
     main_thread: Option<UnsafeCell<<H as Host>::MainThread<'static>>>,
-    shared: <H as Host>::Shared<'static>,
+    shared: Pin<Box<<H as Host>::Shared<'static>>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -107,12 +107,12 @@ impl<H: Host> HostWrapper<H> {
         let mut wrapper = Box::pin(Self {
             audio_processor: None,
             main_thread: None,
-            shared: shared(&()),
+            shared: Box::pin(shared(&())),
         });
 
         let pinned_wrapper = unsafe { Pin::get_unchecked_mut(wrapper.as_mut()) };
         pinned_wrapper.main_thread = Some(UnsafeCell::new(main_thread(unsafe {
-            // SAFETY: TODO
+            // SAFETY: This type guarantees main thread data cannot outlive shared
             extend_shared_ref(&pinned_wrapper.shared)
         })));
 
