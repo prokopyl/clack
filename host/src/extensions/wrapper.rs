@@ -61,8 +61,7 @@ impl<H: Host> HostWrapper<H> {
         }
     }
 
-    /// Returns a raw, non-null pointer to the host's main thread ([`MainThread`](Host::MainThread))
-    /// struct.
+    /// Returns a raw, non-null pointer to the host's ([`MainThread`](Host::MainThread)) struct.
     ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
@@ -95,7 +94,7 @@ impl<H: Host> HostWrapper<H> {
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
     #[inline]
     pub fn shared(&self) -> &<H as Host>::Shared<'_> {
-        // SAFETY: TODO
+        // SAFETY: This type guarantees shared is never used mutably
         unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
 
