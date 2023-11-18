@@ -7,8 +7,8 @@ edition = "2021"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-clack-plugin = { path = "../../../plugin" }
-clack-extensions = { path = "../../../extensions", features = ["audio-ports", "params", "state", "clack-plugin", "clack-host"] }
+clack-plugin = { workspace = true }
+clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin", "clack-host"] }
 
 [dev-dependencies]
 clack-test-host = { path = "../../../test-host" }
