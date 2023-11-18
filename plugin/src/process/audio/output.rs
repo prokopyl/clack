@@ -145,7 +145,7 @@ impl<'a> OutputPort<'a> {
 /// [`OutputPort::channels`].
 pub struct OutputChannels<'a, S> {
     pub(crate) frames_count: u32,
-    pub(crate) data: &'a [*const S],
+    pub(crate) data: &'a mut [*const S],
 }
 
 impl<'a, S> OutputChannels<'a, S> {
@@ -162,7 +162,7 @@ impl<'a, S> OutputChannels<'a, S> {
     /// In CLAP's API, hosts provide a port's audio data as an array of raw pointers, each of which points
     /// to the start of a sample array of type `S` and of [`frames_count`](Self::frames_count) length.
     #[inline]
-    pub fn raw_data(&self) -> &'a [*const S] {
+    pub fn raw_data(&self) -> &[*const S] {
         self.data
     }
 
@@ -205,9 +205,48 @@ impl<'a, S> OutputChannels<'a, S> {
     #[inline]
     pub fn iter_mut(&mut self) -> OutputChannelsIter<S> {
         OutputChannelsIter {
-            data: self.data.as_ref().iter(),
+            data: self.data.as_mut().iter_mut(),
             frames_count: self.frames_count,
         }
+    }
+
+    /// Divides the output channels into two at an index.
+    ///
+    /// The first will contain all channels with indices from `[0, mid)` (excluding
+    /// the index `mid` itself) and the second will contain all channels with
+    /// indices from `[mid, channel_count)`.
+    ///
+    /// Unlike [`slice::split_at_mut`](core::slice::split_at_mut), this method does not panic if
+    /// `mid` is larger than `channel_count`.
+    /// The second [`OutputChannels`] only be empty in this case.
+    #[inline]
+    pub fn split_at_mut(&mut self, mid: u32) -> (OutputChannels<S>, OutputChannels<S>) {
+        let mid = mid as usize;
+        if mid >= self.data.len() {
+            return (
+                OutputChannels {
+                    data: self.data,
+                    frames_count: self.frames_count,
+                },
+                OutputChannels {
+                    data: &mut [],
+                    frames_count: self.frames_count,
+                },
+            );
+        }
+        // PANIC: Checked that mid < len above
+        let (left, right) = self.data.split_at_mut(mid);
+
+        (
+            OutputChannels {
+                data: left,
+                frames_count: self.frames_count,
+            },
+            OutputChannels {
+                data: right,
+                frames_count: self.frames_count,
+            },
+        )
     }
 }
 impl<'a, T> IntoIterator for &'a OutputChannels<'a, T> {
@@ -237,7 +276,7 @@ impl<'a, T> IntoIterator for OutputChannels<'a, T> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         OutputChannelsIter {
-            data: self.data.as_ref().iter(),
+            data: self.data.as_mut().iter_mut(),
             frames_count: self.frames_count,
         }
     }
@@ -245,7 +284,7 @@ impl<'a, T> IntoIterator for OutputChannels<'a, T> {
 
 /// An iterator over all of an [`OutputPort`]'s channels' writable sample buffers.
 pub struct OutputChannelsIter<'a, T> {
-    data: core::slice::Iter<'a, *const T>,
+    data: IterMut<'a, *const T>,
     frames_count: u32,
 }
 
