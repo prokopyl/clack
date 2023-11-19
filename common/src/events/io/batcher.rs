@@ -61,7 +61,7 @@ impl<'a> Iterator for EventBatcher<'a> {
                         if event_time > 0 {
                             self.state = HasNextEvent {
                                 next_event: event,
-                                events_remaining_range: 1..events_len,
+                                events_remaining_range: 0..events_len,
                             };
                             Some(EventBatch {
                                 events: InputEventsIter {
@@ -147,7 +147,7 @@ impl<'a> Iterator for EventBatcher<'a> {
                         Some(EventBatch {
                             events: InputEventsIter {
                                 list: self.events,
-                                range: (current_index - 1)..events_len,
+                                range: current_index..events_len,
                             },
                             first_sample: current_event_sample_time as usize,
                             next_sample: None,
@@ -280,6 +280,78 @@ mod tests {
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+
+        assert!(events.next().is_none())
+    }
+
+    #[test]
+    pub fn works_with_two_grouped_nonzero_events() {
+        let buf = [
+            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), 0),
+            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), 0),
+        ];
+
+        let events = InputEvents::from_buffer(&buf);
+        let mut events = events.batch();
+
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 0);
+            assert_eq!(batch.next_sample(), Some(5));
+
+            let mut batch_events = batch.events_iter();
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 5);
+            assert_eq!(batch.next_sample(), None);
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
+            assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+
+        assert!(events.next().is_none())
+    }
+
+    #[test]
+    pub fn works_with_two_distinct_nonzero_events() {
+        let buf = [
+            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), 0),
+            ParamGestureBeginEvent::new(EventHeader::new_core(10, EventFlags::empty()), 0),
+        ];
+
+        let events = InputEvents::from_buffer(&buf);
+        let mut events = events.batch();
+
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 0);
+            assert_eq!(batch.next_sample(), Some(5));
+
+            let mut batch_events = batch.events_iter();
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 5);
+            assert_eq!(batch.next_sample(), Some(10));
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 10);
+            assert_eq!(batch.next_sample(), None);
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
 
