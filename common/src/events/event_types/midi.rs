@@ -79,6 +79,7 @@ impl Eq for MidiEvent {}
 impl Debug for MidiEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MidiEvent")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("data", &self.inner.data)
             .finish()
@@ -163,6 +164,7 @@ impl<'a> Eq for MidiSysExEvent<'a> {}
 impl<'a> Debug for MidiSysExEvent<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MidiSysexEvent")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("data", &self.data())
             .finish()
@@ -230,6 +232,7 @@ impl Eq for Midi2Event {}
 impl Debug for Midi2Event {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Midi2Event")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("data", &self.inner.data)
             .finish()

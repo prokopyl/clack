@@ -162,6 +162,7 @@ impl<E> PartialEq for NoteEvent<E> {
 impl<E> Debug for NoteEvent<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NoteEvent")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
