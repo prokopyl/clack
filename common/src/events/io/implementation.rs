@@ -5,12 +5,12 @@ use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
 
 #[allow(clippy::len_without_is_empty)] // This is not necessary, the trait is intended for FFI
-pub trait InputEventBuffer {
+pub trait InputEventBuffer: Sized {
     fn len(&self) -> u32;
     fn get(&self, index: u32) -> Option<&UnknownEvent>;
 }
 
-pub trait OutputEventBuffer {
+pub trait OutputEventBuffer: Sized {
     fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError>;
 }
 
@@ -117,19 +117,6 @@ impl<T: Event<'static>, const N: usize> InputEventBuffer for [T; N] {
     }
 }
 
-impl<T: Event<'static>> InputEventBuffer for [T] {
-    #[inline]
-    fn len(&self) -> u32 {
-        let len = <[T]>::len(self);
-        len.min((u32::MAX - 1) as usize) as u32
-    }
-
-    #[inline]
-    fn get(&self, index: u32) -> Option<&UnknownEvent> {
-        <[T]>::get(self, index as usize).map(|e| e.as_unknown())
-    }
-}
-
 impl<'a, T: Event<'a>> InputEventBuffer for &'a [T] {
     #[inline]
     fn len(&self) -> u32 {
@@ -143,7 +130,7 @@ impl<'a, T: Event<'a>> InputEventBuffer for &'a [T] {
     }
 }
 
-impl<'a> InputEventBuffer for UnknownEvent<'a> {
+impl<'a> InputEventBuffer for &UnknownEvent<'a> {
     #[inline]
     fn len(&self) -> u32 {
         1
@@ -170,7 +157,7 @@ impl<'a, const N: usize> InputEventBuffer for [&UnknownEvent<'a>; N] {
     }
 }
 
-impl<'a> InputEventBuffer for [&UnknownEvent<'a>] {
+impl<'a> InputEventBuffer for &[&UnknownEvent<'a>] {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent<'a>]>::len(self);

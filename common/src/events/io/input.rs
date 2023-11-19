@@ -37,7 +37,7 @@ pub struct InputEvents<'a> {
 }
 
 impl<'a> InputEvents<'a> {
-    /// Creates a shared reference to an InputEvents list from a given C FFI-compatible pointer.
+    /// Creates a shared reference to an [`InputEvents`] list from a given C FFI-compatible pointer.
     ///
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
