@@ -148,6 +148,7 @@ impl<'a> Index<usize> for InputEvents<'a> {
 }
 
 /// Immutable [`InputEvents`] iterator.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct InputEventsIter<'a> {
     list: &'a InputEvents<'a>,
     range: Range<u32>,

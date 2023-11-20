@@ -1,22 +1,24 @@
 use crate::events::io::{InputEvents, InputEventsIter};
-use crate::events::UnknownEvent;
 use std::ops::Bound;
 
-enum State<'a> {
-    Started,
-    // Other batches: previous_event..next_event
+#[derive(Copy, Clone, Debug)]
+enum State {
+    Started {
+        first_event_sample_time: Option<u32>,
+    },
     HasNextEvent {
         next_event_index: u32,
-        next_event: &'a UnknownEvent<'a>,
+        next_event_sample_time: u32,
     },
-    // Ended
     Ended,
 }
 
+#[derive(Clone)]
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct EventBatcher<'a> {
     events: &'a InputEvents<'a>,
     events_len: u32,
-    state: State<'a>,
+    state: State,
 }
 
 impl<'a> EventBatcher<'a> {
@@ -24,8 +26,33 @@ impl<'a> EventBatcher<'a> {
         Self {
             events,
             events_len: events.len(),
-            state: State::Started,
+            state: State::Started {
+                first_event_sample_time: events.get(0).map(|e| e.header().time()),
+            },
         }
+    }
+
+    #[inline]
+    fn get_event_time(&self, index: u32) -> Option<u32> {
+        self.events.get(index).map(|e| e.header().time())
+    }
+
+    fn next_non_matching(
+        &self,
+        current_event_index: u32,
+        current_sample: u32,
+    ) -> Option<(u32, u32)> {
+        for next_index in (current_event_index + 1)..self.events_len {
+            let Some(next_event_sample_time) = self.get_event_time(next_index) else {
+                continue;
+            };
+
+            if next_event_sample_time != current_sample {
+                return Some((next_index, next_event_sample_time));
+            }
+        }
+
+        None
     }
 }
 
@@ -35,74 +62,50 @@ impl<'a> Iterator for EventBatcher<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         use crate::events::io::batcher::State::*;
 
-        let (next_event_index, next_event_sample_time) = match self.state {
+        let (current_event_index, current_sample, next_non_matching_event) = match self.state {
             Ended => return None,
-            Started => match self.events.get(0) {
-                None => {
-                    self.state = Ended;
-
-                    return Some(EventBatch {
-                        events: InputEventsIter::new(self.events, 0..0),
-                        first_sample: 0,
-                        next_sample: None,
-                    });
-                }
-                Some(first_event) => {
-                    let event_time = first_event.header().time();
-                    if event_time == 0 {
-                        (0, 0)
-                    } else {
-                        self.state = HasNextEvent {
-                            next_event: first_event,
-                            next_event_index: 0,
-                        };
-                        return Some(EventBatch {
-                            events: InputEventsIter::new(self.events, 0..0),
-                            first_sample: 0,
-                            next_sample: Some(event_time as usize),
-                        });
-                    }
-                }
-            },
             HasNextEvent {
-                next_event,
                 next_event_index,
-            } => (next_event_index, next_event.header().time()),
+                next_event_sample_time,
+            } => (
+                next_event_index,
+                next_event_sample_time,
+                self.next_non_matching(next_event_index, next_event_sample_time),
+            ),
+            Started {
+                first_event_sample_time: Some(0),
+            } => (0, 0, self.next_non_matching(0, 0)),
+            Started {
+                first_event_sample_time: None,
+            } => (0, 0, None),
+            Started {
+                first_event_sample_time: Some(first_event_sample_time),
+            } => (0, 0, Some((0, first_event_sample_time))),
         };
-
-        let mut next_non_matching_event = None;
-
-        for next_index in (next_event_index + 1)..self.events.len() {
-            let Some(next_event) = self.events.get(next_index) else {
-                continue;
-            };
-
-            if next_event.header().time() != next_event_sample_time {
-                next_non_matching_event = Some((next_index, next_event));
-                break;
-            }
-        }
 
         match next_non_matching_event {
             None => {
                 self.state = Ended;
 
                 Some(EventBatch {
-                    events: InputEventsIter::new(self.events, next_event_index..self.events_len),
-                    first_sample: next_event_sample_time as usize,
-                    next_sample: None,
+                    events: InputEventsIter::new(self.events, current_event_index..self.events_len),
+                    first_sample: current_sample as usize,
+                    next_batch_first_sample: None,
                 })
             }
-            Some((event_index, next_event)) => {
+            Some((next_event_index, next_event_sample_time)) => {
                 self.state = HasNextEvent {
-                    next_event,
-                    next_event_index: event_index,
+                    next_event_sample_time,
+                    next_event_index,
                 };
 
                 Some(EventBatch {
-                    events: InputEventsIter::new(self.events, next_event_index..event_index),
-                    first_sample: next_event_sample_time as usize,
-                    next_sample: Some(next_event.header().time() as usize),
+                    events: InputEventsIter::new(
+                        self.events,
+                        current_event_index..next_event_index,
+                    ),
+                    first_sample: current_sample as usize,
+                    next_batch_first_sample: Some(next_event_sample_time as usize),
                 })
             }
         }
@@ -112,7 +115,7 @@ impl<'a> Iterator for EventBatcher<'a> {
 pub struct EventBatch<'a> {
     events: InputEventsIter<'a>,
     first_sample: usize,
-    next_sample: Option<usize>,
+    next_batch_first_sample: Option<usize>,
 }
 
 impl<'a> EventBatch<'a> {
@@ -127,15 +130,15 @@ impl<'a> EventBatch<'a> {
     }
 
     #[inline]
-    pub fn next_sample(&self) -> Option<usize> {
-        self.next_sample
+    pub fn next_batch_first_sample(&self) -> Option<usize> {
+        self.next_batch_first_sample
     }
 
     #[inline]
     pub fn sample_bounds(&self) -> (Bound<usize>, Bound<usize>) {
         (
             Bound::Included(self.first_sample),
-            match self.next_sample {
+            match self.next_batch_first_sample {
                 None => Bound::Unbounded,
                 Some(end) => Bound::Excluded(end),
             },
@@ -147,7 +150,7 @@ impl<'a> EventBatch<'a> {
 mod tests {
     use super::*;
     use crate::events::event_types::ParamGestureBeginEvent;
-    use crate::events::{EventFlags, EventHeader};
+    use crate::events::{EventFlags, EventHeader, UnknownEvent};
 
     #[test]
     pub fn works_with_empty_events() {
@@ -158,7 +161,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert!(batch_events.next().is_none());
@@ -180,7 +183,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
@@ -203,7 +206,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), Some(5));
+            assert_eq!(batch.next_batch_first_sample(), Some(5));
 
             let mut batch_events = batch.events_iter();
             assert!(batch_events.next().is_none());
@@ -211,7 +214,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 5);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
@@ -234,7 +237,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), Some(5));
+            assert_eq!(batch.next_batch_first_sample(), Some(5));
 
             let mut batch_events = batch.events_iter();
             assert!(batch_events.next().is_none());
@@ -242,7 +245,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 5);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
@@ -266,7 +269,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), Some(5));
+            assert_eq!(batch.next_batch_first_sample(), Some(5));
 
             let mut batch_events = batch.events_iter();
             assert!(batch_events.next().is_none());
@@ -274,7 +277,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 5);
-            assert_eq!(batch.next_sample(), Some(10));
+            assert_eq!(batch.next_batch_first_sample(), Some(10));
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
@@ -283,7 +286,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 10);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
@@ -307,7 +310,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 0);
-            assert_eq!(batch.next_sample(), Some(5));
+            assert_eq!(batch.next_batch_first_sample(), Some(5));
 
             let mut batch_events = batch.events_iter();
             assert!(batch_events.next().is_none());
@@ -315,7 +318,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 5);
-            assert_eq!(batch.next_sample(), Some(10));
+            assert_eq!(batch.next_batch_first_sample(), Some(10));
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
@@ -324,7 +327,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 10);
-            assert_eq!(batch.next_sample(), Some(15));
+            assert_eq!(batch.next_batch_first_sample(), Some(15));
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
@@ -333,7 +336,7 @@ mod tests {
         {
             let batch = events.next().unwrap();
             assert_eq!(batch.first_sample(), 15);
-            assert_eq!(batch.next_sample(), None);
+            assert_eq!(batch.next_batch_first_sample(), None);
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[2], batch_events.next().unwrap().as_event().unwrap());
