@@ -74,7 +74,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             .ok_or(PluginError::Message("Expected at least one channel"))?;
 
         for event_batch in events.input.batch() {
-            for event in event_batch.events_iter() {
+            for event in event_batch.events() {
                 self.poly_osc.process_event(event)
             }
 

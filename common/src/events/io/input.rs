@@ -113,6 +113,79 @@ impl<'a> InputEvents<'a> {
         }
     }
 
+    /// Returns an iterator that batches all events for easier processing alongside sample buffers.
+    ///
+    /// This iterator will split the stream of events into multiple
+    /// [`EventBatch`es](crate::events::io::EventBatch), so that:
+    /// * Each batch will only have events on its very first sample.
+    /// * All events that happen on the same sample are batched together.
+    ///
+    /// This makes batch processing of audio samples easier, while still being able to handle
+    /// incoming events that may happen on each sample.
+    ///
+    /// See the [`EventBatch`](crate::events::io::EventBatch) documentation for more information.
+    ///
+    /// # Visual example
+    ///
+    /// In this example, a plugin will receive a buffer of audio samples (represented with `.`s),
+    /// alongside multiple input events (represented by `E`s), which happen at precise,
+    /// sample-accurate times.
+    ///
+    /// The timeline of a processing chunk might look like something like this:
+    ///
+    ///```text
+    ///
+    ///         E           E         E         E         
+    ///                     E                   E         
+    ///                                         E         
+    /// . . . . . . . . . . . . . . . . . . . . . . . . .
+    /// ```
+    ///
+    /// While some events are happening at the same time, there are some parts of the sample buffer
+    /// where no event is occurring, which could be processed efficiently all at once.
+    ///
+    /// The [`EventBatcher`] finds these, and splits the stream into multiple
+    /// [`EventBatch`es](crate::events::io::EventBatch) where events only happen at the beginning of
+    /// each batch.
+    ///
+    /// ```text
+    ///|       |E          |E        |E        |E        |
+    ///|       |           |E        |         |E        |
+    ///|       |           |         |         |E        |
+    ///|. . . .|. . . . . .|. . . . .|. . . . .|. . . . .|
+    ///| batch |   batch   |  batch  |  batch  |  batch  |
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// This example shows how to efficiently process the event batches alongside an audio buffer.
+    ///
+    /// ```
+    /// use clack_common::events::io::InputEvents;
+    /// # use clack_common::events::UnknownEvent;
+    ///
+    /// # fn batch_process(input_events: InputEvents, audio_buffer: &[f32]) {
+    /// let input_events: InputEvents = /* ... */
+    /// # input_events;
+    /// let audio_buffer: &[f32] = /* ... */
+    /// # audio_buffer;
+    ///
+    /// for event_bach in input_events.batch() {
+    ///     // First, handle all events that could affect audio processing.
+    ///     // (e.g. note on/off, parameter changes, etc.)
+    ///    for event in event_bach.events() {
+    ///        // (Handle the event...)
+    ///    }
+    ///
+    ///    // Now, we can process the whole audio batch
+    ///    let audio_batch: &[f32] = &audio_buffer[event_bach.sample_bounds()];
+    ///    // (Process the audio samples...)
+    /// }
+    /// # }
+    /// # let events: [&UnknownEvent<'static>; 0] = []; batch_process(InputEvents::from_buffer(&events), &[]);
+    /// ```
+    ///
+    ///
     #[inline]
     pub fn batch(&self) -> EventBatcher {
         EventBatcher::new(self)

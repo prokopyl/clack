@@ -19,12 +19,17 @@ impl SquareOscillator {
     }
 
     #[inline]
+    pub fn set_note_number(&mut self, _new_note_number: u8) {
+        todo!()
+    }
+
+    #[inline]
     pub fn set_frequency(&mut self, _new_frequency: f32) {
         todo!()
     }
 
     #[inline]
-    pub fn next_sample(&mut self) -> f32 {
+    pub fn add_next_samples_to_buffer(&mut self, buf: &mut [f32]) {
         todo!()
     }
 }

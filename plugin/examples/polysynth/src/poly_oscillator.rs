@@ -1,9 +1,12 @@
 use crate::oscillator::SquareOscillator;
-use clack_plugin::prelude::UnknownEvent;
+use clack_plugin::events::event_types::*;
+use clack_plugin::events::spaces::CoreEventSpace;
+use clack_plugin::prelude::*;
 
 #[derive(Copy, Clone)]
 struct Voice {
     oscillator: SquareOscillator,
+    note_number: u8,
 }
 
 pub struct PolyOscillator {
@@ -16,7 +19,8 @@ impl PolyOscillator {
         Self {
             voice_buffer: vec![
                 Voice {
-                    oscillator: SquareOscillator::new(sample_rate)
+                    oscillator: SquareOscillator::new(sample_rate),
+                    note_number: 0
                 };
                 voice_count
             ]
@@ -26,10 +30,57 @@ impl PolyOscillator {
     }
 
     pub fn process_event(&mut self, event: &UnknownEvent) {
-        todo!()
+        match event.as_core_event() {
+            Some(CoreEventSpace::NoteOn(NoteOnEvent(note_event))) => {
+                // Ignore invalid or negative note keys.
+                let Ok(note_key) = u8::try_from(note_event.key()) else {
+                    return;
+                };
+
+                // Skip the event if we are out of voices
+                let Some(available_voice) = self.voice_buffer.get_mut(self.active_voice_count)
+                else {
+                    return;
+                };
+
+                available_voice.oscillator.reset();
+                available_voice.oscillator.set_note_number(note_key);
+
+                self.active_voice_count += 1;
+            }
+            Some(CoreEventSpace::NoteOff(NoteOffEvent(note_event))) => {
+                // A -1 key means shutting off all notes.
+                if note_event.key() == -1 {
+                    self.active_voice_count = 0;
+                    return;
+                }
+
+                // Ignore invalid note keys.
+                let Ok(note_key) = u8::try_from(note_event.key()) else {
+                    return;
+                };
+
+                // Find the voice that is playing that note.
+                if let Some(voice_index) = self
+                    .voice_buffer
+                    .iter()
+                    .position(|v| v.note_number == note_key)
+                {
+                    // Swap the targeted voice with the last one.
+                    self.voice_buffer
+                        .swap(voice_index, self.active_voice_count - 1);
+
+                    // Remove the last voice from the active pool.
+                    self.active_voice_count -= 1;
+                }
+            }
+            _ => {}
+        }
     }
 
     pub fn generate_next_samples(&mut self, output_buffer: &mut [f32]) {
-        todo!()
+        for voice in &mut self.voice_buffer[..self.active_voice_count] {
+            voice.oscillator.add_next_samples_to_buffer(output_buffer);
+        }
     }
 }

@@ -116,7 +116,7 @@ pub struct EventBatch<'a> {
 
 impl<'a> EventBatch<'a> {
     #[inline]
-    pub fn events_iter(&self) -> InputEventsIter<'a> {
+    pub fn events(&self) -> InputEventsIter<'a> {
         self.events.clone()
     }
 
@@ -159,7 +159,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert!(batch_events.next().is_none());
         }
 
@@ -181,7 +181,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -204,7 +204,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), Some(5));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert!(batch_events.next().is_none());
         }
         {
@@ -212,7 +212,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 5);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -235,7 +235,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), Some(5));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert!(batch_events.next().is_none());
         }
         {
@@ -243,7 +243,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 5);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
@@ -267,7 +267,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), Some(5));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert!(batch_events.next().is_none());
         }
         {
@@ -275,7 +275,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 5);
             assert_eq!(batch.next_batch_first_sample(), Some(10));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -284,7 +284,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 10);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -308,7 +308,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 0);
             assert_eq!(batch.next_batch_first_sample(), Some(5));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert!(batch_events.next().is_none());
         }
         {
@@ -316,7 +316,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 5);
             assert_eq!(batch.next_batch_first_sample(), Some(10));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -325,7 +325,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 10);
             assert_eq!(batch.next_batch_first_sample(), Some(15));
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
@@ -334,7 +334,7 @@ mod tests {
             assert_eq!(batch.first_sample(), 15);
             assert_eq!(batch.next_batch_first_sample(), None);
 
-            let mut batch_events = batch.events_iter();
+            let mut batch_events = batch.events();
             assert_eq!(&buf[2], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
