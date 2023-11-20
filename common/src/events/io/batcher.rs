@@ -1,14 +1,12 @@
 use crate::events::io::{InputEvents, InputEventsIter};
 use crate::events::UnknownEvent;
-use std::ops::{Bound, Range};
+use std::ops::Bound;
 
 enum State<'a> {
-    Started {
-        events_len: u32,
-    },
+    Started,
     // Other batches: previous_event..next_event
     HasNextEvent {
-        events_remaining_range: Range<u32>,
+        next_event_index: u32,
         next_event: &'a UnknownEvent<'a>,
     },
     // Ended
@@ -17,6 +15,7 @@ enum State<'a> {
 
 pub struct EventBatcher<'a> {
     events: &'a InputEvents<'a>,
+    events_len: u32,
     state: State<'a>,
 }
 
@@ -24,9 +23,8 @@ impl<'a> EventBatcher<'a> {
     pub(crate) fn new(events: &'a InputEvents<'a>) -> Self {
         Self {
             events,
-            state: State::Started {
-                events_len: events.len(),
-            },
+            events_len: events.len(),
+            state: State::Started,
         }
     }
 }
@@ -37,11 +35,30 @@ impl<'a> Iterator for EventBatcher<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         use crate::events::io::batcher::State::*;
 
-        match &self.state {
+        fn find_next_non_matching<'a>(
+            events: &'a InputEvents,
+            start_at: u32,
+            sample: u32,
+        ) -> Option<(u32, &'a UnknownEvent<'a>)> {
+            let mut lookup_range = start_at..events.len();
+            loop {
+                let Some(next_index) = lookup_range.next() else {
+                    return None;
+                };
+                let Some(next_event) = events.get(next_index) else {
+                    continue;
+                };
+
+                if next_event.header().time() != sample {
+                    return Some((next_index, next_event));
+                }
+            }
+        }
+
+        match self.state {
             Ended => None,
-            Started { events_len } => {
+            Started => {
                 let first_event = self.events.get(0);
-                let events_len = *events_len;
 
                 match first_event {
                     None => {
@@ -61,7 +78,7 @@ impl<'a> Iterator for EventBatcher<'a> {
                         if event_time > 0 {
                             self.state = HasNextEvent {
                                 next_event: event,
-                                events_remaining_range: 0..events_len,
+                                next_event_index: 0,
                             };
                             Some(EventBatch {
                                 events: InputEventsIter {
@@ -72,19 +89,14 @@ impl<'a> Iterator for EventBatcher<'a> {
                                 next_sample: Some(event_time as usize),
                             })
                         } else {
-                            let mut lookup_range = 1..events_len;
-                            let next_non_matching_event = loop {
-                                let Some(next_index) = lookup_range.next() else {
-                                    break None;
-                                };
-                                let Some(next_event) = self.events.get(next_index) else {
-                                    continue;
-                                };
+                            let current_event_sample_time = 0u32;
+                            let next_event_index = 0;
 
-                                if next_event.header().time() != 0 {
-                                    break Some((next_index, next_event));
-                                }
-                            };
+                            let next_non_matching_event = find_next_non_matching(
+                                self.events,
+                                next_event_index + 1,
+                                current_event_sample_time,
+                            );
 
                             match next_non_matching_event {
                                 None => {
@@ -92,15 +104,18 @@ impl<'a> Iterator for EventBatcher<'a> {
                                     self.state = Ended;
 
                                     Some(EventBatch {
-                                        events: self.events.iter(),
-                                        first_sample: 0,
+                                        events: InputEventsIter {
+                                            list: self.events,
+                                            range: next_event_index..self.events_len,
+                                        },
+                                        first_sample: current_event_sample_time as usize,
                                         next_sample: None,
                                     })
                                 }
                                 Some((event_index, next_event)) => {
                                     self.state = HasNextEvent {
                                         next_event,
-                                        events_remaining_range: event_index..events_len,
+                                        next_event_index: event_index,
                                     };
 
                                     Some(EventBatch {
@@ -119,26 +134,15 @@ impl<'a> Iterator for EventBatcher<'a> {
             }
             HasNextEvent {
                 next_event,
-                events_remaining_range,
+                next_event_index,
             } => {
-                let current_index = events_remaining_range.start;
-                let events_len = events_remaining_range.end;
-                let mut events_remaining_range = events_remaining_range.clone();
-
                 let current_event_sample_time = next_event.header().time();
 
-                let next_non_matching_event = loop {
-                    let Some(next_index) = events_remaining_range.next() else {
-                        break None;
-                    };
-                    let Some(next_event) = self.events.get(next_index) else {
-                        continue;
-                    };
-
-                    if next_event.header().time() != current_event_sample_time {
-                        break Some((next_index, next_event));
-                    }
-                };
+                let next_non_matching_event = find_next_non_matching(
+                    self.events,
+                    next_event_index + 1,
+                    current_event_sample_time,
+                );
 
                 match next_non_matching_event {
                     None => {
@@ -147,7 +151,7 @@ impl<'a> Iterator for EventBatcher<'a> {
                         Some(EventBatch {
                             events: InputEventsIter {
                                 list: self.events,
-                                range: current_index..events_len,
+                                range: next_event_index..self.events_len,
                             },
                             first_sample: current_event_sample_time as usize,
                             next_sample: None,
@@ -156,13 +160,13 @@ impl<'a> Iterator for EventBatcher<'a> {
                     Some((event_index, next_event)) => {
                         self.state = HasNextEvent {
                             next_event,
-                            events_remaining_range: event_index..events_len,
+                            next_event_index: event_index,
                         };
 
                         Some(EventBatch {
                             events: InputEventsIter {
                                 list: self.events,
-                                range: current_index..event_index,
+                                range: next_event_index..event_index,
                             },
                             first_sample: current_event_sample_time as usize,
                             next_sample: Some(next_event.header().time() as usize),
@@ -352,6 +356,56 @@ mod tests {
 
             let mut batch_events = batch.events_iter();
             assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+
+        assert!(events.next().is_none())
+    }
+
+    #[test]
+    pub fn three_distinct_nonzero_events() {
+        let buf = [
+            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), 0),
+            ParamGestureBeginEvent::new(EventHeader::new_core(10, EventFlags::empty()), 0),
+            ParamGestureBeginEvent::new(EventHeader::new_core(15, EventFlags::empty()), 0),
+        ];
+
+        let events = InputEvents::from_buffer(&buf);
+        let mut events = events.batch();
+
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 0);
+            assert_eq!(batch.next_sample(), Some(5));
+
+            let mut batch_events = batch.events_iter();
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 5);
+            assert_eq!(batch.next_sample(), Some(10));
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[0], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 10);
+            assert_eq!(batch.next_sample(), Some(15));
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[1], batch_events.next().unwrap().as_event().unwrap());
+            assert!(batch_events.next().is_none());
+        }
+        {
+            let batch = events.next().unwrap();
+            assert_eq!(batch.first_sample(), 15);
+            assert_eq!(batch.next_sample(), None);
+
+            let mut batch_events = batch.events_iter();
+            assert_eq!(&buf[2], batch_events.next().unwrap().as_event().unwrap());
             assert!(batch_events.next().is_none());
         }
 
