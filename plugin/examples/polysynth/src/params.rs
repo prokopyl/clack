@@ -63,6 +63,10 @@ impl PolySynthParams {
     }
 }
 
+/// Implementation of the State extension.
+///
+/// Our state "serialization" is extremely simple and basic: we only have the value of the
+/// volume parameter to store, so we just store its bytes (in little-endian) and call it a day.
 impl<'a> PluginStateImpl for PolySynthPluginMainThread<'a> {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
         let volume_param = self.shared.params.get_volume();
