@@ -1,3 +1,5 @@
+//! Contains all types and implementations related to parameter management.
+
 use crate::{PolySynthAudioProcessor, PolySynthPluginMainThread};
 use clack_extensions::params::implementation::{
     ParamDisplayWriter, ParamInfoWriter, PluginAudioProcessorParams, PluginMainThreadParams,
@@ -5,38 +7,53 @@ use clack_extensions::params::implementation::{
 use clack_extensions::params::info::{ParamInfoData, ParamInfoFlags};
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::events::spaces::CoreEventSpace;
-use clack_plugin::events::UnknownEvent;
-use clack_plugin::plugin::PluginError;
-use clack_plugin::prelude::{InputEvents, OutputEvents};
+use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
 use std::fmt::Write as _;
 use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
 
+/// The default value of the volume parameter.
 const DEFAULT_VOLUME: f32 = 0.2;
 
+/// A struct that manages the parameters for our plugin.
+///
+/// For now, it only manages a single, `volume` parameter.
+///
+/// This struct will be used both by the [`PolySynthPluginMainThread`] (which the host will use
+/// to query the value of our parameters), and by the [`PolySynthAudioProcessor`], which will
+/// actually generate the audio samples.
 pub struct PolySynthParams {
+    /// The current value of the volume parameter.
     volume: AtomicF32,
 }
 
 impl PolySynthParams {
+    /// Initializes the shared parameter value.
     pub fn new() -> Self {
         Self {
             volume: AtomicF32::new(DEFAULT_VOLUME),
         }
     }
 
+    /// Returns the current volume.
     #[inline]
     pub fn get_volume(&self) -> f32 {
         self.volume.load(Ordering::SeqCst)
     }
 
+    /// Sets a new value for the value parameter.
+    /// The value is clamped, as it should only be in the `0..=1` range.
     #[inline]
     pub fn set_volume(&self, new_volume: f32) {
         let new_volume = new_volume.clamp(0., 1.);
         self.volume.store(new_volume, Ordering::SeqCst)
     }
 
+    /// Handles incoming events.
+    ///
+    /// If the given event is a matching parameter change event, the volume parameter will be
+    /// updated accordingly.
     pub fn handle_event(&self, event: &UnknownEvent) {
         if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
             if event.param_id() == 1 {
@@ -107,10 +124,10 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
 
     fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64> {
         if param_id == 1 {
-            let text = text.strip_suffix(" %")?;
-            let value = text.parse().ok()?;
+            let text = text.strip_suffix('%').unwrap_or(text).trim();
+            let percentage: f64 = text.parse().ok()?;
 
-            Some(value)
+            Some(percentage / 100.0)
         } else {
             None
         }
@@ -139,30 +156,41 @@ impl<'a> PluginAudioProcessorParams for PolySynthAudioProcessor<'a> {
     }
 }
 
+/// A small helper to atomically load and store an `f32` value.
 struct AtomicF32(AtomicU32);
 
 impl AtomicF32 {
+    /// Creates a new atomic `f32`.
     #[inline]
     fn new(value: f32) -> Self {
         Self(AtomicU32::new(f32_to_u32_bytes(value)))
     }
 
+    /// Stores the given `value` using the given `order`ing.
     #[inline]
-    fn store(&self, new_value: f32, order: Ordering) {
-        self.0.store(f32_to_u32_bytes(new_value), order)
+    fn store(&self, value: f32, order: Ordering) {
+        self.0.store(f32_to_u32_bytes(value), order)
     }
 
+    /// Loads the contained `value` using the given `order`ing.
     #[inline]
     fn load(&self, order: Ordering) -> f32 {
         f32_from_u32_bytes(self.0.load(order))
     }
 }
 
+/// Packs a `f32` into the bytes of an `u32`.
+///
+/// The resulting value is meaningless and should not be used directly,
+/// except for unpacking with [`f32_from_u32_bytes`].
+///
+/// This is an internal helper used by [`AtomicF32`].
 #[inline]
 fn f32_to_u32_bytes(value: f32) -> u32 {
     u32::from_ne_bytes(value.to_ne_bytes())
 }
 
+/// The counterpart to [`f32_to_u32_bytes`].
 #[inline]
 fn f32_from_u32_bytes(bytes: u32) -> f32 {
     f32::from_ne_bytes(bytes.to_ne_bytes())

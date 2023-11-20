@@ -1,6 +1,6 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 #![doc = include_str!("../README.md")]
-// #![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
+#![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
 
 use crate::params::PolySynthParams;
 use crate::poly_oscillator::PolyOscillator;
@@ -12,6 +12,9 @@ mod oscillator;
 mod params;
 mod poly_oscillator;
 
+/// The type that represents our plugin in Clack.
+///
+/// This is what implements the [`Plugin`] trait, where all the other sub-types are attached.
 pub struct PolySynthPlugin;
 
 impl Plugin for PolySynthPlugin {
@@ -40,8 +43,13 @@ impl Plugin for PolySynthPlugin {
     }
 }
 
+/// Our plugin's audio processor. It lives in the audio thread.
+///
+/// It receives note and parameter events, and generates a mono output by running the oscillators.
 pub struct PolySynthAudioProcessor<'a> {
+    /// The oscillator bank.
     poly_osc: PolyOscillator,
+    /// A reference to the plugin's shared data.
     shared: &'a PolySynthPluginShared,
 }
 
@@ -66,9 +74,12 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
         mut audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError> {
+        // First, we have to make a few sanity checks.
+        // We want at least a single output port, which contains at least one channel of `f32`
+        // audio sample data.
         let mut output_port = audio
             .output_port(0)
-            .ok_or(PluginError::Message("No output"))?;
+            .ok_or(PluginError::Message("No output port found"))?;
 
         let mut output_channels = output_port
             .channels()?
@@ -79,16 +90,22 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             .channel_mut(0)
             .ok_or(PluginError::Message("Expected at least one channel"))?;
 
+        // Ensure the buffer is zero-filled, as all oscillators will just add to it.
         output_buffer.fill(0.0);
 
+        // We use the `EventBatcher` to handle incoming events in a sample-accurate way.
         for event_batch in events.input.batch() {
+            // Handle all of the events (note or param) for this batch.
             for event in event_batch.events() {
                 self.poly_osc.handle_event(event);
                 self.shared.params.handle_event(event);
             }
 
+            // Received the updated volume parameter
             let volume = self.shared.params.get_volume();
 
+            // With all of the events out of the way, we can now handle a whole batch of sample
+            // all at once.
             let output_buffer = &mut output_buffer[event_batch.sample_bounds()];
             self.poly_osc.generate_next_samples(output_buffer, volume);
         }
@@ -96,13 +113,17 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
         // If somehow the host didn't give us a mono output, we copy the output to all channels
         if output_channels.channel_count() > 1 {
             let (first_channel, other_channels) = output_channels.split_at_mut(1);
+            // PANIC: we just checked that channel_count is > 1.
             let first_channel = first_channel.channel(0).unwrap();
 
+            // Copy the first channel into all of the other channels.
             for other_channel in other_channels {
                 other_channel.copy_from_slice(first_channel)
             }
         }
 
+        // Return either the Continue state or the Sleep state, depending on if we have active
+        // voices running or not.
         if self.poly_osc.has_active_voices() {
             Ok(ProcessStatus::Continue)
         } else {
@@ -111,6 +132,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     }
 
     fn stop_processing(&mut self) {
+        // When audio processing stops, we stop all of the oscillator voices just in case.
         self.poly_osc.stop_all();
     }
 }
@@ -159,7 +181,9 @@ impl<'a> PluginNotePortsImpl for PolySynthPluginMainThread<'a> {
     }
 }
 
+/// The plugin data that gets shared between the Main Thread and the Audio Thread.
 pub struct PolySynthPluginShared {
+    /// The plugin's parameter values.
     params: PolySynthParams,
 }
 
@@ -171,7 +195,9 @@ impl<'a> PluginShared<'a> for PolySynthPluginShared {
     }
 }
 
+/// The data that belongs to the main thread of our plugin.
 pub struct PolySynthPluginMainThread<'a> {
+    /// A reference to the plugin's shared data.
     shared: &'a PolySynthPluginShared,
 }
 
