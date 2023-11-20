@@ -1,5 +1,5 @@
 [package]
-name = "polysynth"
+name = "clack-plugin-polysynth"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,4 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { workspace = true, features = ["audio-ports", "clack-plugin", "note-ports"] }
+clack-extensions = { workspace = true, features = ["audio-ports", "clack-plugin", "note-ports", "params"] }
