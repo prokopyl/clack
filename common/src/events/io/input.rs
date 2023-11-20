@@ -149,8 +149,15 @@ impl<'a> Index<usize> for InputEvents<'a> {
 
 /// Immutable [`InputEvents`] iterator.
 pub struct InputEventsIter<'a> {
-    pub(crate) list: &'a InputEvents<'a>,
-    pub(crate) range: Range<u32>,
+    list: &'a InputEvents<'a>,
+    range: Range<u32>,
+}
+
+impl<'a> InputEventsIter<'a> {
+    #[inline]
+    pub(crate) fn new(list: &'a InputEvents<'a>, range: Range<u32>) -> Self {
+        Self { list, range }
+    }
 }
 
 impl<'a> Clone for InputEventsIter<'a> {

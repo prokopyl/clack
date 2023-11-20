@@ -35,144 +35,75 @@ impl<'a> Iterator for EventBatcher<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         use crate::events::io::batcher::State::*;
 
-        fn find_next_non_matching<'a>(
-            events: &'a InputEvents,
-            start_at: u32,
-            sample: u32,
-        ) -> Option<(u32, &'a UnknownEvent<'a>)> {
-            let mut lookup_range = start_at..events.len();
-            loop {
-                let Some(next_index) = lookup_range.next() else {
-                    return None;
-                };
-                let Some(next_event) = events.get(next_index) else {
-                    continue;
-                };
+        let (next_event_index, next_event_sample_time) = match self.state {
+            Ended => return None,
+            Started => match self.events.get(0) {
+                None => {
+                    self.state = Ended;
 
-                if next_event.header().time() != sample {
-                    return Some((next_index, next_event));
+                    return Some(EventBatch {
+                        events: InputEventsIter::new(self.events, 0..0),
+                        first_sample: 0,
+                        next_sample: None,
+                    });
                 }
-            }
-        }
-
-        match self.state {
-            Ended => None,
-            Started => {
-                let first_event = self.events.get(0);
-
-                match first_event {
-                    None => {
-                        self.state = Ended;
-
-                        Some(EventBatch {
-                            events: InputEventsIter {
-                                list: self.events,
-                                range: 0..0,
-                            },
+                Some(first_event) => {
+                    let event_time = first_event.header().time();
+                    if event_time == 0 {
+                        (0, 0)
+                    } else {
+                        self.state = HasNextEvent {
+                            next_event: first_event,
+                            next_event_index: 0,
+                        };
+                        return Some(EventBatch {
+                            events: InputEventsIter::new(self.events, 0..0),
                             first_sample: 0,
-                            next_sample: None,
-                        })
-                    }
-                    Some(event) => {
-                        let event_time = event.header().time();
-                        if event_time > 0 {
-                            self.state = HasNextEvent {
-                                next_event: event,
-                                next_event_index: 0,
-                            };
-                            Some(EventBatch {
-                                events: InputEventsIter {
-                                    list: self.events,
-                                    range: 0..0,
-                                },
-                                first_sample: 0,
-                                next_sample: Some(event_time as usize),
-                            })
-                        } else {
-                            let current_event_sample_time = 0u32;
-                            let next_event_index = 0;
-
-                            let next_non_matching_event = find_next_non_matching(
-                                self.events,
-                                next_event_index + 1,
-                                current_event_sample_time,
-                            );
-
-                            match next_non_matching_event {
-                                None => {
-                                    // Turns out, all events were at index 0. Only one iteration needed.
-                                    self.state = Ended;
-
-                                    Some(EventBatch {
-                                        events: InputEventsIter {
-                                            list: self.events,
-                                            range: next_event_index..self.events_len,
-                                        },
-                                        first_sample: current_event_sample_time as usize,
-                                        next_sample: None,
-                                    })
-                                }
-                                Some((event_index, next_event)) => {
-                                    self.state = HasNextEvent {
-                                        next_event,
-                                        next_event_index: event_index,
-                                    };
-
-                                    Some(EventBatch {
-                                        events: InputEventsIter {
-                                            list: self.events,
-                                            range: 0..event_index,
-                                        },
-                                        first_sample: 0,
-                                        next_sample: Some(next_event.header().time() as usize),
-                                    })
-                                }
-                            }
-                        }
+                            next_sample: Some(event_time as usize),
+                        });
                     }
                 }
-            }
+            },
             HasNextEvent {
                 next_event,
                 next_event_index,
-            } => {
-                let current_event_sample_time = next_event.header().time();
+            } => (next_event_index, next_event.header().time()),
+        };
 
-                let next_non_matching_event = find_next_non_matching(
-                    self.events,
-                    next_event_index + 1,
-                    current_event_sample_time,
-                );
+        let mut next_non_matching_event = None;
 
-                match next_non_matching_event {
-                    None => {
-                        self.state = Ended;
+        for next_index in (next_event_index + 1)..self.events.len() {
+            let Some(next_event) = self.events.get(next_index) else {
+                continue;
+            };
 
-                        Some(EventBatch {
-                            events: InputEventsIter {
-                                list: self.events,
-                                range: next_event_index..self.events_len,
-                            },
-                            first_sample: current_event_sample_time as usize,
-                            next_sample: None,
-                        })
-                    }
-                    Some((event_index, next_event)) => {
-                        self.state = HasNextEvent {
-                            next_event,
-                            next_event_index: event_index,
-                        };
+            if next_event.header().time() != next_event_sample_time {
+                next_non_matching_event = Some((next_index, next_event));
+                break;
+            }
+        }
 
-                        Some(EventBatch {
-                            events: InputEventsIter {
-                                list: self.events,
-                                range: next_event_index..event_index,
-                            },
-                            first_sample: current_event_sample_time as usize,
-                            next_sample: Some(next_event.header().time() as usize),
-                        })
-                    }
-                }
+        match next_non_matching_event {
+            None => {
+                self.state = Ended;
+
+                Some(EventBatch {
+                    events: InputEventsIter::new(self.events, next_event_index..self.events_len),
+                    first_sample: next_event_sample_time as usize,
+                    next_sample: None,
+                })
+            }
+            Some((event_index, next_event)) => {
+                self.state = HasNextEvent {
+                    next_event,
+                    next_event_index: event_index,
+                };
+
+                Some(EventBatch {
+                    events: InputEventsIter::new(self.events, next_event_index..event_index),
+                    first_sample: next_event_sample_time as usize,
+                    next_sample: Some(next_event.header().time() as usize),
+                })
             }
         }
     }
