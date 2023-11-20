@@ -138,13 +138,13 @@ impl<'a> IntoIterator for &'a EventBuffer {
     }
 }
 
-impl InputEventBuffer for EventBuffer {
+impl InputEventBuffer<'static> for EventBuffer {
     #[inline]
     fn len(&self) -> u32 {
         self.indexes.len() as u32
     }
 
-    fn get(&self, index: u32) -> Option<&UnknownEvent> {
+    fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
         let header_index = (*self.indexes.get(index as usize)?) as usize;
         // SAFETY: Registered indexes always have actual event headers written by append_header_data
         // PANIC: We used registered indexes, this should never panic
@@ -169,7 +169,7 @@ impl InputEventBuffer for EventBuffer {
     }
 }
 
-impl OutputEventBuffer for EventBuffer {
+impl OutputEventBuffer<'static> for EventBuffer {
     fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
         self.push(event);
 

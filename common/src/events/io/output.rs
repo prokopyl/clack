@@ -83,7 +83,7 @@ impl<'a> OutputEvents<'a> {
     /// let output_events = OutputEvents::from_buffer(&mut buf);
     /// ```
     #[inline]
-    pub fn from_buffer<I: OutputEventBuffer>(buffer: &'a mut I) -> Self {
+    pub fn from_buffer<'b: 'a, O: OutputEventBuffer<'b>>(buffer: &'a mut O) -> Self {
         Self {
             inner: raw_output_events(buffer),
             _lifetime: PhantomData,
@@ -147,7 +147,7 @@ impl Display for TryPushError {
 
 impl Error for TryPushError {}
 
-impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
+impl<'a, I: OutputEventBuffer<'a>> From<&'a mut I> for OutputEvents<'a> {
     #[inline]
     fn from(implementation: &'a mut I) -> Self {
         Self::from_buffer(implementation)
@@ -166,9 +166,9 @@ impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
 
 #[derive(Copy, Clone)]
 struct VoidEvents;
-impl OutputEventBuffer for VoidEvents {
+impl<'a> OutputEventBuffer<'a> for VoidEvents {
     #[inline]
-    fn try_push(&mut self, _event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
+    fn try_push(&mut self, _event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
         Ok(())
     }
 }

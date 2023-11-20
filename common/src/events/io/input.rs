@@ -55,7 +55,7 @@ impl<'a> InputEvents<'a> {
     }
 
     #[inline]
-    pub const fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
+    pub const fn from_buffer<'b: 'a, I: InputEventBuffer<'b>>(buffer: &'a I) -> Self {
         Self {
             inner: raw_input_events(buffer),
             _lifetime: PhantomData,
@@ -63,8 +63,8 @@ impl<'a> InputEvents<'a> {
     }
 
     #[inline]
-    pub const fn empty() -> Self {
-        Self::from_buffer::<[&UnknownEvent<'static>; 0]>(&[])
+    pub const fn empty() -> InputEvents<'static> {
+        InputEvents::from_buffer::<[&UnknownEvent<'static>; 0]>(&[])
     }
 
     /// Returns the number of events in the list.
@@ -228,7 +228,7 @@ impl<'a> IntoIterator for &'a InputEvents<'a> {
     }
 }
 
-impl<'a, I: InputEventBuffer> From<&'a I> for InputEvents<'a> {
+impl<'a, I: InputEventBuffer<'a>> From<&'a I> for InputEvents<'a> {
     #[inline]
     fn from(implementation: &'a I) -> Self {
         Self::from_buffer(implementation)
