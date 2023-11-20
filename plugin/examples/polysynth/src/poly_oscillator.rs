@@ -29,6 +29,10 @@ impl PolyOscillator {
         }
     }
 
+    pub fn stop_all(&mut self) {
+        self.active_voice_count = 0;
+    }
+
     pub fn process_event(&mut self, event: &UnknownEvent) {
         match event.as_core_event() {
             Some(CoreEventSpace::NoteOn(NoteOnEvent(note_event))) => {
@@ -45,13 +49,14 @@ impl PolyOscillator {
 
                 available_voice.oscillator.reset();
                 available_voice.oscillator.set_note_number(note_key);
+                available_voice.note_number = note_key;
 
                 self.active_voice_count += 1;
             }
             Some(CoreEventSpace::NoteOff(NoteOffEvent(note_event))) => {
                 // A -1 key means shutting off all notes.
                 if note_event.key() == -1 {
-                    self.active_voice_count = 0;
+                    self.stop_all();
                     return;
                 }
 
@@ -82,5 +87,10 @@ impl PolyOscillator {
         for voice in &mut self.voice_buffer[..self.active_voice_count] {
             voice.oscillator.add_next_samples_to_buffer(output_buffer);
         }
+    }
+
+    #[inline]
+    pub fn has_active_voices(&self) -> bool {
+        self.active_voice_count > 0
     }
 }

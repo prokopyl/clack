@@ -87,20 +87,20 @@ impl<T: Event<'static>> InputEventBuffer for T {
     }
 }
 
-impl<T: Event<'static>> InputEventBuffer for Option<T> {
+impl<T: InputEventBuffer> InputEventBuffer for Option<T> {
     #[inline]
     fn len(&self) -> u32 {
-        match self.is_some() {
-            true => 1,
-            false => 0,
+        match self {
+            Some(b) => b.len(),
+            None => 0,
         }
     }
 
     #[inline]
     fn get(&self, index: u32) -> Option<&UnknownEvent> {
-        match index {
-            0 => self.as_ref().map(|e| e.as_unknown()),
-            _ => None,
+        match self {
+            None => None,
+            Some(b) => b.get(index),
         }
     }
 }

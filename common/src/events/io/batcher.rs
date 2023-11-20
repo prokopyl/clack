@@ -23,11 +23,17 @@ pub struct EventBatcher<'a> {
 
 impl<'a> EventBatcher<'a> {
     pub(crate) fn new(events: &'a InputEvents<'a>) -> Self {
+        let events_len = events.len();
+
         Self {
             events,
-            events_len: events.len(),
+            events_len,
             state: State::Started {
-                first_event_sample_time: events.get(0).map(|e| e.header().time()),
+                first_event_sample_time: if events_len == 0 {
+                    None
+                } else {
+                    events.get(0).map(|e| e.header().time())
+                },
             },
         }
     }

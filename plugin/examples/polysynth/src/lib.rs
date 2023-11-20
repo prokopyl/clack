@@ -5,6 +5,10 @@ use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
     PluginAudioPortsImpl,
 };
+use clack_extensions::note_ports::{
+    NoteDialect, NoteDialects, NotePortInfoData, NotePortInfoWriter, PluginNotePorts,
+    PluginNotePortsImpl,
+};
 
 use crate::poly_oscillator::PolyOscillator;
 use clack_plugin::prelude::*;
@@ -32,7 +36,9 @@ impl Plugin for PolySynthPlugin {
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &PolySynthPluginShared) {
-        builder.register::<PluginAudioPorts>();
+        builder
+            .register::<PluginAudioPorts>()
+            .register::<PluginNotePorts>();
     }
 }
 
@@ -49,6 +55,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
         _shared: &'a PolySynthPluginShared,
         audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
+        println!("STARTED: proko {} sample rate", audio_config.sample_rate);
         Ok(Self {
             poly_osc: PolyOscillator::new(16, audio_config.sample_rate as f32),
         })
@@ -73,6 +80,8 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             .channel_mut(0)
             .ok_or(PluginError::Message("Expected at least one channel"))?;
 
+        output_buffer.fill(0.0);
+
         for event_batch in events.input.batch() {
             for event in event_batch.events() {
                 self.poly_osc.process_event(event)
@@ -92,7 +101,15 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             }
         }
 
-        Ok(ProcessStatus::ContinueIfNotQuiet)
+        if self.poly_osc.has_active_voices() {
+            Ok(ProcessStatus::Continue)
+        } else {
+            Ok(ProcessStatus::Sleep)
+        }
+    }
+
+    fn stop_processing(&mut self) {
+        self.poly_osc.stop_all();
     }
 }
 
@@ -106,15 +123,37 @@ impl PluginAudioPortsImpl for PolySynthPluginMainThread {
     }
 
     fn get(&self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
-        if is_input && index == 0 {
+        println!("Scanning input: {is_input} index {index}");
+        if !is_input && index == 0 {
             writer.set(&AudioPortInfoData {
-                id: 0,
+                id: 1,
                 name: b"main",
                 channel_count: 1,
                 flags: AudioPortFlags::IS_MAIN,
                 port_type: Some(AudioPortType::MONO),
                 in_place_pair: None,
             });
+        }
+    }
+}
+
+impl PluginNotePortsImpl for PolySynthPluginMainThread {
+    fn count(&self, is_input: bool) -> u32 {
+        if is_input {
+            1
+        } else {
+            0
+        }
+    }
+
+    fn get(&self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter) {
+        if is_input && index == 0 {
+            writer.set(&NotePortInfoData {
+                id: 1,
+                name: b"main",
+                preferred_dialect: Some(NoteDialect::Clap),
+                supported_dialects: NoteDialects::CLAP,
+            })
         }
     }
 }

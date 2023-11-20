@@ -76,7 +76,7 @@ impl<'a> InputEvents<'a> {
         }
     }
 
-    /// Returns if there are no events in the list.
+    /// Returns `true` if there are no events in the list.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -84,7 +84,33 @@ impl<'a> InputEvents<'a> {
 
     /// Attempts to retrieve an event from the list using its `index`.
     ///
-    /// If `index` is out of bounds, `None` is returned.
+    /// If no event is found at the given `index`, `None` is returned.
+    ///
+    /// Implementors of this method *SHOULD* always return an event if the `index` is in bounds
+    /// (`0..len`), and *SOULD NOT* return one if the `index` is out of bounds. However, this isn't
+    /// a guarantee.
+    ///
+    /// Because incorrect implementations can be found in the wild, users of this method should
+    /// always check the returned `Option`, and skip if `None` is returned while
+    /// getting an expected event using an index that is in bounds.
+    ///
+    /// This also means that users should *not* rely on this method returning `None` to stop an
+    /// iteration, or `Some` to continue it. Always rely on the value of [`len`](InputEvents::len)
+    /// first if you wish to iterate manually.
+    ///
+    /// # Panics
+    ///
+    /// While this method itself does not panic, some hosts (e.g. Bitwig) may elect to crash the
+    /// the plugin if the given `index` is out of bounds.
+    ///
+    /// Therefore, users should be careful while calling this method. Always check the value of
+    /// [`len`](InputEvents::len) before attempting to call this method, to ensure that `index` is
+    /// always in bounds.
+    ///
+    /// # See also
+    ///
+    /// Use the [`iter`](InputEvents::iter) method to iterate on all input events, which handles
+    /// all of the above edge-cases.
     #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
         let event = unsafe { (self.inner.get?)(&self.inner, index) };
