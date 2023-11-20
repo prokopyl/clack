@@ -8,4 +8,4 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { workspace = true, features = ["audio-ports", "clack-plugin", "note-ports", "params"] }
+clack-extensions = { workspace = true, features = ["audio-ports", "clack-plugin", "note-ports", "params", "state"] }

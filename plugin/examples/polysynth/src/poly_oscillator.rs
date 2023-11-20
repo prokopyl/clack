@@ -63,7 +63,7 @@ impl PolyOscillator {
         self.active_voice_count = 0;
     }
 
-    pub fn process_event(&mut self, event: &UnknownEvent) {
+    pub fn handle_event(&mut self, event: &UnknownEvent) {
         match event.as_core_event() {
             Some(CoreEventSpace::NoteOn(NoteOnEvent(note_event))) => {
                 // Ignore invalid or negative note keys.
@@ -91,9 +91,11 @@ impl PolyOscillator {
         }
     }
 
-    pub fn generate_next_samples(&mut self, output_buffer: &mut [f32]) {
+    pub fn generate_next_samples(&mut self, output_buffer: &mut [f32], volume: f32) {
         for voice in &mut self.voice_buffer[..self.active_voice_count] {
-            voice.oscillator.add_next_samples_to_buffer(output_buffer);
+            voice
+                .oscillator
+                .add_next_samples_to_buffer(output_buffer, volume);
         }
     }
 

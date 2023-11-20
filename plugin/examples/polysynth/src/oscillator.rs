@@ -36,15 +36,12 @@ impl SquareOscillator {
     }
 
     #[inline]
-    pub fn add_next_samples_to_buffer(&mut self, buf: &mut [f32]) {
-        // Keep enough headroom to play a few notes at once without "clipping".
-        const VOLUME: f32 = 0.2;
-
+    pub fn add_next_samples_to_buffer(&mut self, buf: &mut [f32], volume: f32) {
         for value in buf {
             if self.current_phase <= PI {
-                *value += VOLUME;
+                *value += volume;
             } else {
-                *value -= VOLUME;
+                *value -= volume;
             }
 
             self.current_phase += self.phase_increment;
