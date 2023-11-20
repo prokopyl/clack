@@ -32,21 +32,17 @@ impl<'a> EventBatcher<'a> {
         }
     }
 
-    #[inline]
-    fn get_event_time(&self, index: u32) -> Option<u32> {
-        self.events.get(index).map(|e| e.header().time())
-    }
-
     fn next_non_matching(
         &self,
         current_event_index: u32,
         current_sample: u32,
     ) -> Option<(u32, u32)> {
         for next_index in (current_event_index + 1)..self.events_len {
-            let Some(next_event_sample_time) = self.get_event_time(next_index) else {
+            let Some(next_event) = self.events.get(next_index) else {
                 continue;
             };
 
+            let next_event_sample_time = next_event.header().time();
             if next_event_sample_time != current_sample {
                 return Some((next_index, next_event_sample_time));
             }
