@@ -11,6 +11,7 @@
 
 use crate::events::spaces::*;
 use clap_sys::events::clap_event_header;
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 pub mod event_types;
@@ -50,7 +51,6 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
 }
 
 #[repr(transparent)]
-#[derive(Debug)]
 pub struct UnknownEvent<'a> {
     _sysex_lifetime: PhantomData<&'a u8>,
     data: [u8],
@@ -155,6 +155,18 @@ where
         match self.as_event_for_space::<E>(other.header().space_id()) {
             None => false,
             Some(s) => s.eq(other),
+        }
+    }
+}
+
+impl<'a> Debug for UnknownEvent<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.as_core_event() {
+            Some(e) => Debug::fmt(&e, f),
+            None => f
+                .debug_struct("UnknownEvent")
+                .field("header", self.header())
+                .finish(),
         }
     }
 }
