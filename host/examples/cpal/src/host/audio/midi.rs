@@ -144,7 +144,7 @@ impl MidiReceiver {
             }
         }
 
-        InputEvents::from_buffer(&self.clap_events_buffer)
+        self.clap_events_buffer.as_input()
     }
 }
 

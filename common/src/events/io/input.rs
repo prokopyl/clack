@@ -21,7 +21,7 @@ use std::ops::{Index, Range};
 ///```
 /// use clack_common::events::{Event, EventHeader};
 /// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
-/// use clack_common::events::io::{EventBuffer, InputEvents, OutputEventBuffer};
+/// use clack_common::events::io::{EventBuffer, InputEvents};
 ///
 /// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
 /// let buf = [event];
@@ -54,6 +54,14 @@ impl<'a> InputEvents<'a> {
         &self.inner
     }
 
+    /// Returns an [`InputEvents`] from a reference [`InputEventBuffer`] implementation.
+    ///
+    /// The most common [`InputEventBuffer`] implementors are the
+    /// [`EventBuffer`](crate::events::io::EventBuffer), and arrays or slices of either any
+    /// [`Event`](crate::events::Event) type, or of [`UnknownEvent`] references.
+    ///
+    /// See the [`InputEventBuffer`] implementation docs for a list of all types that can be used
+    /// by default.
     #[inline]
     pub const fn from_buffer<'b: 'a, I: InputEventBuffer<'b>>(buffer: &'a I) -> Self {
         Self {
@@ -62,6 +70,17 @@ impl<'a> InputEvents<'a> {
         }
     }
 
+    /// Returns an [`InputEvents`] that is always empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::io::InputEvents;
+    ///
+    /// let no_events = InputEvents::empty();
+    /// assert_eq!(0, no_events.len());
+    /// assert!(no_events.get(0).is_none());
+    /// ```
     #[inline]
     pub const fn empty() -> InputEvents<'static> {
         InputEvents::from_buffer::<[&UnknownEvent<'static>; 0]>(&[])
@@ -121,6 +140,7 @@ impl<'a> InputEvents<'a> {
         unsafe { Some(UnknownEvent::from_raw(event)) }
     }
 
+    /// Returns an iterator over all of the events in this [`InputEvents`].
     #[inline]
     pub fn iter(&self) -> InputEventsIter {
         InputEventsIter {
@@ -129,6 +149,9 @@ impl<'a> InputEvents<'a> {
         }
     }
 
+    /// Returns an iterator over a specific sub-range of the events in this [`InputEvents`].
+    ///
+    /// If the given `range` is out of bounds, then `None` is returned.
     #[inline]
     pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter> {
         let len = self.len();

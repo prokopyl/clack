@@ -13,6 +13,9 @@ enum State {
     Ended,
 }
 
+/// An iterator which batches input events by grouping them together.
+///
+/// See the [`InputEvents::batch`] method documentation for more details and usage examples.
 #[derive(Clone)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct EventBatcher<'a> {
@@ -114,6 +117,10 @@ impl<'a> Iterator for EventBatcher<'a> {
     }
 }
 
+/// A batch of events over a specific timeframe in samples.
+///
+/// This is what is produced by the [`EventBatcher`] iterator, i.e. the iterator returned by the
+/// [`InputEvents::batch`] method.
 pub struct EventBatch<'a> {
     events: InputEventsIter<'a>,
     first_sample: usize,
@@ -121,21 +128,60 @@ pub struct EventBatch<'a> {
 }
 
 impl<'a> EventBatch<'a> {
+    /// Returns all of the events in this batch.
     #[inline]
     pub fn events(&self) -> InputEventsIter<'a> {
         self.events.clone()
     }
 
+    /// Returns the index of the first sample in this batch.
+    ///
+    /// This is used to locate the start of the batch when processing a block of samples.
     #[inline]
     pub fn first_sample(&self) -> usize {
         self.first_sample
     }
 
+    /// Returns the index of the first sample in the next batch.
+    ///
+    /// This is used to locate the end of the batch when processing a block of samples.
+    ///
+    /// If there is no next batch (i.e. if this is the last batch), then this returns `None`,
+    /// indicating that this batch extends to the end of the sample block that is being processed.
     #[inline]
     pub fn next_batch_first_sample(&self) -> Option<usize> {
         self.next_batch_first_sample
     }
 
+    /// Returns the batch's bounds as a pair of sample index bounds, which can be directly used
+    /// for indexing into a slice.
+    ///
+    /// This is equivalent to indexing with:
+    /// * `first_sample..next_batch_first_sample` if there is a next batch;
+    /// * `first_sample..`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::io::EventBatch;
+    /// # fn index(slice: &[f32], batch: EventBatch) {
+    /// let slice: &[f32] = /* ... */
+    /// # slice;
+    /// let batch: EventBatch = /* ... */
+    /// # batch;
+    ///
+    /// // Easily get the subslice matching this event batch's bounds.
+    /// let subslice = &slice[batch.sample_bounds()];
+    ///
+    /// // Using sample_bounds is equivalent to doing this:
+    /// let manual_subslice = match batch.next_batch_first_sample() {
+    ///     Some(next_batch_first_sample) => &slice[batch.first_sample()..next_batch_first_sample],
+    ///     None => &slice[batch.first_sample()..]
+    /// };
+    ///
+    /// assert_eq!(subslice, manual_subslice)
+    /// # }
+    /// ```
     #[inline]
     pub fn sample_bounds(&self) -> (Bound<usize>, Bound<usize>) {
         (

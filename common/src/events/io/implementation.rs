@@ -4,13 +4,45 @@ use crate::events::{Event, UnknownEvent};
 use crate::utils::handle_panic;
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
 
+/// A trait for all types which can act as an ordered, indexed list of [`UnknownEvent`]s.
+///
+/// This is the backing implementation of an [`InputEvents`](crate::events::io::InputEvents), which
+/// is how input events are shared from the CLAP host to the plugin.
+///
+/// Some events (MIDI SysEx) require a backing buffer to store additional data, which may or may not
+/// be tied to the lifetime list self. This is what the `'a` lifetime of the [`InputEventBuffer`]
+/// represents.
+///
+/// Note that events are indexed using `u32` instead of the standard `usize`, to match the CLAP
+/// specification.
 #[allow(clippy::len_without_is_empty)] // This is not necessary, the trait is intended for FFI
 pub trait InputEventBuffer<'a>: Sized {
+    /// Returns the number of events in this list.
     fn len(&self) -> u32;
+    /// Returns the event at the given `index`.
+    ///
+    /// If `index` is out of bounds, then this must return `None` instead.
     fn get(&self, index: u32) -> Option<&UnknownEvent<'a>>;
 }
 
+/// A trait for all types which can act as an ordered queue for outbound [`UnknownEvent`]s.
+///
+/// This is the backing implementation of an [`OutputEvents`](crate::events::io::OutputEvents), which
+/// is how output events are shared from the CLAP plugin to the host.
+///
+/// Some events (MIDI SysEx) require a backing buffer to store additional data, which may or may not
+/// be tied to the lifetime list self. This is what the `'a` lifetime of the [`OutputEventBuffer`]
+/// represents.
+///
+/// Note that events are indexed using `u32` instead of the standard `usize`, to match the CLAP
+/// specification.
 pub trait OutputEventBuffer<'a>: Sized {
+    /// Attempts to push a given event to the queue.
+    ///
+    /// # Errors
+    ///
+    /// This may return a [`TryPushError`] if the event couldn't be pushed for any reason (e.g. the
+    /// underlying implementation ran out of buffer space).
     fn try_push(&mut self, event: &UnknownEvent<'a>) -> Result<(), TryPushError>;
 }
 

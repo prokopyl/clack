@@ -1,7 +1,10 @@
 use crate::events::UnknownEvent;
 use std::mem::replace;
 
-// Iterator that merges two streams together (in order)
+/// An iterator that merges two ordered streams of events together.
+///
+/// This wraps two distinct event iterators and produces all the events produced by both, but in
+/// order.
 pub struct EventMerger<'a, 'e, I1, I2> {
     iter_1: I1,
     iter_2: I2,
@@ -12,6 +15,7 @@ pub struct EventMerger<'a, 'e, I1, I2> {
 }
 
 impl<'a, 'e, I1, I2> EventMerger<'a, 'e, I1, I2> {
+    /// Creates a new event merger from two iterators.
     #[inline]
     pub fn new(iter_1: I1, iter_2: I2) -> Self {
         Self {

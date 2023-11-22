@@ -1,16 +1,49 @@
+use crate::events::event_types::TransportEvent;
 use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
-use crate::events::io::TryPushError;
-use crate::events::spaces::CoreEventSpace;
+use crate::events::io::{InputEvents, OutputEvents, TryPushError};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
 use core::mem::{size_of_val, MaybeUninit};
 use core::slice::from_raw_parts_mut;
-use std::ops::Range;
+use std::ops::{Index, Range};
 
 #[repr(C, align(8))]
 #[derive(Copy, Clone)]
 struct AlignedEventHeader(clap_event_header);
 
+/// A buffer for ordered storing of heterogeneous [`UnknownEvent`]s.
+///
+/// This type is useful for dynamic storage of arbitrary events, as [`UnknownEvent`]s are
+/// dynamically-sized types (DSTs) and can not be simply stored in e.g. a [`Vec`].
+///
+/// This type is also useful as the backing storage for plugin events, as it implements both the
+/// [`InputEventBuffer`] and the [`OutputEventBuffer`] traits.
+///
+/// # Example
+///
+/// ```
+/// use clack_common::events::event_types::ParamGestureBeginEvent;
+/// use clack_common::events::EventHeader;
+/// use clack_common::events::io::EventBuffer;
+///
+/// let mut buffer = EventBuffer::new();
+/// assert!(buffer.is_empty());
+///
+/// let some_event = ParamGestureBeginEvent::new(EventHeader::new(6), 2);
+/// buffer.push(&some_event);
+/// assert_eq!(1, buffer.len());
+/// assert_eq!(&buffer[0], &some_event);
+/// ```
+///
+/// # Realtime Safety
+///
+/// This type is backed by `Vec` internally, and therefore holds similar realtime properties.
+/// Reading from it is always realtime-safe, but pushing new events to it may not be.
+///
+/// To avoid allocations, hosts should use the [`with_capacity`](EventBuffer::with_capacity)
+/// to pre-allocate a reasonable amount of space for plugins to send their events.
+///
+/// However, this is always a best-effort, and not a guarantee.
 pub struct EventBuffer {
     headers: Vec<MaybeUninit<AlignedEventHeader>>, // force 64-bit alignment
     indexes: Vec<u32>,
@@ -27,6 +60,7 @@ pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
 }
 
 impl EventBuffer {
+    /// Creates a new, empty [`EventBuffer`].
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -35,34 +69,53 @@ impl EventBuffer {
         }
     }
 
+    /// Creates a new empty [`EventBuffer`], but with enough pre-allocated capacity for the given
+    /// number of standard events.
+    ///
+    /// Because CLAP events can have any arbitrary size, this method can only pre-allocate on a
+    /// best-effort basis, only reserving enough space for the largest standard CLAP events.
+    ///
+    /// # Realtime Safety
+    ///
+    /// This method always allocates and is not realtime-safe, unless `events` is zero.
     #[inline]
     pub fn with_capacity(events: usize) -> Self {
         Self {
-            headers: Vec::with_capacity(events * core::mem::size_of::<CoreEventSpace<'static>>()),
+            // TransportEvent is the largest standard CLAP event.
+            headers: Vec::with_capacity(events * core::mem::size_of::<TransportEvent>()),
             indexes: Vec::with_capacity(events),
         }
     }
 
+    /// Clears the buffer, removing all events.
+    ///
+    /// Note that this has no effect on the allocated capacity of the buffer.
     pub fn clear(&mut self) {
         self.indexes.clear();
         self.headers.clear();
     }
 
+    /// Returns the number of events in this buffer.
     #[inline]
     pub fn len(&self) -> usize {
         self.indexes.len()
     }
 
+    /// Returns `true` if this buffer has no events in it (i.e. if `len == 0`), `false` otherwise.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.indexes.is_empty()
     }
 
+    /// Returns the event located at the given `index`.
+    ///
+    /// If `index` is out of bounds, this returns [`None`].
     #[inline]
-    pub fn get(&self, index: u32) -> Option<&UnknownEvent> {
+    pub fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
         <Self as InputEventBuffer>::get(self, index)
     }
 
+    /// Returns an iterator of all the events contained in this buffer.
     #[inline]
     pub fn iter(&self) -> EventBufferIter {
         EventBufferIter {
@@ -71,6 +124,9 @@ impl EventBuffer {
         }
     }
 
+    /// Sorts the events contained in this buffer, based on their time.
+    ///
+    /// It is necessary to sort the events before passing them to a plugin.
     pub fn sort(&mut self) {
         self.indexes.sort_by_key(|i| {
             // SAFETY: Registered indexes always have actual event headers written by append_header_data
@@ -80,20 +136,48 @@ impl EventBuffer {
         })
     }
 
-    pub fn insert(&mut self, event: &UnknownEvent<'static>, position: usize) {
-        let index = self.append_header_data(event);
+    /// Inserts a given `event` at the given `position`, shifting all events after it to the right.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `position > len`.
+    pub fn insert<E: AsRef<UnknownEvent<'static>> + ?Sized>(&mut self, event: &E, position: usize) {
+        let index = self.append_header_data(event.as_ref());
         self.indexes.insert(position, index as u32);
     }
 
-    pub fn push_all<'a>(&mut self, events: impl IntoIterator<Item = &'a UnknownEvent<'static>>) {
+    /// Pushes all events produced by the given `events` iterator at the end of the buffer.
+    pub fn push_all<'a, E: AsRef<UnknownEvent<'static>> + ?Sized + 'a>(
+        &mut self,
+        events: impl IntoIterator<Item = &'a E>,
+    ) {
         for e in events {
             self.push(e);
         }
     }
 
-    pub fn push(&mut self, event: &UnknownEvent<'static>) {
-        let index = self.append_header_data(event);
+    /// Pushes the given event into the buffer.
+    ///
+    /// The event is always added at the end of the buffer.
+    pub fn push<E: AsRef<UnknownEvent<'static>> + ?Sized>(&mut self, event: &E) {
+        let index = self.append_header_data(event.as_ref());
         self.indexes.push(index as u32);
+    }
+
+    /// Produces an [`InputEvents`] that wraps this buffer as an [`InputEventBuffer`] implementation.
+    ///
+    /// This helper method is strictly equivalent to using [`InputEvents::from_buffer`].
+    #[inline]
+    pub fn as_input(&self) -> InputEvents {
+        InputEvents::from_buffer(self)
+    }
+
+    /// Produces an [`OutputEvents`] that wraps this buffer as an [`OutputEventBuffer`] implementation.
+    ///
+    /// This helper method is strictly equivalent to using [`OutputEvents::from_buffer`].
+    #[inline]
+    pub fn as_output(&mut self) -> OutputEvents {
+        OutputEvents::from_buffer(self)
     }
 
     fn append_header_data(&mut self, event: &UnknownEvent<'static>) -> usize {
@@ -184,6 +268,18 @@ impl Default for EventBuffer {
     }
 }
 
+const INDEX_ERROR: &str = "Indexed EventBuffer out of bounds";
+
+impl Index<usize> for EventBuffer {
+    type Output = UnknownEvent<'static>;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index as u32).expect(INDEX_ERROR)
+    }
+}
+
+/// An iterator over the events contained in an [`EventBuffer`].
 pub struct EventBufferIter<'a> {
     buffer: &'a EventBuffer,
     range: Range<usize>,

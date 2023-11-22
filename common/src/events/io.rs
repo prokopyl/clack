@@ -1,3 +1,7 @@
+//! Various utilities and types to help processing Input and Output events.
+
+#![deny(missing_docs)]
+
 mod batcher;
 mod buffer;
 mod implementation;
