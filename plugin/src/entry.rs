@@ -224,7 +224,7 @@ impl Error for EntryLoadError {}
 #[macro_export]
 macro_rules! clack_export_entry {
     ($entry_type:ty) => {
-        #[allow(non_upper_case_globals)]
+        #[allow(non_upper_case_globals, missing_docs)]
         #[allow(unsafe_code)]
         #[allow(warnings, unused)]
         #[no_mangle]

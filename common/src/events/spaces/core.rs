@@ -1,8 +1,9 @@
 use crate::events::event_types::*;
 use crate::events::{Event, EventSpace, UnknownEvent};
 use std::ffi::CStr;
+use std::fmt::{Debug, Formatter};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum CoreEventSpace<'a> {
     NoteOn(&'a NoteOnEvent),
     NoteOff(&'a NoteOffEvent),
@@ -58,6 +59,27 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
             CoreEventSpace::MidiSysEx(e) => e.as_unknown(),
             CoreEventSpace::ParamGestureBegin(e) => e.as_unknown(),
             CoreEventSpace::ParamGestureEnd(e) => e.as_unknown(),
+        }
+    }
+}
+
+impl<'a> Debug for CoreEventSpace<'a> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CoreEventSpace::NoteOn(e) => Debug::fmt(e, f),
+            CoreEventSpace::NoteOff(e) => Debug::fmt(e, f),
+            CoreEventSpace::NoteChoke(e) => Debug::fmt(e, f),
+            CoreEventSpace::NoteEnd(e) => Debug::fmt(e, f),
+            CoreEventSpace::NoteExpression(e) => Debug::fmt(e, f),
+            CoreEventSpace::ParamValue(e) => Debug::fmt(e, f),
+            CoreEventSpace::ParamMod(e) => Debug::fmt(e, f),
+            CoreEventSpace::ParamGestureBegin(e) => Debug::fmt(e, f),
+            CoreEventSpace::ParamGestureEnd(e) => Debug::fmt(e, f),
+            CoreEventSpace::Transport(e) => Debug::fmt(e, f),
+            CoreEventSpace::Midi(e) => Debug::fmt(e, f),
+            CoreEventSpace::Midi2(e) => Debug::fmt(e, f),
+            CoreEventSpace::MidiSysEx(e) => Debug::fmt(e, f),
         }
     }
 }

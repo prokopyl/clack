@@ -2,13 +2,18 @@
 resolver = "2"
 members = [
     "common",
-    "plugin/examples/gain",
     "host",
     "host/examples/cpal",
     "plugin",
+    "plugin/examples/gain",
+    "plugin/examples/polysynth",
     "extensions",
     "test-host"
 ]
 
 [workspace.dependencies]
+clack-plugin = { path = "./plugin" }
+clack-host = { path = "./host" }
+clack-extensions = { path = "./extensions" }
+
 selfie = { git = 'https://github.com/prokopyl/selfie', rev = '726013fc94835b6f24918ba822a49e5c3b2a3b25' }

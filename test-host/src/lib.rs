@@ -140,14 +140,11 @@ impl TestHost {
             latency: 0,
         }]);
 
-        let events_in = InputEvents::from_buffer(&self.input_events);
-        let mut events_out = OutputEvents::from_buffer(&mut self.output_events);
-
         let result = processor.process(
             &input_channels,
             &mut output_channels,
-            &events_in,
-            &mut events_out,
+            &self.input_events.as_input(),
+            &mut self.output_events.as_output(),
             0,
             None,
             None,

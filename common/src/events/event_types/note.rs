@@ -4,7 +4,7 @@ use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOnEvent(pub NoteEvent<Self>);
 
@@ -20,7 +20,13 @@ impl<'a> AsRef<UnknownEvent<'a>> for NoteOnEvent {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+impl Debug for NoteOnEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fmt_note_event(&self.0, f, "NoteOnEvent")
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOffEvent(pub NoteEvent<Self>);
 
@@ -36,7 +42,13 @@ impl<'a> AsRef<UnknownEvent<'a>> for NoteOffEvent {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+impl Debug for NoteOffEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fmt_note_event(&self.0, f, "NoteOffEvent")
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteChokeEvent(pub NoteEvent<Self>);
 
@@ -52,7 +64,13 @@ impl<'a> AsRef<UnknownEvent<'a>> for NoteChokeEvent {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+impl Debug for NoteChokeEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fmt_note_event(&self.0, f, "NoteChokeEvent")
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteEndEvent(pub NoteEvent<Self>);
 
@@ -65,6 +83,12 @@ impl<'a> AsRef<UnknownEvent<'a>> for NoteEndEvent {
     #[inline]
     fn as_ref(&self) -> &UnknownEvent<'a> {
         self.as_unknown()
+    }
+}
+
+impl Debug for NoteEndEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fmt_note_event(&self.0, f, "NoteEndEvent")
     }
 }
 
@@ -161,12 +185,21 @@ impl<E> PartialEq for NoteEvent<E> {
 
 impl<E> Debug for NoteEvent<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NoteEvent")
-            .field("port_index", &self.inner.port_index)
-            .field("channel", &self.inner.channel)
-            .field("key", &self.inner.key)
-            .field("velocity", &self.inner.velocity)
-            .field("note_id", &self.inner.note_id)
-            .finish()
+        fmt_note_event(self, f, "NoteEvent")
     }
+}
+
+fn fmt_note_event<E>(
+    event: &NoteEvent<E>,
+    f: &mut Formatter<'_>,
+    event_name: &'static str,
+) -> core::fmt::Result {
+    f.debug_struct(event_name)
+        .field("header", event.header())
+        .field("port_index", &event.inner.port_index)
+        .field("channel", &event.inner.channel)
+        .field("key", &event.inner.key)
+        .field("velocity", &event.inner.velocity)
+        .field("note_id", &event.inner.note_id)
+        .finish()
 }

@@ -1,8 +1,10 @@
+use crate::host::CpalHost;
+use clack_extensions::note_ports::{NoteDialects, NotePortInfoBuffer, PluginNotePorts};
 use clack_host::events::event_types::{
     MidiEvent, NoteChokeEvent, NoteEvent, NoteOffEvent, NoteOnEvent,
 };
-use clack_host::events::{Event, EventFlags};
-use clack_host::prelude::{EventBuffer, EventHeader, InputEvents};
+use clack_host::events::EventFlags;
+use clack_host::prelude::*;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rtrb::{Consumer, RingBuffer};
 use std::error::Error;
@@ -39,13 +41,27 @@ pub struct MidiReceiver {
     /// The audio sample rate. This is used to calculate the event's sample time from the device
     /// timestamp.
     sample_rate: u64,
+    /// The index of the note port the plugin uses.
+    /// This is determined from the CLAP note ports extension.
+    main_plugin_note_port_index: u32,
+    /// If the plugin prefers to receive note events as MIDI events instead of CLAP Note events.
+    prefers_midi: bool,
 }
 
 impl MidiReceiver {
     /// Connects to a MIDI device and starts receiving events.
     ///
     /// This selects the last MIDI device that was plugged in, if any.
-    pub fn new(sample_rate: u64) -> Result<Option<Self>, Box<dyn Error>> {
+    pub fn new(
+        sample_rate: u64,
+        instance: &mut PluginInstance<CpalHost>,
+    ) -> Result<Option<Self>, Box<dyn Error>> {
+        let Some((main_plugin_note_port_index, prefers_midi)) = find_main_note_port_index(instance)
+        else {
+            println!("Plugin does not have any Note inputs. It will not be fed any MIDI input.");
+            return Ok(None);
+        };
+
         let mut input = MidiInput::new("Clack Host")?;
         input.ignore(Ignore::Sysex | Ignore::Time | Ignore::ActiveSense);
 
@@ -99,6 +115,8 @@ impl MidiReceiver {
             consumer,
             sample_rate,
             abandoned: false,
+            main_plugin_note_port_index,
+            prefers_midi,
         }))
     }
 
@@ -111,17 +129,14 @@ impl MidiReceiver {
         self.clap_events_buffer.clear();
 
         if !self.abandoned && self.consumer.is_abandoned() {
-            self.clap_events_buffer.push(
-                NoteChokeEvent(NoteEvent::new(
-                    EventHeader::new_core(0, EventFlags::IS_LIVE),
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    0.0,
-                ))
-                .as_unknown(),
-            );
+            self.clap_events_buffer.push(&NoteChokeEvent(NoteEvent::new(
+                EventHeader::new_core(0, EventFlags::IS_LIVE),
+                -1,
+                -1,
+                -1,
+                -1,
+                0.0,
+            )));
             self.abandoned = true;
         } else {
             let mut first_event_timestamp = None;
@@ -140,11 +155,13 @@ impl MidiReceiver {
                     midi_event.midi_event,
                     sample_time as u32,
                     &mut self.clap_events_buffer,
+                    self.main_plugin_note_port_index,
+                    self.prefers_midi,
                 );
             }
         }
 
-        InputEvents::from_buffer(&self.clap_events_buffer)
+        self.clap_events_buffer.as_input()
     }
 }
 
@@ -167,44 +184,78 @@ fn micro_timestamp_to_sample_time(
 }
 
 /// Pushes a MIDI event to the given Clack event buffer.
-fn push_midi_to_buffer(message: MidiMessage, sample_time: u32, buffer: &mut EventBuffer) {
+fn push_midi_to_buffer(
+    message: MidiMessage,
+    sample_time: u32,
+    buffer: &mut EventBuffer,
+    port_index: u32,
+    prefers_midi: bool,
+) {
     match message {
-        MidiMessage::NoteOff(channel, note, velocity) => buffer.push(
-            NoteOffEvent(NoteEvent::new(
+        MidiMessage::NoteOff(channel, note, velocity) if !prefers_midi => {
+            buffer.push(&NoteOffEvent(NoteEvent::new(
                 EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
                 -1,
-                0,
+                port_index as i16,
                 note as i16,
                 channel.index() as i16,
                 u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
-            ))
-            .as_unknown(),
-        ),
-        MidiMessage::NoteOn(channel, note, velocity) => {
-            buffer.push(
-                NoteOnEvent(NoteEvent::new(
-                    EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                    -1,
-                    0,
-                    note as i16,
-                    channel.index() as i16,
-                    u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
-                ))
-                .as_unknown(),
-            );
+            )))
+        }
+        MidiMessage::NoteOn(channel, note, velocity) if !prefers_midi => {
+            buffer.push(&NoteOnEvent(NoteEvent::new(
+                EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
+                -1,
+                port_index as i16,
+                note as i16,
+                channel.index() as i16,
+                u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
+            )));
         }
         m => {
             let mut buf = [0; 3];
             if m.copy_to_slice(&mut buf).is_ok() {
-                buffer.push(
-                    MidiEvent::new(
-                        EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                        0,
-                        buf,
-                    )
-                    .as_unknown(),
-                )
+                buffer.push(&MidiEvent::new(
+                    EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
+                    port_index as u16,
+                    buf,
+                ))
             }
         }
     }
+}
+
+/// Tries to find the ID of the main note port of a plugin, and whether it supports CLAP note events
+/// or not.
+///
+/// This returns `None` if it couldn't find one.
+fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<(u32, bool)> {
+    let handle = instance.main_thread_plugin_data();
+    let plugin_note_ports = handle.shared().get_extension::<PluginNotePorts>()?;
+
+    let mut buffer = NotePortInfoBuffer::new();
+    let ports_count = plugin_note_ports.count(&handle, true);
+    for i in 0..ports_count {
+        let Some(port_info) = plugin_note_ports.get(&handle, i, true, &mut buffer) else {
+            continue;
+        };
+
+        if !port_info
+            .supported_dialects
+            .intersects(NoteDialects::CLAP | NoteDialects::MIDI)
+        {
+            continue;
+        }
+
+        let prefers_midi = !port_info.supported_dialects.intersects(NoteDialects::CLAP);
+        let port_name = String::from_utf8_lossy(port_info.name);
+        println!(
+            "Found Note port '{}' (ID {}, Supports CLAP events: {})",
+            &port_name, port_info.id, !prefers_midi
+        );
+
+        return Some((port_info.id, prefers_midi));
+    }
+
+    None
 }

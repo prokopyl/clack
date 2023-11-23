@@ -83,7 +83,7 @@ impl<'a> OutputEvents<'a> {
     /// let output_events = OutputEvents::from_buffer(&mut buf);
     /// ```
     #[inline]
-    pub fn from_buffer<I: OutputEventBuffer>(buffer: &'a mut I) -> Self {
+    pub fn from_buffer<'b: 'a, O: OutputEventBuffer<'b>>(buffer: &'a mut O) -> Self {
         Self {
             inner: raw_output_events(buffer),
             _lifetime: PhantomData,
@@ -110,6 +110,13 @@ impl<'a> OutputEvents<'a> {
     ///
     /// For best performance however, it is recommended to insert the events in order if possible.
     ///
+    /// # Errors
+    ///
+    /// This method will return a [`TryPushError`] if the event could not be pushed to the list.
+    ///
+    /// The exact reason is left at the implementer's discretion, but this is usually a sign that
+    /// the implementer ran out of buffer space, and either cannot or refuses to allocate more.
+    ///
     /// # Realtime Safety
     ///
     /// This operation may cause the underlying event buffer to be reallocated by the host, therefore
@@ -128,11 +135,15 @@ impl<'a> OutputEvents<'a> {
     }
 }
 
+/// An error that may occur when [`OutputEvents::try_push`] couldn't complete.
+///
+/// See the documentation of [`OutputEvents::try_push`] for more information.
 #[non_exhaustive]
 #[derive(Debug, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 pub struct TryPushError;
 
 impl TryPushError {
+    /// Creates a new [`TryPushError`].
     #[inline]
     pub const fn new() -> Self {
         Self {}
@@ -147,7 +158,7 @@ impl Display for TryPushError {
 
 impl Error for TryPushError {}
 
-impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
+impl<'a, I: OutputEventBuffer<'a>> From<&'a mut I> for OutputEvents<'a> {
     #[inline]
     fn from(implementation: &'a mut I) -> Self {
         Self::from_buffer(implementation)
@@ -166,9 +177,9 @@ impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
 
 #[derive(Copy, Clone)]
 struct VoidEvents;
-impl OutputEventBuffer for VoidEvents {
+impl<'a> OutputEventBuffer<'a> for VoidEvents {
     #[inline]
-    fn try_push(&mut self, _event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
+    fn try_push(&mut self, _event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
         Ok(())
     }
 }

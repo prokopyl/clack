@@ -120,6 +120,7 @@ impl PartialEq for ParamValueEvent {
 impl Debug for ParamValueEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamValueEvent")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
@@ -242,6 +243,7 @@ impl PartialEq for ParamModEvent {
 impl Debug for ParamModEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamModEvent")
+            .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
             .field("channel", &self.inner.channel)
             .field("key", &self.inner.key)
@@ -290,6 +292,8 @@ impl ParamGestureBeginEvent {
 impl Debug for ParamGestureBeginEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamGestureBeginEvent")
+            .field("header", &self.header())
+            .field("header", &self.header())
             .field("param_id", &self.inner.param_id)
             .finish()
     }
@@ -341,6 +345,7 @@ impl ParamGestureEndEvent {
 impl Debug for ParamGestureEndEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamGestureEndEvent")
+            .field("header", &self.header())
             .field("header", self.header())
             .field("param_id", &self.inner.param_id)
             .finish()
