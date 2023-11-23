@@ -26,6 +26,7 @@ mod gui;
 mod timer;
 
 use audio::*;
+use clack_extensions::note_ports::{HostNotePortsImpl, NoteDialects, NotePortRescanFlags};
 use gui::*;
 use timer::*;
 
@@ -365,6 +366,16 @@ impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
 
     fn rescan(&mut self, _flag: RescanType) {
         // We don't support audio ports changing on the fly
+    }
+}
+
+impl<'a> HostNotePortsImpl for CpalHostMainThread<'a> {
+    fn supported_dialects(&self) -> NoteDialects {
+        NoteDialects::CLAP
+    }
+
+    fn rescan(&mut self, _flags: NotePortRescanFlags) {
+        // We don't support note ports changing on the fly
     }
 }
 

@@ -51,7 +51,7 @@ impl PluginNotePorts {
 
 pub trait HostNotePortsImpl {
     fn supported_dialects(&self) -> NoteDialects;
-    fn rescan(&self, flags: NotePortRescanFlags);
+    fn rescan(&mut self, flags: NotePortRescanFlags);
 }
 
 impl<H: Host> ExtensionImplementation<H> for HostNotePorts

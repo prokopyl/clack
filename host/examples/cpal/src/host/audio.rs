@@ -30,7 +30,7 @@ pub fn activate_to_stream(
     let config = FullAudioConfig::find_best_from(&output_device, instance)?;
     println!("Using negociated audio output settings: {config}");
 
-    let midi = MidiReceiver::new(44_100)?;
+    let midi = MidiReceiver::new(44_100, instance)?;
 
     let plugin_audio_processor = instance
         .activate(|_, _, _| (), config.as_clack_plugin_config())?
