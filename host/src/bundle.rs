@@ -115,10 +115,9 @@ impl PluginBundle {
     /// ```
     pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         let path = path.as_ref();
+        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
         let library = PluginEntryLibrary::load(path)?;
-
-        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
         let inner = unsafe { cache::load_from_library(library, path_str)? };
 
