@@ -124,6 +124,7 @@ impl AudioPorts {
 
         let mut min_channel_buffer_length = usize::MAX;
         let mut total = 0;
+        let mut has_reallocated = false;
 
         for (i, port) in iter.enumerate() {
             total = i + 1;
@@ -140,6 +141,10 @@ impl AudioPorts {
                             constant_mask |= 1 << i as u64
                         }
 
+                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
+                            has_reallocated = true;
+                        }
+
                         self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
                     }
                     false
@@ -150,6 +155,10 @@ impl AudioPorts {
                             min_channel_buffer_length.min(channel.buffer.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
+                        }
+
+                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
+                            has_reallocated = true;
                         }
 
                         self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
@@ -175,6 +184,27 @@ impl AudioPorts {
             }
         }
 
+        // If a realloc occured, we must rewrite all of the pointers.
+        // Thankfully, we know we wrote them sequentially, and we stored the lengths, so it's easy
+        // to find them back.
+        if has_reallocated {
+            let mut last_len = 0;
+            for descriptor in &mut self.buffer_configs[..total] {
+                let channel_count = descriptor.channel_count as usize;
+                let buffers = self
+                    .buffer_lists
+                    .get_mut(last_len..channel_count)
+                    .unwrap_or(&mut []);
+                last_len += channel_count;
+
+                if descriptor.data32.is_null() {
+                    descriptor.data64 = buffers.as_ptr().cast();
+                } else {
+                    descriptor.data32 = buffers.as_ptr().cast();
+                }
+            }
+        }
+
         InputAudioBuffers {
             buffers: &self.buffer_configs[..total],
             min_channel_buffer_length,
@@ -197,6 +227,7 @@ impl AudioPorts {
 
         let mut min_channel_buffer_length = usize::MAX;
         let mut total = 0;
+        let mut has_reallocated = false;
 
         for (i, port) in iter.enumerate() {
             total = i + 1;
@@ -207,6 +238,11 @@ impl AudioPorts {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
                         min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
+
+                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
+                            has_reallocated = true;
+                        }
+
                         self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     false
@@ -214,6 +250,11 @@ impl AudioPorts {
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
                         min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
+
+                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
+                            has_reallocated = true;
+                        }
+
                         self.buffer_lists.push(channel.as_mut_ptr().cast())
                     }
                     true
@@ -234,6 +275,27 @@ impl AudioPorts {
             } else {
                 descriptor.data64 = core::ptr::null();
                 descriptor.data32 = buffers.as_mut_ptr() as *const *const _;
+            }
+        }
+
+        // If a realloc occured, we must rewrite all of the pointers.
+        // Thankfully, we know we wrote them sequentially, and we stored the lengths, so it's easy
+        // to find them back.
+        if has_reallocated {
+            let mut last_len = 0;
+            for descriptor in &mut self.buffer_configs[..total] {
+                let channel_count = descriptor.channel_count as usize;
+                let buffers = self
+                    .buffer_lists
+                    .get_mut(last_len..channel_count)
+                    .unwrap_or(&mut []);
+                last_len += channel_count;
+
+                if descriptor.data32.is_null() {
+                    descriptor.data64 = buffers.as_ptr().cast();
+                } else {
+                    descriptor.data32 = buffers.as_ptr().cast();
+                }
             }
         }
 
@@ -321,7 +383,10 @@ impl<'a> OutputAudioBuffers<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use clack_plugin::prelude::*;
+    use clap_sys::process::clap_process;
     use std::cell::RefCell;
+    use std::ptr::null_mut;
 
     #[test]
     pub fn input_audio_buffers_work() {
@@ -397,5 +462,72 @@ mod test {
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
+    }
+
+    #[test]
+    pub fn audio_buffers_work_with_wrong_capacity() {
+        let mut input_ports = AudioPorts::with_capacity(1, 1);
+        let mut output_ports = AudioPorts::with_capacity(1, 1);
+        let mut input_bufs = [[[42f32; 4]; 128], [[69f32; 4]; 128]];
+        let mut output_bufs = [[[42f32; 4]; 128], [[69f32; 4]; 128]];
+
+        let input_buffers =
+            input_ports.with_input_buffers(input_bufs.iter_mut().map(|bufs| AudioPortBuffer {
+                latency: 0,
+                channels: AudioPortBufferType::f32_input_only(bufs.iter_mut().map(|b| {
+                    InputChannel {
+                        buffer: b.as_mut_slice(),
+                        is_constant: false,
+                    }
+                })),
+            }));
+
+        let mut output_buffers =
+            output_ports.with_output_buffers(output_bufs.iter_mut().map(|bufs| AudioPortBuffer {
+                latency: 0,
+                channels: AudioPortBufferType::f32_output_only(
+                    bufs.iter_mut().map(|b| b.as_mut_slice()),
+                ),
+            }));
+
+        assert_eq!(input_buffers.buffers.len(), 2);
+        assert_eq!(input_buffers.min_channel_buffer_length, 4);
+        assert_eq!(output_buffers.buffers.len(), 2);
+        assert_eq!(output_buffers.min_channel_buffer_length, 4);
+
+        let raw_input_buffers = input_buffers.as_raw_buffers();
+        let raw_output_buffers = output_buffers.as_raw_buffers();
+        let process = clap_process {
+            audio_inputs: raw_input_buffers.as_ptr(),
+            audio_outputs: raw_output_buffers.as_ptr() as *mut _,
+            audio_inputs_count: raw_input_buffers.len() as u32,
+            audio_outputs_count: raw_output_buffers.len() as u32,
+
+            steady_time: 0,
+            frames_count: 4,
+            transport: null_mut(),
+            in_events: null_mut(),
+            out_events: null_mut(),
+        };
+
+        let mut audio = unsafe { Audio::from_raw(&process) };
+
+        for (port, bufs) in audio.input_ports().zip(&input_bufs) {
+            let channels = port.channels().unwrap().into_f32().unwrap();
+
+            assert_eq!(channels.channel_count(), 128);
+            for (channel, buf) in channels.iter().zip(bufs.iter()) {
+                assert_eq!(buf, channel)
+            }
+        }
+
+        for (mut port, bufs) in audio.output_ports().zip(&output_bufs) {
+            let channels = port.channels().unwrap().into_f32().unwrap();
+
+            assert_eq!(channels.channel_count(), 128);
+            for (channel, buf) in channels.iter().zip(bufs.iter()) {
+                assert_eq!(buf, channel)
+            }
+        }
     }
 }

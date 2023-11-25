@@ -12,6 +12,7 @@ members = [
 ]
 
 [workspace.dependencies]
+clack-common = { path = "./common" }
 clack-plugin = { path = "./plugin" }
 clack-host = { path = "./host" }
 clack-extensions = { path = "./extensions" }

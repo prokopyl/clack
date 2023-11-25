@@ -198,18 +198,25 @@ pub struct Audio<'a> {
 }
 
 impl<'a> Audio<'a> {
+    /// Create a new [`Audio`] from the information in a given raw, C-FFI compatible `clap_process`
+    /// struct.
+    ///
+    /// # Safety
+    ///
+    /// Users must ensure all fields of the given `raw_process` are valid, and that all buffers
+    /// it points to stay valid for the given lifetime.
     #[inline]
-    pub(crate) unsafe fn from_raw(process: &clap_process) -> Audio {
+    pub unsafe fn from_raw(raw_process: &clap_process) -> Audio {
         unsafe {
             Audio {
-                frames_count: process.frames_count,
+                frames_count: raw_process.frames_count,
                 inputs: core::slice::from_raw_parts(
-                    process.audio_inputs,
-                    process.audio_inputs_count as usize,
+                    raw_process.audio_inputs,
+                    raw_process.audio_inputs_count as usize,
                 ),
                 outputs: core::slice::from_raw_parts_mut(
-                    process.audio_outputs,
-                    process.audio_outputs_count as usize,
+                    raw_process.audio_outputs,
+                    raw_process.audio_outputs_count as usize,
                 ),
             }
         }
