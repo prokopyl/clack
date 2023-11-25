@@ -17,16 +17,14 @@ unsafe impl Sync for EntryPointer {}
 
 static ENTRY_CACHE: OnceLock<Mutex<HashMap<EntryPointer, Arc<EntrySourceInner>>>> = OnceLock::new();
 
-unsafe fn get_or_insert(
+fn get_or_insert(
     entry_pointer: EntryPointer,
     load_entry: impl FnOnce() -> Result<EntrySourceInner, PluginBundleError>,
 ) -> Result<CachedEntry, PluginBundleError> {
-    // dbg!("Loading", ::std::thread::current().id());
     let cache = ENTRY_CACHE
         .get_or_init(|| Mutex::new(HashMap::new()))
         .lock();
 
-    // dbg!("Locked for loading", ::std::thread::current().id());
     let mut cache = match cache {
         Ok(guard) => guard,
         Err(e) => e.into_inner(),
@@ -40,9 +38,6 @@ unsafe fn get_or_insert(
             entry_source
         }
     };
-
-    drop(cache);
-    // dbg!("Unlocked for loading.", ::std::thread::current().id());
 
     Ok(CachedEntry(Some(s)))
 }
@@ -109,12 +104,9 @@ impl Drop for CachedEntry {
         // Drop the Arc. If it was the only one outside of the cache, then its refcount should be 1.
         self.0 = None;
 
-        // dbg!("Unloading", ::std::thread::current().id());
         let cache = ENTRY_CACHE
             .get_or_init(|| Mutex::new(HashMap::new()))
             .lock();
-
-        // dbg!("Locked for unloading", ::std::thread::current().id());
 
         let mut cache = match cache {
             Ok(guard) => guard,
@@ -126,9 +118,5 @@ impl Drop for CachedEntry {
                 o.remove();
             }
         }
-
-        drop(cache);
-
-        // dbg!("Unlocked for unloading", ::std::thread::current().id());
     }
 }
