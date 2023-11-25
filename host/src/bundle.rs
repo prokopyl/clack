@@ -45,18 +45,18 @@
 use std::error::Error;
 use std::ffi::{NulError, OsStr};
 use std::fmt::{Display, Formatter};
-use std::pin::Pin;
-use std::sync::Arc;
 
-use entry::*;
-use selfie::Selfie;
 use std::ptr::NonNull;
 
+mod cache;
 mod entry;
+mod library;
 
 #[cfg(test)]
-mod diva_stub;
+pub mod diva_stub;
 
+use crate::bundle::cache::CachedEntry;
+use crate::bundle::library::PluginEntryLibrary;
 use crate::factory::{FactoryPointer, PluginFactory};
 pub use clack_common::entry::*;
 use clack_common::utils::ClapVersion;
@@ -91,7 +91,7 @@ use clack_common::utils::ClapVersion;
 /// ```
 #[derive(Clone)]
 pub struct PluginBundle {
-    inner: Pin<Arc<EntrySource>>,
+    inner: CachedEntry,
 }
 
 impl PluginBundle {
@@ -115,17 +115,12 @@ impl PluginBundle {
     /// ```
     pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         let path = path.as_ref();
+
+        let library = PluginEntryLibrary::load(path)?;
+
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
-        let library = Pin::new(PluginEntryLibrary::load(path)?);
-
-        let inner = Arc::pin(EntrySource::FromLibrary(
-            Selfie::try_new(library, |entry| unsafe {
-                LoadedEntry::load(entry, path_str)
-            })
-            // The library can be discarded completely
-            .map_err(|e| e.error)?,
-        ));
+        let inner = unsafe { cache::load_from_library(library, path_str)? };
 
         Ok(Self { inner })
     }
@@ -141,10 +136,6 @@ impl PluginBundle {
     /// See [`PluginBundleError`] for all the possible errors that may occur.
     ///
     /// # Safety
-    ///
-    /// Plugin entries must be initialized only once, which this function cannot enforce.
-    /// Users of this function *must* ensure it is only called *once* for every
-    /// [`EntryDescriptor`] it is called on.
     ///
     /// Users of this function *must* also ensure the [`EntryDescriptor`]'s fields are all
     /// valid as per the
@@ -172,17 +163,14 @@ impl PluginBundle {
         plugin_path: &str,
     ) -> Result<Self, PluginBundleError> {
         Ok(Self {
-            inner: Arc::pin(EntrySource::FromRaw(LoadedEntry::load(inner, plugin_path)?)),
+            inner: cache::load_from_raw(inner, plugin_path)?,
         })
     }
 
     /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
     pub fn raw_entry(&self) -> &EntryDescriptor {
-        match &self.inner.as_ref().get_ref() {
-            EntrySource::FromRaw(raw) => raw.entry(),
-            EntrySource::FromLibrary(bundle) => bundle.with_referential(|e| e.entry()),
-        }
+        self.inner.raw_entry()
     }
 
     /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.

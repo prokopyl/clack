@@ -1,3 +1,4 @@
+use clack_host::factory::PluginFactory;
 use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
@@ -94,4 +95,31 @@ pub fn handles_instanciation_errors() {
     if plugin_instance.is_ok() {
         panic!("Instanciation should have failed")
     }
+}
+
+#[test]
+pub fn it_works_concurrently_with_static_entrypoint() {
+    let entrypoint = &DIVA_STUB_ENTRY;
+
+    std::thread::scope(|s| {
+        for i in 0..300 {
+            std::thread::Builder::new()
+                .name(format!("Test {i}"))
+                .spawn_scoped(s, move || {
+                    let bundle = unsafe {
+                        PluginBundle::load_from_raw(entrypoint, "/home/user/.clap/u-he/libdiva.so")
+                    }
+                    .unwrap();
+
+                    let desc = bundle
+                        .get_factory::<PluginFactory>()
+                        .unwrap()
+                        .plugin_descriptor(0)
+                        .unwrap();
+
+                    assert_eq!(desc.id().unwrap().to_str().unwrap(), "com.u-he.diva");
+                })
+                .unwrap();
+        }
+    })
 }
