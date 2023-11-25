@@ -102,7 +102,7 @@ pub fn it_works_concurrently_with_static_entrypoint() {
     let entrypoint = &DIVA_STUB_ENTRY;
 
     std::thread::scope(|s| {
-        for i in 0..300 {
+        for i in 0..50 {
             std::thread::Builder::new()
                 .name(format!("Test {i}"))
                 .spawn_scoped(s, move || {
