@@ -5,16 +5,16 @@ edition = "2021"
 rust-version = "1.59"
 
 [dependencies]
-clap-sys = { git = "https://github.com/robbert-vdh/clap-sys.git", branch = "feature/cstr-macro" }
-clack-common = { path = "../common" }
+clap-sys = { workspace = true }
+clack-common = { workspace = true }
 libloading = "0.7.2"
 selfie = { workspace = true }
 stable_deref_trait = "1.2.0"
 
 [dev-dependencies]
-clack-plugin = { path = "../plugin" }
-clack-extensions = { path = "../extensions", features = ["clack-host", "latency", "log"] }
-clack-test-host = { path = "../test-host" }
+clack-plugin = { workspace = true }
+clack-extensions = { workspace = true, features = ["clack-host", "latency", "log"] }
+clack-test-host = { workspace = true }
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
 serial_test = "2.0.0"
 static_assertions = "1.1.0"

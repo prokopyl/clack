@@ -7,6 +7,6 @@ rust-version = "1.59"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-"clack-host" = { path = "../host" }
-"clack-extensions" = { path = "../extensions", features = ["audio-ports", "params", "state", "clack-plugin"] }
+clack-host = { workspace = true }
+clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin"] }
 selfie = { workspace = true }

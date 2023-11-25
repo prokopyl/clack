@@ -16,5 +16,7 @@ clack-common = { path = "./common" }
 clack-plugin = { path = "./plugin" }
 clack-host = { path = "./host" }
 clack-extensions = { path = "./extensions" }
+clack-test-host = { path = "./test-host" }
 
+clap-sys = { git = "https://github.com/glowcoil/clap-sys.git", rev = '22afeff171abab7c702c599b41bedd060de61880' }
 selfie = { git = 'https://github.com/prokopyl/selfie', rev = '726013fc94835b6f24918ba822a49e5c3b2a3b25' }
