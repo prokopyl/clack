@@ -1,12 +1,8 @@
 use crate::bundle::entry::LoadedEntry;
-use crate::bundle::library::PluginEntryLibrary;
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
-use selfie::refs::RefType;
-use selfie::Selfie;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
 
 #[derive(Hash, Eq, PartialEq)]
@@ -42,13 +38,14 @@ fn get_or_insert(
     Ok(CachedEntry(Some(s)))
 }
 
+#[cfg(feature = "libloading")]
 pub(crate) unsafe fn load_from_library(
-    library: PluginEntryLibrary,
+    library: crate::bundle::library::PluginEntryLibrary,
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
         Ok(EntrySourceInner::FromLibrary(
-            Selfie::try_new(Pin::new(library), |entry| unsafe {
+            selfie::Selfie::try_new(std::pin::Pin::new(library), |entry| unsafe {
                 LoadedEntry::load(entry, plugin_path)
             })
             // The library can be discarded completely
@@ -69,15 +66,10 @@ pub(crate) unsafe fn load_from_raw(
     })
 }
 
-pub(crate) struct LoadedEntryRef;
-
-impl<'a> RefType<'a> for LoadedEntryRef {
-    type Ref = LoadedEntry<'a>;
-}
-
 enum EntrySourceInner {
     FromRaw(LoadedEntry<'static>),
-    FromLibrary(Selfie<'static, PluginEntryLibrary, LoadedEntryRef>),
+    #[cfg(feature = "libloading")]
+    FromLibrary(crate::bundle::library::LibraryEntry),
 }
 
 #[derive(Clone)]
@@ -92,6 +84,7 @@ impl CachedEntry {
 
         match entry.as_ref() {
             EntrySourceInner::FromRaw(raw) => raw.entry(),
+            #[cfg(feature = "libloading")]
             EntrySourceInner::FromLibrary(bundle) => bundle.with_referential(|e| e.entry()),
         }
     }

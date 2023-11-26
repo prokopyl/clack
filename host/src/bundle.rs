@@ -43,20 +43,21 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::{NulError, OsStr};
+use std::ffi::NulError;
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
 
 mod cache;
 mod entry;
+
+#[cfg(feature = "libloading")]
 mod library;
 
 #[cfg(test)]
 pub mod diva_stub;
 
 use crate::bundle::cache::CachedEntry;
-use crate::bundle::library::PluginEntryLibrary;
 use crate::factory::{FactoryPointer, PluginFactory};
 pub use clack_common::entry::*;
 use clack_common::utils::ClapVersion;
@@ -113,7 +114,10 @@ impl PluginBundle {
     /// println!("Loaded bundle CLAP version: {}", bundle.version());
     /// # Ok(()) }
     /// ```
-    pub fn load<P: AsRef<OsStr>>(path: P) -> Result<Self, PluginBundleError> {
+    #[cfg(feature = "libloading")]
+    pub fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
+        use crate::bundle::library::PluginEntryLibrary;
+
         let path = path.as_ref();
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
@@ -240,6 +244,7 @@ pub enum PluginBundleError {
     ///
     /// This contains the error type from the underlying
     /// [`libloading`](https://crates.io/crates/libloading) library.
+    #[cfg(feature = "libloading")]
     LibraryLoadingError(libloading::Error),
     /// The entry pointer exposed by the dynamic library file is `null`.
     NullEntryPointer,
@@ -260,6 +265,7 @@ impl Error for PluginBundleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             PluginBundleError::InvalidNulPath(e) => Some(e),
+            #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => Some(e),
             _ => None,
         }
@@ -273,6 +279,7 @@ impl Display for PluginBundleError {
             PluginBundleError::InvalidNulPath(e) => {
                 write!(f, "Invalid plugin descriptor path: {e}")
             }
+            #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => {
                 write!(f, "Failed to load plugin descriptor library: {e}")
             }

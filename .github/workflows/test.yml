@@ -31,6 +31,8 @@ jobs:
       run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-host" --no-default-features
     - name: Check Standalone Extensions
       run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" --no-default-features
+    - name: Check Host Without default features
+      run: cargo check -p clack-host --no-default-features
     - name: Run tests
       run: cargo test --all --verbose
 

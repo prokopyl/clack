@@ -7,14 +7,20 @@ rust-version = "1.59"
 [dependencies]
 clap-sys = { workspace = true }
 clack-common = { workspace = true }
-libloading = "0.7.2"
-selfie = { workspace = true }
-stable_deref_trait = "1.2.0"
+
+libloading = { workspace = true, optional = true }
+selfie = { workspace = true, optional = true }
+stable_deref_trait = { workspace = true, optional = true }
+
+[features]
+default = ["libloading"]
+libloading = ["dep:libloading", "dep:selfie", "dep:stable_deref_trait"]
 
 [dev-dependencies]
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true, features = ["clack-host", "latency", "log"] }
 clack-test-host = { workspace = true }
+
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
 serial_test = "2.0.0"
 static_assertions = "1.1.0"
