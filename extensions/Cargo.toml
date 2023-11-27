@@ -3,12 +3,13 @@ name = "clack-extensions"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.59"
+license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clack-plugin = { workspace = true, optional = true }
-clack-host = { workspace = true, optional = true }
+clack-host = { workspace = true, optional = true, default-features = false }
 clack-common = { workspace = true }
 clap-sys = { workspace = true }
 

@@ -2,6 +2,8 @@
 name = "clack-host-cpal"
 version = "0.0.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
 
 [dependencies]
 clack-host = { workspace = true }
