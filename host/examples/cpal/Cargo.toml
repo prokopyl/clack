@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
-clack-host = { workspace = true }
+clack-host = { workspace = true, features = ["default"] }
 clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer"] }
 cpal = "0.15.2"
 crossbeam-channel = "0.5.8"
