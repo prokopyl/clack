@@ -26,7 +26,7 @@ use std::cell::UnsafeCell;
 use std::error::Error;
 use std::ffi::{c_void, CStr};
 use std::fmt::{Display, Formatter};
-use std::panic::AssertUnwindSafe;
+use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::ptr::NonNull;
 
 pub use clack_common::entry::*;
@@ -333,13 +333,22 @@ impl<E: Entry> EntryHolder<E> {
         }
     }
 
+    #[inline]
     pub unsafe fn init(&self, plugin_path: *const core::ffi::c_char) -> bool {
+        self.init_with(plugin_path, |p| E::new(p))
+    }
+
+    pub unsafe fn init_with(
+        &self,
+        plugin_path: *const core::ffi::c_char,
+        entry_factory: impl FnOnce(&CStr) -> Result<E, EntryLoadError> + UnwindSafe,
+    ) -> bool {
         if (*self.inner.get()).is_some() {
             return true;
         }
 
         let plugin_path = CStr::from_ptr(plugin_path);
-        let entry = catch_unwind(|| E::new(plugin_path));
+        let entry = catch_unwind(|| entry_factory(plugin_path));
 
         if let Ok(Ok(entry)) = entry {
             *self.inner.get() = Some(entry);
