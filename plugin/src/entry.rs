@@ -22,12 +22,12 @@
 
 use crate::extensions::wrapper::panic::catch_unwind;
 use crate::factory::Factory;
-use std::cell::UnsafeCell;
 use std::error::Error;
 use std::ffi::{c_void, CStr};
 use std::fmt::{Display, Formatter};
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::ptr::NonNull;
+use std::sync::Mutex;
 
 pub use clack_common::entry::*;
 
@@ -35,7 +35,7 @@ mod single;
 
 pub use single::SinglePluginEntry;
 
-/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
+/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](PluginFactory) types.
 pub mod prelude {
     pub use crate::{
         entry::*,
@@ -316,20 +316,27 @@ impl<'a> EntryFactories<'a> {
     }
 }
 
+enum EntryHolderInner<E> {
+    Initialized { reference_count: usize, entry: E },
+    Uninitialized,
+}
+
 #[doc(hidden)]
 pub struct EntryHolder<E> {
-    inner: UnsafeCell<Option<E>>,
+    inner: Mutex<EntryHolderInner<E>>,
 }
 
 // SAFETY: TODO
 unsafe impl<E> Send for EntryHolder<E> {}
 unsafe impl<E> Sync for EntryHolder<E> {}
 
+use crate::entry::EntryHolderInner::*;
+
 #[doc(hidden)]
 impl<E: Entry> EntryHolder<E> {
     pub const fn new() -> Self {
         Self {
-            inner: UnsafeCell::new(None),
+            inner: Mutex::new(Uninitialized),
         }
     }
 
@@ -343,23 +350,49 @@ impl<E: Entry> EntryHolder<E> {
         plugin_path: *const core::ffi::c_char,
         entry_factory: impl FnOnce(&CStr) -> Result<E, EntryLoadError> + UnwindSafe,
     ) -> bool {
-        if (*self.inner.get()).is_some() {
-            return true;
-        }
+        let Ok(mut inner) = self.inner.lock() else {
+            return false;
+        };
 
-        let plugin_path = CStr::from_ptr(plugin_path);
-        let entry = catch_unwind(|| entry_factory(plugin_path));
+        match &mut *inner {
+            Initialized {
+                reference_count, ..
+            } => {
+                *reference_count += 1;
+                true
+            }
+            Uninitialized => {
+                let plugin_path = CStr::from_ptr(plugin_path);
+                let entry = catch_unwind(|| entry_factory(plugin_path));
 
-        if let Ok(Ok(entry)) = entry {
-            *self.inner.get() = Some(entry);
-            true
-        } else {
-            false
+                if let Ok(Ok(entry)) = entry {
+                    *inner = Initialized {
+                        entry,
+                        reference_count: 1,
+                    };
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 
-    pub unsafe fn de_init(&self) {
-        let _ = catch_unwind(AssertUnwindSafe(|| *self.inner.get() = None));
+    pub fn de_init(&self) {
+        let Ok(mut inner) = self.inner.lock() else {
+            return;
+        };
+
+        if let Initialized {
+            reference_count, ..
+        } = &mut *inner
+        {
+            if *reference_count > 1 {
+                *reference_count -= 1;
+            } else {
+                let _ = catch_unwind(AssertUnwindSafe(|| *inner = Uninitialized));
+            }
+        }
     }
 
     pub unsafe fn get_factory(&self, identifier: *const core::ffi::c_char) -> *const c_void {
@@ -367,9 +400,14 @@ impl<E: Entry> EntryHolder<E> {
             return core::ptr::null();
         }
 
-        let Some(entry) = &*self.inner.get() else {
+        let Ok(inner) = self.inner.lock() else {
             return core::ptr::null();
         };
+
+        let Initialized { entry, .. } = &*inner else {
+            return core::ptr::null();
+        };
+
         let identifier = CStr::from_ptr(identifier);
 
         catch_unwind(AssertUnwindSafe(|| {
