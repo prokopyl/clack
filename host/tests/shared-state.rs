@@ -1,4 +1,5 @@
 use clack_host::prelude::*;
+use clack_plugin::clack_entry;
 use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
@@ -51,8 +52,7 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
     }
 }
 
-clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
-static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
+pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared {
     state_ext: OnceLock<bool>,

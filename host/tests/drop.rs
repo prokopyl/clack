@@ -3,6 +3,7 @@ use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
 use clack_host::prelude::*;
+use clack_plugin::clack_entry;
 use serial_test::serial;
 
 pub struct DivaPluginStubAudioProcessor {
@@ -91,8 +92,7 @@ impl Drop for DivaPluginStubMainThread {
     }
 }
 
-clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
-static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
+pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared;
 impl<'a> HostShared<'a> for MyHostShared {

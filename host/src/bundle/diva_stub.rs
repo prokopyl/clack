@@ -1,3 +1,4 @@
+use clack_plugin::clack_entry;
 use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
@@ -70,6 +71,5 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
     }
 }
 
-clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
 #[allow(unused)] // This is only used in doctests
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
+pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);

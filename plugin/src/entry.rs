@@ -228,31 +228,47 @@ macro_rules! clack_export_entry {
         #[allow(unsafe_code)]
         #[allow(warnings, unused)]
         #[no_mangle]
-        pub static clap_entry: $crate::entry::EntryDescriptor = {
-            static HOLDER: $crate::entry::EntryHolder<$entry_type> =
-                $crate::entry::EntryHolder::new();
+        pub static clap_entry: $crate::entry::EntryDescriptor = $crate::clack_entry!($entry_type);
+    };
+}
 
-            unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
-                HOLDER.init(plugin_path)
-            }
+/// Produces an [`EntryDescriptor`] value from a given [`Entry`] type, but without exposing it.
+///
+/// This can be useful as an alternative to the usual
+/// [`clack_export_entry`](crate::clack_export_entry) macro if you do not want or need to export the
+/// given entry, and just need an [`EntryDescriptor`].
+#[macro_export]
+macro_rules! clack_entry {
+    ($entry_type:ty) => {
+        ({
+            #[allow(unsafe_code)]
+            const fn _entry() -> $crate::entry::EntryDescriptor {
+                static HOLDER: $crate::entry::EntryHolder<$entry_type> =
+                    $crate::entry::EntryHolder::new();
 
-            unsafe extern "C" fn deinit() {
-                HOLDER.de_init()
-            }
+                unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
+                    HOLDER.init(plugin_path)
+                }
 
-            unsafe extern "C" fn get_factory(
-                identifier: *const ::core::ffi::c_char,
-            ) -> *const ::core::ffi::c_void {
-                HOLDER.get_factory(identifier)
-            }
+                unsafe extern "C" fn deinit() {
+                    HOLDER.de_init()
+                }
 
-            $crate::entry::EntryDescriptor {
-                clap_version: $crate::utils::ClapVersion::CURRENT.to_raw(),
-                init: Some(init),
-                deinit: Some(deinit),
-                get_factory: Some(get_factory),
+                unsafe extern "C" fn get_factory(
+                    identifier: *const ::core::ffi::c_char,
+                ) -> *const ::core::ffi::c_void {
+                    HOLDER.get_factory(identifier)
+                }
+
+                $crate::entry::EntryDescriptor {
+                    clap_version: $crate::utils::ClapVersion::CURRENT.to_raw(),
+                    init: Some(init),
+                    deinit: Some(deinit),
+                    get_factory: Some(get_factory),
+                }
             }
-        };
+            _entry()
+        })
     };
 }
 

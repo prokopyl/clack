@@ -9,6 +9,7 @@ mod diva_stub {
     use clack_extensions::state::*;
 
     use clack_common::stream::{InputStream, OutputStream};
+    use clack_plugin::clack_entry;
     use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
     use clack_plugin::prelude::*;
     use std::ffi::CStr;
@@ -111,9 +112,8 @@ mod diva_stub {
         }
     }
 
-    clack_export_entry!(SinglePluginEntry<DivaPluginStub>);
     #[allow(unused)] // This is only used in doctests
-    pub static DIVA_STUB_ENTRY: EntryDescriptor = clap_entry;
+    pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 }
 
 pub fn get_working_instance<H: Host, FS, FH>(
