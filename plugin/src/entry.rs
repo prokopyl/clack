@@ -223,6 +223,14 @@ impl Error for EntryLoadError {}
 /// ```
 #[macro_export]
 macro_rules! clack_export_entry {
+    ($entry_type:ty, $entry_lambda:expr) => {
+        #[allow(non_upper_case_globals, missing_docs)]
+        #[allow(unsafe_code)]
+        #[allow(warnings, unused)]
+        #[no_mangle]
+        pub static clap_entry: $crate::entry::EntryDescriptor =
+            $crate::clack_entry!($entry_type, $entry_lambda);
+    };
     ($entry_type:ty) => {
         #[allow(non_upper_case_globals, missing_docs)]
         #[allow(unsafe_code)]
@@ -239,6 +247,37 @@ macro_rules! clack_export_entry {
 /// given entry, and just need an [`EntryDescriptor`].
 #[macro_export]
 macro_rules! clack_entry {
+    ($entry_type:ty, $entry_lambda:expr) => {
+        ({
+            #[allow(unsafe_code)]
+            const fn _entry() -> $crate::entry::EntryDescriptor {
+                static HOLDER: $crate::entry::EntryHolder<$entry_type> =
+                    $crate::entry::EntryHolder::new();
+
+                unsafe extern "C" fn init(plugin_path: *const ::core::ffi::c_char) -> bool {
+                    HOLDER.init_with(plugin_path, $entry_lambda)
+                }
+
+                unsafe extern "C" fn deinit() {
+                    HOLDER.de_init()
+                }
+
+                unsafe extern "C" fn get_factory(
+                    identifier: *const ::core::ffi::c_char,
+                ) -> *const ::core::ffi::c_void {
+                    HOLDER.get_factory(identifier)
+                }
+
+                $crate::entry::EntryDescriptor {
+                    clap_version: $crate::utils::ClapVersion::CURRENT.to_raw(),
+                    init: Some(init),
+                    deinit: Some(deinit),
+                    get_factory: Some(get_factory),
+                }
+            }
+            _entry()
+        })
+    };
     ($entry_type:ty) => {
         ({
             #[allow(unsafe_code)]
