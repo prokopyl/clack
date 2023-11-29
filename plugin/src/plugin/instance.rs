@@ -160,7 +160,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 /// [`PluginFactory::instantiate_plugin`](crate::factory::plugin::PluginFactory::instantiate_plugin) method.
 pub struct PluginInstance<'a> {
     inner: Box<clap_plugin>,
-    lifetime: PhantomData<&'a clap_plugin>,
+    lifetime: PhantomData<&'a clap_plugin_descriptor>,
 }
 
 impl<'a> PluginInstance<'a> {

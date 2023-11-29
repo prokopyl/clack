@@ -51,11 +51,8 @@ impl<P: Plugin> Entry for SinglePluginEntry<P> {
 
 struct SinglePluginFactory<P> {
     descriptor: PluginDescriptorWrapper,
-    _plugin: PhantomData<P>,
+    _plugin: PhantomData<fn() -> P>,
 }
-
-unsafe impl<P> Send for SinglePluginFactory<P> {}
-unsafe impl<P> Sync for SinglePluginFactory<P> {}
 
 impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
     #[inline]
