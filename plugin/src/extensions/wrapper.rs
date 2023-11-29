@@ -5,8 +5,8 @@
 
 use crate::host::{HostHandle, HostMainThreadHandle};
 use crate::plugin::{
-    logging, AudioConfiguration, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError,
-    PluginMainThread, PluginShared,
+    logging, AudioConfiguration, InstanceInitializer, Plugin, PluginAudioProcessor, PluginBoxInner,
+    PluginError, PluginMainThread, PluginShared,
 };
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
@@ -48,8 +48,17 @@ pub struct PluginWrapper<'a, P: Plugin> {
 }
 
 impl<'a, P: Plugin> PluginWrapper<'a, P> {
-    pub(crate) fn new(host: HostMainThreadHandle<'a>) -> Result<Self, PluginError> {
-        let shared = Box::pin(P::Shared::new(host.shared())?);
+    pub(crate) fn new(
+        host: HostMainThreadHandle<'a>,
+        initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
+    ) -> Result<Self, PluginError> {
+        let shared = match initializer {
+            None => P::Shared::new(host.shared())?,
+            Some(i) => i.init_shared(host.shared())?,
+        };
+
+        let shared = Box::pin(shared);
+
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
         let main_thread = UnsafeCell::new(P::MainThread::new(host, shared_ref)?);
@@ -258,8 +267,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
             .cast::<PluginBoxInner<'a, P>>()
             .as_ref()
             .ok_or(PluginWrapperError::NullPluginData)?
-            .plugin_data
-            .as_ref()
+            .wrapper()
             .ok_or(PluginWrapperError::UninitializedPlugin)
     }
 
@@ -273,8 +281,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
                 .cast::<PluginBoxInner<'a, P>>()
                 .as_mut()
                 .ok_or(PluginWrapperError::NullPluginData)?
-                .plugin_data
-                .as_mut()
+                .wrapper_mut()
                 .ok_or(PluginWrapperError::UninitializedPlugin)?,
         ))
     }

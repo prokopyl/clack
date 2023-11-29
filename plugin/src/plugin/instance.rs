@@ -2,7 +2,10 @@ use crate::extensions::wrapper::PluginWrapper;
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
 use crate::plugin::descriptor::PluginDescriptorWrapper;
-use crate::plugin::{AudioConfiguration, Plugin, PluginAudioProcessor, PluginMainThread};
+use crate::plugin::instance::WrapperState::*;
+use crate::plugin::{
+    AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
+};
 use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
@@ -11,18 +14,60 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 
+pub(crate) trait InstanceInitializer<'a, P: Plugin>: 'a {
+    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>;
+}
+
+impl<'a, P: Plugin, F: 'a> InstanceInitializer<'a, P> for F
+where
+    F: FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>,
+{
+    #[inline]
+    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> {
+        self(handle)
+    }
+}
+
+enum WrapperState<'a, P: Plugin> {
+    Initialized(PluginWrapper<'a, P>),
+    Uninitialized(Option<Box<dyn InstanceInitializer<'a, P>>>),
+    InitializationFailed,
+}
+
 pub(crate) struct PluginBoxInner<'a, P: Plugin> {
     host: HostHandle<'a>,
-    pub(crate) plugin_data: Option<PluginWrapper<'a, P>>,
+    plugin_data: WrapperState<'a, P>,
 }
 
 impl<'a, P: Plugin> PluginBoxInner<'a, P> {
-    fn get_plugin_desc(host: HostHandle<'a>, desc: &'a clap_plugin_descriptor) -> clap_plugin {
+    #[inline]
+    pub(crate) fn wrapper(&self) -> Option<&PluginWrapper<'a, P>> {
+        match &self.plugin_data {
+            Initialized(w) => Some(w),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn wrapper_mut(&mut self) -> Option<&mut PluginWrapper<'a, P>> {
+        match &mut self.plugin_data {
+            Initialized(w) => Some(w),
+            _ => None,
+        }
+    }
+}
+
+impl<'a, P: Plugin> PluginBoxInner<'a, P> {
+    fn get_plugin_desc(
+        host: HostHandle<'a>,
+        desc: &'a clap_plugin_descriptor,
+        initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
+    ) -> clap_plugin {
         clap_plugin {
             desc,
             plugin_data: Box::into_raw(Box::new(Self {
                 host,
-                plugin_data: None,
+                plugin_data: Uninitialized(initializer),
             }))
             .cast(),
             init: Some(Self::init),
@@ -46,20 +91,33 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     unsafe extern "C" fn init(plugin: *const clap_plugin) -> bool {
         // TODO: null check this
         let data = &mut *((*plugin).plugin_data as *mut PluginBoxInner<'a, P>);
-        if data.plugin_data.is_some() {
-            eprintln!("Plugin is already initialized");
-            return true; // TODO: revert
-        }
+        let uninit_data = match &mut data.plugin_data {
+            data @ Uninitialized(_) => core::mem::replace(data, InitializationFailed),
+            Initialized(_) => {
+                // TODO: use proper logging
+                eprintln!("Plugin is already initialized");
+                return true; // TODO: revert
+            }
+            InitializationFailed => {
+                // TODO: use proper logging
+                eprintln!("Plugin already failed to initialize");
+                return true; // TODO: revert
+            }
+        };
 
-        data.plugin_data = Some(
-            match PluginWrapper::new(data.host.as_main_thread_unchecked()) {
-                Ok(d) => d,
-                Err(e) => {
-                    super::logging::plugin_log::<P>(plugin, &e.into());
-                    return false;
-                }
-            },
-        );
+        let Uninitialized(initializer) = uninit_data else {
+            unreachable!()
+        };
+
+        let wrapper = match PluginWrapper::new(data.host.as_main_thread_unchecked(), initializer) {
+            Ok(d) => d,
+            Err(e) => {
+                super::logging::plugin_log::<P>(plugin, &e.into());
+                return false;
+            }
+        };
+
+        data.plugin_data = Initialized(wrapper);
 
         true
     }
@@ -186,6 +244,23 @@ impl<'a> PluginInstance<'a> {
             inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
                 host,
                 descriptor.as_raw(),
+                None,
+            )),
+            lifetime: PhantomData,
+        }
+    }
+    pub fn new_with<P: Plugin>(
+        host_info: HostInfo<'a>,
+        descriptor: &'a PluginDescriptorWrapper,
+        initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
+    ) -> PluginInstance<'a> {
+        // SAFETY: we guarantee that no host_handle methods are called until init() is called
+        let host = unsafe { host_info.to_handle() };
+        Self {
+            inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
+                host,
+                descriptor.as_raw(),
+                Some(Box::new(initializer) as Box<dyn InstanceInitializer<'a, P>>),
             )),
             lifetime: PhantomData,
         }
