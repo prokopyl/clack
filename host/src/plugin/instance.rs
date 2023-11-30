@@ -73,6 +73,20 @@ impl<H: Host> PluginInstanceInner<H> {
         unsafe { &*self.plugin_ptr }
     }
 
+    #[inline]
+    pub fn plugin_shared(&self) -> PluginSharedHandle {
+        PluginSharedHandle::new(self.plugin_ptr)
+    }
+
+    #[inline]
+    pub unsafe fn plugin_main_thread(&self) -> PluginMainThreadHandle {
+        PluginMainThreadHandle::new(self.plugin_ptr)
+    }
+    #[inline]
+    pub unsafe fn plugin_audio_processor(&self) -> PluginAudioProcessorHandle {
+        PluginAudioProcessorHandle::new(self.plugin_ptr)
+    }
+
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,

@@ -266,6 +266,8 @@ pub mod host;
 pub mod plugin;
 pub mod process;
 
+pub(crate) mod util;
+
 pub use clack_common::events;
 pub use clack_common::stream;
 pub use clack_common::utils;
