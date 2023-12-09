@@ -13,7 +13,7 @@ use instance::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {
-    inner: WriterLock<Arc<PluginInstanceInner<H>>>,
+    inner: WriterLock<PluginInstanceInner<H>>,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -115,6 +115,12 @@ impl<H: Host> PluginInstance<H> {
         self.inner.get().raw_instance()
     }
 
+    pub fn handle(&self) -> PluginInstanceHandle<H> {
+        PluginInstanceHandle {
+            inner: self.inner.make_reader(),
+        }
+    }
+
     #[inline]
     pub fn is_active(&self) -> bool {
         Arc::strong_count(self.inner.get()) > 1
@@ -152,7 +158,7 @@ impl<H: Host> PluginInstance<H> {
 }
 
 pub struct PluginInstanceHandle<H: Host> {
-    inner: WeakReader<Arc<PluginInstanceInner<H>>>,
+    inner: WeakReader<PluginInstanceInner<H>>,
 }
 
 impl<H: Host> PluginInstanceHandle<H> {
