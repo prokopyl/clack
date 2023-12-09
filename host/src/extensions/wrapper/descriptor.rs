@@ -1,5 +1,5 @@
 use crate::extensions::wrapper::HostWrapper;
-use crate::host::{Host, HostExtensions, HostInfo, HostShared};
+use crate::host::{Host, HostExtensions, HostFoo, HostInfo, HostShared};
 use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use std::ffi::{c_void, CStr};
@@ -38,7 +38,7 @@ impl RawHostDescriptor {
     }
 
     #[inline]
-    pub(crate) fn set_wrapper<H: Host>(&mut self, wrapper: &HostWrapper<H>) {
+    pub(crate) fn set_wrapper<'w, H: Host>(&mut self, wrapper: &HostWrapper<'w, H>) {
         self.raw.host_data = wrapper as *const _ as *mut _
     }
 }

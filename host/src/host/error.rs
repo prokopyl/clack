@@ -1,4 +1,4 @@
-use crate::host::Host;
+use crate::host::{Host, HostFoo};
 use crate::process::ProcessingStartError;
 use core::fmt;
 
@@ -81,9 +81,9 @@ impl fmt::Display for HostError {
 
 impl std::error::Error for HostError {}
 
-impl<H: Host> From<ProcessingStartError<H>> for HostError {
+impl<'w, H: Host> From<ProcessingStartError<'w, H>> for HostError {
     #[inline]
-    fn from(_: ProcessingStartError<H>) -> Self {
+    fn from(_: ProcessingStartError<'w, H>) -> Self {
         Self::StartProcessingFailed
     }
 }

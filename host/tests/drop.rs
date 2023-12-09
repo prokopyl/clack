@@ -115,7 +115,7 @@ impl Host for MyHost {
     type AudioProcessor<'a> = ();
 }
 
-fn instantiate() -> PluginInstance<MyHost> {
+fn instantiate() -> PluginInstance<'static, MyHost> {
     let bundle = unsafe {
         PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
     };

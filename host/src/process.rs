@@ -1,6 +1,6 @@
 use self::audio_buffers::InputAudioBuffers;
-use crate::host::Host;
 use crate::host::HostError;
+use crate::host::{Host, HostFoo};
 use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
 use crate::prelude::OutputAudioBuffers;
 use crate::process::PluginAudioProcessor::*;
@@ -24,15 +24,15 @@ pub struct PluginAudioConfiguration {
     pub frames_count_range: RangeInclusive<u32>,
 }
 
-pub enum PluginAudioProcessor<H: Host> {
-    Started(StartedPluginAudioProcessor<H>),
-    Stopped(StoppedPluginAudioProcessor<H>),
+pub enum PluginAudioProcessor<'w, H: Host> {
+    Started(StartedPluginAudioProcessor<'w, H>),
+    Stopped(StoppedPluginAudioProcessor<'w, H>),
     Poisoned,
 }
 
-impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
+impl<'w, H: Host> PluginAudioProcessor<'w, H> {
     #[inline]
-    pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<H>, HostError> {
+    pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Started(s) => Ok(s),
             Stopped(_) => Err(HostError::ProcessingStopped),
@@ -41,7 +41,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn as_started_mut(&mut self) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    pub fn as_started_mut(&mut self) -> Result<&mut StartedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Started(s) => Ok(s),
             Stopped(_) => Err(HostError::ProcessingStopped),
@@ -50,7 +50,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn as_stopped(&self) -> Result<&StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn as_stopped(&self) -> Result<&StoppedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Stopped(s) => Ok(s),
             Started(_) => Err(HostError::ProcessingStarted),
@@ -59,7 +59,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn as_stopped_mut(&mut self) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn as_stopped_mut(&mut self) -> Result<&mut StoppedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Stopped(s) => Ok(s),
             Started(_) => Err(HostError::ProcessingStarted),
@@ -68,7 +68,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
             Started(s) => s.shared_host_data(),
@@ -104,14 +104,16 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
 
     pub fn ensure_processing_started(
         &mut self,
-    ) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    ) -> Result<&mut StartedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Started(s) => Ok(s),
             _ => self.start_processing(),
         }
     }
 
-    pub fn start_processing(&mut self) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    pub fn start_processing(
+        &mut self,
+    ) -> Result<&mut StartedPluginAudioProcessor<'w, H>, HostError> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
@@ -138,14 +140,16 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
 
     pub fn ensure_processing_stopped(
         &mut self,
-    ) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    ) -> Result<&mut StoppedPluginAudioProcessor<'w, H>, HostError> {
         match self {
             Stopped(s) => Ok(s),
             _ => self.stop_processing(),
         }
     }
 
-    pub fn stop_processing(&mut self) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn stop_processing(
+        &mut self,
+    ) -> Result<&mut StoppedPluginAudioProcessor<'w, H>, HostError> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
@@ -165,26 +169,26 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 }
 
-impl<'a, H: 'a + Host> From<StartedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
+impl<'w, H: Host> From<StartedPluginAudioProcessor<'w, H>> for PluginAudioProcessor<'w, H> {
     #[inline]
-    fn from(p: StartedPluginAudioProcessor<H>) -> Self {
+    fn from(p: StartedPluginAudioProcessor<'w, H>) -> Self {
         Started(p)
     }
 }
 
-impl<'a, H: 'a + Host> From<StoppedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
+impl<'w, H: Host> From<StoppedPluginAudioProcessor<'w, H>> for PluginAudioProcessor<'w, H> {
     #[inline]
-    fn from(p: StoppedPluginAudioProcessor<H>) -> Self {
+    fn from(p: StoppedPluginAudioProcessor<'w, H>) -> Self {
         Stopped(p)
     }
 }
 
-pub struct StartedPluginAudioProcessor<H: Host> {
-    inner: Option<Arc<PluginInstanceInner<H>>>,
+pub struct StartedPluginAudioProcessor<'w, H: Host> {
+    inner: Option<Arc<PluginInstanceInner<'w, H>>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
-impl<H: Host> StartedPluginAudioProcessor<H> {
+impl<'w, H: Host> StartedPluginAudioProcessor<'w, H> {
     #[allow(clippy::too_many_arguments)]
     pub fn process(
         &mut self,
@@ -231,7 +235,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<H> {
+    pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<'w, H> {
         let inner = self.inner.take().unwrap();
         // SAFETY: this is called on the audio thread
         unsafe { inner.stop_processing() };
@@ -243,7 +247,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
         self.inner.as_ref().unwrap().wrapper().shared()
     }
 
@@ -291,7 +295,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 }
 
-impl<H: Host> Drop for StartedPluginAudioProcessor<H> {
+impl<'w, H: Host> Drop for StartedPluginAudioProcessor<'w, H> {
     fn drop(&mut self) {
         if let Some(inner) = self.inner.take() {
             // SAFETY: this is called on the audio thread
@@ -300,14 +304,14 @@ impl<H: Host> Drop for StartedPluginAudioProcessor<H> {
     }
 }
 
-pub struct StoppedPluginAudioProcessor<H: Host> {
-    pub(crate) inner: Arc<PluginInstanceInner<H>>,
+pub struct StoppedPluginAudioProcessor<'w, H: Host> {
+    pub(crate) inner: Arc<PluginInstanceInner<'w, H>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
-impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
+impl<'w, H: Host> StoppedPluginAudioProcessor<'w, H> {
     #[inline]
-    pub(crate) fn new(inner: Arc<PluginInstanceInner<H>>) -> Self {
+    pub(crate) fn new(inner: Arc<PluginInstanceInner<'w, H>>) -> Self {
         Self {
             inner,
             _no_sync: PhantomData,
@@ -317,7 +321,7 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     #[inline]
     pub fn start_processing(
         self,
-    ) -> Result<StartedPluginAudioProcessor<H>, ProcessingStartError<H>> {
+    ) -> Result<StartedPluginAudioProcessor<'w, H>, ProcessingStartError<'w, H>> {
         // SAFETY: this is called on the audio thread
         match unsafe { self.inner.start_processing() } {
             Ok(()) => Ok(StartedPluginAudioProcessor {
@@ -329,7 +333,7 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
         self.inner.wrapper().shared()
     }
 
@@ -361,30 +365,30 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     }
 }
 
-pub struct ProcessingStartError<H: Host> {
-    processor: StoppedPluginAudioProcessor<H>,
+pub struct ProcessingStartError<'w, H: Host> {
+    processor: StoppedPluginAudioProcessor<'w, H>,
 }
 
-impl<H: Host> ProcessingStartError<H> {
+impl<'w, H: Host> ProcessingStartError<'w, H> {
     #[inline]
-    pub fn into_stopped_processor(self) -> StoppedPluginAudioProcessor<H> {
+    pub fn into_stopped_processor(self) -> StoppedPluginAudioProcessor<'w, H> {
         self.processor
     }
 }
 
-impl<H: Host> Debug for ProcessingStartError<H> {
+impl<'w, H: Host> Debug for ProcessingStartError<'w, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Failed to start plugin processing")
     }
 }
 
-impl<H: Host> Display for ProcessingStartError<H> {
+impl<'w, H: Host> Display for ProcessingStartError<'w, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("Failed to start plugin processing")
     }
 }
 
-impl<H: Host> Error for ProcessingStartError<H> {}
+impl<'w, H: Host> Error for ProcessingStartError<'w, H> {}
 
 #[cfg(test)]
 mod test {

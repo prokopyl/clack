@@ -25,7 +25,7 @@
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
 //!
-//!     fn declare_extensions(builder: &mut HostExtensions<Self>, _: &Self::Shared<'_>) {
+//!     fn declare_extensions(builder: &mut HostExtensions<Self>, _: &Self::SharedRef<'_>) {
 //!         builder.register::<HostState>();
 //!     }
 //! }

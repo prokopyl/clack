@@ -5,7 +5,7 @@ struct SendPtr<T>(Option<NonNull<T>>);
 unsafe impl<T: Send> Send for SendPtr<T> {}
 unsafe impl<T: Sync> Sync for SendPtr<T> {}
 
-pub struct WriterLock<T: 'static> {
+pub struct WriterLock<T> {
     // This must *only* be dropped by this thread
     data: Arc<T>,
     // It's okay if other readers drop this
@@ -17,7 +17,7 @@ fn panic_poisoned() -> ! {
     panic!("PluginInstance panicked while (de)activating and is poisoned")
 }
 
-impl<T: 'static> WriterLock<T> {
+impl<T> WriterLock<T> {
     pub fn new(data: Arc<T>) -> Self {
         // SAFETY: The pointer comes from the Arc, it has to be non-null.
         let ptr = unsafe { NonNull::new_unchecked(Arc::as_ptr(&data) as *mut _) };
@@ -58,7 +58,7 @@ impl<T: 'static> WriterLock<T> {
     }
 }
 
-impl<T: 'static> Drop for WriterLock<T> {
+impl<T> Drop for WriterLock<T> {
     fn drop(&mut self) {
         if let Some(lock) = Arc::get_mut(&mut self.lock) {
             // We don't have any readers. It's an easy drop!

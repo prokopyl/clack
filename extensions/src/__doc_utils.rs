@@ -116,10 +116,10 @@ mod diva_stub {
     pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 }
 
-pub fn get_working_instance<H: Host, FS, FH>(
+pub fn get_working_instance<'w, H: Host, FS, FH>(
     shared: FS,
     main_thread: FH,
-) -> Result<PluginInstance<H>, Box<dyn std::error::Error>>
+) -> Result<PluginInstance<'w, H>, Box<dyn std::error::Error>>
 where
     FS: for<'b> FnOnce(&'b ()) -> <H as Host>::Shared<'b>,
     FH: for<'b> FnOnce(&'b <H as Host>::Shared<'b>) -> <H as Host>::MainThread<'b>,

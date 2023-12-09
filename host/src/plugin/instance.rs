@@ -1,19 +1,20 @@
 use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::extensions::wrapper::HostWrapper;
+use crate::host::HostFoo;
 use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
 use std::sync::Arc;
 
-pub struct PluginInstanceInner<H: Host> {
-    host_wrapper: Pin<Box<HostWrapper<H>>>,
+pub struct PluginInstanceInner<'w, H: Host> {
+    host_wrapper: Pin<Box<HostWrapper<'w, H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     plugin_ptr: *mut clap_plugin,
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
-impl<H: Host> PluginInstanceInner<H> {
+impl<'w, H: Host> PluginInstanceInner<'w, H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
@@ -22,8 +23,8 @@ impl<H: Host> PluginInstanceInner<H> {
         host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
-        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
+        FS: for<'s> FnOnce(&'s ()) -> <H as HostFoo<'w>>::SharedRef<'s>,
+        FH: for<'s> FnOnce(&'s <H as HostFoo<'w>>::SharedRef<'s>) -> <H as Host>::MainThread<'s>,
     {
         let host_wrapper = HostWrapper::new(shared, main_thread);
         let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
@@ -64,7 +65,7 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 
     #[inline]
-    pub fn wrapper(&self) -> &HostWrapper<H> {
+    pub fn wrapper(&self) -> &HostWrapper<'w, H> {
         &self.host_wrapper
     }
 
@@ -95,7 +96,7 @@ impl<H: Host> PluginInstanceInner<H> {
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host>::Shared<'a>,
+            &'a <H as HostFoo<'w>>::SharedRef<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
@@ -173,7 +174,7 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 }
 
-impl<H: Host> Drop for PluginInstanceInner<H> {
+impl<'w, H: Host> Drop for PluginInstanceInner<'w, H> {
     #[inline]
     fn drop(&mut self) {
         // Happens only if instantiate didn't complete
@@ -195,5 +196,5 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Send for PluginInstanceInner<H> {}
-unsafe impl<H: Host> Sync for PluginInstanceInner<H> {}
+unsafe impl<'w, H: Host> Send for PluginInstanceInner<'w, H> {}
+unsafe impl<'w, H: Host> Sync for PluginInstanceInner<'w, H> {}

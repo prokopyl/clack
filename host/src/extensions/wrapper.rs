@@ -1,5 +1,6 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
+use crate::host::HostFoo;
 use crate::prelude::*;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
@@ -25,17 +26,17 @@ mod panic {
 
 pub(crate) mod descriptor;
 
-pub struct HostWrapper<H: Host> {
-    audio_processor: Option<UnsafeCell<<H as Host>::AudioProcessor<'static>>>,
-    main_thread: Option<UnsafeCell<<H as Host>::MainThread<'static>>>,
-    shared: Pin<Box<<H as Host>::Shared<'static>>>,
+pub struct HostWrapper<'w, H: Host> {
+    audio_processor: Option<UnsafeCell<<H as Host>::AudioProcessor<'w>>>,
+    main_thread: Option<UnsafeCell<<H as Host>::MainThread<'w>>>,
+    shared: Pin<Box<<H as HostFoo<'w>>::SharedRef<'w>>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Send for HostWrapper<H> {}
-unsafe impl<H: Host> Sync for HostWrapper<H> {}
+unsafe impl<'w, H: Host> Send for HostWrapper<'w, H> {}
+unsafe impl<'w, H: Host> Sync for HostWrapper<'w, H> {}
 
-impl<H: Host> HostWrapper<H> {
+impl<'w, H: Host> HostWrapper<'w, H> {
     /// TODO: docs
     ///
     /// # Safety
@@ -91,17 +92,17 @@ impl<H: Host> HostWrapper<H> {
         }
     }
 
-    /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
+    /// Returns a shared reference to the host's [`Shared`](Host::SharedRef) struct.
     #[inline]
-    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
         // SAFETY: This type guarantees shared is never used mutably
         unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
 
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Box<Self>>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
-        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
+        FS: for<'s> FnOnce(&'s ()) -> <H as HostFoo<'w>>::SharedRef<'s>,
+        FH: for<'s> FnOnce(&'s <H as HostFoo<'w>>::SharedRef<'s>) -> <H as Host>::MainThread<'s>,
     {
         let mut wrapper = Box::pin(Self {
             audio_processor: None,
@@ -141,7 +142,7 @@ impl<H: Host> HostWrapper<H> {
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host>::Shared<'a>,
+            &'a <H as HostFoo<'w>>::SharedRef<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
@@ -198,7 +199,7 @@ impl<H: Host> HostWrapper<H> {
             .map_err(|_| HostWrapperError::Panic)?
     }
 
-    unsafe fn from_raw<'a>(raw: *const clap_host) -> Result<&'a Self, HostWrapperError> {
+    unsafe fn from_raw<'a>(raw: *const clap_host) -> Result<&'w Self, HostWrapperError> {
         raw.as_ref()
             .ok_or(HostWrapperError::NullHostInstance)?
             .host_data
@@ -231,11 +232,12 @@ unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(shared: &H) -> &'a H {
 
 /// # Safety
 /// The user MUST prevent this reference to be written anywhere
-unsafe fn shrink_shared_ref<'a, 'instance, H: Host>(
-    shared: &'a H::Shared<'instance>,
-) -> &'a H::Shared<'a> {
-    let original_ptr = shared as *const H::Shared<'instance>;
-    let transmuted_ptr: *const H::Shared<'a> = core::mem::transmute(original_ptr);
+unsafe fn shrink_shared_ref<'w, 'a, 'instance, H: HostFoo<'w>>(
+    shared: &'a <H as HostFoo<'w>>::SharedRef<'instance>,
+) -> &'a <H as HostFoo<'w>>::SharedRef<'a> {
+    let original_ptr = shared as *const <H as HostFoo<'w>>::SharedRef<'instance>;
+    let transmuted_ptr: *const <H as HostFoo<'w>>::SharedRef<'a> =
+        core::mem::transmute(original_ptr);
 
     &*transmuted_ptr
 }

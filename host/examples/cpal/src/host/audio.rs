@@ -20,7 +20,7 @@ use midi::*;
 
 /// Activates the given plugin instance, and outputs its processed audio to a new CPAL stream.
 pub fn activate_to_stream(
-    instance: &mut PluginInstance<CpalHost>,
+    instance: &mut PluginInstance<'static, CpalHost>,
 ) -> Result<Stream, Box<dyn Error>> {
     // Initialize CPAL
     let cpal_host = cpal::default_host();
@@ -104,7 +104,7 @@ fn make_stream_runner<S: FromSample<f32>>(
 /// Holds all of the data, buffers and state that are going to live and get used on the audio thread.
 struct StreamAudioProcessor {
     /// The plugin's audio processor.
-    audio_processor: StartedPluginAudioProcessor<CpalHost>,
+    audio_processor: StartedPluginAudioProcessor<'static, CpalHost>,
     /// The audio buffers.
     buffers: HostAudioBuffers,
     /// The MIDI event receiver.
@@ -116,7 +116,7 @@ struct StreamAudioProcessor {
 impl StreamAudioProcessor {
     /// Initializes the audio thread data.
     pub fn new(
-        plugin_instance: StartedPluginAudioProcessor<CpalHost>,
+        plugin_instance: StartedPluginAudioProcessor<'static, CpalHost>,
         midi_receiver: Option<MidiReceiver>,
         config: FullAudioConfig,
     ) -> Self {

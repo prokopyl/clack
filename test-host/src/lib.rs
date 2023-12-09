@@ -15,8 +15,8 @@ impl<'a> RefType<'a> for PluginDescriptorRef {
 
 pub struct TestHost {
     entry_and_descriptor: Selfie<'static, Box<PluginBundle>, PluginDescriptorRef>,
-    plugin: PluginInstance<TestHostImpl>,
-    processor: Option<StoppedPluginAudioProcessor<TestHostImpl>>,
+    plugin: PluginInstance<'static, TestHostImpl>,
+    processor: Option<StoppedPluginAudioProcessor<'static, TestHostImpl>>,
 
     input_buffers: [Vec<f32>; 2],
     output_buffers: [Vec<f32>; 2],
@@ -156,12 +156,12 @@ impl TestHost {
     }
 
     #[inline]
-    pub fn plugin(&self) -> &PluginInstance<TestHostImpl> {
+    pub fn plugin(&self) -> &PluginInstance<'static, TestHostImpl> {
         &self.plugin
     }
 
     #[inline]
-    pub fn plugin_mut(&mut self) -> &mut PluginInstance<TestHostImpl> {
+    pub fn plugin_mut(&mut self) -> &mut PluginInstance<'static, TestHostImpl> {
         &mut self.plugin
     }
 

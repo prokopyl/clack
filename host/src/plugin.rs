@@ -7,17 +7,18 @@ use std::sync::Arc;
 mod handle;
 pub(crate) mod instance;
 
+use crate::host::HostFoo;
 use crate::util::{WeakReader, WriterLock};
 pub use handle::*;
 use instance::*;
 
 /// A plugin instance.
-pub struct PluginInstance<H: Host> {
-    inner: WriterLock<PluginInstanceInner<H>>,
+pub struct PluginInstance<'w, H: Host> {
+    inner: WriterLock<PluginInstanceInner<'w, H>>,
     _no_send: PhantomData<*const ()>,
 }
 
-impl<H: Host> PluginInstance<H> {
+impl<'w, H: Host> PluginInstance<'w, H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
@@ -26,10 +27,10 @@ impl<H: Host> PluginInstance<H> {
         host: &HostInfo,
     ) -> Result<Self, HostError>
     where
-        FS: for<'b> FnOnce(&'b ()) -> <H as Host>::Shared<'b>,
-        FH: for<'b> FnOnce(&'b <H as Host>::Shared<'b>) -> <H as Host>::MainThread<'b>,
+        FS: for<'b> FnOnce(&'b ()) -> <H as HostFoo<'w>>::SharedRef<'b>,
+        FH: for<'b> FnOnce(&'b <H as HostFoo<'w>>::SharedRef<'b>) -> <H as Host>::MainThread<'b>,
     {
-        let inner = PluginInstanceInner::<H>::instantiate(
+        let inner = PluginInstanceInner::<'w, H>::instantiate(
             shared,
             main_thread,
             bundle,
@@ -47,11 +48,11 @@ impl<H: Host> PluginInstance<H> {
         &mut self,
         audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
+    ) -> Result<StoppedPluginAudioProcessor<'w, H>, HostError>
     where
         FA: for<'a> FnOnce(
             PluginAudioProcessorHandle<'a>,
-            &'a <H as Host>::Shared<'a>,
+            &'a <H as HostFoo<'w>>::SharedRef<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
@@ -65,7 +66,7 @@ impl<H: Host> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<H>) {
+    pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<'w, H>) {
         self.deactivate_with(processor, |_, _| ())
     }
 
@@ -76,7 +77,7 @@ impl<H: Host> PluginInstance<H> {
 
     pub fn deactivate_with<T, D>(
         &mut self,
-        processor: StoppedPluginAudioProcessor<H>,
+        processor: StoppedPluginAudioProcessor<'w, H>,
         drop_with: D,
     ) -> T
     where
@@ -115,9 +116,14 @@ impl<H: Host> PluginInstance<H> {
         self.inner.get().raw_instance()
     }
 
-    pub fn handle(&self) -> PluginInstanceHandle<H> {
+    pub fn handle(&self) -> PluginInstanceHandle<'w, H> {
+        let reader: WeakReader<PluginInstanceInner<'w, H>> = self.inner.make_reader();
+        // SAFETY: the reader itself guarantees the data cannot be accessed past 'w
+        let static_reader: WeakReader<PluginInstanceInner<'static, H>> =
+            unsafe { core::mem::transmute(reader) };
+
         PluginInstanceHandle {
-            inner: self.inner.make_reader(),
+            inner: static_reader,
         }
     }
 
@@ -127,7 +133,7 @@ impl<H: Host> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
         self.inner.get().wrapper().shared()
     }
 
@@ -157,15 +163,15 @@ impl<H: Host> PluginInstance<H> {
     }
 }
 
-pub struct PluginInstanceHandle<H: Host> {
-    inner: WeakReader<PluginInstanceInner<H>>,
+pub struct PluginInstanceHandle<'w, H: Host> {
+    inner: WeakReader<PluginInstanceInner<'w, H>>,
 }
 
-impl<H: Host> PluginInstanceHandle<H> {
+impl<'w, H: Host> PluginInstanceHandle<'w, H> {
     #[inline]
     pub fn use_shared_host_data<T>(
         &self,
-        lambda: impl FnOnce(&H::Shared<'_>) -> T,
+        lambda: impl FnOnce(&<H as HostFoo>::SharedRef<'_>) -> T,
     ) -> Result<T, HostError> {
         self.inner
             .use_with(|inner| lambda(inner.wrapper().shared()))

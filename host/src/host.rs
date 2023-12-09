@@ -148,7 +148,7 @@
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
 //!
-//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::Shared<'_>) {
+//!     fn declare_extensions(builder: &mut HostExtensions<Self>, shared: &Self::SharedRef<'_>) {
 //!         builder
 //!             .register::<HostLog>()
 //!             .register::<HostLatency>();
@@ -265,6 +265,21 @@ pub trait HostShared<'a>: Send + Sync {
     fn request_callback(&self);
 }
 
+/// TEMP
+pub trait HostFoo<'w> {
+    /// X
+    type SharedRef<'a>: HostShared<'a>
+    where
+        'w: 'a;
+}
+
+impl<'w, H: Host> HostFoo<'w> for H
+where
+    for<'b> <H as Host>::Shared<'b>: 'w,
+{
+    type SharedRef<'a> = <H as Host>::Shared<'a> where 'w: 'a;
+}
+
 /// A Clack Host implementation.
 ///
 /// This type does not hold any data nor is used at runtime. It exists only to tie
@@ -272,7 +287,7 @@ pub trait HostShared<'a>: Send + Sync {
 /// associated types together with the declared extensions.
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
-pub trait Host: 'static {
+pub trait Host: 'static + for<'z> HostFoo<'z> {
     /// The type that handles host data and callbacks tied to `[thread-safe]` operations.
     /// See the [`HostShared`] docs and the [module docs](self) for more information.
     type Shared<'a>: HostShared<'a> + 'a;
