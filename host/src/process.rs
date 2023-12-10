@@ -1,6 +1,6 @@
 use self::audio_buffers::InputAudioBuffers;
+use crate::host::Host;
 use crate::host::HostError;
-use crate::host::{Host, HostFoo};
 use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
 use crate::prelude::OutputAudioBuffers;
 use crate::process::PluginAudioProcessor::*;
@@ -68,7 +68,7 @@ impl<'w, H: Host> PluginAudioProcessor<'w, H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
             Started(s) => s.shared_host_data(),
@@ -247,7 +247,7 @@ impl<'w, H: Host> StartedPluginAudioProcessor<'w, H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
         self.inner.as_ref().unwrap().wrapper().shared()
     }
 
@@ -333,7 +333,7 @@ impl<'w, H: Host> StoppedPluginAudioProcessor<'w, H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
         self.inner.wrapper().shared()
     }
 

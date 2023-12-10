@@ -94,7 +94,7 @@ impl<'w, H: Host> HostWrapper<'w, H> {
 
     /// Returns a shared reference to the host's [`Shared`](Host::SharedRef) struct.
     #[inline]
-    pub fn shared(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
+    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
         // SAFETY: This type guarantees shared is never used mutably
         unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
@@ -232,12 +232,11 @@ unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(shared: &H) -> &'a H {
 
 /// # Safety
 /// The user MUST prevent this reference to be written anywhere
-unsafe fn shrink_shared_ref<'w, 'a, 'instance, H: HostFoo<'w>>(
+unsafe fn shrink_shared_ref<'w, 'a, 'instance, H: Host>(
     shared: &'a <H as HostFoo<'w>>::SharedRef<'instance>,
-) -> &'a <H as HostFoo<'w>>::SharedRef<'a> {
+) -> &'a <H as Host>::Shared<'a> {
     let original_ptr = shared as *const <H as HostFoo<'w>>::SharedRef<'instance>;
-    let transmuted_ptr: *const <H as HostFoo<'w>>::SharedRef<'a> =
-        core::mem::transmute(original_ptr);
+    let transmuted_ptr: *const <H as Host>::Shared<'a> = core::mem::transmute(original_ptr);
 
     &*transmuted_ptr
 }

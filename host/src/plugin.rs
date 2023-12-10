@@ -118,13 +118,8 @@ impl<'w, H: Host> PluginInstance<'w, H> {
 
     pub fn handle(&self) -> PluginInstanceHandle<'w, H> {
         let reader: WeakReader<PluginInstanceInner<'w, H>> = self.inner.make_reader();
-        // SAFETY: the reader itself guarantees the data cannot be accessed past 'w
-        let static_reader: WeakReader<PluginInstanceInner<'static, H>> =
-            unsafe { core::mem::transmute(reader) };
 
-        PluginInstanceHandle {
-            inner: static_reader,
-        }
+        PluginInstanceHandle { inner: reader }
     }
 
     #[inline]
@@ -133,7 +128,7 @@ impl<'w, H: Host> PluginInstance<'w, H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as HostFoo<'w>>::SharedRef<'_> {
+    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
         self.inner.get().wrapper().shared()
     }
 
@@ -171,7 +166,7 @@ impl<'w, H: Host> PluginInstanceHandle<'w, H> {
     #[inline]
     pub fn use_shared_host_data<T>(
         &self,
-        lambda: impl FnOnce(&<H as HostFoo>::SharedRef<'_>) -> T,
+        lambda: impl FnOnce(&<H as Host>::Shared<'_>) -> T,
     ) -> Result<T, HostError> {
         self.inner
             .use_with(|inner| lambda(inner.wrapper().shared()))

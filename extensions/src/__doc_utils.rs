@@ -1,3 +1,4 @@
+use clack_host::host::HostFoo;
 use clack_host::prelude::*;
 
 mod diva_stub {
@@ -121,8 +122,8 @@ pub fn get_working_instance<'w, H: Host, FS, FH>(
     main_thread: FH,
 ) -> Result<PluginInstance<'w, H>, Box<dyn std::error::Error>>
 where
-    FS: for<'b> FnOnce(&'b ()) -> <H as Host>::Shared<'b>,
-    FH: for<'b> FnOnce(&'b <H as Host>::Shared<'b>) -> <H as Host>::MainThread<'b>,
+    FS: for<'b> FnOnce(&'b ()) -> <H as HostFoo<'w>>::SharedRef<'b>,
+    FH: for<'b> FnOnce(&'b <H as HostFoo<'w>>::SharedRef<'b>) -> <H as Host>::MainThread<'b>,
 {
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 

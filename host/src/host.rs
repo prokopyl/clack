@@ -266,17 +266,15 @@ pub trait HostShared<'a>: Send + Sync {
 }
 
 /// TEMP
-pub trait HostFoo<'w> {
+/// Blocked by: https://internals.rust-lang.org/t/is-due-to-current-limitations-in-the-borrow-checker-overzealous/17818
+pub unsafe trait HostFoo<'w> {
     /// X
     type SharedRef<'a>: HostShared<'a>
     where
         'w: 'a;
 }
 
-impl<'w, H: Host> HostFoo<'w> for H
-where
-    for<'b> <H as Host>::Shared<'b>: 'w,
-{
+unsafe impl<'w, H: Host> HostFoo<'w> for H {
     type SharedRef<'a> = <H as Host>::Shared<'a> where 'w: 'a;
 }
 

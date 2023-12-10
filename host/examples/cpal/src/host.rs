@@ -51,7 +51,7 @@ impl Host for CpalHost {
     type MainThread<'a> = CpalHostMainThread<'a>;
     type AudioProcessor<'a> = ();
 
-    fn declare_extensions(builder: &mut HostExtensions<Self>, _shared: &Self::SharedRef<'_>) {
+    fn declare_extensions(builder: &mut HostExtensions<Self>, _shared: &Self::Shared<'_>) {
         builder
             .register::<HostLog>()
             .register::<HostGui>()
