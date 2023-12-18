@@ -340,6 +340,17 @@ impl<'a> InputAudioBuffers<'a> {
     }
 
     #[inline]
+    pub unsafe fn from_raw_buffers(
+        buffers: &'a [clap_audio_buffer],
+        min_channel_buffer_length: u32,
+    ) -> Self {
+        Self {
+            buffers,
+            min_channel_buffer_length: min_channel_buffer_length as usize,
+        }
+    }
+
+    #[inline]
     pub fn as_raw_buffers(&self) -> &'a [clap_audio_buffer] {
         self.buffers
     }
@@ -361,6 +372,17 @@ impl<'a> OutputAudioBuffers<'a> {
         Self {
             buffers: &mut [],
             min_channel_buffer_length: 0,
+        }
+    }
+
+    #[inline]
+    pub unsafe fn from_raw_buffers(
+        buffers: &'a mut [clap_audio_buffer],
+        min_channel_buffer_length: u32,
+    ) -> Self {
+        Self {
+            buffers,
+            min_channel_buffer_length: min_channel_buffer_length as usize,
         }
     }
 

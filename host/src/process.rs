@@ -145,6 +145,14 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         }
     }
 
+    pub fn stopped(self) -> StoppedPluginAudioProcessor<H> {
+        match self {
+            Stopped(s) => s,
+            Started(s) => s.stop_processing(),
+            Poisoned => panic!("Plugin audio processor was poisoned"),
+        }
+    }
+
     pub fn stop_processing(&mut self) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
         let inner = core::mem::replace(self, Poisoned);
 

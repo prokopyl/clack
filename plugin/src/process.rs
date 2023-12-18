@@ -342,6 +342,12 @@ impl<'a> Audio<'a> {
     pub fn frames_count(&self) -> u32 {
         self.frames_count
     }
+
+    /// Returns the raw input and output buffers structs, respectively.
+    #[inline]
+    pub fn raw_buffers(&mut self) -> (&[clap_audio_buffer], &mut [clap_audio_buffer]) {
+        (self.inputs, self.outputs)
+    }
 }
 
 impl<'buf: 'a, 'a> IntoIterator for &'a mut Audio<'buf> {

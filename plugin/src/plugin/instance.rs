@@ -6,6 +6,7 @@ use crate::plugin::instance::WrapperState::*;
 use crate::plugin::{
     AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
 };
+use crate::prelude::HostMainThreadHandle;
 use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
@@ -13,18 +14,34 @@ use core::ffi::c_void;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+use std::pin::Pin;
 
 pub(crate) trait InstanceInitializer<'a, P: Plugin>: 'a {
-    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>;
+    #[allow(clippy::type_complexity)] // It's internal, eh
+    fn init_shared(
+        self: Box<Self>,
+        handle: HostMainThreadHandle<'a>,
+    ) -> Result<(Pin<Box<P::Shared<'a>>>, P::MainThread<'a>), PluginError>;
 }
 
-impl<'a, P: Plugin, F: 'a> InstanceInitializer<'a, P> for F
+impl<'a, P: Plugin, F: 'a, FM: 'a> InstanceInitializer<'a, P> for F
 where
-    F: FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>,
+    F: FnOnce(HostMainThreadHandle<'a>) -> Result<(P::Shared<'a>, FM), PluginError>,
+    FM: FnOnce(&'a P::Shared<'a>) -> Result<P::MainThread<'a>, PluginError>,
 {
     #[inline]
-    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> {
-        self(handle)
+    fn init_shared(
+        self: Box<Self>,
+        handle: HostMainThreadHandle<'a>,
+    ) -> Result<(Pin<Box<P::Shared<'a>>>, P::MainThread<'a>), PluginError> {
+        let (shared, main_thread_init) = self(handle)?;
+        let shared = Box::pin(shared);
+
+        // SAFETY: this lives long enough
+        let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
+        let main_thread = main_thread_init(shared_ref)?;
+
+        Ok((shared, main_thread))
     }
 }
 
@@ -249,11 +266,16 @@ impl<'a> PluginInstance<'a> {
             lifetime: PhantomData,
         }
     }
-    pub fn new_with<P: Plugin>(
+
+    pub fn new_with<P: Plugin, FM: 'a>(
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptorWrapper,
-        initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
-    ) -> PluginInstance<'a> {
+        initializer: impl FnOnce(HostMainThreadHandle<'a>) -> Result<(P::Shared<'a>, FM), PluginError>
+            + 'a,
+    ) -> PluginInstance<'a>
+    where
+        FM: FnOnce(&'a P::Shared<'a>) -> Result<P::MainThread<'a>, PluginError>,
+    {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
         Self {

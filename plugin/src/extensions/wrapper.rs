@@ -52,19 +52,26 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         host: HostMainThreadHandle<'a>,
         initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
     ) -> Result<Self, PluginError> {
-        let shared = match initializer {
-            None => P::Shared::new(host.shared())?,
-            Some(i) => i.init_shared(host.shared())?,
-        };
+        let shared_host = host.shared();
+        if let Some(initializer) = initializer {
+            let (shared, main_thread) = initializer.init_shared(host)?;
 
-        let shared = Box::pin(shared);
+            return Ok(Self {
+                host: shared_host,
+                shared,
+                main_thread: UnsafeCell::new(main_thread),
+                audio_processor: None,
+            });
+        }
+
+        let shared = Box::pin(P::Shared::new(host.shared())?);
 
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
         let main_thread = UnsafeCell::new(P::MainThread::new(host, shared_ref)?);
 
         Ok(Self {
-            host: host.shared(),
+            host: shared_host,
             shared,
             main_thread,
             audio_processor: None,
