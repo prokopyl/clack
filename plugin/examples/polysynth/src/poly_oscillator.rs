@@ -73,6 +73,11 @@ impl PolyOscillator {
 
         // Find the voice that is playing that note.
         if let Some(voice_index) = voice_index {
+            if voice_index >= self.active_voice_count {
+                // the voice is not playing
+                return;
+            }
+
             // Swap the targeted voice with the last one.
             self.voice_buffer
                 .swap(voice_index, self.active_voice_count - 1);
