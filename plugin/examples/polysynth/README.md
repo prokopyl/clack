@@ -21,19 +21,18 @@ off the various parts of the Clack API by implementing the following features:
 
 ## Building and installing from source
 
-To build this example from source, move (`cd`) to the directory containing
-the Clack source code, and you can build the example using `cargo` like so:
+We use the [xtask compile helper from ni-plug](https://github.com/robbert-vdh/nih-plug/blob/master/nih_plug_xtask/README.md)
+to build this example from source and handle the bundling of the binary dynamic library output from Cargo.
+Run the following command from the root of the Clack repository.
 
 ```shell
-cargo build -p clack-plugin-polysynth --release
+cargo xtask bundle -p clack-plugin-polysynth --release
 ```
 
-This will create a `clack_plugin_polysynth` library file (suffix may vary depending on
-your Operating System) in the `target/release` directory. 
+This will create a `clack-plugin-polysynth.clap` file in the `target/bundled` directory. 
 
-You can then copy (or link) that file to your CLAP plugin directory, and renaming it
-with a `.clap` extension (e.g. `clack_plugin_polysynth.clap`). This will enable it to
-be picked up by your CLAP DAWs and hosts.
+You can then copy (or link) that file to your CLAP plugin directory.
+This will enable it to be picked up by your CLAP DAWs and hosts.
 
 ## Usage
 

@@ -7,8 +7,9 @@ members = [
     "plugin",
     "plugin/examples/gain",
     "plugin/examples/polysynth",
+    "plugin/examples/xtask",
     "extensions",
-    "test-host"
+    "test-host",
 ]
 
 [workspace.dependencies]
