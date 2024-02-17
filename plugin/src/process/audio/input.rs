@@ -140,7 +140,7 @@ impl<'a> InputPort<'a> {
 #[derive(Copy, Clone)]
 pub struct InputChannels<'a, S> {
     frames_count: u32,
-    data: &'a [*const S],
+    data: &'a [*mut S],
 }
 
 impl<'a, S> InputChannels<'a, S> {
@@ -157,7 +157,7 @@ impl<'a, S> InputChannels<'a, S> {
     /// In CLAP's API, hosts provide a port's audio data as an array of raw pointers, each of which points
     /// to the start of a sample array of type `S` and of [`frames_count`](Self::frames_count) length.
     #[inline]
-    pub fn raw_data(&self) -> &'a [*const S] {
+    pub fn raw_data(&self) -> &'a [*mut S] {
         self.data
     }
 
@@ -213,7 +213,7 @@ impl<'a, T> IntoIterator for &'a InputChannels<'a, T> {
 /// An iterator over all of an [`InputPort`]'s channels' sample buffers.
 pub struct InputChannelsIter<'a, T> {
     // TODO: hide these with new() function
-    pub(crate) data: Iter<'a, *const T>,
+    pub(crate) data: Iter<'a, *mut T>,
     pub(crate) frames_count: u32,
 }
 

@@ -47,6 +47,23 @@ impl PluginAudioPorts {
             None
         }
     }
+
+    // TODO: try to bridge this, it seems silly
+    // FIXME: argument order consistency
+    // TODO: cleanup, etc.
+    #[cfg(feature = "clack-plugin")]
+    pub fn get_to_writer(
+        &self,
+        plugin: &PluginMainThreadHandle,
+        is_input: bool,
+        index: u32,
+        buffer: &mut AudioPortInfoWriter,
+    ) {
+        if let Some(get) = self.0.get {
+            buffer.is_set =
+                unsafe { get(plugin.as_raw(), index, is_input, buffer.buf.as_mut_ptr()) };
+        }
+    }
 }
 
 pub trait HostAudioPortsImpl {

@@ -172,7 +172,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
         })
     }
 
-    fn get_value(&self, param_id: u32) -> Option<f64> {
+    fn get_value(&mut self, param_id: u32) -> Option<f64> {
         if param_id == 0 {
             Some(self.rusting as f64)
         } else {

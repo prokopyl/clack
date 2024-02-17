@@ -17,9 +17,9 @@ impl Window {
         Self { raw }
     }
 
-    #[cfg(feature = "clack-host")]
+    /// TODO
     #[inline]
-    pub(crate) unsafe fn as_raw(&self) -> &clap_window {
+    pub fn as_raw(&self) -> &clap_window {
         &self.raw
     }
 

@@ -11,8 +11,9 @@ use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 pub struct ParamInfoWriter<'a> {
-    initialized: bool,
-    inner: &'a mut MaybeUninit<clap_param_info>,
+    // FIXME: naming consistency with AudioPorts/NotePorts
+    pub(crate) initialized: bool,
+    pub(crate) inner: &'a mut MaybeUninit<clap_param_info>,
 }
 
 impl<'a> ParamInfoWriter<'a> {
@@ -97,7 +98,7 @@ impl<'a> core::fmt::Write for ParamDisplayWriter<'a> {
 pub trait PluginMainThreadParams {
     fn count(&self) -> u32;
     fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter);
-    fn get_value(&self, param_id: u32) -> Option<f64>;
+    fn get_value(&mut self, param_id: u32) -> Option<f64>;
     fn value_to_text(
         &self,
         param_id: u32,
@@ -153,7 +154,7 @@ where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let val =
-        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().get_value(param_id)))
+        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().get_value(param_id)))
             .flatten();
 
     match val {

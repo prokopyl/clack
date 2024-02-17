@@ -1,4 +1,5 @@
 use super::*;
+use crate::params::implementation::ParamInfoWriter;
 use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_host::extensions::prelude::*;
@@ -30,11 +31,7 @@ impl PluginParams {
         }
     }
 
-    pub fn get_value<H: Host>(
-        &self,
-        plugin: &PluginMainThreadHandle,
-        param_id: u32,
-    ) -> Option<f64> {
+    pub fn get_value(&self, plugin: &PluginMainThreadHandle, param_id: u32) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
         let valid = unsafe { (self.0.get_value?)(plugin.as_raw(), param_id, value.as_mut_ptr()) };
 
@@ -45,7 +42,23 @@ impl PluginParams {
         }
     }
 
-    pub fn value_to_text<'b, H: Host>(
+    // TODO: try to bridge this, it seems silly
+    // FIXME: argument order consistency
+    // TODO: cleanup, etc.
+    #[cfg(feature = "clack-plugin")]
+    pub fn get_info_to_writer(
+        &self,
+        plugin: &PluginMainThreadHandle,
+        index: u32,
+        buffer: &mut ParamInfoWriter,
+    ) {
+        if let Some(get_info) = self.0.get_info {
+            buffer.initialized =
+                unsafe { get_info(plugin.as_raw(), index, buffer.inner.as_mut_ptr()) };
+        }
+    }
+
+    pub fn value_to_text<'b>(
         &self,
         plugin: &PluginMainThreadHandle,
         param_id: u32,
@@ -73,7 +86,7 @@ impl PluginParams {
         }
     }
 
-    pub fn text_to_value<H: Host>(
+    pub fn text_to_value(
         &self,
         plugin: &PluginMainThreadHandle,
         param_id: u32,

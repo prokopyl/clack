@@ -43,9 +43,10 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::NulError;
+use std::ffi::{CStr, NulError};
 use std::fmt::{Display, Formatter};
 
+use libloading::Library;
 use std::ptr::NonNull;
 
 mod cache;
@@ -122,6 +123,29 @@ impl PluginBundle {
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
         let library = PluginEntryLibrary::load(path)?;
+
+        let inner = unsafe { cache::load_from_library(library, path_str)? };
+
+        Ok(Self { inner })
+    }
+
+    // TODO: docs
+    /// # Safety
+    ///
+    /// The given path must match the file location the library was loaded from. Moreover, the
+    /// symbol named `symbol_name` must be a valid CLAP entry.
+    #[cfg(feature = "libloading")]
+    pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
+        path: P,
+        library: Library,
+        symbol_name: &CStr,
+    ) -> Result<Self, PluginBundleError> {
+        use crate::bundle::library::PluginEntryLibrary;
+
+        let path = path.as_ref();
+        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+
+        let library = PluginEntryLibrary::load_from_symbol_in_library(library, symbol_name)?;
 
         let inner = unsafe { cache::load_from_library(library, path_str)? };
 

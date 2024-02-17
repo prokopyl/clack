@@ -5,7 +5,7 @@ use libloading::Library;
 use selfie::refs::RefType;
 use selfie::Selfie;
 use stable_deref_trait::StableDeref;
-use std::ffi::OsStr;
+use std::ffi::{CStr, OsStr};
 use std::ops::Deref;
 use std::ptr::NonNull;
 
@@ -14,14 +14,27 @@ pub(crate) struct PluginEntryLibrary {
     entry_ptr: NonNull<EntryDescriptor>,
 }
 
-const SYMBOL_NAME: &[u8] = b"clap_entry\0";
+// SAFETY: this has a null byte at the end
+const SYMBOL_NAME: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"clap_entry\0") };
 impl PluginEntryLibrary {
     pub fn load(path: &OsStr) -> Result<Self, PluginBundleError> {
         let library =
             unsafe { Library::new(path) }.map_err(PluginBundleError::LibraryLoadingError)?;
 
-        let symbol = unsafe { library.get::<*const EntryDescriptor>(SYMBOL_NAME) }
-            .map_err(PluginBundleError::LibraryLoadingError)?;
+        Self::load_from_library(library)
+    }
+
+    pub fn load_from_library(library: Library) -> Result<Self, PluginBundleError> {
+        unsafe { Self::load_from_symbol_in_library(library, SYMBOL_NAME) }
+    }
+
+    pub unsafe fn load_from_symbol_in_library(
+        library: Library,
+        symbol_name: &CStr,
+    ) -> Result<Self, PluginBundleError> {
+        let symbol =
+            unsafe { library.get::<*const EntryDescriptor>(symbol_name.to_bytes_with_nul()) }
+                .map_err(PluginBundleError::LibraryLoadingError)?;
 
         let entry_ptr = NonNull::new(*symbol as *mut EntryDescriptor)
             .ok_or(PluginBundleError::NullEntryPointer)?;

@@ -105,7 +105,7 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         })
     }
 
-    fn get_value(&self, param_id: u32) -> Option<f64> {
+    fn get_value(&mut self, param_id: u32) -> Option<f64> {
         if param_id == 1 {
             Some(self.shared.params.get_volume() as f64)
         } else {

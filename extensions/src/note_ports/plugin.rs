@@ -6,8 +6,8 @@ use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
 
 pub struct NotePortInfoWriter<'a> {
-    buf: &'a mut MaybeUninit<clap_note_port_info>,
-    is_set: bool,
+    pub(crate) buf: &'a mut MaybeUninit<clap_note_port_info>,
+    pub(crate) is_set: bool,
 }
 
 impl<'a> NotePortInfoWriter<'a> {
