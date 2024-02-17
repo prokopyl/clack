@@ -27,7 +27,7 @@ impl AudioPortsConfigBuffer {
 
 impl PluginAudioPortsConfig {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
-    pub fn count(&self, plugin: &PluginMainThreadHandle) -> usize {
+    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
         match self.0.count {
             None => 0,
             Some(count) => unsafe { count(plugin.as_raw()) as usize },
@@ -40,7 +40,7 @@ impl PluginAudioPortsConfig {
     /// unnecessary allocations.
     pub fn get<'b>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         index: usize,
         buffer: &'b mut AudioPortsConfigBuffer,
     ) -> Option<AudioPortsConfiguration<'b>> {

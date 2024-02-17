@@ -44,8 +44,8 @@ impl<'a> NotePortInfoWriter<'a> {
 }
 
 pub trait PluginNotePortsImpl {
-    fn count(&self, is_input: bool) -> u32;
-    fn get(&self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter);
+    fn count(&mut self, is_input: bool) -> u32;
+    fn get(&mut self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter);
 }
 
 impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
@@ -65,7 +65,7 @@ unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin, is_input: bool
 where
     for<'a> P::MainThread<'a>: PluginNotePortsImpl,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count(is_input)))
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count(is_input)))
         .unwrap_or(0)
 }
 
@@ -84,7 +84,7 @@ where
         };
 
         let mut writer = NotePortInfoWriter::from_raw(info);
-        p.main_thread().as_ref().get(is_input, index, &mut writer);
+        p.main_thread().as_mut().get(is_input, index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

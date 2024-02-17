@@ -230,13 +230,13 @@ fn push_midi_to_buffer(
 ///
 /// This returns `None` if it couldn't find one.
 fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<(u32, bool)> {
-    let handle = instance.main_thread_plugin_data();
+    let mut handle = instance.main_thread_plugin_data();
     let plugin_note_ports = handle.shared().get_extension::<PluginNotePorts>()?;
 
     let mut buffer = NotePortInfoBuffer::new();
-    let ports_count = plugin_note_ports.count(&handle, true);
+    let ports_count = plugin_note_ports.count(&mut handle, true);
     for i in 0..ports_count {
-        let Some(port_info) = plugin_note_ports.get(&handle, i, true, &mut buffer) else {
+        let Some(port_info) = plugin_note_ports.get(&mut handle, i, true, &mut buffer) else {
             continue;
         };
 

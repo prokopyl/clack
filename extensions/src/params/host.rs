@@ -6,7 +6,7 @@ use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 impl PluginParams {
-    pub fn count(&self, plugin: &PluginMainThreadHandle) -> u32 {
+    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
         match self.0.count {
             None => 0,
             Some(count) => unsafe { count(plugin.as_raw()) },
@@ -15,7 +15,7 @@ impl PluginParams {
 
     pub fn get_info<'b>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         param_index: u32,
         info: &'b mut MaybeUninit<ParamInfo>,
     ) -> Option<&'b mut ParamInfo> {
@@ -32,7 +32,7 @@ impl PluginParams {
 
     pub fn get_value<H: Host>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         param_id: u32,
     ) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
@@ -47,7 +47,7 @@ impl PluginParams {
 
     pub fn value_to_text<'b, H: Host>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         param_id: u32,
         value: f64,
         buffer: &'b mut [MaybeUninit<u8>],
@@ -75,7 +75,7 @@ impl PluginParams {
 
     pub fn text_to_value<H: Host>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         param_id: u32,
         display: &CStr,
     ) -> Option<f64> {

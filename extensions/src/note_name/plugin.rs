@@ -7,13 +7,13 @@ use std::ptr::addr_of_mut;
 /// Implementation of the Plugin-side of the Note Name extension.
 pub trait PluginNoteNameImpl {
     /// Returns the number of available [`NoteName`]s.
-    fn count(&self) -> usize;
+    fn count(&mut self) -> usize;
 
     /// Retrieves a specific [`NoteName`] from its index.
     ///
     /// The plugin gets passed a host-provided mutable buffer to write the configuration into, to
     /// avoid any unnecessary allocations.
-    fn get(&self, index: usize, writer: &mut NoteNameWriter);
+    fn get(&mut self, index: usize, writer: &mut NoteNameWriter);
 }
 
 impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
@@ -31,7 +31,7 @@ unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count() as u32)).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count() as u32)).unwrap_or(0)
 }
 
 unsafe extern "C" fn get<P: Plugin>(
@@ -48,7 +48,7 @@ where
         };
 
         let mut writer = NoteNameWriter::from_raw(config);
-        p.main_thread().as_ref().get(index as usize, &mut writer);
+        p.main_thread().as_mut().get(index as usize, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

@@ -48,17 +48,17 @@ pub fn it_works() {
 
     let plugin = host.plugin_mut();
 
-    let plugin_main_thread = plugin.main_thread_plugin_data();
+    let mut plugin_main_thread = plugin.main_thread_plugin_data();
     let ports_ext = plugin_main_thread
         .shared()
         .get_extension::<PluginAudioPorts>()
         .unwrap();
-    assert_eq!(1, ports_ext.count(&plugin_main_thread, true));
-    assert_eq!(1, ports_ext.count(&plugin_main_thread, false));
+    assert_eq!(1, ports_ext.count(&mut plugin_main_thread, true));
+    assert_eq!(1, ports_ext.count(&mut plugin_main_thread, false));
 
     let mut buf = AudioPortInfoBuffer::new();
     let info = ports_ext
-        .get(&plugin_main_thread, 0, false, &mut buf)
+        .get(&mut plugin_main_thread, 0, false, &mut buf)
         .unwrap();
 
     assert_eq!(info.id, 0);

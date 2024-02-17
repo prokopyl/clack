@@ -100,13 +100,14 @@ impl HostGui {
 #[allow(unused)]
 pub trait PluginGuiImpl {
     /// Indicate whether a particular API is supported.
-    fn is_api_supported(&self, configuration: GuiConfiguration) -> bool;
+    #[allow(clippy::wrong_self_convention)] // To match the CLAP naming
+    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool;
 
     /// Provide a hint to the host if the plugin prefers to use an API (and/or float state).
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    fn get_preferred_api(&self) -> Option<GuiConfiguration>;
+    fn get_preferred_api(&mut self) -> Option<GuiConfiguration>;
 
     /// Create and allocate all resources needed for the GUI
     ///
@@ -133,12 +134,12 @@ pub trait PluginGuiImpl {
     /// Tell host if GUI can be resized
     ///
     /// Only applies to embedded windows.
-    fn can_resize(&self) -> bool {
+    fn can_resize(&mut self) -> bool {
         false
     }
 
     /// Provide hints on the resize-ability of the GUI
-    fn get_resize_hints(&self) -> Option<GuiResizeHints> {
+    fn get_resize_hints(&mut self) -> Option<GuiResizeHints> {
         None
     }
 
@@ -211,7 +212,7 @@ where
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
             .main_thread()
-            .as_ref()
+            .as_mut()
             .is_api_supported(GuiConfiguration {
                 api_type: GuiApiType(CStr::from_ptr(api)),
                 is_floating,
@@ -233,7 +234,7 @@ where
             return Err(PluginWrapperError::NulPtr("get_preferred_api output"));
         }
 
-        match plugin.main_thread().as_ref().get_preferred_api() {
+        match plugin.main_thread().as_mut().get_preferred_api() {
             None => Ok(false),
             Some(GuiConfiguration {
                 api_type,
@@ -317,7 +318,7 @@ where
     for<'a> P::MainThread<'a>: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_ref().can_resize())
+        Ok(plugin.main_thread().as_mut().can_resize())
     })
     .unwrap_or(false)
 }
@@ -330,7 +331,7 @@ where
     for<'a> P::MainThread<'a>: PluginGuiImpl,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if let Some(plugin_hints) = plugin.main_thread().as_ref().get_resize_hints() {
+        if let Some(plugin_hints) = plugin.main_thread().as_mut().get_resize_hints() {
             *hints = plugin_hints.to_raw();
             Ok(true)
         } else {
