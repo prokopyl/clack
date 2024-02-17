@@ -4,7 +4,7 @@ use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::Iter;
 
-/// An iterator of all of the available [`InputPort`]s from an [`Audio`] struct.
+/// An iterator of all the available [`InputPort`]s from an [`Audio`] struct.
 pub struct InputPortsIter<'a> {
     inputs: Iter<'a, clap_audio_buffer>,
     frames_count: u32,
@@ -67,7 +67,7 @@ impl<'a> InputPort<'a> {
     /// # Errors
     ///
     /// This method returns a [`BufferError::InvalidChannelBuffer`] if the host provided neither
-    /// [`f32`] or [`f64`] buffer type, which is invalid per the CLAP specification.
+    /// [`f32`] nor [`f64`] buffer type, which is invalid per the CLAP specification.
     ///
     /// # Example
     ///
@@ -140,7 +140,7 @@ impl<'a> InputPort<'a> {
 #[derive(Copy, Clone)]
 pub struct InputChannels<'a, S> {
     frames_count: u32,
-    data: &'a [*const S],
+    data: &'a [*mut S],
 }
 
 impl<'a, S> InputChannels<'a, S> {
@@ -157,7 +157,7 @@ impl<'a, S> InputChannels<'a, S> {
     /// In CLAP's API, hosts provide a port's audio data as an array of raw pointers, each of which points
     /// to the start of a sample array of type `S` and of [`frames_count`](Self::frames_count) length.
     #[inline]
-    pub fn raw_data(&self) -> &'a [*const S] {
+    pub fn raw_data(&self) -> &'a [*mut S] {
         self.data
     }
 
@@ -180,7 +180,7 @@ impl<'a, S> InputChannels<'a, S> {
         }
     }
 
-    /// Gets an iterator over all of the port's channels' sample buffers.
+    /// Gets an iterator over all the port's channels' sample buffers.
     #[inline]
     pub fn iter(&self) -> InputChannelsIter<'a, S> {
         InputChannelsIter {
@@ -213,7 +213,7 @@ impl<'a, T> IntoIterator for &'a InputChannels<'a, T> {
 /// An iterator over all of an [`InputPort`]'s channels' sample buffers.
 pub struct InputChannelsIter<'a, T> {
     // TODO: hide these with new() function
-    pub(crate) data: Iter<'a, *const T>,
+    pub(crate) data: Iter<'a, *mut T>,
     pub(crate) frames_count: u32,
 }
 

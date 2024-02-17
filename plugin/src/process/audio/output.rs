@@ -145,7 +145,7 @@ impl<'a> OutputPort<'a> {
 /// [`OutputPort::channels`].
 pub struct OutputChannels<'a, S> {
     pub(crate) frames_count: u32,
-    pub(crate) data: &'a mut [*const S],
+    pub(crate) data: &'a mut [*mut S],
 }
 
 impl<'a, S> OutputChannels<'a, S> {
@@ -162,7 +162,7 @@ impl<'a, S> OutputChannels<'a, S> {
     /// In CLAP's API, hosts provide a port's audio data as an array of raw pointers, each of which points
     /// to the start of a sample array of type `S` and of [`frames_count`](Self::frames_count) length.
     #[inline]
-    pub fn raw_data(&self) -> &[*const S] {
+    pub fn raw_data(&self) -> &[*mut S] {
         self.data
     }
 
@@ -284,7 +284,7 @@ impl<'a, T> IntoIterator for OutputChannels<'a, T> {
 
 /// An iterator over all of an [`OutputPort`]'s channels' writable sample buffers.
 pub struct OutputChannelsIter<'a, T> {
-    data: IterMut<'a, *const T>,
+    data: IterMut<'a, *mut T>,
     frames_count: u32,
 }
 
