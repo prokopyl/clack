@@ -1,9 +1,9 @@
 use crate::gui::GuiApiType;
-use clap_sys::ext::gui::{clap_window, clap_window_handle};
+use clap_sys::ext::gui::*;
+use core::ffi::{c_ulong, c_void, CStr};
 use raw_window_handle::{
     AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle, XlibWindowHandle,
 };
-use std::ffi::{c_void, CStr};
 
 /// A host-provided parent window.
 pub struct Window {
@@ -17,25 +17,58 @@ impl Window {
         Self { raw }
     }
 
-    #[cfg(feature = "clack-host")]
-    #[inline]
-    pub(crate) unsafe fn as_raw(&self) -> &clap_window {
-        &self.raw
-    }
-
     /// Returns the windowing API that is used to handle this window.
     #[inline]
     pub fn api_type(&self) -> GuiApiType {
         unsafe { GuiApiType(CStr::from_ptr(self.raw.api)) }
     }
 
-    /// Return this Window's handle as a raw C pointer.
+    /// Returns the window as a reference to the C-FFI compatible CLAP struct.
+    #[inline]
+    pub fn as_raw(&self) -> &clap_window {
+        &self.raw
+    }
+
+    /// Return this window's handle as a generic, opaque pointer.
     ///
     /// This is useful to handle custom GUI types.
     #[inline]
-    pub fn raw_ptr(&self) -> *mut c_void {
+    pub fn as_generic_ptr(&self) -> *mut c_void {
         // SAFETY: it's all always representable as a pointer
         unsafe { self.raw.specific.ptr }
+    }
+
+    /// Returns the window's handle as a Win32 `HWND`, if this is a Win32 window.
+    /// Otherwise, this returns `None`.
+    pub fn as_win32_hwnd(&self) -> Option<*mut c_void> {
+        if self.api_type() == GuiApiType::WIN32 {
+            // SAFETY: We just checked this was a WIN32 window
+            unsafe { Some(self.raw.specific.win32) }
+        } else {
+            None
+        }
+    }
+
+    /// Returns the window's handle as a pointer to Cocoa `NSView`, if this is a Cocoa window.
+    /// Otherwise, this returns `None`.
+    pub fn as_cocoa_nsview(&self) -> Option<*mut c_void> {
+        if self.api_type() == GuiApiType::COCOA {
+            // SAFETY: We just checked this was a COCOA window
+            unsafe { Some(self.raw.specific.cocoa) }
+        } else {
+            None
+        }
+    }
+
+    /// Returns the window's handle as an X11 window handle, if this is an X11 window.
+    /// Otherwise, this returns `None`.
+    pub fn as_x11_handle(&self) -> Option<c_ulong> {
+        if self.api_type() == GuiApiType::COCOA {
+            // SAFETY: We just checked this was a COCOA window
+            unsafe { Some(self.raw.specific.x11) }
+        } else {
+            None
+        }
     }
 
     /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
