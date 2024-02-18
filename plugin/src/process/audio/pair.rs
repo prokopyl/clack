@@ -1,3 +1,4 @@
+use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{BufferError, InputPort, OutputPort, SampleType};
 use crate::process::Audio;
@@ -226,11 +227,12 @@ impl<'a, S> PairedChannels<'a, S> {
         let input = self
             .input_data
             .get(index)
-            .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) });
+            .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
 
-        let output = self.output_data.get(index).map(|ptr| unsafe {
-            core::slice::from_raw_parts_mut(*ptr, self.frames_count as usize)
-        });
+        let output = self
+            .output_data
+            .get(index)
+            .map(|ptr| unsafe { slice_from_external_parts_mut(*ptr, self.frames_count as usize) });
 
         ChannelPair::from_optional_io(input, output)
     }
@@ -275,10 +277,10 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
         let input = self
             .input_iter
             .next()
-            .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) });
+            .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
 
         let output = self.output_iter.next().map(|ptr| unsafe {
-            core::slice::from_raw_parts_mut((*ptr) as *mut _, self.frames_count as usize)
+            slice_from_external_parts_mut((*ptr) as *mut _, self.frames_count as usize)
         });
 
         ChannelPair::from_optional_io(input, output)

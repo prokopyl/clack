@@ -1,5 +1,6 @@
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader, UnknownEvent};
+use crate::utils::slice_from_external_parts;
 use clap_sys::events::{
     clap_event_midi, clap_event_midi2, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
     CLAP_EVENT_MIDI_SYSEX,
@@ -143,7 +144,7 @@ impl<'buf> MidiSysExEvent<'buf> {
     #[inline]
     pub fn data(&self) -> &'buf [u8] {
         // SAFETY: this struct ensures the buffer is valid and for the required lifetime
-        unsafe { core::slice::from_raw_parts(self.inner.buffer, self.inner.size as usize) }
+        unsafe { slice_from_external_parts(self.inner.buffer, self.inner.size as usize) }
     }
 
     #[inline]

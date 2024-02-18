@@ -20,3 +20,20 @@ pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &
     core::ptr::copy_nonoverlapping(value.as_ptr(), dst, max_len);
     dst.add(max_len).write(0)
 }
+
+/// A safer form of [`core::slice::from_raw_parts_mut`] that returns a properly aligned slice in case
+/// the length is 0.
+///
+/// In C it is common for empty slices to be represented using a null pointer, but this is UB in
+/// Rust, as all references must be aligned and non-null.
+///
+/// This helper avoids that pitfall by ignoring the pointer if the length is zero.
+#[cfg(feature = "clack-plugin")]
+#[inline]
+pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
+    if len == 0 {
+        return &mut [];
+    }
+
+    core::slice::from_raw_parts_mut(data, len)
+}

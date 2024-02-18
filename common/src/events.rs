@@ -65,6 +65,7 @@ impl<'a> UnknownEvent<'a> {
     /// in the header.
     #[inline]
     pub const unsafe fn from_raw<'e>(header: *const clap_event_header) -> &'e Self {
+        // SAFETY: no need to check for len > 0, since the data slice includes the header itself.
         let data = core::slice::from_raw_parts(header as *const _, (*header).size as usize);
         // SAFETY: The caller guarantees the right number of bytes is available after the given pointer in the size field.
         Self::from_bytes_unchecked(data)

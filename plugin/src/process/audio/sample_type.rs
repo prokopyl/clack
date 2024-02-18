@@ -1,3 +1,4 @@
+use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::process::audio::BufferError;
 use clap_sys::audio_buffer::clap_audio_buffer;
 
@@ -278,20 +279,20 @@ impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
                     Err(BufferError::InvalidChannelBuffer)
                 }
             }
-            (false, true) => Ok(SampleType::F32(core::slice::from_raw_parts(
+            (false, true) => Ok(SampleType::F32(slice_from_external_parts(
                 raw.data32 as *const *mut f32,
                 raw.channel_count as usize,
             ))),
-            (true, false) => Ok(SampleType::F64(core::slice::from_raw_parts(
+            (true, false) => Ok(SampleType::F64(slice_from_external_parts(
                 raw.data64 as *const *mut f64,
                 raw.channel_count as usize,
             ))),
             (false, false) => Ok(SampleType::Both(
-                core::slice::from_raw_parts(
+                slice_from_external_parts(
                     raw.data32 as *const *mut f32,
                     raw.channel_count as usize,
                 ),
-                core::slice::from_raw_parts(
+                slice_from_external_parts(
                     raw.data64 as *const *mut f64,
                     raw.channel_count as usize,
                 ),
@@ -313,17 +314,17 @@ impl<'a> SampleType<&'a mut [*mut f32], &'a mut [*mut f64]> {
                     Err(BufferError::InvalidChannelBuffer)
                 }
             }
-            (false, true) => Ok(SampleType::F32(core::slice::from_raw_parts_mut(
+            (false, true) => Ok(SampleType::F32(slice_from_external_parts_mut(
                 raw.data32 as *mut _,
                 raw.channel_count as usize,
             ))),
-            (true, false) => Ok(SampleType::F64(core::slice::from_raw_parts_mut(
+            (true, false) => Ok(SampleType::F64(slice_from_external_parts_mut(
                 raw.data64 as *mut _,
                 raw.channel_count as usize,
             ))),
             (false, false) => Ok(SampleType::Both(
-                core::slice::from_raw_parts_mut(raw.data32 as *mut _, raw.channel_count as usize),
-                core::slice::from_raw_parts_mut(raw.data64 as *mut _, raw.channel_count as usize),
+                slice_from_external_parts_mut(raw.data32 as *mut _, raw.channel_count as usize),
+                slice_from_external_parts_mut(raw.data64 as *mut _, raw.channel_count as usize),
             )),
         }
     }

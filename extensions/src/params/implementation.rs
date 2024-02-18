@@ -1,6 +1,6 @@
 use crate::params::info::ParamInfoData;
 use crate::params::{HostParams, ParamClearFlags, ParamRescanFlags};
-use crate::utils::write_to_array_buf;
+use crate::utils::{slice_from_external_parts_mut, write_to_array_buf};
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_plugin::extensions::prelude::*;
 use clap_sys::events::{clap_input_events, clap_output_events};
@@ -175,7 +175,7 @@ unsafe extern "C" fn value_to_text<P: Plugin>(
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    let buf = core::slice::from_raw_parts_mut(display as *mut u8, size as usize);
+    let buf = slice_from_external_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
         p.main_thread()

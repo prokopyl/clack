@@ -1,3 +1,4 @@
+use crate::internal_utils::slice_from_external_parts;
 use crate::prelude::Audio;
 use crate::process::audio::{BufferError, SampleType};
 use clack_common::process::ConstantMask;
@@ -176,7 +177,7 @@ impl<'a, S> InputChannels<'a, S> {
         unsafe {
             self.data
                 .get(channel_index as usize)
-                .map(|data| core::slice::from_raw_parts(*data, self.frames_count as usize))
+                .map(|data| slice_from_external_parts(*data, self.frames_count as usize))
         }
     }
 
@@ -224,7 +225,7 @@ impl<'a, T> Iterator for InputChannelsIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.data
             .next()
-            .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) })
+            .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) })
     }
 
     #[inline]

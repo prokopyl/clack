@@ -1,3 +1,4 @@
+use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::prelude::Audio;
 use crate::process::audio::{BufferError, SampleType};
 use crate::process::InputChannelsIter;
@@ -177,7 +178,7 @@ impl<'a, S> OutputChannels<'a, S> {
     pub fn channel(&self, channel_index: u32) -> Option<&[S]> {
         unsafe {
             self.data.get(channel_index as usize).map(|data| {
-                core::slice::from_raw_parts(*data as *const _, self.frames_count as usize)
+                slice_from_external_parts(*data as *const _, self.frames_count as usize)
             })
         }
     }
@@ -187,7 +188,7 @@ impl<'a, S> OutputChannels<'a, S> {
     pub fn channel_mut(&mut self, channel_index: u32) -> Option<&mut [S]> {
         unsafe {
             self.data.get(channel_index as usize).map(|data| {
-                core::slice::from_raw_parts_mut(*data as *mut _, self.frames_count as usize)
+                slice_from_external_parts_mut(*data as *mut _, self.frames_count as usize)
             })
         }
     }
@@ -294,7 +295,7 @@ impl<'a, T> Iterator for OutputChannelsIter<'a, T> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.data.next().map(|ptr| unsafe {
-            core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
+            slice_from_external_parts_mut(*ptr as *mut _, self.frames_count as usize)
         })
     }
 

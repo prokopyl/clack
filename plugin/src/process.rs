@@ -13,6 +13,7 @@ use std::ops::RangeBounds;
 
 pub use clack_common::process::ProcessStatus;
 pub mod audio;
+use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use audio::*;
 
 /// Metadata about the current process call.
@@ -210,11 +211,11 @@ impl<'a> Audio<'a> {
         unsafe {
             Audio {
                 frames_count: raw_process.frames_count,
-                inputs: core::slice::from_raw_parts(
+                inputs: slice_from_external_parts(
                     raw_process.audio_inputs,
                     raw_process.audio_inputs_count as usize,
                 ),
-                outputs: core::slice::from_raw_parts_mut(
+                outputs: slice_from_external_parts_mut(
                     raw_process.audio_outputs,
                     raw_process.audio_outputs_count as usize,
                 ),

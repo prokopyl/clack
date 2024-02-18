@@ -4,7 +4,6 @@ use crate::events::io::{InputEvents, OutputEvents, TryPushError};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
 use core::mem::{size_of_val, MaybeUninit};
-use core::slice::from_raw_parts_mut;
 use std::ops::{Index, Range};
 
 #[repr(C, align(8))]
@@ -201,7 +200,7 @@ impl EventBuffer {
 
         // SAFETY: casting anything to bytes is always safe
         let new_bytes = unsafe {
-            from_raw_parts_mut(
+            core::slice::from_raw_parts_mut(
                 new_elements.as_mut_ptr() as *mut u8,
                 size_of_val(new_elements),
             )
