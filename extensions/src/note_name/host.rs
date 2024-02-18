@@ -27,7 +27,7 @@ impl NoteNameBuffer {
 
 impl PluginNoteName {
     /// Returns the number of available [`NoteName`]s.
-    pub fn count(&self, plugin: &PluginMainThreadHandle) -> usize {
+    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
         match self.0.count {
             None => 0,
             Some(count) => unsafe { count(plugin.as_raw()) as usize },
@@ -40,7 +40,7 @@ impl PluginNoteName {
     /// unnecessary allocations.
     pub fn get<'b>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         index: usize,
         buffer: &'b mut NoteNameBuffer,
     ) -> Option<NoteName<'b>> {

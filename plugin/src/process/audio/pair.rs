@@ -178,8 +178,8 @@ impl<'a> PortPair<'a> {
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`PortPair::channels`].
 pub struct PairedChannels<'a, S> {
-    input_data: &'a [*const S],
-    output_data: &'a mut [*const S],
+    input_data: &'a [*mut S],
+    output_data: &'a mut [*mut S],
     frames_count: u32,
 }
 
@@ -229,7 +229,7 @@ impl<'a, S> PairedChannels<'a, S> {
             .map(|ptr| unsafe { core::slice::from_raw_parts(*ptr, self.frames_count as usize) });
 
         let output = self.output_data.get(index).map(|ptr| unsafe {
-            core::slice::from_raw_parts_mut(*ptr as *mut _, self.frames_count as usize)
+            core::slice::from_raw_parts_mut(*ptr, self.frames_count as usize)
         });
 
         ChannelPair::from_optional_io(input, output)
@@ -262,8 +262,8 @@ impl<'a, S> IntoIterator for PairedChannels<'a, S> {
 
 /// An iterator over all of a [`PortPair`]'s [`ChannelPair`]s.
 pub struct PairedChannelsIter<'a, S> {
-    input_iter: Iter<'a, *const S>,
-    output_iter: IterMut<'a, *const S>,
+    input_iter: Iter<'a, *mut S>,
+    output_iter: IterMut<'a, *mut S>,
     frames_count: u32,
 }
 

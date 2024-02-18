@@ -110,7 +110,7 @@ impl<'a> Gui<'a> {
     /// only figures out if that is okay for the plugin, and whether or not is supports embedding.
     fn negotiate_configuration(
         gui: &'a PluginGui,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
     ) -> Option<GuiConfiguration<'static>> {
         // This implementation only supports the default: Win32 on Windows, Cocoa on MacOS, X11 on Unix
         // We completely ignore the plugin's preference here: it's platform-default or nothing.

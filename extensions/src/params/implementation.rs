@@ -95,16 +95,16 @@ impl<'a> core::fmt::Write for ParamDisplayWriter<'a> {
 }
 
 pub trait PluginMainThreadParams {
-    fn count(&self) -> u32;
-    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter);
-    fn get_value(&self, param_id: u32) -> Option<f64>;
+    fn count(&mut self) -> u32;
+    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter);
+    fn get_value(&mut self, param_id: u32) -> Option<f64>;
     fn value_to_text(
-        &self,
+        &mut self,
         param_id: u32,
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result;
-    fn text_to_value(&self, param_id: u32, text: &str) -> Option<f64>;
+    fn text_to_value(&mut self, param_id: u32, text: &str) -> Option<f64>;
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,
@@ -124,7 +124,7 @@ unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().count())).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
 unsafe extern "C" fn get_info<P: Plugin>(
@@ -137,7 +137,7 @@ where
 {
     let mut info = ParamInfoWriter::new(value);
     PluginWrapper::<P>::handle(plugin, |p| {
-        p.main_thread().as_ref().get_info(param_index, &mut info);
+        p.main_thread().as_mut().get_info(param_index, &mut info);
         Ok(())
     })
     .is_some()
@@ -153,7 +153,7 @@ where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let val =
-        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_ref().get_value(param_id)))
+        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().get_value(param_id)))
             .flatten();
 
     match val {
@@ -179,7 +179,7 @@ where
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
         p.main_thread()
-            .as_ref()
+            .as_mut()
             .value_to_text(param_id, value, &mut writer)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
@@ -201,7 +201,7 @@ where
     let val = PluginWrapper::<P>::handle(plugin, |p| {
         let display = core::str::from_utf8(display)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
-        Ok(p.main_thread().as_ref().text_to_value(param_id, display))
+        Ok(p.main_thread().as_mut().text_to_value(param_id, display))
     })
     .flatten();
 

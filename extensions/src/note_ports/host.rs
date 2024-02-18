@@ -24,7 +24,7 @@ impl NotePortInfoBuffer {
 }
 
 impl PluginNotePorts {
-    pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
+    pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match self.0.count {
             None => 0,
             Some(count) => unsafe { count(plugin.as_raw(), is_input) },
@@ -33,7 +33,7 @@ impl PluginNotePorts {
 
     pub fn get<'b>(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         index: u32,
         is_input: bool,
         buffer: &'b mut NotePortInfoBuffer,

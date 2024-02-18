@@ -138,7 +138,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 }
 
 impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
-    fn count(&self, is_input: bool) -> u32 {
+    fn count(&mut self, is_input: bool) -> u32 {
         if is_input {
             0
         } else {
@@ -146,7 +146,7 @@ impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
         }
     }
 
-    fn get(&self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
+    fn get(&mut self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
         if !is_input && index == 0 {
             writer.set(&AudioPortInfoData {
                 id: 1,
@@ -161,7 +161,7 @@ impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
 }
 
 impl<'a> PluginNotePortsImpl for PolySynthPluginMainThread<'a> {
-    fn count(&self, is_input: bool) -> u32 {
+    fn count(&mut self, is_input: bool) -> u32 {
         if is_input {
             1
         } else {
@@ -169,7 +169,7 @@ impl<'a> PluginNotePortsImpl for PolySynthPluginMainThread<'a> {
         }
     }
 
-    fn get(&self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter) {
+    fn get(&mut self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter) {
         if is_input && index == 0 {
             writer.set(&NotePortInfoData {
                 id: 1,

@@ -411,7 +411,7 @@ impl<'a> GuiApiType<'a> {
     /// [`X11`](Self::X11) on other Unix OSes.
     #[inline]
     #[allow(unreachable_code)]
-    pub fn default_for_current_platform() -> Option<Self> {
+    pub const fn default_for_current_platform() -> Option<Self> {
         #[cfg(target_os = "windows")]
         return Some(Self::WIN32);
         #[cfg(target_os = "macos")]

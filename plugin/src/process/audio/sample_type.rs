@@ -25,8 +25,8 @@ pub enum SampleType<F32, F64> {
     /// The host isn't actually allowed to send both buffer types for a given port to the plugin,
     /// but this is still technically a possibility due to how the CLAP API is designed.
     ///
-    /// This variant is there to let plugins decide what to do with the buffers and whether or not
-    /// to simply ignore the extra one, instead of throwing an hard error if this were to happen.
+    /// This variant is there to let plugins decide what to do with the buffers and whether
+    /// to simply ignore the extra one, instead of throwing a hard error if this were to happen.
     Both(F32, F64),
 }
 
@@ -267,7 +267,7 @@ impl<F32, F64> SampleType<F32, F64> {
     }
 }
 
-impl<'a> SampleType<&'a [*const f32], &'a [*const f64]> {
+impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
     #[inline]
     pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
@@ -279,22 +279,28 @@ impl<'a> SampleType<&'a [*const f32], &'a [*const f64]> {
                 }
             }
             (false, true) => Ok(SampleType::F32(core::slice::from_raw_parts(
-                raw.data32,
+                raw.data32 as *const *mut f32,
                 raw.channel_count as usize,
             ))),
             (true, false) => Ok(SampleType::F64(core::slice::from_raw_parts(
-                raw.data64,
+                raw.data64 as *const *mut f64,
                 raw.channel_count as usize,
             ))),
             (false, false) => Ok(SampleType::Both(
-                core::slice::from_raw_parts(raw.data32, raw.channel_count as usize),
-                core::slice::from_raw_parts(raw.data64, raw.channel_count as usize),
+                core::slice::from_raw_parts(
+                    raw.data32 as *const *mut f32,
+                    raw.channel_count as usize,
+                ),
+                core::slice::from_raw_parts(
+                    raw.data64 as *const *mut f64,
+                    raw.channel_count as usize,
+                ),
             )),
         }
     }
 }
 
-impl<'a> SampleType<&'a mut [*const f32], &'a mut [*const f64]> {
+impl<'a> SampleType<&'a mut [*mut f32], &'a mut [*mut f64]> {
     #[inline]
     pub(crate) unsafe fn from_raw_buffer_mut(
         raw: &mut clap_audio_buffer,

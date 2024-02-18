@@ -5,7 +5,7 @@ impl PluginGui {
     /// Indicate whether a particular API is supported.
     pub fn is_api_supported(
         &self,
-        plugin: &PluginMainThreadHandle,
+        plugin: &mut PluginMainThreadHandle,
         configuration: GuiConfiguration,
     ) -> bool {
         match self.inner.is_api_supported {
@@ -23,7 +23,10 @@ impl PluginGui {
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    pub fn get_preferred_api(&self, plugin: &PluginMainThreadHandle) -> Option<GuiConfiguration> {
+    pub fn get_preferred_api(
+        &self,
+        plugin: &mut PluginMainThreadHandle,
+    ) -> Option<GuiConfiguration> {
         let mut api_type = core::ptr::null();
         let mut is_floating = true;
 
@@ -93,7 +96,7 @@ impl PluginGui {
     }
 
     /// Get current size of GUI
-    pub fn get_size(&self, plugin: &PluginMainThreadHandle) -> Option<GuiSize> {
+    pub fn get_size(&self, plugin: &mut PluginMainThreadHandle) -> Option<GuiSize> {
         let mut width = 0;
         let mut height = 0;
 
@@ -109,7 +112,7 @@ impl PluginGui {
     /// Tell host if GUI can be resized
     ///
     /// Only applies to embedded windows.
-    pub fn can_resize(&self, plugin: &PluginMainThreadHandle) -> bool {
+    pub fn can_resize(&self, plugin: &mut PluginMainThreadHandle) -> bool {
         if let Some(can_resize) = self.inner.can_resize {
             unsafe { can_resize(plugin.as_raw()) }
         } else {
@@ -118,7 +121,7 @@ impl PluginGui {
     }
 
     /// Provide hints on the resize-ability of the GUI
-    pub fn get_resize_hints(&self, plugin: &PluginMainThreadHandle) -> Option<GuiResizeHints> {
+    pub fn get_resize_hints(&self, plugin: &mut PluginMainThreadHandle) -> Option<GuiResizeHints> {
         let mut hints = clap_gui_resize_hints {
             aspect_ratio_height: u32::MAX,
             aspect_ratio_width: u32::MAX,

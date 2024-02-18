@@ -101,11 +101,11 @@ impl<'a> PluginAudioProcessorParams for GainPluginAudioProcessor<'a> {
 }
 
 impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
-    fn count(&self, _is_input: bool) -> u32 {
+    fn count(&mut self, _is_input: bool) -> u32 {
         1
     }
 
-    fn get(&self, _is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
+    fn get(&mut self, _is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
         if index == 0 {
             writer.set(&AudioPortInfoData {
                 id: 0,
@@ -151,11 +151,11 @@ impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a>
 }
 
 impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
-    fn count(&self) -> u32 {
+    fn count(&mut self) -> u32 {
         1
     }
 
-    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter) {
+    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
         if param_index > 0 {
             return;
         }
@@ -172,7 +172,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
         })
     }
 
-    fn get_value(&self, param_id: u32) -> Option<f64> {
+    fn get_value(&mut self, param_id: u32) -> Option<f64> {
         if param_id == 0 {
             Some(self.rusting as f64)
         } else {
@@ -181,7 +181,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     }
 
     fn value_to_text(
-        &self,
+        &mut self,
         param_id: u32,
         value: f64,
         writer: &mut ParamDisplayWriter,
@@ -196,7 +196,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
         }
     }
 
-    fn text_to_value(&self, _param_id: u32, _text: &str) -> Option<f64> {
+    fn text_to_value(&mut self, _param_id: u32, _text: &str) -> Option<f64> {
         None
     }
 
