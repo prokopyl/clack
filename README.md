@@ -79,12 +79,8 @@ impl Plugin for MyGainPlugin {
     type Shared<'a> = ();
     type MainThread<'a> = ();
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.gain\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Clack Gain Example\0").unwrap(),
-            ..Default::default()
-        })
+    fn get_descriptor() -> PluginDescriptor {
+      PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
     }
 }
 

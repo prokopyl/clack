@@ -1,11 +1,11 @@
 use crate::extensions::wrapper::PluginWrapper;
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo};
-use crate::plugin::descriptor::PluginDescriptorWrapper;
 use crate::plugin::instance::WrapperState::*;
 use crate::plugin::{
     AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
 };
+use crate::prelude::PluginDescriptor;
 use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
@@ -230,13 +230,13 @@ impl<'a> PluginInstance<'a> {
     /// Instantiates a plugin of a given implementation `P`.
     ///
     /// Instantiated plugins also require an [`HostInfo`] instance given by the host, and a
-    /// reference to the associated [`PluginDescriptorWrapper`].
+    /// reference to the associated [`PluginDescriptor`].
     ///
     /// See the [`PluginFactory`](crate::factory::plugin::PluginFactory)'s trait documentation for
-    /// an usage example.
+    /// a usage example.
     pub fn new<P: Plugin>(
         host_info: HostInfo<'a>,
-        descriptor: &'a PluginDescriptorWrapper,
+        descriptor: &'a PluginDescriptor,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
@@ -251,7 +251,7 @@ impl<'a> PluginInstance<'a> {
     }
     pub fn new_with<P: Plugin>(
         host_info: HostInfo<'a>,
-        descriptor: &'a PluginDescriptorWrapper,
+        descriptor: &'a PluginDescriptor,
         initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called

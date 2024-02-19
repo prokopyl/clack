@@ -22,16 +22,11 @@ impl Plugin for PolySynthPlugin {
     type Shared<'a> = PolySynthPluginShared;
     type MainThread<'a> = PolySynthPluginMainThread<'a>;
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        use clack_plugin::plugin::descriptor::features::*;
-        use std::ffi::CStr;
+    fn get_descriptor() -> PluginDescriptor {
+        use clack_plugin::plugin::features::*;
 
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.polysynth\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Clack PolySynth Example\0").unwrap(),
-            features: Some(&[SYNTHESIZER, MONO, INSTRUMENT]),
-            ..Default::default()
-        })
+        PluginDescriptor::new("org.rust-audio.clack.polysynth", "Clack PolySynth Example")
+            .with_features([SYNTHESIZER, MONO, INSTRUMENT])
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &PolySynthPluginShared) {

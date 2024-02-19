@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 /// impl Plugin for MyPlugin {
 ///     /* ... */
 /// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
+/// #   fn get_descriptor() -> PluginDescriptor {
 /// #       unreachable!()
 /// #   }
 /// }
@@ -37,7 +37,7 @@ impl<P: Plugin> Entry for SinglePluginEntry<P> {
     fn new(_plugin_path: &CStr) -> Result<Self, EntryLoadError> {
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
-                descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
+                descriptor: P::get_descriptor(),
                 _plugin: PhantomData,
             }),
         })
@@ -50,7 +50,7 @@ impl<P: Plugin> Entry for SinglePluginEntry<P> {
 }
 
 struct SinglePluginFactory<P> {
-    descriptor: PluginDescriptorWrapper,
+    descriptor: PluginDescriptor,
     _plugin: PhantomData<fn() -> P>,
 }
 
@@ -61,7 +61,7 @@ impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
     }
 
     #[inline]
-    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper> {
+    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor> {
         match index {
             0 => Some(&self.descriptor),
             _ => None,
@@ -74,7 +74,7 @@ impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
     ) -> Option<PluginInstance<'a>> {
-        if plugin_id == self.descriptor.descriptor().id() {
+        if plugin_id == self.descriptor.id() {
             Some(PluginInstance::new::<P>(host_info, &self.descriptor))
         } else {
             None

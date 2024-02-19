@@ -3,7 +3,6 @@
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
-use std::ffi::CStr;
 
 use clack_plugin::prelude::*;
 
@@ -11,6 +10,7 @@ use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
     PluginAudioPortsImpl,
 };
+use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin;
@@ -20,15 +20,11 @@ impl Plugin for GainPlugin {
     type Shared<'a> = GainPluginShared<'a>;
     type MainThread<'a> = GainPluginMainThread<'a>;
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        use clack_plugin::plugin::descriptor::features::*;
+    fn get_descriptor() -> PluginDescriptor {
+        use clack_plugin::plugin::features::*;
 
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.gain\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Clack Gain Example\0").unwrap(),
-            features: Some(&[SYNTHESIZER, STEREO]),
-            ..Default::default()
-        })
+        PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+            .with_features([SYNTHESIZER, STEREO])
     }
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {

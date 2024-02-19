@@ -53,12 +53,12 @@ use crate::process::Events;
 use crate::process::Process;
 use clack_common::process::ProcessStatus;
 
-pub mod descriptor;
+mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 
-use crate::plugin::descriptor::PluginDescriptor;
+pub use descriptor::*;
 pub use error::PluginError;
 pub use instance::*;
 
@@ -158,12 +158,11 @@ pub trait Plugin: 'static {
     /// See the [module documentation](crate::plugin) for more information on the thread model.
     type MainThread<'a>: PluginMainThread<'a, Self::Shared<'a>>;
 
-    /// Creates a new Plugin Descriptor.
+    /// Returns a new Plugin Descriptor, which contains metadata about the plugin, such as its name,
+    /// stable identifier, and more.
     ///
-    /// This contains read-only data about the plugin, such as it's name, stable identifier, and more.
-    ///
-    /// See the [`PluginDescriptor`] trait's documentation for more information.
-    fn get_descriptor() -> Box<dyn PluginDescriptor>;
+    /// See the [`PluginDescriptor`] type's documentation for more information.
+    fn get_descriptor() -> PluginDescriptor;
 
     #[inline]
     #[allow(unused_variables)]

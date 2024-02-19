@@ -19,15 +19,10 @@ impl Plugin for DivaPluginStub {
     type Shared<'a> = ();
     type MainThread<'a> = DivaPluginStubMainThread;
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        use clack_plugin::plugin::descriptor::features::*;
+    fn get_descriptor() -> PluginDescriptor {
+        use clack_plugin::plugin::features::*;
 
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Diva\0").unwrap(),
-            features: Some(&[SYNTHESIZER, STEREO]),
-            ..Default::default()
-        })
+        PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 }
 

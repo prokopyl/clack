@@ -44,7 +44,7 @@ pub mod prelude {
             Factory,
         },
         host::HostInfo,
-        plugin::{descriptor::PluginDescriptorWrapper, PluginInstance},
+        plugin::{PluginDescriptor, PluginInstance},
     };
 }
 
@@ -75,7 +75,7 @@ pub mod prelude {
 /// impl Plugin for MyFirstPlugin {
 ///     /* ... */
 /// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
+/// #   fn get_descriptor() -> PluginDescriptor {
 /// #       unreachable!()
 /// #   }
 /// }
@@ -83,7 +83,7 @@ pub mod prelude {
 /// impl Plugin for MySecondPlugin {
 ///     /* ... */
 /// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
+/// #   fn get_descriptor() -> PluginDescriptor {
 /// #       unreachable!()
 /// #   }
 /// }
@@ -106,15 +106,15 @@ pub mod prelude {
 ///
 /// // Our factory holds the descriptors for both of our plugins
 /// pub struct MyPluginFactory {
-///     first_plugin: PluginDescriptorWrapper,
-///     second_plugin: PluginDescriptorWrapper,
+///     first_plugin: PluginDescriptor,
+///     second_plugin: PluginDescriptor,
 /// }
 ///
 /// impl MyPluginFactory {
 ///     pub fn new() -> Self {
 ///         Self {
-///             first_plugin: PluginDescriptorWrapper::new(MyFirstPlugin::get_descriptor()),
-///             second_plugin: PluginDescriptorWrapper::new(MySecondPlugin::get_descriptor()),
+///             first_plugin: MyFirstPlugin::get_descriptor(),
+///             second_plugin: MySecondPlugin::get_descriptor(),
 ///         }
 ///     }
 /// }
@@ -126,8 +126,8 @@ pub mod prelude {
 ///
 ///     // Gets the plugin descriptor matching the given index.
 ///     // It doesn't matter much which plugin has which index,
-///     // but each of our plugins must have an unique one.
-///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper> {
+///     // but each of our plugins must have a unique one.
+///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor> {
 ///         match index {
 ///             0 => Some(&self.first_plugin),
 ///             1 => Some(&self.second_plugin),
@@ -142,11 +142,11 @@ pub mod prelude {
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,
 ///     ) -> Option<PluginInstance<'a>> {
-///         if plugin_id == self.first_plugin.descriptor().id() {
+///         if plugin_id == self.first_plugin.id() {
 ///             // We can use the PluginInstance type to easily make a new instance of a given
 ///             // plugin type.
 ///             Some(PluginInstance::new::<MyFirstPlugin>(host_info, &self.first_plugin))
-///         } else if plugin_id == self.second_plugin.descriptor().id() {
+///         } else if plugin_id == self.second_plugin.id() {
 ///             Some(PluginInstance::new::<MySecondPlugin>(host_info, &self.second_plugin))
 ///         } else {
 ///             None
