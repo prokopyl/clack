@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 clack-host = { workspace = true, features = ["default"] }
-clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer"] }
+clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer", "raw-window-handle_05"] }
 cpal = "0.15.2"
 crossbeam-channel = "0.5.8"
 clap = { version = "4.3.0", features = ["derive"] }
