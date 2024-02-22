@@ -248,7 +248,7 @@ const _: () = {
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window_handle(handle: WindowHandle) -> Option<Self> {
+        pub fn from_window_handle(handle: WindowHandle<'a>) -> Option<Self> {
             match handle.as_raw() {
                 RawWindowHandle::Win32(handle) => unsafe {
                     Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))

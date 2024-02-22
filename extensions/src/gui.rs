@@ -346,7 +346,7 @@ impl<'a> GuiApiType<'a> {
     pub const WAYLAND: GuiApiType<'static> =
         GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
 
-    /// Whether or not this API type can provide a [`RawWindowHandle`](raw_window_handle::RawWindowHandle).
+    /// Whether this API type can provide a `RawWindowHandle`.
     pub fn can_provide_raw_window_handle(&self) -> bool {
         self == &Self::WIN32 || self == &Self::COCOA || self == &Self::X11
     }
