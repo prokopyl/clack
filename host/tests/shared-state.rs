@@ -1,6 +1,5 @@
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
-use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
 use std::sync::OnceLock;

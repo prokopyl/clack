@@ -1,5 +1,4 @@
 use clack_host::factory::PluginFactory;
-use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
 
