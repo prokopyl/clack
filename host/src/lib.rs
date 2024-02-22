@@ -285,7 +285,11 @@ pub mod prelude {
         plugin::PluginInstance,
         plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
         process::{
-            audio_buffers::*, PluginAudioConfiguration, ProcessStatus, StoppedPluginAudioProcessor,
+            audio_buffers::{
+                AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
+                OutputAudioBuffers, OutputAudioPortInfo,
+            },
+            PluginAudioConfiguration, ProcessStatus, StoppedPluginAudioProcessor,
         },
     };
 }
