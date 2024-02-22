@@ -12,11 +12,10 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
 use std::sync::OnceLock;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event::{Event, WindowEvent};
-use winit::event_loop::EventLoop;
-use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::event_loop::{ControlFlow, EventLoop};
 
 /// Audio related routines and utilities.
 mod audio;
@@ -236,7 +235,7 @@ fn run_gui_embedded(
     let main_thread = instance.main_thread_host_data_mut();
     println!("Opening GUI in embedded mode");
 
-    let mut event_loop = EventLoop::new();
+    let event_loop = EventLoop::new()?;
     let gui = main_thread.gui.as_mut().unwrap();
     let plugin = main_thread.plugin.as_mut().unwrap();
 
@@ -244,7 +243,7 @@ fn run_gui_embedded(
 
     let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
 
-    event_loop.run_return(move |event, _target, control_flow| {
+    event_loop.run(move |event, target| {
         while let Ok(message) = receiver.try_recv() {
             match message {
                 MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
@@ -263,7 +262,7 @@ fn run_gui_embedded(
                         .into()
                     };
 
-                    window.as_mut().unwrap().set_inner_size(new_size);
+                    let _ = window.as_mut().unwrap().request_inner_size(new_size);
                 }
                 _ => {}
             }
@@ -278,7 +277,7 @@ fn run_gui_embedded(
                     return;
                 }
                 WindowEvent::Destroyed => {
-                    control_flow.set_exit();
+                    target.exit();
                     return;
                 }
                 WindowEvent::Resized(size) => {
@@ -290,12 +289,12 @@ fn run_gui_embedded(
                         .resize_gui(size, scale_factor);
 
                     if actual_size != size.into() {
-                        window.set_inner_size(actual_size);
+                        let _ = window.request_inner_size(actual_size);
                     }
                 }
                 _ => {}
             },
-            Event::LoopDestroyed => {
+            Event::LoopExiting => {
                 instance.main_thread_host_data_mut().destroy_gui();
             }
             _ => {}
@@ -303,13 +302,12 @@ fn run_gui_embedded(
 
         let main_thread = instance.main_thread_host_data_mut();
         main_thread.tick_timers();
-        control_flow.set_wait_timeout(
-            main_thread
-                .timers
-                .smallest_duration()
-                .unwrap_or(Duration::from_millis(60)),
-        );
-    });
+        let wait_duration = main_thread
+            .timers
+            .smallest_duration()
+            .unwrap_or(Duration::from_millis(60));
+        target.set_control_flow(ControlFlow::WaitUntil(Instant::now() + wait_duration));
+    })?;
 
     // Just to let any eventual background thread properly close (looking at you JUCE)
     std::thread::sleep(Duration::from_millis(100));

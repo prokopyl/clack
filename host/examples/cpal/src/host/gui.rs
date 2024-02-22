@@ -214,7 +214,7 @@ impl<'a> Gui<'a> {
             .with_resizable(self.is_resizeable)
             .build(event_loop)?;
 
-        gui.set_parent(plugin, ClapWindow::from_raw_window(&window).unwrap())?;
+        gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
         // Some plugins don't show anything until this is called, others return an error.
         let _ = gui.show(plugin);
         self.is_open = true;
