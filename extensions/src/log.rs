@@ -81,7 +81,6 @@ unsafe impl Extension for HostLog {
 mod plugin {
     use super::*;
     use clack_plugin::host::HostHandle;
-    use std::ffi::CStr;
 
     impl HostLog {
         #[inline]

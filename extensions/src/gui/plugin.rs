@@ -1,7 +1,5 @@
 use super::*;
 use clack_plugin::extensions::prelude::*;
-use clap_sys::ext::gui::{clap_gui_resize_hints, clap_plugin_gui, clap_window};
-use std::ffi::CStr;
 use std::os::raw::c_char;
 
 impl HostGui {

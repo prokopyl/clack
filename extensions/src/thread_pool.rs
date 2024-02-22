@@ -51,9 +51,7 @@ impl Error for ThreadPoolRequestError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-
     use clack_plugin::extensions::prelude::*;
-    use clap_sys::ext::thread_pool::clap_plugin_thread_pool;
 
     /// Implementation of the Plugin-side of the Thread Pool extension.
     pub trait PluginThreadPoolImpl {

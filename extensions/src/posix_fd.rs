@@ -83,7 +83,6 @@ impl Display for FdError {
 mod host {
     use super::*;
     use clack_host::extensions::prelude::*;
-    use std::os::unix::prelude::RawFd;
 
     impl PluginPosixFd {
         /// A callback that gets called for every event on each registered File Descriptor.
@@ -176,7 +175,6 @@ pub use host::*;
 mod plugin {
     use super::*;
     use clack_plugin::extensions::prelude::*;
-    use std::os::unix::prelude::RawFd;
 
     impl HostPosixFd {
         /// Registers a given File Descriptor into the host's event reactor, for a given set of events.
