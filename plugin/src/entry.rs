@@ -38,7 +38,7 @@ pub use single::SinglePluginEntry;
 /// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
 pub mod prelude {
     pub use crate::{
-        entry::*,
+        entry::{Entry, EntryDescriptor, EntryFactories, EntryLoadError, SinglePluginEntry},
         factory::{
             plugin::{PluginFactory, PluginFactoryWrapper},
             Factory,

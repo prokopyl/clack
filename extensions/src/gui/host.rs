@@ -180,7 +180,7 @@ impl PluginGui {
     pub fn set_parent(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        window: &Window,
+        window: Window,
     ) -> Result<(), GuiError> {
         let success = unsafe {
             self.inner.set_parent.ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())

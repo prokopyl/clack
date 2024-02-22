@@ -2,7 +2,6 @@ use super::*;
 use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_host::extensions::prelude::*;
-use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 impl PluginParams {

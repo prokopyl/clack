@@ -2,6 +2,7 @@ use clack_host::prelude::*;
 
 mod diva_stub {
     #[cfg(test)]
+    #[allow(clippy::items_after_test_module)] // This is not really a test module
     mod clack_extensions {
         pub use crate::*;
     }
@@ -10,7 +11,6 @@ mod diva_stub {
 
     use clack_common::stream::{InputStream, OutputStream};
     use clack_plugin::clack_entry;
-    use clack_plugin::plugin::descriptor::{PluginDescriptor, StaticPluginDescriptor};
     use clack_plugin::prelude::*;
     use std::ffi::CStr;
     use std::io::{Read, Write};

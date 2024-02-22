@@ -11,8 +11,6 @@ use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
     PluginAudioPortsImpl,
 };
-use clack_plugin::plugin::descriptor::StaticPluginDescriptor;
-use clack_plugin::process::audio::ChannelPair;
 use clack_plugin::utils::Cookie;
 
 pub struct GainPlugin;

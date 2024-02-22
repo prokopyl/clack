@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 clack-host = { workspace = true, features = ["default"] }
-clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer"] }
+clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer", "raw-window-handle_06"] }
 cpal = "0.15.2"
 crossbeam-channel = "0.5.8"
 clap = { version = "4.3.0", features = ["derive"] }
@@ -16,5 +16,5 @@ midir = "0.9.1"
 rayon = "1.7.0"
 rtrb = "0.2.3"
 walkdir = "2.3.3"
-winit = { version = "0.28.6", default-features = false,  features = ["x11"] }
+winit = { version = "0.29.10", default-features = false,  features = ["rwh_06", "x11"] }
 wmidi = "4.0.6"
