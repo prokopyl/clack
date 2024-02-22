@@ -148,26 +148,9 @@ impl<'a> Window<'a> {
 #[cfg(feature = "raw-window-handle_05")]
 const _: () = {
     use raw_window_handle_05::{
-        AppKitWindowHandle, HasRawWindowHandle, HasWindowHandle, RawWindowHandle,
-        Win32WindowHandle, WindowHandle, XlibWindowHandle,
+        AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
+        XlibWindowHandle,
     };
-
-    impl<'a> TryFrom<WindowHandle<'a>> for Window<'a> {
-        type Error = ();
-
-        fn try_from(value: WindowHandle<'a>) -> Result<Self, Self::Error> {
-            match value.raw_window_handle() {
-                RawWindowHandle::Win32(handle) => unsafe { Ok(Self::from_win32_hwnd(handle.hwnd)) },
-                RawWindowHandle::AppKit(handle) => unsafe {
-                    Ok(Self::from_cocoa_nsview(handle.ns_view))
-                },
-                RawWindowHandle::Xlib(handle) => unsafe {
-                    Ok(Self::from_x11_handle(handle.window))
-                },
-                _ => Err(()),
-            }
-        }
-    }
 
     unsafe impl<'a> HasRawWindowHandle for Window<'a> {
         fn raw_window_handle(&self) -> RawWindowHandle {
@@ -196,16 +179,27 @@ const _: () = {
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window<W: HasWindowHandle>(window: &'a W) -> Option<Self> {
-            Self::from_window_handle(window.window_handle().ok()?)
+        pub fn from_raw_window<W: HasRawWindowHandle>(window: &'a W) -> Option<Self> {
+            Self::from_raw_window_handle(window.raw_window_handle())
         }
 
-        /// Creates a [`Window`] from a [`WindowHandle`].
+        /// Creates a [`Window`] from a [`RawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window_handle(handle: WindowHandle<'a>) -> Option<Self> {
-            handle.try_into().ok()
+        pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
+            match handle {
+                RawWindowHandle::Win32(handle) => unsafe {
+                    Some(Self::from_win32_hwnd(handle.hwnd))
+                },
+                RawWindowHandle::AppKit(handle) => unsafe {
+                    Some(Self::from_cocoa_nsview(handle.ns_view))
+                },
+                RawWindowHandle::Xlib(handle) => unsafe {
+                    Some(Self::from_x11_handle(handle.window))
+                },
+                _ => None,
+            }
         }
     }
 };
