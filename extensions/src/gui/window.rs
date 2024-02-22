@@ -203,3 +203,64 @@ const _: () = {
         }
     }
 };
+
+#[cfg(feature = "raw-window-handle_06")]
+const _: () = {
+    use raw_window_handle_06::{
+        AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, Win32WindowHandle,
+        WindowHandle, XlibWindowHandle,
+    };
+    use std::num::NonZeroIsize;
+    use std::ptr::NonNull;
+
+    impl<'a> HasWindowHandle for Window<'a> {
+        fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
+            let api_type = self.api_type();
+
+            let raw = if api_type == GuiApiType::WIN32 {
+                RawWindowHandle::Win32(Win32WindowHandle::new(
+                    NonZeroIsize::new((unsafe { self.raw.specific.win32 }) as isize).unwrap(),
+                ))
+            } else if api_type == GuiApiType::COCOA {
+                RawWindowHandle::AppKit(AppKitWindowHandle::new(
+                    NonNull::new(unsafe { self.raw.specific.cocoa }).unwrap(),
+                ))
+            } else if api_type == GuiApiType::X11 {
+                RawWindowHandle::Xlib(XlibWindowHandle::new(unsafe { self.raw.specific.x11 }))
+            } else {
+                return Err(HandleError::NotSupported);
+            };
+
+            Ok(unsafe { WindowHandle::borrow_raw(raw) })
+        }
+    }
+
+    impl<'a> Window<'a> {
+        /// Creates a [`Window`] from any window object implementing [`HasWindowHandle`].
+        ///
+        /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+        #[inline]
+        pub fn from_window<W: HasWindowHandle>(window: &'a W) -> Option<Self> {
+            Self::from_window_handle(window.window_handle().ok()?)
+        }
+
+        /// Creates a [`Window`] from a [`WindowHandle`].
+        ///
+        /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+        #[inline]
+        pub fn from_window_handle(handle: WindowHandle) -> Option<Self> {
+            match handle.as_raw() {
+                RawWindowHandle::Win32(handle) => unsafe {
+                    Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
+                },
+                RawWindowHandle::AppKit(handle) => unsafe {
+                    Some(Self::from_cocoa_nsview(handle.ns_view.as_ptr()))
+                },
+                RawWindowHandle::Xlib(handle) => unsafe {
+                    Some(Self::from_x11_handle(handle.window))
+                },
+                _ => None,
+            }
+        }
+    }
+};
