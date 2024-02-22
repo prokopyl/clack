@@ -2,12 +2,26 @@
 //!
 //! There are two available approaches, either:
 //!
-//! * The plugin the plugin creates a window and embeds it into the host's window. This is often the
+//! * The plugin creates a window and embeds it into the host's window. This is often the
 //!   preferred option, as it gives more control to the host, and feels more integrated.
 //!
 //! * The plugin creates an independent, floating window. This option should always be supported, at
 //!   least as a fallback, in case window embedding is not available, which can be the case due to
 //!   technical limitations.
+//!
+//! ## Compatibility with the `raw-window-handle` crate
+//!
+//! The [`Window`] type has optional support for the traits from the `raw-window-handle` crate:
+//!
+//! * By default, this module has no dependency on the `raw-window-handle` crate;
+//! * If the `raw_window_handle_05` feature is enabled, this module will depend on
+//!   `raw-window-handle` version `0.5`. The [`Window`] type will implement the `HasRawWindowHandle`
+//!   trait, and the [`Window::from_raw_window`] and [`Window::from_raw_window_handle`] methods
+//!   will become available.
+//! * If the `raw_window_handle_06` feature is enabled, this module will depend on
+//!   `raw-window-handle` version `0.6`. The [`Window`] type will implement the `HasWindowHandle`
+//!   trait, and the [`Window::from_window`] and [`Window::from_window_handle`] methods
+//!   will become available.
 //!
 //! ## Opening a Plugin GUI
 //!
