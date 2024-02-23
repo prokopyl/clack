@@ -5,8 +5,8 @@
 
 use crate::host::{HostHandle, HostMainThreadHandle};
 use crate::plugin::{
-    logging, AudioConfiguration, InstanceInitializer, Plugin, PluginAudioProcessor, PluginBoxInner,
-    PluginError, PluginMainThread, PluginShared,
+    logging, AudioConfiguration, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError,
+    PluginMainThreadInitializer, PluginSharedInitializer,
 };
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
@@ -50,18 +50,14 @@ pub struct PluginWrapper<'a, P: Plugin> {
 impl<'a, P: Plugin> PluginWrapper<'a, P> {
     pub(crate) fn new(
         host: HostMainThreadHandle<'a>,
-        initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
+        shared_initializer: Box<dyn PluginSharedInitializer<'a, P>>,
+        main_thread_initializer: Box<dyn PluginMainThreadInitializer<'a, P>>,
     ) -> Result<Self, PluginError> {
-        let shared = match initializer {
-            None => P::Shared::new(host.shared())?,
-            Some(i) => i.init_shared(host.shared())?,
-        };
-
-        let shared = Box::pin(shared);
+        let shared = Box::pin(shared_initializer.init(host.shared())?);
 
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
-        let main_thread = UnsafeCell::new(P::MainThread::new(host, shared_ref)?);
+        let main_thread = UnsafeCell::new(main_thread_initializer.init(host, shared_ref)?);
 
         Ok(Self {
             host: host.shared(),

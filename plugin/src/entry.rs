@@ -33,7 +33,7 @@ pub use clack_common::entry::*;
 
 mod single;
 
-pub use single::SinglePluginEntry;
+pub use single::{SimplePlugin, SinglePluginEntry};
 
 /// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
 pub mod prelude {
@@ -73,19 +73,15 @@ pub mod prelude {
 /// pub struct MySecondPlugin;
 ///
 /// impl Plugin for MyFirstPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> PluginDescriptor {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// impl Plugin for MySecondPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> PluginDescriptor {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// pub struct MyEntry {
@@ -113,8 +109,8 @@ pub mod prelude {
 /// impl MyPluginFactory {
 ///     pub fn new() -> Self {
 ///         Self {
-///             first_plugin: MyFirstPlugin::get_descriptor(),
-///             second_plugin: MySecondPlugin::get_descriptor(),
+///             first_plugin: PluginDescriptor::new("my.plugin.first", "My first plugin"),
+///             second_plugin: PluginDescriptor::new("my.plugin.second", "My second plugin"),
 ///         }
 ///     }
 /// }
@@ -145,9 +141,19 @@ pub mod prelude {
 ///         if plugin_id == self.first_plugin.id() {
 ///             // We can use the PluginInstance type to easily make a new instance of a given
 ///             // plugin type.
-///             Some(PluginInstance::new::<MyFirstPlugin>(host_info, &self.first_plugin))
+///             Some(PluginInstance::new::<MyFirstPlugin>(
+///                 host_info,
+///                 &self.first_plugin,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
 ///         } else if plugin_id == self.second_plugin.id() {
-///             Some(PluginInstance::new::<MySecondPlugin>(host_info, &self.second_plugin))
+///             Some(PluginInstance::new::<MySecondPlugin>(
+///                 host_info,
+///                 &self.second_plugin,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
 ///         } else {
 ///             None
 ///         }

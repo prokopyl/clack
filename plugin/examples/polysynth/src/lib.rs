@@ -14,7 +14,7 @@ mod poly_oscillator;
 
 /// The type that represents our plugin in Clack.
 ///
-/// This is what implements the [`Plugin`] trait, where all the other sub-types are attached.
+/// This is what implements the [`Plugin`] trait, where all the other subtypes are attached.
 pub struct PolySynthPlugin;
 
 impl Plugin for PolySynthPlugin {
@@ -22,6 +22,16 @@ impl Plugin for PolySynthPlugin {
     type Shared<'a> = PolySynthPluginShared;
     type MainThread<'a> = PolySynthPluginMainThread<'a>;
 
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &PolySynthPluginShared) {
+        builder
+            .register::<PluginAudioPorts>()
+            .register::<PluginNotePorts>()
+            .register::<PluginParams>()
+            .register::<PluginState>();
+    }
+}
+
+impl SimplePlugin for PolySynthPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 
@@ -29,12 +39,17 @@ impl Plugin for PolySynthPlugin {
             .with_features([SYNTHESIZER, MONO, INSTRUMENT])
     }
 
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &PolySynthPluginShared) {
-        builder
-            .register::<PluginAudioPorts>()
-            .register::<PluginNotePorts>()
-            .register::<PluginParams>()
-            .register::<PluginState>();
+    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(PolySynthPluginShared {
+            params: PolySynthParams::new(),
+        })
+    }
+
+    fn new_main_thread<'a>(
+        _host: HostMainThreadHandle<'a>,
+        shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError> {
+        Ok(PolySynthPluginMainThread { shared })
     }
 }
 
@@ -99,7 +114,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             // Received the updated volume parameter
             let volume = self.shared.params.get_volume();
 
-            // With all of the events out of the way, we can now handle a whole batch of sample
+            // With all the events out of the way, we can now handle a whole batch of sample
             // all at once.
             let output_buffer = &mut output_buffer[event_batch.sample_bounds()];
             self.poly_osc.generate_next_samples(output_buffer, volume);
@@ -127,7 +142,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     }
 
     fn stop_processing(&mut self) {
-        // When audio processing stops, we stop all of the oscillator voices just in case.
+        // When audio processing stops, we stop all the oscillator voices just in case.
         self.poly_osc.stop_all();
     }
 }
@@ -182,13 +197,7 @@ pub struct PolySynthPluginShared {
     params: PolySynthParams,
 }
 
-impl<'a> PluginShared<'a> for PolySynthPluginShared {
-    fn new(_host: HostHandle<'a>) -> Result<Self, PluginError> {
-        Ok(Self {
-            params: PolySynthParams::new(),
-        })
-    }
-}
+impl<'a> PluginShared<'a> for PolySynthPluginShared {}
 
 /// The data that belongs to the main thread of our plugin.
 pub struct PolySynthPluginMainThread<'a> {
@@ -196,13 +205,6 @@ pub struct PolySynthPluginMainThread<'a> {
     shared: &'a PolySynthPluginShared,
 }
 
-impl<'a> PluginMainThread<'a, PolySynthPluginShared> for PolySynthPluginMainThread<'a> {
-    fn new(
-        _host: HostMainThreadHandle<'a>,
-        shared: &'a PolySynthPluginShared,
-    ) -> Result<Self, PluginError> {
-        Ok(Self { shared })
-    }
-}
+impl<'a> PluginMainThread<'a, PolySynthPluginShared> for PolySynthPluginMainThread<'a> {}
 
 clack_export_entry!(SinglePluginEntry<PolySynthPlugin>);

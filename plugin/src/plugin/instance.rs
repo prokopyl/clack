@@ -1,6 +1,6 @@
 use crate::extensions::wrapper::PluginWrapper;
 use crate::extensions::PluginExtensions;
-use crate::host::{HostHandle, HostInfo};
+use crate::host::{HostHandle, HostInfo, HostMainThreadHandle};
 use crate::plugin::instance::WrapperState::*;
 use crate::plugin::{
     AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
@@ -14,23 +14,53 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 
-pub(crate) trait InstanceInitializer<'a, P: Plugin>: 'a {
-    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>;
+pub(crate) trait PluginSharedInitializer<'a, P: Plugin>: 'a {
+    fn init(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>;
 }
 
-impl<'a, P: Plugin, F: 'a> InstanceInitializer<'a, P> for F
+impl<'a, P: Plugin, F: 'a> PluginSharedInitializer<'a, P> for F
 where
     F: FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>,
 {
     #[inline]
-    fn init_shared(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> {
+    fn init(self: Box<Self>, handle: HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> {
         self(handle)
+    }
+}
+
+pub(crate) trait PluginMainThreadInitializer<'a, P: Plugin>: 'a {
+    fn init(
+        self: Box<Self>,
+        host: HostMainThreadHandle<'a>,
+        shared: &'a P::Shared<'a>,
+    ) -> Result<P::MainThread<'a>, PluginError>;
+}
+
+impl<'a, P: Plugin, F: 'a> PluginMainThreadInitializer<'a, P> for F
+where
+    F: FnOnce(
+        HostMainThreadHandle<'a>,
+        &'a P::Shared<'a>,
+    ) -> Result<P::MainThread<'a>, PluginError>,
+{
+    #[inline]
+    fn init(
+        self: Box<Self>,
+        host: HostMainThreadHandle<'a>,
+        shared: &'a P::Shared<'a>,
+    ) -> Result<P::MainThread<'a>, PluginError> {
+        self(host, shared)
     }
 }
 
 enum WrapperState<'a, P: Plugin> {
     Initialized(PluginWrapper<'a, P>),
-    Uninitialized(Option<Box<dyn InstanceInitializer<'a, P>>>),
+    Uninitialized(
+        (
+            Box<dyn PluginSharedInitializer<'a, P>>,
+            Box<dyn PluginMainThreadInitializer<'a, P>>,
+        ),
+    ),
     InitializationFailed,
 }
 
@@ -61,7 +91,10 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     fn get_plugin_desc(
         host: HostHandle<'a>,
         desc: &'a clap_plugin_descriptor,
-        initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
+        initializer: (
+            Box<dyn PluginSharedInitializer<'a, P>>,
+            Box<dyn PluginMainThreadInitializer<'a, P>>,
+        ),
     ) -> clap_plugin {
         clap_plugin {
             desc,
@@ -105,11 +138,15 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             }
         };
 
-        let Uninitialized(initializer) = uninit_data else {
+        let Uninitialized((shared_init, main_thread_init)) = uninit_data else {
             unreachable!()
         };
 
-        let wrapper = match PluginWrapper::new(data.host.as_main_thread_unchecked(), initializer) {
+        let wrapper = match PluginWrapper::new(
+            data.host.as_main_thread_unchecked(),
+            shared_init,
+            main_thread_init,
+        ) {
             Ok(d) => d,
             Err(e) => {
                 super::logging::plugin_log::<P>(plugin, &e.into());
@@ -237,6 +274,12 @@ impl<'a> PluginInstance<'a> {
     pub fn new<P: Plugin>(
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptor,
+        shared_initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
+        main_thread_initializer: impl FnOnce(
+                HostMainThreadHandle<'a>,
+                &'a P::Shared<'a>,
+            ) -> Result<P::MainThread<'a>, PluginError>
+            + 'a,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
@@ -244,23 +287,11 @@ impl<'a> PluginInstance<'a> {
             inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
                 host,
                 descriptor.as_raw(),
-                None,
-            )),
-            lifetime: PhantomData,
-        }
-    }
-    pub fn new_with<P: Plugin>(
-        host_info: HostInfo<'a>,
-        descriptor: &'a PluginDescriptor,
-        initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
-    ) -> PluginInstance<'a> {
-        // SAFETY: we guarantee that no host_handle methods are called until init() is called
-        let host = unsafe { host_info.to_handle() };
-        Self {
-            inner: Box::new(PluginBoxInner::<P>::get_plugin_desc(
-                host,
-                descriptor.as_raw(),
-                Some(Box::new(initializer) as Box<dyn InstanceInitializer<'a, P>>),
+                (
+                    Box::new(shared_initializer) as Box<dyn PluginSharedInitializer<'a, P>>,
+                    Box::new(main_thread_initializer)
+                        as Box<dyn PluginMainThreadInitializer<'a, P>>,
+                ),
             )),
             lifetime: PhantomData,
         }

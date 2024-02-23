@@ -78,9 +78,22 @@ impl Plugin for MyGainPlugin {
 
     type Shared<'a> = ();
     type MainThread<'a> = ();
+}
 
+impl SimplePlugin for MyGainPlugin {
     fn get_descriptor() -> PluginDescriptor {
-      PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+        PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+    }
+
+    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(())
+    }
+
+    fn new_main_thread<'a>(
+        _host: HostMainThreadHandle<'a>,
+        _shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError> {
+        Ok(())
     }
 }
 

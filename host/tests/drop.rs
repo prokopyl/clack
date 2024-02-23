@@ -14,21 +14,30 @@ pub struct DivaPluginStubMainThread {
     active: bool,
 }
 
-impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &'a ()) -> Result<Self, PluginError> {
-        Ok(Self { active: false })
-    }
-}
+impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {}
 
 impl Plugin for DivaPluginStub {
     type AudioProcessor<'a> = DivaPluginStubAudioProcessor;
     type Shared<'a> = ();
     type MainThread<'a> = DivaPluginStubMainThread;
+}
 
+impl SimplePlugin for DivaPluginStub {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
+    }
+
+    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(())
+    }
+
+    fn new_main_thread<'a>(
+        _host: HostMainThreadHandle<'a>,
+        _shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError> {
+        Ok(DivaPluginStubMainThread { active: false })
     }
 }
 

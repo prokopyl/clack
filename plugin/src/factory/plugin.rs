@@ -109,11 +109,9 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 /// pub struct MyPlugin;
 ///
 /// impl Plugin for MyPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> PluginDescriptor {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// pub struct MyPluginFactory {
@@ -134,7 +132,12 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///
 ///     fn instantiate_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
 ///         if plugin_id == self.plugin_descriptor.id() {
-///             Some(PluginInstance::new::<MyPlugin>(host_info, &self.plugin_descriptor))
+///             Some(PluginInstance::new::<MyPlugin>(
+///                 host_info,
+///                 &self.plugin_descriptor,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
 ///         } else {
 ///             None
 ///         }

@@ -43,7 +43,7 @@ pub fn it_works() {
             .features()
             .map(|s| s.to_bytes())
             .collect::<Vec<_>>(),
-        &[&b"synthesizer"[..], &b"stereo"[..]]
+        &[&b"stereo"[..]]
     );
 
     let plugin = host.plugin_mut();
