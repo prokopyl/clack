@@ -206,7 +206,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     ///
     /// # Example
     ///
-    /// This is the implementation of the [`on_main_thread`](PluginMainThread::on_main_thread)
+    /// This is the implementation of the [`on_main_thread`](crate::plugin::PluginMainThread::on_main_thread)
     /// callback's C wrapper.
     ///
     /// This method is guaranteed by the CLAP specification to be only called on the main thread.

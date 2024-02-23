@@ -53,7 +53,7 @@ mod diva_stub {
         }
     }
 
-    impl SimplePlugin for DivaPluginStub {
+    impl DefaultPluginFactory for DivaPluginStub {
         fn get_descriptor() -> PluginDescriptor {
             use clack_plugin::plugin::features::*;
 

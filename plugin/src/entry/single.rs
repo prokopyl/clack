@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 /// An [`Entry`] that only exposes a single plugin type to the host.
 ///
-/// This is a simplified entry type, which only requires the simple [`SimplePlugin`] trait to be
+/// This is a simplified entry type, which only requires the simple [`DefaultPluginFactory`] trait to be
 /// implemented by the user, and implements an entry and plugin factory around it.
 ///
 /// This entry type exists purely for convenience of the users in the common case of having a single
@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 /// # Example
 ///
 /// ```
-/// use clack_plugin::entry::SimplePlugin;
+/// use clack_plugin::entry::DefaultPluginFactory;
 /// use clack_plugin::prelude::*;
 ///
 /// pub struct MyPlugin;
@@ -29,7 +29,7 @@ use std::marker::PhantomData;
 ///     type MainThread<'a> = ();
 /// }
 ///
-/// impl SimplePlugin for MyPlugin {
+/// impl DefaultPluginFactory for MyPlugin {
 ///     fn get_descriptor() -> PluginDescriptor {
 ///         PluginDescriptor::new("my.plugin", "My Plugin")
 ///     }
@@ -50,11 +50,11 @@ use std::marker::PhantomData;
 ///
 /// clack_export_entry!(SinglePluginEntry::<MyPlugin>);
 /// ```
-pub struct SinglePluginEntry<P: SimplePlugin> {
+pub struct SinglePluginEntry<P: DefaultPluginFactory> {
     plugin_factory: PluginFactoryWrapper<SinglePluginFactory<P>>,
 }
 
-impl<P: SimplePlugin> Entry for SinglePluginEntry<P> {
+impl<P: DefaultPluginFactory> Entry for SinglePluginEntry<P> {
     fn new(_plugin_path: &CStr) -> Result<Self, EntryLoadError> {
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
@@ -75,7 +75,7 @@ struct SinglePluginFactory<P> {
     _plugin: PhantomData<fn() -> P>,
 }
 
-impl<P: SimplePlugin> PluginFactory for SinglePluginFactory<P> {
+impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
     #[inline]
     fn plugin_count(&self) -> u32 {
         1
@@ -90,7 +90,7 @@ impl<P: SimplePlugin> PluginFactory for SinglePluginFactory<P> {
     }
 
     #[inline]
-    fn instantiate_plugin<'a>(
+    fn create_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
@@ -108,11 +108,15 @@ impl<P: SimplePlugin> PluginFactory for SinglePluginFactory<P> {
     }
 }
 
-/// A trait used by [`SinglePluginEntry`] that provides simplified, generic methods for plugin
-/// instance creation.
+/// An optional trait used by [`SinglePluginEntry`] that provides simplified, methods for generic
+/// plugin factories.
+///
+/// Implementing this trait is optional: you can disregard it completely if you use a custom
+/// factory, which also allows you to pass additional parameters to these methods, for e.g. sharing
+/// data across multiple instances.
 ///
 /// See the [`SinglePluginEntry`] documentation for more information and examples.
-pub trait SimplePlugin: Plugin {
+pub trait DefaultPluginFactory: Plugin {
     /// Returns a new Plugin Descriptor, which contains metadata about the plugin, such as its name,
     /// stable identifier, and more.
     ///

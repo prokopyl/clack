@@ -31,7 +31,7 @@ impl Plugin for PolySynthPlugin {
     }
 }
 
-impl SimplePlugin for PolySynthPlugin {
+impl DefaultPluginFactory for PolySynthPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 

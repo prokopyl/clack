@@ -80,7 +80,7 @@ impl Plugin for MyGainPlugin {
     type MainThread<'a> = ();
 }
 
-impl SimplePlugin for MyGainPlugin {
+impl DefaultPluginFactory for MyGainPlugin {
     fn get_descriptor() -> PluginDescriptor {
         PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
     }

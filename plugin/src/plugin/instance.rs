@@ -252,7 +252,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 ///
 /// This type is created with its [`new`](PluginInstance::new) method when the host wants to
 /// instantiate a given plugin type, and is what needs to be returned by the
-/// [`PluginFactory::instantiate_plugin`](crate::factory::plugin::PluginFactory::instantiate_plugin) method.
+/// [`PluginFactory::instantiate_plugin`](crate::factory::plugin::PluginFactory::create_plugin) method.
 pub struct PluginInstance<'a> {
     inner: Box<clap_plugin>,
     lifetime: PhantomData<&'a clap_plugin_descriptor>,

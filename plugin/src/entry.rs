@@ -33,7 +33,7 @@ pub use clack_common::entry::*;
 
 mod single;
 
-pub use single::{SimplePlugin, SinglePluginEntry};
+pub use single::{DefaultPluginFactory, SinglePluginEntry};
 
 /// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
 pub mod prelude {
@@ -133,7 +133,7 @@ pub mod prelude {
 ///
 ///     // Called when the host desires to create a new instance of one of our plugins.
 ///     // Which plugin it is, is determined by the given plugin_id.
-///     fn instantiate_plugin<'a>(
+///     fn create_plugin<'a>(
 ///         &'a self,
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,

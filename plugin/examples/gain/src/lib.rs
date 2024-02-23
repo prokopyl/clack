@@ -26,7 +26,7 @@ impl Plugin for GainPlugin {
     }
 }
 
-impl SimplePlugin for GainPlugin {
+impl DefaultPluginFactory for GainPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 

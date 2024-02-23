@@ -82,7 +82,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         let host_info = HostInfo::from_raw(clap_host);
         let this = &*(factory as *const Self);
 
-        match this.factory.instantiate_plugin(host_info, plugin_id) {
+        match this.factory.create_plugin(host_info, plugin_id) {
             None => core::ptr::null(),
             Some(instance) => instance.into_owned_ptr(),
         }
@@ -130,7 +130,7 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///         }
 ///     }
 ///
-///     fn instantiate_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
+///     fn create_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
 ///         if plugin_id == self.plugin_descriptor.id() {
 ///             Some(PluginInstance::new::<MyPlugin>(
 ///                 host_info,
@@ -166,7 +166,7 @@ pub trait PluginFactory: Send + Sync {
     ///
     /// If the given `plugin_id` does not match any known plugins to this factory, this method
     /// returns [`None`].
-    fn instantiate_plugin<'a>(
+    fn create_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
