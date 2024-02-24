@@ -1,7 +1,7 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_test_host::TestHost;
 
-use gain::clap_entry;
+use clack_plugin_gain::clap_entry;
 
 #[test]
 pub fn it_works() {
@@ -43,7 +43,7 @@ pub fn it_works() {
             .features()
             .map(|s| s.to_bytes())
             .collect::<Vec<_>>(),
-        &[&b"stereo"[..]]
+        &[&b"audio-effect"[..], &b"stereo"[..]]
     );
 
     let plugin = host.plugin_mut();

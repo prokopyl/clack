@@ -1,5 +1,5 @@
 [package]
-name = "gain"
+name = "clack-plugin-gain"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,7 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin", "clack-host"] }
+clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin"] }
 
 [dev-dependencies]
 clack-test-host = { workspace = true }

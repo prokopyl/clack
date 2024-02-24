@@ -17,7 +17,7 @@ jobs:
     steps:
     - if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get install libasound2-dev
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -41,7 +41,7 @@ jobs:
 
     steps:
     - run: sudo apt-get install libasound2-dev
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -53,12 +53,36 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all --all-features -- -D warnings
+  clap-validator:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'clack'
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build
+        run: cd clack; cargo build --release -p clack-plugin-gain -p clack-plugin-polysynth --verbose
+      - name: Download Clap-Validator
+        uses: actions/checkout@v4
+        with:
+          repository: 'free-audio/clap-validator'
+          ref: '0.3.2'
+          path: 'clap-validator'
+      - name: Validate
+        run: cd clap-validator; cargo run --release -- validate ../clack/target/release/libclack_plugin_gain.so ../clack/target/release/libclack_plugin_polysynth.so
+
+
   miri:
     runs-on: ubuntu-latest
     env:
       MIRIFLAGS: "-Zmiri-tree-borrows"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -73,13 +97,14 @@ jobs:
         with:
           command: miri
           args: test --all --all-features --verbose --exclude clack-host-cpal
+
   rustdoc:
     runs-on: ubuntu-latest
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
       - run: sudo apt-get install libasound2-dev
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -89,6 +114,7 @@ jobs:
         with:
           command: doc
           args: --all-features --no-deps
+
   cargo-deny:
     runs-on: ubuntu-latest
     strategy:
@@ -99,7 +125,7 @@ jobs:
     # Prevent sudden announcement of a new advisory from failing ci:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}

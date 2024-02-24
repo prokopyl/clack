@@ -5,7 +5,7 @@ use clack_host::factory::PluginFactory;
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
 pub fn it_works() {
     let bundle_path = format!(
-        "{}/../target/debug/{}gain{}",
+        "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX
@@ -24,7 +24,7 @@ pub fn it_works() {
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
 pub fn it_works_concurrently() {
     let bundle_path = format!(
-        "{}/../target/debug/{}gain{}",
+        "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX

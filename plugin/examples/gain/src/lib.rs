@@ -31,7 +31,7 @@ impl DefaultPluginFactory for GainPlugin {
         use clack_plugin::plugin::features::*;
 
         PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
-            .with_features([STEREO])
+            .with_features([AUDIO_EFFECT, STEREO])
     }
 
     fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
@@ -162,7 +162,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
             default_value: 0.0,
             min_value: 0.0,
             max_value: 1000.0,
-            flags: ParamInfoFlags::IS_STEPPED,
+            flags: ParamInfoFlags::IS_STEPPED | ParamInfoFlags::IS_AUTOMATABLE,
             cookie: Cookie::empty(),
         })
     }
