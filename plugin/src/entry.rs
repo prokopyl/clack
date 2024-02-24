@@ -367,13 +367,9 @@ enum EntryHolderInner<E> {
 }
 
 #[doc(hidden)]
-pub struct EntryHolder<E> {
+pub struct EntryHolder<E: Entry> {
     inner: Mutex<EntryHolderInner<E>>,
 }
-
-// SAFETY: TODO
-unsafe impl<E> Send for EntryHolder<E> {}
-unsafe impl<E> Sync for EntryHolder<E> {}
 
 use crate::entry::EntryHolderInner::*;
 

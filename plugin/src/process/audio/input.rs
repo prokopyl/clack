@@ -213,7 +213,6 @@ impl<'a, T> IntoIterator for &'a InputChannels<'a, T> {
 
 /// An iterator over all of an [`InputPort`]'s channels' sample buffers.
 pub struct InputChannelsIter<'a, T> {
-    // TODO: hide these with new() function
     pub(crate) data: Iter<'a, *mut T>,
     pub(crate) frames_count: u32,
 }
