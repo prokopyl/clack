@@ -3,10 +3,9 @@
 //! These unsafe utilities are targeted at extension implementors. Most `clack-plugin` users do not
 //! have to use those utilities to use extensions, see `clack-extensions` instead.
 
-use crate::host::{HostHandle, HostMainThreadHandle};
+use crate::host::HostHandle;
 use crate::plugin::{
-    logging, AudioConfiguration, InstanceInitializer, Plugin, PluginAudioProcessor, PluginBoxInner,
-    PluginError, PluginMainThread, PluginShared,
+    logging, AudioConfiguration, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError,
 };
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
@@ -48,27 +47,17 @@ pub struct PluginWrapper<'a, P: Plugin> {
 }
 
 impl<'a, P: Plugin> PluginWrapper<'a, P> {
-    pub(crate) fn new(
-        host: HostMainThreadHandle<'a>,
-        initializer: Option<Box<dyn InstanceInitializer<'a, P>>>,
-    ) -> Result<Self, PluginError> {
-        let shared = match initializer {
-            None => P::Shared::new(host.shared())?,
-            Some(i) => i.init_shared(host.shared())?,
-        };
-
-        let shared = Box::pin(shared);
-
-        // SAFETY: this lives long enough
-        let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
-        let main_thread = UnsafeCell::new(P::MainThread::new(host, shared_ref)?);
-
-        Ok(Self {
-            host: host.shared(),
+    pub(crate) unsafe fn new(
+        host: HostHandle<'a>,
+        shared: Pin<Box<P::Shared<'a>>>,
+        main_thread: UnsafeCell<P::MainThread<'a>>,
+    ) -> Self {
+        Self {
+            host,
             shared,
             main_thread,
             audio_processor: None,
-        })
+        }
     }
 
     /// # Safety
@@ -210,7 +199,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     ///
     /// # Example
     ///
-    /// This is the implementation of the [`on_main_thread`](PluginMainThread::on_main_thread)
+    /// This is the implementation of the [`on_main_thread`](crate::plugin::PluginMainThread::on_main_thread)
     /// callback's C wrapper.
     ///
     /// This method is guaranteed by the CLAP specification to be only called on the main thread.
@@ -231,7 +220,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     where
         F: FnOnce(&PluginWrapper<'a, P>) -> Result<T, PluginWrapperError>,
     {
-        match Self::handle_panic(plugin, handler) {
+        match Self::from_raw(plugin).and_then(|p| Self::handle_panic(p, handler)) {
             Ok(value) => Some(value),
             Err(e) => {
                 logging::plugin_log::<P>(plugin, &e);
@@ -250,7 +239,26 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     where
         F: FnOnce(Pin<&mut PluginWrapper<'a, P>>) -> Result<T, PluginWrapperError>,
     {
-        match Self::handle_panic_mut(plugin, handler) {
+        match Self::from_raw_mut(plugin).and_then(|p| Self::handle_panic(p, handler)) {
+            Ok(value) => Some(value),
+            Err(e) => {
+                logging::plugin_log::<P>(plugin, &e);
+
+                None
+            }
+        }
+    }
+
+    /// # Safety
+    /// The plugin pointer must be valid
+    pub(crate) unsafe fn handle_plugin_data<T, F>(
+        plugin: *const clap_plugin,
+        handler: F,
+    ) -> Option<T>
+    where
+        F: FnOnce(NonNull<PluginBoxInner<'a, P>>) -> Result<T, PluginWrapperError>,
+    {
+        match Self::plugin_data_from_raw(plugin).and_then(|p| Self::handle_panic(p, handler)) {
             Ok(value) => Some(value),
             Err(e) => {
                 logging::plugin_log::<P>(plugin, &e);
@@ -266,9 +274,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
             .plugin_data
             .cast::<PluginBoxInner<'a, P>>()
             .as_ref()
-            .ok_or(PluginWrapperError::NullPluginData)?
+            .ok_or(PluginWrapperError::AlreadyDestroyed)?
             .wrapper()
-            .ok_or(PluginWrapperError::UninitializedPlugin)
     }
 
     unsafe fn from_raw_mut<'p>(
@@ -280,35 +287,28 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
                 .plugin_data
                 .cast::<PluginBoxInner<'a, P>>()
                 .as_mut()
-                .ok_or(PluginWrapperError::NullPluginData)?
-                .wrapper_mut()
-                .ok_or(PluginWrapperError::UninitializedPlugin)?,
+                .ok_or(PluginWrapperError::AlreadyDestroyed)?
+                .wrapper_mut()?,
         ))
     }
 
-    unsafe fn handle_panic<T, F>(
-        plugin: *const clap_plugin,
-        handler: F,
-    ) -> Result<T, PluginWrapperError>
-    where
-        F: FnOnce(&Self) -> Result<T, PluginWrapperError>,
-    {
-        let plugin = Self::from_raw(plugin)?;
+    unsafe fn plugin_data_from_raw(
+        raw: *const clap_plugin,
+    ) -> Result<NonNull<PluginBoxInner<'a, P>>, PluginWrapperError> {
+        let data = raw
+            .as_ref()
+            .ok_or(PluginWrapperError::NullPluginInstance)?
+            .plugin_data
+            .cast::<PluginBoxInner<'a, P>>();
 
-        panic::catch_unwind(AssertUnwindSafe(|| handler(plugin)))
-            .map_err(|_| PluginWrapperError::Panic)?
+        NonNull::new(data).ok_or(PluginWrapperError::AlreadyDestroyed)
     }
 
-    unsafe fn handle_panic_mut<T, F>(
-        plugin: *const clap_plugin,
-        handler: F,
-    ) -> Result<T, PluginWrapperError>
+    unsafe fn handle_panic<Pa, T, F>(parameter: Pa, handler: F) -> Result<T, PluginWrapperError>
     where
-        F: FnOnce(Pin<&mut Self>) -> Result<T, PluginWrapperError>,
+        F: FnOnce(Pa) -> Result<T, PluginWrapperError>,
     {
-        let plugin = Self::from_raw_mut(plugin)?;
-
-        panic::catch_unwind(AssertUnwindSafe(|| handler(plugin)))
+        panic::catch_unwind(AssertUnwindSafe(|| handler(parameter)))
             .map_err(|_| PluginWrapperError::Panic)?
     }
 }
@@ -321,9 +321,10 @@ unsafe impl<'a, P: Plugin> Sync for PluginWrapper<'a, P> {}
 pub enum PluginWrapperError {
     /// The `clap_plugin` raw pointer was null.
     NullPluginInstance,
-    /// The `clap_plugin.plugin_data` raw pointer was null.
-    NullPluginData,
-    /// A unexpectedly null raw pointer was encountered.
+    /// The `clap_plugin.plugin_data` raw pointer was null, which indicates the instance was already
+    /// destroyed.
+    AlreadyDestroyed,
+    /// An unexpectedly null raw pointer was encountered.
     ///
     /// The given string may contain more information about which pointer was found to be null.
     NulPtr(&'static str),
@@ -331,8 +332,12 @@ pub enum PluginWrapperError {
     ///
     /// The given string may contain more information about which parameter was found to be invalid.
     InvalidParameter(&'static str),
-    /// The plugin was not properly initialized (i.e. `init` was not called or had failed).
+    /// The plugin was not properly initialized (i.e. `init` was not called).
     UninitializedPlugin,
+    /// The plugin's initialization (`init`) has failed.
+    InitializationAlreadyFailed,
+    /// The plugin is already initialized (i.e. a second call to `init` was attempted).
+    AlreadyInitialized,
     /// An attempt was made to call `activate` on an already activated plugin.
     ActivatedPlugin,
     /// An attempt was made to call an audio-thread function while the plugin was deactivated
@@ -412,9 +417,13 @@ impl Display for PluginWrapperError {
             PluginWrapperError::NullPluginInstance => {
                 f.write_str("Plugin method was called with null clap_plugin pointer")
             }
-            PluginWrapperError::NullPluginData => {
-                f.write_str("Plugin method was called with null clap_plugin.plugin_data pointer")
+            PluginWrapperError::AlreadyDestroyed => f.write_str(
+                "Plugin instance was already destroyed (clap_plugin.plugin_data pointer is null)",
+            ),
+            PluginWrapperError::InitializationAlreadyFailed => {
+                f.write_str("Plugin initialization has already failed")
             }
+            PluginWrapperError::AlreadyInitialized => f.write_str("Plugin is already initialized"),
             PluginWrapperError::NulPtr(ptr_name) => {
                 write!(f, "Plugin method was called with null {ptr_name} pointer")
             }

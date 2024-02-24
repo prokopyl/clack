@@ -40,25 +40,25 @@
 //!   shared between the main thread and the audio thread. If it isn't needed , `()` can be used
 //!   instead.
 //!
-//!   It can be used to hold read-only data (such as all of the detected host extensions), or to
+//!   It can be used to hold read-only data (such as all the detected host extensions), or to
 //!   hold any other kind of synchronized state.
 //!
 //!   However, it should be noted that this type *can* be used by the host simultaneously from
 //!   threads that are neither the main thread nor the audio thread.
 
 use crate::extensions::PluginExtensions;
-use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
+use crate::host::HostAudioThreadHandle;
 use crate::process::Audio;
 use crate::process::Events;
 use crate::process::Process;
 use clack_common::process::ProcessStatus;
 
-pub mod descriptor;
+mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 
-use crate::plugin::descriptor::PluginDescriptor;
+pub use descriptor::*;
 pub use error::PluginError;
 pub use instance::*;
 
@@ -71,23 +71,9 @@ pub use instance::*;
 /// threads, including (but not limited to) the main thread and the audio thread.
 ///
 /// See the [module documentation](crate::plugin) for more information on the thread model.
-pub trait PluginShared<'a>: Sized + Send + Sync + 'a {
-    /// Creates a new instance of this shared data.
-    ///
-    /// This struct receives a thread-safe host handle that can be stored for the lifetime of the plugin.
-    ///
-    /// # Errors
-    /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
-    /// not instantiated.
-    fn new(host: HostHandle<'a>) -> Result<Self, PluginError>;
-}
+pub trait PluginShared<'a>: Sized + Send + Sync + 'a {}
 
-impl<'a> PluginShared<'a> for () {
-    #[inline]
-    fn new(_host: HostHandle<'a>) -> Result<Self, PluginError> {
-        Ok(())
-    }
-}
+impl<'a> PluginShared<'a> for () {}
 
 /// The part of the data and operation of a plugin that must be on the main thread.
 ///
@@ -99,29 +85,15 @@ impl<'a> PluginShared<'a> for () {
 ///
 /// See the [module documentation](crate::plugin) for more information on the thread model.
 pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
-    /// Creates a new instance of the plugin's main thread.
-    ///
-    /// This struct receives an exclusive host handle that can be stored for the lifetime of the plugin.
-    ///
-    /// # Errors
-    /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
-    /// not instantiated.
-    fn new(host: HostMainThreadHandle<'a>, shared: &'a S) -> Result<Self, PluginError>;
-
     /// This is called by the host on the main thread, in response to a previous call to
-    /// [`HostHandle::request_callback`](HostHandle::request_callback).
+    /// [`HostHandle::request_callback`](crate::host::HostHandle::request_callback).
     ///
     /// The default implementation of this method does nothing.
     #[inline]
     fn on_main_thread(&mut self) {}
 }
 
-impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {
-    #[inline]
-    fn new(_host: HostMainThreadHandle<'a>, _shared: &'a S) -> Result<Self, PluginError> {
-        Ok(())
-    }
-}
+impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {}
 
 /// The audio configuration passed to a plugin's audio processor upon activation.
 ///
@@ -157,13 +129,6 @@ pub trait Plugin: 'static {
     ///
     /// See the [module documentation](crate::plugin) for more information on the thread model.
     type MainThread<'a>: PluginMainThread<'a, Self::Shared<'a>>;
-
-    /// Creates a new Plugin Descriptor.
-    ///
-    /// This contains read-only data about the plugin, such as it's name, stable identifier, and more.
-    ///
-    /// See the [`PluginDescriptor`] trait's documentation for more information.
-    fn get_descriptor() -> Box<dyn PluginDescriptor>;
 
     #[inline]
     #[allow(unused_variables)]

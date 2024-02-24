@@ -33,7 +33,7 @@ pub use clack_common::entry::*;
 
 mod single;
 
-pub use single::SinglePluginEntry;
+pub use single::{DefaultPluginFactory, SinglePluginEntry};
 
 /// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
 pub mod prelude {
@@ -44,7 +44,7 @@ pub mod prelude {
             Factory,
         },
         host::HostInfo,
-        plugin::{descriptor::PluginDescriptorWrapper, PluginInstance},
+        plugin::{PluginDescriptor, PluginInstance},
     };
 }
 
@@ -73,19 +73,15 @@ pub mod prelude {
 /// pub struct MySecondPlugin;
 ///
 /// impl Plugin for MyFirstPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// impl Plugin for MySecondPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// pub struct MyEntry {
@@ -106,15 +102,15 @@ pub mod prelude {
 ///
 /// // Our factory holds the descriptors for both of our plugins
 /// pub struct MyPluginFactory {
-///     first_plugin: PluginDescriptorWrapper,
-///     second_plugin: PluginDescriptorWrapper,
+///     first_plugin: PluginDescriptor,
+///     second_plugin: PluginDescriptor,
 /// }
 ///
 /// impl MyPluginFactory {
 ///     pub fn new() -> Self {
 ///         Self {
-///             first_plugin: PluginDescriptorWrapper::new(MyFirstPlugin::get_descriptor()),
-///             second_plugin: PluginDescriptorWrapper::new(MySecondPlugin::get_descriptor()),
+///             first_plugin: PluginDescriptor::new("my.plugin.first", "My first plugin"),
+///             second_plugin: PluginDescriptor::new("my.plugin.second", "My second plugin"),
 ///         }
 ///     }
 /// }
@@ -126,8 +122,8 @@ pub mod prelude {
 ///
 ///     // Gets the plugin descriptor matching the given index.
 ///     // It doesn't matter much which plugin has which index,
-///     // but each of our plugins must have an unique one.
-///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper> {
+///     // but each of our plugins must have a unique one.
+///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor> {
 ///         match index {
 ///             0 => Some(&self.first_plugin),
 ///             1 => Some(&self.second_plugin),
@@ -137,17 +133,27 @@ pub mod prelude {
 ///
 ///     // Called when the host desires to create a new instance of one of our plugins.
 ///     // Which plugin it is, is determined by the given plugin_id.
-///     fn instantiate_plugin<'a>(
+///     fn create_plugin<'a>(
 ///         &'a self,
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,
 ///     ) -> Option<PluginInstance<'a>> {
-///         if plugin_id == self.first_plugin.descriptor().id() {
+///         if plugin_id == self.first_plugin.id() {
 ///             // We can use the PluginInstance type to easily make a new instance of a given
 ///             // plugin type.
-///             Some(PluginInstance::new::<MyFirstPlugin>(host_info, &self.first_plugin))
-///         } else if plugin_id == self.second_plugin.descriptor().id() {
-///             Some(PluginInstance::new::<MySecondPlugin>(host_info, &self.second_plugin))
+///             Some(PluginInstance::new::<MyFirstPlugin>(
+///                 host_info,
+///                 &self.first_plugin,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
+///         } else if plugin_id == self.second_plugin.id() {
+///             Some(PluginInstance::new::<MySecondPlugin>(
+///                 host_info,
+///                 &self.second_plugin,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
 ///         } else {
 ///             None
 ///         }
@@ -361,13 +367,9 @@ enum EntryHolderInner<E> {
 }
 
 #[doc(hidden)]
-pub struct EntryHolder<E> {
+pub struct EntryHolder<E: Entry> {
     inner: Mutex<EntryHolderInner<E>>,
 }
-
-// SAFETY: TODO
-unsafe impl<E> Send for EntryHolder<E> {}
-unsafe impl<E> Sync for EntryHolder<E> {}
 
 use crate::entry::EntryHolderInner::*;
 

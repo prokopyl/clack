@@ -10,8 +10,7 @@
 
 use crate::factory::Factory;
 use crate::host::HostInfo;
-use crate::plugin::descriptor::PluginDescriptorWrapper;
-use crate::plugin::PluginInstance;
+use crate::plugin::{PluginDescriptor, PluginInstance};
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
@@ -83,7 +82,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         let host_info = HostInfo::from_raw(clap_host);
         let this = &*(factory as *const Self);
 
-        match this.factory.instantiate_plugin(host_info, plugin_id) {
+        match this.factory.create_plugin(host_info, plugin_id) {
             None => core::ptr::null(),
             Some(instance) => instance.into_owned_ptr(),
         }
@@ -110,15 +109,13 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 /// pub struct MyPlugin;
 ///
 /// impl Plugin for MyPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
 /// }
 ///
 /// pub struct MyPluginFactory {
-///     plugin_descriptor: PluginDescriptorWrapper
+///     plugin_descriptor: PluginDescriptor
 /// }
 ///
 /// impl PluginFactory for MyPluginFactory {
@@ -126,16 +123,21 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///         1 // We only have a single plugin
 ///     }
 ///
-///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper> {
+///     fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor> {
 ///         match index {
 ///             0 => Some(&self.plugin_descriptor),
 ///             _ => None
 ///         }
 ///     }
 ///
-///     fn instantiate_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
+///     fn create_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
 ///         if plugin_id == self.plugin_descriptor.id() {
-///             Some(PluginInstance::new::<MyPlugin>(host_info, &self.plugin_descriptor))
+///             Some(PluginInstance::new::<MyPlugin>(
+///                 host_info,
+///                 &self.plugin_descriptor,
+///                 |_host| Ok(()) /* Create the shared struct */,
+///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///             ))
 ///         } else {
 ///             None
 ///         }
@@ -145,8 +147,8 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 pub trait PluginFactory: Send + Sync {
     /// Returns the number of plugins exposed by this factory.
     fn plugin_count(&self) -> u32;
-    /// Returns the [`PluginDescriptorWrapper`] wrapping the descriptor of a plugin that is assigned
-    /// to the given index.
+
+    /// Returns the [`PluginDescriptor`] of the plugin that is assigned the given index.
     ///
     /// Hosts will usually call this method repeatedly with every index from 0 to the total returned
     /// by [`plugin_count`](PluginFactory::plugin_count), in order to discover all the plugins
@@ -154,7 +156,7 @@ pub trait PluginFactory: Send + Sync {
     ///
     /// If the given index is out of bounds, or in general does not match any given plugin, this
     /// returns [`None`].
-    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper>;
+    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor>;
 
     /// Creates a new plugin instance for the plugin type matching the given `plugin_id`.
     ///
@@ -164,7 +166,7 @@ pub trait PluginFactory: Send + Sync {
     ///
     /// If the given `plugin_id` does not match any known plugins to this factory, this method
     /// returns [`None`].
-    fn instantiate_plugin<'a>(
+    fn create_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,

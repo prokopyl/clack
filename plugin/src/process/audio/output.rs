@@ -193,7 +193,7 @@ impl<'a, S> OutputChannels<'a, S> {
         }
     }
 
-    /// Gets a read-only iterator over all of the port's channels' sample buffers.
+    /// Gets a read-only iterator over all the port's channels' sample buffers.
     #[inline]
     pub fn iter(&self) -> InputChannelsIter<S> {
         InputChannelsIter {
@@ -202,7 +202,7 @@ impl<'a, S> OutputChannels<'a, S> {
         }
     }
 
-    /// Gets an iterator over all of the port's channels' writable sample buffers.
+    /// Gets an iterator over all the port's channels' writable sample buffers.
     #[inline]
     pub fn iter_mut(&mut self) -> OutputChannelsIter<S> {
         OutputChannelsIter {

@@ -12,7 +12,6 @@ mod diva_stub {
     use clack_common::stream::{InputStream, OutputStream};
     use clack_plugin::clack_entry;
     use clack_plugin::prelude::*;
-    use std::ffi::CStr;
     use std::io::{Read, Write};
 
     pub struct DivaPluginStub;
@@ -26,14 +25,7 @@ mod diva_stub {
 
     pub struct DivaPluginStubMainThread {}
 
-    impl<'a> PluginMainThread<'a, DivaPluginStubShared<'a>> for DivaPluginStubMainThread {
-        fn new(
-            _host: HostMainThreadHandle<'a>,
-            _shared: &'a DivaPluginStubShared,
-        ) -> Result<Self, PluginError> {
-            Ok(Self {})
-        }
-    }
+    impl<'a> PluginMainThread<'a, DivaPluginStubShared<'a>> for DivaPluginStubMainThread {}
 
     impl PluginStateImpl for DivaPluginStubMainThread {
         fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
@@ -49,30 +41,34 @@ mod diva_stub {
         }
     }
 
-    impl<'a> PluginShared<'a> for DivaPluginStubShared<'a> {
-        fn new(host: HostHandle<'a>) -> Result<Self, PluginError> {
-            Ok(Self { host })
-        }
-    }
+    impl<'a> PluginShared<'a> for DivaPluginStubShared<'a> {}
 
     impl Plugin for DivaPluginStub {
         type AudioProcessor<'a> = DivaPluginStubAudioProcessor<'a>;
         type Shared<'a> = DivaPluginStubShared<'a>;
         type MainThread<'a> = DivaPluginStubMainThread;
 
-        fn get_descriptor() -> Box<dyn PluginDescriptor> {
-            use clack_plugin::plugin::descriptor::features::*;
-
-            Box::new(StaticPluginDescriptor {
-                id: CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
-                name: CStr::from_bytes_with_nul(b"Diva\0").unwrap(),
-                features: Some(&[SYNTHESIZER, STEREO]),
-                ..Default::default()
-            })
-        }
-
         fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &Self::Shared<'_>) {
             builder.register::<PluginState>();
+        }
+    }
+
+    impl DefaultPluginFactory for DivaPluginStub {
+        fn get_descriptor() -> PluginDescriptor {
+            use clack_plugin::plugin::features::*;
+
+            PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
+        }
+
+        fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+            Ok(DivaPluginStubShared { host })
+        }
+
+        fn new_main_thread<'a>(
+            _host: HostMainThreadHandle<'a>,
+            _shared: &'a Self::Shared<'a>,
+        ) -> Result<Self::MainThread<'a>, PluginError> {
+            Ok(DivaPluginStubMainThread {})
         }
     }
 

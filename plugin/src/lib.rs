@@ -20,7 +20,7 @@ pub use clack_common::utils;
 /// A helpful prelude re-exporting all the types related to plugin implementation.
 pub mod prelude {
     pub use crate::clack_export_entry;
-    pub use crate::entry::{Entry, EntryDescriptor, SinglePluginEntry};
+    pub use crate::entry::{DefaultPluginFactory, Entry, EntryDescriptor, SinglePluginEntry};
     pub use crate::events::{
         io::{InputEvents, OutputEvents},
         UnknownEvent,
@@ -28,9 +28,8 @@ pub mod prelude {
     pub use crate::extensions::PluginExtensions;
     pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
     pub use crate::plugin::{
-        descriptor::{PluginDescriptor, StaticPluginDescriptor},
-        AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
-        PluginShared,
+        AudioConfiguration, Plugin, PluginAudioProcessor, PluginDescriptor, PluginError,
+        PluginMainThread, PluginShared,
     };
     pub use crate::process::{
         audio::{ChannelPair, SampleType},

@@ -3,7 +3,6 @@
 
 use clack_extensions::params::info::ParamInfoFlags;
 use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
-use std::ffi::CStr;
 
 use clack_plugin::prelude::*;
 
@@ -20,21 +19,34 @@ impl Plugin for GainPlugin {
     type Shared<'a> = GainPluginShared<'a>;
     type MainThread<'a> = GainPluginMainThread<'a>;
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        use clack_plugin::plugin::descriptor::features::*;
-
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.gain\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Clack Gain Example\0").unwrap(),
-            features: Some(&[SYNTHESIZER, STEREO]),
-            ..Default::default()
-        })
-    }
-
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
         builder
             .register::<PluginParams>()
             .register::<PluginAudioPorts>();
+    }
+}
+
+impl DefaultPluginFactory for GainPlugin {
+    fn get_descriptor() -> PluginDescriptor {
+        use clack_plugin::plugin::features::*;
+
+        PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+            .with_features([STEREO])
+    }
+
+    fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(GainPluginShared { _host: host })
+    }
+
+    fn new_main_thread<'a>(
+        host: HostMainThreadHandle<'a>,
+        shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError> {
+        Ok(Self::MainThread {
+            rusting: 0,
+            shared,
+            _host: host,
+        })
     }
 }
 
@@ -121,11 +133,7 @@ pub struct GainPluginShared<'a> {
     _host: HostHandle<'a>,
 }
 
-impl<'a> PluginShared<'a> for GainPluginShared<'a> {
-    fn new(host: HostHandle<'a>) -> Result<Self, PluginError> {
-        Ok(Self { _host: host })
-    }
-}
+impl<'a> PluginShared<'a> for GainPluginShared<'a> {}
 
 pub struct GainPluginMainThread<'a> {
     rusting: u32,
@@ -135,18 +143,7 @@ pub struct GainPluginMainThread<'a> {
     _host: HostMainThreadHandle<'a>,
 }
 
-impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a> {
-    fn new(
-        host: HostMainThreadHandle<'a>,
-        shared: &'a GainPluginShared,
-    ) -> Result<Self, PluginError> {
-        Ok(Self {
-            rusting: 0,
-            shared,
-            _host: host,
-        })
-    }
-}
+impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a> {}
 
 impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     fn count(&mut self) -> u32 {

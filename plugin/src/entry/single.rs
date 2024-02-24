@@ -5,6 +5,9 @@ use std::marker::PhantomData;
 
 /// An [`Entry`] that only exposes a single plugin type to the host.
 ///
+/// This is a simplified entry type, which only requires the simple [`DefaultPluginFactory`] trait to be
+/// implemented by the user, and implements an entry and plugin factory around it.
+///
 /// This entry type exists purely for convenience of the users in the common case of having a single
 /// plugin type to expose to the host.
 ///
@@ -15,29 +18,47 @@ use std::marker::PhantomData;
 /// # Example
 ///
 /// ```
+/// use clack_plugin::entry::DefaultPluginFactory;
 /// use clack_plugin::prelude::*;
 ///
 /// pub struct MyPlugin;
 ///
 /// impl Plugin for MyPlugin {
-///     /* ... */
-/// #   type AudioProcessor<'a> = (); type Shared<'a> = (); type MainThread<'a> = ();
-/// #   fn get_descriptor() -> Box<dyn PluginDescriptor> {
-/// #       unreachable!()
-/// #   }
+///     type AudioProcessor<'a> = ();
+///     type Shared<'a> = ();
+///     type MainThread<'a> = ();
+/// }
+///
+/// impl DefaultPluginFactory for MyPlugin {
+///     fn get_descriptor() -> PluginDescriptor {
+///         PluginDescriptor::new("my.plugin", "My Plugin")
+///     }
+///
+///     fn new_shared<'a>(
+///         _host: HostHandle<'a>
+///     ) -> Result<Self::Shared<'a>, PluginError> {
+///         Ok(())
+///     }
+///
+///     fn new_main_thread<'a>(
+///         host: HostMainThreadHandle<'a>,
+///         shared: &'a Self::Shared<'a>
+///     ) -> Result<Self::MainThread<'a>, PluginError> {
+///         Ok(())
+///     }
 /// }
 ///
 /// clack_export_entry!(SinglePluginEntry::<MyPlugin>);
 /// ```
-pub struct SinglePluginEntry<P> {
+pub struct SinglePluginEntry<P: DefaultPluginFactory> {
     plugin_factory: PluginFactoryWrapper<SinglePluginFactory<P>>,
 }
 
-impl<P: Plugin> Entry for SinglePluginEntry<P> {
+impl<P: DefaultPluginFactory> Entry for SinglePluginEntry<P> {
     fn new(_plugin_path: &CStr) -> Result<Self, EntryLoadError> {
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
-                descriptor: PluginDescriptorWrapper::new(P::get_descriptor()),
+                descriptor: P::get_descriptor(),
                 _plugin: PhantomData,
             }),
         })
@@ -50,18 +71,18 @@ impl<P: Plugin> Entry for SinglePluginEntry<P> {
 }
 
 struct SinglePluginFactory<P> {
-    descriptor: PluginDescriptorWrapper,
+    descriptor: PluginDescriptor,
     _plugin: PhantomData<fn() -> P>,
 }
 
-impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
+impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
     #[inline]
     fn plugin_count(&self) -> u32 {
         1
     }
 
     #[inline]
-    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptorWrapper> {
+    fn plugin_descriptor(&self, index: u32) -> Option<&PluginDescriptor> {
         match index {
             0 => Some(&self.descriptor),
             _ => None,
@@ -69,15 +90,57 @@ impl<P: Plugin> PluginFactory for SinglePluginFactory<P> {
     }
 
     #[inline]
-    fn instantiate_plugin<'a>(
+    fn create_plugin<'a>(
         &'a self,
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
     ) -> Option<PluginInstance<'a>> {
-        if plugin_id == self.descriptor.descriptor().id() {
-            Some(PluginInstance::new::<P>(host_info, &self.descriptor))
+        if plugin_id == self.descriptor.id() {
+            Some(PluginInstance::new::<P>(
+                host_info,
+                &self.descriptor,
+                P::new_shared,
+                P::new_main_thread,
+            ))
         } else {
             None
         }
     }
+}
+
+/// An optional trait used by [`SinglePluginEntry`] that provides simplified, methods for generic
+/// plugin factories.
+///
+/// Implementing this trait is optional: you can disregard it completely if you use a custom
+/// factory, which also allows you to pass additional parameters to these methods, for e.g. sharing
+/// data across multiple instances.
+///
+/// See the [`SinglePluginEntry`] documentation for more information and examples.
+pub trait DefaultPluginFactory: Plugin {
+    /// Returns a new Plugin Descriptor, which contains metadata about the plugin, such as its name,
+    /// stable identifier, and more.
+    ///
+    /// See the [`PluginDescriptor`] type's documentation for more information.
+    fn get_descriptor() -> PluginDescriptor;
+
+    /// Creates a new instance of this shared data.
+    ///
+    /// This struct receives a thread-safe host handle that can be stored for the lifetime of the plugin.
+    ///
+    /// # Errors
+    /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
+    /// not instantiated.
+    fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError>;
+
+    /// Creates a new instance of the plugin's main thread.
+    ///
+    /// This struct receives an exclusive host handle that can be stored for the lifetime of the plugin.
+    ///
+    /// # Errors
+    /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
+    /// not instantiated.
+    fn new_main_thread<'a>(
+        host: HostMainThreadHandle<'a>,
+        shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError>;
 }

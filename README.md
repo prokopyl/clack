@@ -78,13 +78,22 @@ impl Plugin for MyGainPlugin {
 
     type Shared<'a> = ();
     type MainThread<'a> = ();
+}
 
-    fn get_descriptor() -> Box<dyn PluginDescriptor> {
-        Box::new(StaticPluginDescriptor {
-            id: CStr::from_bytes_with_nul(b"org.rust-audio.clack.gain\0").unwrap(),
-            name: CStr::from_bytes_with_nul(b"Clack Gain Example\0").unwrap(),
-            ..Default::default()
-        })
+impl DefaultPluginFactory for MyGainPlugin {
+    fn get_descriptor() -> PluginDescriptor {
+        PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+    }
+
+    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(())
+    }
+
+    fn new_main_thread<'a>(
+        _host: HostMainThreadHandle<'a>,
+        _shared: &'a Self::Shared<'a>,
+    ) -> Result<Self::MainThread<'a>, PluginError> {
+        Ok(())
     }
 }
 
