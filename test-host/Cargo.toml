@@ -11,4 +11,4 @@ publish = false
 [dependencies]
 clack-host = { workspace = true, default-features = false }
 clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin"] }
-selfie = { workspace = true }
+selfie = { git = 'https://github.com/prokopyl/selfie', rev = '726013fc94835b6f24918ba822a49e5c3b2a3b25', version = "0.0.2" }

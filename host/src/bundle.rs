@@ -13,7 +13,7 @@
 //! documentation to learn more about factories.
 //!
 //! Clack handles all of this functionality through the [`PluginBundle`] type, which exposes all
-//! of the bundle's factory implementation, and allow the bundle to be loaded in two different ways:
+//! the bundle's factory implementation, and allow the bundle to be loaded in two different ways:
 //!
 //! * From a file, using [`PluginBundle::load`].
 //!

@@ -10,12 +10,11 @@ clap-sys = { workspace = true }
 clack-common = { workspace = true }
 
 libloading = { workspace = true, optional = true }
-selfie = { workspace = true, optional = true }
 stable_deref_trait = { workspace = true, optional = true }
 
 [features]
 default = ["libloading"]
-libloading = ["dep:libloading", "dep:selfie", "dep:stable_deref_trait"]
+libloading = ["dep:libloading", "dep:stable_deref_trait"]
 
 [dev-dependencies]
 clack-plugin = { workspace = true }

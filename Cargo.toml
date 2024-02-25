@@ -19,7 +19,6 @@ clack-extensions = { path = "./extensions", version = "0.1.0" }
 clack-test-host = { path = "./test-host", version = "0.1.0" }
 
 clap-sys = "0.4.0"
-selfie = { git = 'https://github.com/prokopyl/selfie', rev = '726013fc94835b6f24918ba822a49e5c3b2a3b25', version = "0.0.2" }
 
 bitflags = "2.4.2"
 libloading = "0.8.1"

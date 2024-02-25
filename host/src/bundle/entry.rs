@@ -2,16 +2,18 @@ use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use clack_common::utils::ClapVersion;
 use std::ffi::CString;
+use std::ptr::NonNull;
 
-pub struct LoadedEntry<'a> {
-    entry: &'a EntryDescriptor,
+pub struct LoadedEntry {
+    entry: NonNull<EntryDescriptor>,
 }
 
-impl<'a> LoadedEntry<'a> {
+impl LoadedEntry {
     /// # Safety
     ///
     /// User must ensure that the provided entry is fully valid, as well as everything it exposes.
-    pub unsafe fn load(entry: &'a EntryDescriptor, path: &str) -> Result<Self, PluginBundleError> {
+    /// User must also ensure this type *only* exists while `entry` is valid.
+    pub unsafe fn load(entry: &EntryDescriptor, path: &str) -> Result<Self, PluginBundleError> {
         let plugin_version = ClapVersion::from_raw(entry.clap_version);
         if !plugin_version.is_compatible() {
             return Err(PluginBundleError::IncompatibleClapVersion { plugin_version });
@@ -25,18 +27,23 @@ impl<'a> LoadedEntry<'a> {
             }
         }
 
-        Ok(Self { entry })
+        Ok(Self {
+            entry: entry.into(),
+        })
     }
 
     #[inline]
-    pub fn entry(&self) -> &'a EntryDescriptor {
-        self.entry
+    pub fn entry(&self) -> &EntryDescriptor {
+        // SAFETY: this type ensures entry is still valid.
+        unsafe { self.entry.as_ref() }
     }
 }
 
-impl<'a> Drop for LoadedEntry<'a> {
+impl Drop for LoadedEntry {
     fn drop(&mut self) {
-        if let Some(deinit) = self.entry.deinit {
+        // SAFETY: this type ensures entry is still valid.
+        let entry = unsafe { self.entry.as_ref() };
+        if let Some(deinit) = entry.deinit {
             // SAFETY: this type ensures deinit() is valid, and this can only be called once.
             unsafe { deinit() }
         }
@@ -44,6 +51,6 @@ impl<'a> Drop for LoadedEntry<'a> {
 }
 
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
-unsafe impl<'a> Send for LoadedEntry<'a> {}
+unsafe impl Send for LoadedEntry {}
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
-unsafe impl<'a> Sync for LoadedEntry<'a> {}
+unsafe impl Sync for LoadedEntry {}

@@ -1,4 +1,5 @@
 use crate::bundle::entry::LoadedEntry;
+use crate::bundle::library::PluginEntryLibrary;
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use std::collections::hash_map::Entry;
@@ -43,18 +44,16 @@ fn get_or_insert(
 ///
 /// Users must ensure the given library is valid.
 pub(crate) unsafe fn load_from_library(
-    library: crate::bundle::library::PluginEntryLibrary,
+    library: PluginEntryLibrary,
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
-        Ok(EntrySourceInner::FromLibrary(
-            // SAFETY: parent function is unsafe to cover this
-            selfie::Selfie::try_new(std::pin::Pin::new(library), |entry| unsafe {
-                LoadedEntry::load(entry, plugin_path)
-            })
-            // The library can be discarded completely
-            .map_err(|e| e.error)?,
-        ))
+        // SAFETY: parent function is unsafe to cover this
+        let entry = unsafe { LoadedEntry::load(library.entry(), plugin_path) }?;
+        Ok(EntrySourceInner::FromLibrary {
+            entry,
+            _library: library,
+        })
     })
 }
 
@@ -66,6 +65,7 @@ pub(crate) unsafe fn load_from_raw(
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(entry_descriptor), || {
+        // SAFETY: entry_descriptor is 'static, it is always valid.
         Ok(EntrySourceInner::FromRaw(LoadedEntry::load(
             entry_descriptor,
             plugin_path,
@@ -74,9 +74,13 @@ pub(crate) unsafe fn load_from_raw(
 }
 
 enum EntrySourceInner {
-    FromRaw(LoadedEntry<'static>),
+    FromRaw(LoadedEntry),
     #[cfg(feature = "libloading")]
-    FromLibrary(crate::bundle::library::LibraryEntry),
+    FromLibrary {
+        // SAFETY: drop order is important! We must deinit the entry before unloading the library.
+        entry: LoadedEntry,
+        _library: PluginEntryLibrary,
+    },
 }
 
 #[derive(Clone)]
@@ -92,7 +96,7 @@ impl CachedEntry {
         match entry.as_ref() {
             EntrySourceInner::FromRaw(raw) => raw.entry(),
             #[cfg(feature = "libloading")]
-            EntrySourceInner::FromLibrary(bundle) => bundle.with_referential(|e| e.entry()),
+            EntrySourceInner::FromLibrary { entry, .. } => entry.entry(),
         }
     }
 }

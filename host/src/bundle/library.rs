@@ -1,9 +1,6 @@
-use crate::bundle::entry::LoadedEntry;
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use libloading::Library;
-use selfie::refs::RefType;
-use selfie::Selfie;
 use stable_deref_trait::StableDeref;
 use std::ffi::OsStr;
 use std::ops::Deref;
@@ -59,11 +56,3 @@ unsafe impl StableDeref for PluginEntryLibrary {}
 unsafe impl Send for PluginEntryLibrary {}
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
 unsafe impl Sync for PluginEntryLibrary {}
-
-pub(crate) struct LoadedEntryRef;
-
-impl<'a> RefType<'a> for LoadedEntryRef {
-    type Ref = LoadedEntry<'a>;
-}
-
-pub(crate) type LibraryEntry = Selfie<'static, PluginEntryLibrary, LoadedEntryRef>;
