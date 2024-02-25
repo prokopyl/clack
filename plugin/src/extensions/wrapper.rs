@@ -398,7 +398,7 @@ impl PluginWrapperError {
     /// Returns a closure that maps an error to a [`PluginWrapperError::Any`] error of a given
     /// severity.
     ///
-    /// This is an useful helper method when paired with [`Result::map_err`].
+    /// This is a useful helper method when paired with [`Result::map_err`].
     ///
     /// # Example
     /// ```

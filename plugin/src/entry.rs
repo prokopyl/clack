@@ -399,7 +399,9 @@ impl<E: Entry> EntryHolder<E> {
         plugin_path: *const core::ffi::c_char,
         entry_factory: impl FnOnce(&CStr) -> Result<E, EntryLoadError> + UnwindSafe,
     ) -> bool {
-        let Ok(mut inner) = self.inner.lock() else {
+        let Ok(Ok(mut inner)) = catch_unwind(|| self.inner.lock()) else {
+            // A poisoned lock means init() panicked, so we consider the entry unusable.
+            // Same if lock() itself panicked.
             return false;
         };
 
