@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![deny(clippy::undocumented_unsafe_blocks)]
 
 extern crate core;
 

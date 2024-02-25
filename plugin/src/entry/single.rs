@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 use crate::entry::prelude::*;
 use crate::prelude::*;
 use std::ffi::CStr;

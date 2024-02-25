@@ -61,6 +61,7 @@ impl From<NoteDialect> for NoteDialects {
     }
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNotePorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
     type ExtensionSide = PluginExtensionSide;
@@ -69,8 +70,11 @@ unsafe impl Extension for PluginNotePorts {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginNotePorts {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginNotePorts {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNotePorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
     type ExtensionSide = HostExtensionSide;
@@ -79,6 +83,8 @@ unsafe impl Extension for HostNotePorts {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostNotePorts {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostNotePorts {}
 
 pub struct NotePortInfoData<'a> {
@@ -89,16 +95,18 @@ pub struct NotePortInfoData<'a> {
 }
 
 impl<'a> NotePortInfoData<'a> {
+    /// # Safety
+    ///
+    /// Users must ensure the given port info is valid.
     #[cfg(feature = "clack-host")]
     // TODO: make pub?
-    unsafe fn try_from_raw(raw: &'a clap_note_port_info) -> Option<Self> {
-        use crate::utils::data_from_array_buf;
-        Some(Self {
+    unsafe fn from_raw(raw: &'a clap_note_port_info) -> Self {
+        Self {
             id: raw.id,
-            name: data_from_array_buf(&raw.name),
+            name: crate::utils::data_from_array_buf(&raw.name),
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
             preferred_dialect: NoteDialect::from_raw(raw.preferred_dialect),
-        })
+        }
     }
 }
 

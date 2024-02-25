@@ -57,6 +57,7 @@ bitflags! {
     }
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = PluginExtensionSide;
@@ -65,8 +66,11 @@ unsafe impl Extension for PluginAudioPorts {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginAudioPorts {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginAudioPorts {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = HostExtensionSide;
@@ -75,6 +79,8 @@ unsafe impl Extension for HostAudioPorts {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostAudioPorts {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostAudioPorts {}
 
 #[derive(Clone)]

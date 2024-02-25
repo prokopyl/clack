@@ -34,11 +34,12 @@ impl<'a> HostInfo<'a> {
         ClapVersion::from_raw(self.as_raw().clap_version)
     }
 
-    /// An user-friendly name for the host.
+    /// A user-friendly name for the host.
     ///
     /// This should always be set by the host.
     pub fn name(&self) -> Option<&'a CStr> {
         NonNull::new(self.as_raw().name as *mut _)
+            // SAFETY: this type ensures the pointers are valid
             .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
@@ -47,13 +48,15 @@ impl<'a> HostInfo<'a> {
     /// This field is optional.
     pub fn vendor(&self) -> Option<&'a CStr> {
         NonNull::new(self.as_raw().vendor as *mut _)
+            // SAFETY: this type ensures the pointers are valid
             .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    /// An URL to the host's webpage.
+    /// A URL to the host's webpage.
     ///
     /// This field is optional.
     pub fn url(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the pointers are valid
         NonNull::new(self.as_raw().url as *mut _).map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
@@ -62,12 +65,16 @@ impl<'a> HostInfo<'a> {
     /// This should always be set by the host.
     pub fn version(&self) -> Option<&'a CStr> {
         NonNull::new(self.as_raw().version as *mut _)
+            // SAFETY: this type ensures the pointers are valid
             .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
         let ext =
-            unsafe { (self.as_raw().get_extension?)(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
+            // SAFETY: this type ensure the function pointers are valid
+            unsafe { self.as_raw().get_extension?(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
+        // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
+        // E::IDENTIFIER.
         NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
     }
 
@@ -83,6 +90,7 @@ impl<'a> HostInfo<'a> {
 
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
+        // SAFETY: this type ensures the raw pointer is valid
         unsafe { &*self.raw }
     }
 }
@@ -97,7 +105,9 @@ pub struct HostHandle<'a> {
     _lifetime: PhantomData<&'a clap_host>,
 }
 
+// SAFETY: this type only safely exposes the thread-safe operations of clap_host
 unsafe impl<'a> Send for HostHandle<'a> {}
+// SAFETY: this type only safely exposes the thread-safe operations of clap_host
 unsafe impl<'a> Sync for HostHandle<'a> {}
 
 impl<'a> HostHandle<'a> {
@@ -113,6 +123,7 @@ impl<'a> HostHandle<'a> {
     /// Returns a raw, C FFI-compatible reference to the host handle.
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
+        // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { &*self.raw }
     }
 
@@ -200,6 +211,7 @@ impl<'a> HostMainThreadHandle<'a> {
 
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
+        // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { &*self.raw }
     }
 }
@@ -217,6 +229,7 @@ pub struct HostAudioThreadHandle<'a> {
     _lifetime: PhantomData<&'a clap_host>,
 }
 
+// SAFETY: this type only exposes the audio-thread-safe (Send) operation of clap_host
 unsafe impl<'a> Send for HostAudioThreadHandle<'a> {}
 
 impl<'a> HostAudioThreadHandle<'a> {
@@ -230,6 +243,7 @@ impl<'a> HostAudioThreadHandle<'a> {
 
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
+        // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { &*self.raw }
     }
 }

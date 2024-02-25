@@ -27,6 +27,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P::MainThread<'a>: PluginNoteNameImpl,
@@ -34,6 +35,7 @@ where
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count() as u32)).unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
@@ -54,13 +56,17 @@ where
     .unwrap_or(false)
 }
 
-/// An helper struct to write an [`NoteName`] into the host's provided buffer.
+/// A helper struct to write an [`NoteName`] into the host's provided buffer.
 pub struct NoteNameWriter<'a> {
     buf: &'a mut MaybeUninit<clap_note_name>,
     is_set: bool,
 }
 
 impl<'a> NoteNameWriter<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the provided pointer is aligned and points to a valid allocation.
+    /// However, it doesn't have to be initialized.
     #[inline]
     unsafe fn from_raw(raw: *mut clap_note_name) -> Self {
         Self {
@@ -76,6 +82,7 @@ impl<'a> NoteNameWriter<'a> {
 
         let buf = self.buf.as_mut_ptr();
 
+        // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
@@ -94,6 +101,7 @@ impl HostNoteName {
     #[inline]
     pub fn changed(&self, host: &mut HostMainThreadHandle) {
         if let Some(changed) = self.0.changed {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { changed(host.as_raw()) }
         }
     }

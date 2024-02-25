@@ -60,6 +60,7 @@ impl Default for Cookie {
 
 // SAFETY: Cookies themselves are just pointers, which plugins have to consider as Send + Sync
 unsafe impl Send for Cookie {}
+// SAFETY: Cookies themselves are just pointers, which plugins have to consider as Send + Sync
 unsafe impl Sync for Cookie {}
 
 /// A safer form of [`core::slice::from_raw_parts`] that returns a properly aligned slice in case
@@ -69,6 +70,11 @@ unsafe impl Sync for Cookie {}
 /// Rust, as all references must be aligned and non-null.
 ///
 /// This helper avoids that pitfall by ignoring the pointer if the length is zero.
+///
+/// # Safety
+///
+/// Same as [`core::slice::from_raw_parts`], except the provided pointer *can* be null or
+/// dangling for zero-length slices.
 #[inline]
 pub(crate) unsafe fn slice_from_external_parts<'a, T>(data: *const T, len: usize) -> &'a [T] {
     if len == 0 {
@@ -79,6 +85,11 @@ pub(crate) unsafe fn slice_from_external_parts<'a, T>(data: *const T, len: usize
 }
 
 /// Same as [`slice_from_external_parts`] but for mut slices.
+///
+/// # Safety
+///
+/// Same as [`core::slice::from_raw_parts_mut`], except the provided pointer *can* be null or
+/// dangling for zero-length slices.
 #[inline]
 pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
     if len == 0 {

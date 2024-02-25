@@ -48,6 +48,7 @@ pub struct TransportEvent {
     pub time_signature_denominator: i16,
 }
 
+// SAFETY: this matches the type ID and event space
 unsafe impl<'a> Event<'a> for TransportEvent {
     const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT;
     type EventSpace = CoreEventSpace<'a>;

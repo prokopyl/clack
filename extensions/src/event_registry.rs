@@ -7,6 +7,7 @@ pub struct HostEventRegistry {
     inner: clap_host_event_registry,
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostEventRegistry {
     const IDENTIFIER: &'static CStr = CLAP_EXT_EVENT_REGISTRY;
     type ExtensionSide = HostExtensionSide;
@@ -24,12 +25,14 @@ const _: () = {
         ) -> Option<EventSpaceId<S>> {
             let mut out = u16::MAX;
             let success =
-                unsafe { (self.inner.query?)(host.shared().as_raw(), S::NAME.as_ptr(), &mut out) };
+                // SAFETY: This type ensures the function pointer is valid.
+                unsafe { self.inner.query?(host.shared().as_raw(), S::NAME.as_ptr(), &mut out) };
 
             if !success {
                 return None;
             };
 
+            // SAFETY: the EventSpaceId has been fetched from S's name.
             unsafe { Some(EventSpaceId::new(out)?.into_unchecked()) }
         }
     }
@@ -53,6 +56,7 @@ mod host {
 
         #[inline]
         fn query_type<'a, S: EventSpace<'a>>(&self) -> Option<EventSpaceId<S>> {
+            // SAFETY: the EventSpaceId has been fetched from S's name.
             unsafe { self.query(S::NAME).map(|i| i.into_unchecked()) }
         }
     }
@@ -68,6 +72,7 @@ mod host {
         };
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn query<H: Host>(
         host: *const clap_host,
         space_name: *const c_char,

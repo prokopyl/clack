@@ -18,6 +18,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn log<H: Host>(
     host: *const clap_host,
     severity: clap_log_severity,

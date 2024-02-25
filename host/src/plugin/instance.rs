@@ -41,6 +41,8 @@ impl<H: Host> PluginInstanceInner<H> {
 
             let raw_descriptor = instance.host_descriptor.raw();
 
+            // SAFETY: the host pointer comes from a valid allocation that is pinned for the
+            // lifetime of the instance
             let plugin_instance_ptr = unsafe {
                 entry
                     .get_plugin_factory()
@@ -53,10 +55,13 @@ impl<H: Host> PluginInstanceInner<H> {
                 return Err(HostError::InstantiationFailed);
             }
 
-            instance
-                .host_wrapper
-                .as_mut()
-                .instantiated(plugin_instance_ptr);
+            // SAFETY: we just checked the pointer is non-null
+            unsafe {
+                instance
+                    .host_wrapper
+                    .as_mut()
+                    .instantiated(plugin_instance_ptr)
+            };
             instance.plugin_ptr = plugin_instance_ptr;
         }
 
@@ -70,6 +75,7 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
+        // SAFETY: this type ensures the instance pointer is valid
         unsafe { &*self.plugin_ptr }
     }
 
@@ -95,6 +101,7 @@ impl<H: Host> PluginInstanceInner<H> {
             .as_mut()
             .setup_audio_processor(audio_processor, self.plugin_ptr)?;
 
+        // SAFETY: this type ensures the function pointer is valid
         let success = unsafe {
             activate(
                 self.plugin_ptr,
@@ -124,13 +131,17 @@ impl<H: Host> PluginInstanceInner<H> {
             return Err(HostError::DeactivatedPlugin);
         }
 
-        if let Some(deactivate) = unsafe { *self.plugin_ptr }.deactivate {
+        if let Some(deactivate) = self.raw_instance().deactivate {
+            // SAFETY: this type ensures the function pointer is valid.
+            // We just checked the instance is in an active state.
             unsafe { deactivate(self.plugin_ptr) };
         }
 
         self.host_wrapper.as_mut().deactivate(drop)
     }
 
+    /// # Safety
+    /// User must ensure the instance is not in a processing state.
     #[inline]
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
         if let Some(start_processing) = (*self.plugin_ptr).start_processing {
@@ -144,6 +155,8 @@ impl<H: Host> PluginInstanceInner<H> {
         }
     }
 
+    /// # Safety
+    /// User must ensure the instance is in a processing state.
     #[inline]
     pub unsafe fn stop_processing(&self) {
         if let Some(stop_processing) = (*self.plugin_ptr).stop_processing {
@@ -151,6 +164,8 @@ impl<H: Host> PluginInstanceInner<H> {
         }
     }
 
+    /// # Safety
+    /// User must ensure this is only called on the main thread.
     #[inline]
     pub unsafe fn on_main_thread(&self) {
         if let Some(on_main_thread) = (*self.plugin_ptr).on_main_thread {
@@ -172,6 +187,9 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
             let _ = self.deactivate_with(|_, _| ());
         }
 
+        // SAFETY: we are in the drop impl, so this can only be called once and without any
+        // other concurrent calls.
+        // This type also ensures the function pointer type is valid.
         unsafe {
             if let Some(destroy) = (*self.plugin_ptr).destroy {
                 destroy(self.plugin_ptr)
@@ -182,4 +200,5 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
 unsafe impl<H: Host> Send for PluginInstanceInner<H> {}
+// SAFETY: The only non-thread-safe methods on this type are unsafe
 unsafe impl<H: Host> Sync for PluginInstanceInner<H> {}

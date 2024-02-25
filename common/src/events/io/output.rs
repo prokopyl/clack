@@ -56,6 +56,7 @@ impl<'a> OutputEvents<'a> {
     /// This pointer is only valid until the list is dropped.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_output_events {
+        // SAFETY: OutputEvents list has the same layout and is repr(C)
         unsafe { &mut *(self as *mut _ as *mut _) }
     }
 
@@ -127,6 +128,7 @@ impl<'a> OutputEvents<'a> {
     pub fn try_push<E: AsRef<UnknownEvent<'a>>>(&mut self, event: E) -> Result<(), TryPushError> {
         let try_push = self.inner.try_push.ok_or(TryPushError)?;
 
+        // SAFETY: this function pointer is safely initialized by from_raw or from_buffer
         if !unsafe { try_push(&self.inner, event.as_ref().as_raw()) } {
             Err(TryPushError {})
         } else {

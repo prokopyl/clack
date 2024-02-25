@@ -42,6 +42,7 @@ pub struct NoteExpressionEvent {
     inner: clap_event_note_expression,
 }
 
+// SAFETY: this matches the type ID and event space
 unsafe impl<'a> Event<'a> for NoteExpressionEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_EXPRESSION;
     type EventSpace = CoreEventSpace<'a>;

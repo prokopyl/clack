@@ -7,6 +7,7 @@ impl HostState {
     #[inline]
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
         if let Some(mark_dirty) = self.0.mark_dirty {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { mark_dirty(host.shared().as_raw()) }
         }
     }
@@ -30,6 +31,7 @@ where
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn load<P: Plugin>(
     plugin: *const clap_plugin,
     stream: *const clap_istream,
@@ -45,6 +47,7 @@ where
     .is_some()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn save<P: Plugin>(
     plugin: *const clap_plugin,
     stream: *const clap_ostream,

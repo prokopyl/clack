@@ -27,6 +27,7 @@ impl PluginNotePorts {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match self.0.count {
             None => 0,
+            // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw(), is_input) },
         }
     }
@@ -39,10 +40,12 @@ impl PluginNotePorts {
         buffer: &'b mut NotePortInfoBuffer,
     ) -> Option<NotePortInfoData<'b>> {
         let success =
-            unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
+            // SAFETY: This type ensures the function pointer is valid.
+            unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
-            unsafe { NotePortInfoData::try_from_raw(buffer.inner.assume_init_ref()) }
+            // SAFETY: we just checked the buffer was successfully written to
+            Some(unsafe { NotePortInfoData::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }
@@ -67,6 +70,7 @@ where
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn supported_dialects<H: Host>(host: *const clap_host) -> u32
 where
     for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
@@ -77,6 +81,7 @@ where
     .unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
 where
     for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,

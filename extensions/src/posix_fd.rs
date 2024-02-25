@@ -32,6 +32,7 @@ pub struct PluginPosixFd(clap_plugin_posix_fd_support);
 #[repr(C)]
 pub struct HostPosixFd(clap_host_posix_fd_support);
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
     type ExtensionSide = PluginExtensionSide;
@@ -40,8 +41,11 @@ unsafe impl Extension for PluginPosixFd {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginPosixFd {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginPosixFd {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
     type ExtensionSide = HostExtensionSide;
@@ -50,6 +54,8 @@ unsafe impl Extension for HostPosixFd {
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostPosixFd {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostPosixFd {}
 
 /// Errors that can occur with the POSIX File Descriptors extension.
@@ -92,6 +98,7 @@ mod host {
         #[inline]
         pub fn on_fd(&self, plugin: &mut PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
             if let Some(on_fd) = self.0.on_fd {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_fd(plugin.as_raw(), fd, flags.bits) }
             }
         }
@@ -122,6 +129,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn register_fd<H: Host>(
         host: *const clap_host,
         fd: i32,
@@ -140,6 +148,7 @@ mod host {
         .unwrap_or(false)
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn modify_fd<H: Host>(
         host: *const clap_host,
         fd: i32,
@@ -157,6 +166,7 @@ mod host {
         })
         .unwrap_or(false)
     }
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn unregister_fd<H: Host>(host: *const clap_host, fd: i32) -> bool
     where
         for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
@@ -189,6 +199,7 @@ mod plugin {
         ) -> Result<(), FdError> {
             let register_fd = self.0.register_fd.ok_or(FdError::Register((fd, flags)))?;
 
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { register_fd(host.as_raw(), fd, flags.bits) };
             match success {
                 true => Ok(()),
@@ -205,6 +216,7 @@ mod plugin {
         ) -> Result<(), FdError> {
             let modify_fd = self.0.modify_fd.ok_or(FdError::Modify((fd, flags)))?;
 
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { modify_fd(host.as_raw(), fd, flags.bits) };
             match success {
                 true => Ok(()),
@@ -220,6 +232,7 @@ mod plugin {
         ) -> Result<(), FdError> {
             let unregister_fd = self.0.unregister_fd.ok_or(FdError::Unregister(fd))?;
 
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { unregister_fd(host.as_raw(), fd) };
             match success {
                 true => Ok(()),
@@ -250,6 +263,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn on_fd<P: Plugin>(
         plugin: *const clap_plugin,
         fd: i32,

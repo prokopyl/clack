@@ -45,7 +45,7 @@ pub unsafe trait FactoryPointer<'a>: Sized + 'a {
     /// # Safety
     ///
     /// The caller *MUST* ensure the given pointer points to the same type that is expected by this
-    /// pointer type. (e.g. the given pointer must point to a `clap_plugin_factory` to create a [`PluginFactory`].
+    /// pointer type. (e.g. the given pointer must point to a `clap_plugin_factory` to create a [`PluginFactory`]).
     unsafe fn from_raw(raw: NonNull<c_void>) -> Self;
 }
 
@@ -81,6 +81,7 @@ pub struct PluginFactory<'a> {
     _lifetime: PhantomData<&'a clap_plugin_factory>,
 }
 
+// SAFETY: This takes a clap_plugin_factory pointer, which matches CLAP_PLUGIN_FACTORY_ID
 unsafe impl<'a> FactoryPointer<'a> for PluginFactory<'a> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 
@@ -100,11 +101,12 @@ impl<'a> PluginFactory<'a> {
         // SAFETY: no special safety considerations
         match unsafe { (*self.inner).get_plugin_count } {
             None => 0,
+            // SAFETY: this type ensures the function pointer is valid
             Some(count) => unsafe { count(self.inner) },
         }
     }
 
-    /// Returns an the [`PluginDescriptor`s](PluginDescriptor) exposed by this plugin
+    /// Returns the [`PluginDescriptor`s](PluginDescriptor) exposed by this plugin
     /// factory at a given index, or `None` if there is no plugin descriptor at the given index.
     ///
     /// Implementations on the plugin-side *should* return a descriptor for any index strictly less
@@ -115,8 +117,9 @@ impl<'a> PluginFactory<'a> {
     #[inline]
     pub fn plugin_descriptor(&self, index: u32) -> Option<PluginDescriptor<'a>> {
         // SAFETY: descriptor is guaranteed not to outlive the entry
-        unsafe { ((*self.inner).get_plugin_descriptor?)(self.inner, index).as_ref() }
-            .map(PluginDescriptor::from_raw)
+        unsafe { (*self.inner).get_plugin_descriptor?(self.inner, index).as_ref() }
+            // SAFETY: this descriptor is guaranteed to be valid by the spec
+            .map(|d| unsafe { PluginDescriptor::from_raw(d) })
     }
 
     /// Returns an iterator of all the [`PluginDescriptor`s](PluginDescriptor) exposed by this
@@ -136,14 +139,18 @@ impl<'a> PluginFactory<'a> {
         }
     }
 
+    /// # Safety
+    ///
+    /// User must pass a valid clap_host pointer, which has to stay valid for the lifetime of the
+    /// plugin.
     pub(crate) unsafe fn create_plugin(
         &self,
         plugin_id: &CStr,
         host: *const clap_host,
     ) -> Result<NonNull<clap_plugin>, HostError> {
-        let plugin = NonNull::new(((*self.inner)
+        let plugin = NonNull::new((*self.inner)
             .create_plugin
-            .ok_or(HostError::NullFactoryCreatePluginFunction)?)(
+            .ok_or(HostError::NullFactoryCreatePluginFunction)?(
             self.inner,
             host,
             plugin_id.as_ptr(),

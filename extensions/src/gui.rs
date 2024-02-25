@@ -154,10 +154,18 @@ pub struct PluginGui {
     inner: clap_plugin_gui,
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionSide = PluginExtensionSide;
 }
+
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for PluginGui {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Sync for PluginGui {}
 
 /// The Host-side of the GUI extension.
 #[repr(C)]
@@ -165,10 +173,18 @@ pub struct HostGui {
     inner: clap_host_gui,
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionSide = HostExtensionSide;
 }
+
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for HostGui {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Sync for HostGui {}
 
 /// Errors that can occur related to Plugin GUI handling.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -331,17 +347,21 @@ impl<'a> GuiApiType<'a> {
     ///
     /// See <https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent> to learn
     /// more about embedding using the Win32 API.
-    pub const WIN32: GuiApiType<'static> =
-        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") });
+    pub const WIN32: GuiApiType<'static> = GuiApiType(
+        // SAFETY: this constant string is NULL-terminated
+        unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") },
+    );
 
-    /// Represents the Cocoa API used by MacOS.
+    /// Represents the Cocoa API used by acOS.
     ///
     /// This API uses logical size for pixels.
     ///
     /// The `set_scale` method should not be called with this GUI API, as it is all handled by the
     /// OS directly.
-    pub const COCOA: GuiApiType<'static> =
-        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") });
+    pub const COCOA: GuiApiType<'static> = GuiApiType(
+        // SAFETY: this constant string is NULL-terminated
+        unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") },
+    );
 
     /// Represents the X11 API, used by various Unix OSes.
     ///
@@ -349,16 +369,20 @@ impl<'a> GuiApiType<'a> {
     ///
     /// See <https://specifications.freedesktop.org/xembed-spec/xembed-spec-latest.html> to learn more
     /// about embedding using the X11 API.
-    pub const X11: GuiApiType<'static> =
-        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") });
+    pub const X11: GuiApiType<'static> = GuiApiType(
+        // SAFETY: this constant string is NULL-terminated
+        unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") },
+    );
 
     /// Represents the Wayland API, used by various, newer Unix OSes.
     ///
     /// This API uses physical size for pixels.
     ///
     /// This API does *not* support embedding as of now. You can still use floating windows.
-    pub const WAYLAND: GuiApiType<'static> =
-        GuiApiType(unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") });
+    pub const WAYLAND: GuiApiType<'static> = GuiApiType(
+        // SAFETY: this constant string is NULL-terminated
+        unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") },
+    );
 
     /// Whether this API type can provide a `RawWindowHandle`.
     pub fn can_provide_raw_window_handle(&self) -> bool {

@@ -91,6 +91,7 @@ impl<'a> InputEvents<'a> {
     pub fn len(&self) -> u32 {
         match self.inner.size {
             None => 0,
+            // SAFETY: this function pointer is safely initialized by from_raw or from_buffer
             Some(s) => unsafe { s(&self.inner) },
         }
     }
@@ -132,15 +133,17 @@ impl<'a> InputEvents<'a> {
     /// all of the above edge-cases.
     #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
-        let event = unsafe { (self.inner.get?)(&self.inner, index) };
+        // SAFETY: this function pointer is safely initialized by from_raw or from_buffer
+        let event = unsafe { self.inner.get?(&self.inner, index) };
         if event.is_null() {
             return None;
         };
 
+        // SAFETY: the returned event pointer is guaranteed to be valid by from_raw or from_buffer
         unsafe { Some(UnknownEvent::from_raw(event)) }
     }
 
-    /// Returns an iterator over all of the events in this [`InputEvents`].
+    /// Returns an iterator over all the events in this [`InputEvents`].
     #[inline]
     pub fn iter(&self) -> InputEventsIter {
         InputEventsIter {

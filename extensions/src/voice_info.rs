@@ -21,8 +21,11 @@ pub struct PluginVoiceInfo(clap_plugin_voice_info);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginVoiceInfo {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginVoiceInfo {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
     type ExtensionSide = PluginExtensionSide;
@@ -35,8 +38,11 @@ pub struct HostVoiceInfo(clap_host_voice_info);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostVoiceInfo {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostVoiceInfo {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
     type ExtensionSide = HostExtensionSide;
@@ -98,6 +104,7 @@ mod host {
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> Option<VoiceInfo> {
             let info = MaybeUninit::uninit();
 
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { self.0.get?(plugin.as_raw(), info.as_ptr() as *mut _) };
 
             // SAFETY: we only read the buffer if the plugin returned a successful state
@@ -121,6 +128,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
         for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
@@ -145,6 +153,7 @@ mod plugin {
         /// it by calling [`get`](PluginVoiceInfoImpl::get) again.
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
             if let Some(changed) = self.0.changed {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }
             }
         }
@@ -167,6 +176,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get<P: Plugin>(
         plugin: *const clap_plugin,
         info: *mut clap_voice_info,

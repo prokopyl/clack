@@ -11,6 +11,7 @@ impl PluginState {
     ) -> Result<(), StateError> {
         let mut stream = InputStream::from_reader(reader);
 
+        // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
             (self.0.load.ok_or(StateError { saving: false })?)(plugin.as_raw(), stream.as_raw_mut())
         } {
@@ -27,6 +28,7 @@ impl PluginState {
     ) -> Result<(), StateError> {
         let mut stream = OutputStream::from_writer(writer);
 
+        // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
             (self.0.save.ok_or(StateError { saving: true })?)(plugin.as_raw(), stream.as_raw_mut())
         } {
@@ -54,6 +56,7 @@ where
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn mark_dirty<H: Host>(host: *const clap_host)
 where
     for<'a> <H as Host>::MainThread<'a>: HostStateImpl,

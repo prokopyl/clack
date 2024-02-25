@@ -121,8 +121,10 @@ impl PluginBundle {
         let path = path.as_ref();
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
-        let library = PluginEntryLibrary::load(path)?;
+        // SAFETY: TODO: make this function actually unsafe
+        let library = unsafe { PluginEntryLibrary::load(path)? };
 
+        // SAFETY: TODO
         let inner = unsafe { cache::load_from_library(library, path_str)? };
 
         Ok(Self { inner })
@@ -198,7 +200,9 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
-        let ptr = unsafe { (self.raw_entry().get_factory?)(F::IDENTIFIER.as_ptr()) } as *mut _;
+        // SAFETY: this type ensures the function pointer is valid.
+        let ptr = unsafe { self.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
+        // SAFETY: pointer was created using F's own identifier.
         NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
     }
 

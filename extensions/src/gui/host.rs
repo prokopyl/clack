@@ -9,6 +9,7 @@ impl PluginGui {
         configuration: GuiConfiguration,
     ) -> bool {
         match self.inner.is_api_supported {
+            // SAFETY: This type ensures the function pointer is valid.
             Some(is_api_supported) => unsafe {
                 is_api_supported(
                     plugin.as_raw(),
@@ -30,11 +31,13 @@ impl PluginGui {
         let mut api_type = core::ptr::null();
         let mut is_floating = true;
 
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             self.inner.get_preferred_api?(plugin.as_raw(), &mut api_type, &mut is_floating)
         };
 
         if success && !api_type.is_null() {
+            // SAFETY: we checked the pointer was successfully written to.
             let api_type = unsafe { GuiApiType(CStr::from_ptr(api_type)) };
             Some(GuiConfiguration {
                 api_type,
@@ -56,6 +59,7 @@ impl PluginGui {
         plugin: &mut PluginMainThreadHandle,
         configuration: GuiConfiguration,
     ) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             self.inner.create.ok_or(GuiError::CreateError)?(
                 plugin.as_raw(),
@@ -73,6 +77,7 @@ impl PluginGui {
     /// Free all resources associated with the GUI
     pub fn destroy(&self, plugin: &mut PluginMainThreadHandle) {
         if let Some(destroy) = self.inner.destroy {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { destroy(plugin.as_raw()) }
         }
     }
@@ -87,6 +92,7 @@ impl PluginGui {
         scale: f64,
     ) -> Result<(), GuiError> {
         let success =
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { self.inner.set_scale.ok_or(GuiError::CreateError)?(plugin.as_raw(), scale) };
 
         match success {
@@ -100,6 +106,7 @@ impl PluginGui {
         let mut width = 0;
         let mut height = 0;
 
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe { self.inner.get_size?(plugin.as_raw(), &mut width, &mut height) };
 
         if success && width != 0 && height != 0 {
@@ -114,6 +121,7 @@ impl PluginGui {
     /// Only applies to embedded windows.
     pub fn can_resize(&self, plugin: &mut PluginMainThreadHandle) -> bool {
         if let Some(can_resize) = self.inner.can_resize {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { can_resize(plugin.as_raw()) }
         } else {
             false
@@ -130,6 +138,7 @@ impl PluginGui {
             preserve_aspect_ratio: true,
         };
 
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe { self.inner.get_resize_hints?(plugin.as_raw(), &mut hints) };
 
         match success {
@@ -153,6 +162,7 @@ impl PluginGui {
     ) -> Option<GuiSize> {
         let mut new_size = size;
 
+        // SAFETY: This type ensures the function pointer is valid.
         unsafe {
             self.inner.adjust_size?(plugin.as_raw(), &mut new_size.width, &mut new_size.height)
                 .then_some(new_size)
@@ -165,6 +175,7 @@ impl PluginGui {
         plugin: &mut PluginMainThreadHandle,
         size: GuiSize,
     ) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             self.inner.set_size.ok_or(GuiError::SetScaleError)?(
                 plugin.as_raw(),
@@ -182,6 +193,7 @@ impl PluginGui {
         plugin: &mut PluginMainThreadHandle,
         window: Window,
     ) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             self.inner.set_parent.ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())
         };
@@ -197,6 +209,7 @@ impl PluginGui {
         plugin: &mut PluginMainThreadHandle,
         window: Window,
     ) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             self.inner.set_transient.ok_or(GuiError::SetParentError)?(
                 plugin.as_raw(),
@@ -212,12 +225,14 @@ impl PluginGui {
     /// Only applies to floating windows.
     pub fn suggest_title(&self, plugin: &mut PluginMainThreadHandle, title: &CStr) {
         if let Some(suggest_title) = self.inner.suggest_title {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { suggest_title(plugin.as_raw(), title.as_ptr()) }
         }
     }
 
     /// Show the window
     pub fn show(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         unsafe { self.inner.show.ok_or(GuiError::ShowError)?(plugin.as_raw()) }
             .then_some(())
             .ok_or(GuiError::ShowError)
@@ -227,6 +242,7 @@ impl PluginGui {
     ///
     /// This should not free the resources associated with the GUI, just hide it.
     pub fn hide(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         unsafe { self.inner.hide.ok_or(GuiError::ShowError)?(plugin.as_raw()) }
             .then_some(())
             .ok_or(GuiError::ShowError)
@@ -293,6 +309,7 @@ where
     };
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn resize_hints_changed<H: Host>(host: *const clap_host)
 where
     for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
@@ -303,6 +320,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_resize<H: Host>(
     host: *const clap_host,
     width: u32,
@@ -320,6 +338,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_show<H: Host>(host: *const clap_host) -> bool
 where
     for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
@@ -327,6 +346,7 @@ where
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show().is_ok())).unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_hide<H: Host>(host: *const clap_host) -> bool
 where
     for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
@@ -334,6 +354,7 @@ where
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide().is_ok())).unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn closed<H: Host>(host: *const clap_host, was_destroyed: bool)
 where
     for<'a> <H as Host>::Shared<'a>: HostGuiImpl,

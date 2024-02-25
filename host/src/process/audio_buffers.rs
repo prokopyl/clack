@@ -69,12 +69,13 @@ pub struct AudioPortBuffer<I32, I64> {
 
 // bikeshed
 pub struct AudioPorts {
-    buffer_lists: Vec<*mut f32>, // Can be f32 or f64, casted on-demand
+    buffer_lists: Vec<*mut f32>, // Can be f32 or f64, cast on-demand
     buffer_configs: Vec<clap_audio_buffer>,
 }
 
 // SAFETY: The pointers are only temporary storage, they are not used unless AudioPorts is exclusively borrowed
 unsafe impl Send for AudioPorts {}
+// SAFETY: The pointers are only temporary storage, they are not used unless AudioPorts is exclusively borrowed
 unsafe impl Sync for AudioPorts {}
 
 impl AudioPorts {

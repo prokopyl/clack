@@ -8,8 +8,11 @@ pub struct HostThreadCheck(clap_host_thread_check);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostThreadCheck {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostThreadCheck {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadCheck {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
     type ExtensionSide = HostExtensionSide;
@@ -23,12 +26,14 @@ mod plugin {
     impl HostThreadCheck {
         #[inline]
         pub fn is_main_thread(&self, host: &HostHandle) -> Option<bool> {
-            Some(unsafe { (self.0.is_main_thread?)(host.as_raw()) })
+            // SAFETY: This type ensures the function pointer is valid.
+            Some(unsafe { self.0.is_main_thread?(host.as_raw()) })
         }
 
         #[inline]
         pub fn is_audio_thread(&self, host: &HostHandle) -> Option<bool> {
-            Some(unsafe { (self.0.is_audio_thread?)(host.as_raw()) })
+            // SAFETY: This type ensures the function pointer is valid.
+            Some(unsafe { self.0.is_audio_thread?(host.as_raw()) })
         }
     }
 }
@@ -54,6 +59,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn is_main_thread<H: Host>(host: *const clap_host) -> bool
     where
         for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,
@@ -61,6 +67,7 @@ mod host {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn is_audio_thread<H: Host>(host: *const clap_host) -> bool
     where
         for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,

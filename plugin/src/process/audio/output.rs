@@ -6,7 +6,7 @@ use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::IterMut;
 
-/// An iterator of all of the available [`OutputPort`]s from an [`Audio`] struct.
+/// An iterator of all the available [`OutputPort`]s from an [`Audio`] struct.
 pub struct OutputPortsIter<'a> {
     outputs: IterMut<'a, clap_audio_buffer>,
     frames_count: u32,
@@ -29,6 +29,8 @@ impl<'a> Iterator for OutputPortsIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.outputs
             .next()
+            // SAFETY: The Audio type this is built from ensures each buffer is valid
+            // and is of length frames_count.
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
@@ -52,6 +54,10 @@ pub struct OutputPort<'a> {
 }
 
 impl<'a> OutputPort<'a> {
+    /// # Safety
+    ///
+    /// * The provided buffer must be valid;
+    /// * `frames_count` *must* match the size of the buffers.
     #[inline]
     pub(crate) unsafe fn from_raw(inner: &'a mut clap_audio_buffer, frames_count: u32) -> Self {
         Self {
@@ -95,6 +101,7 @@ impl<'a> OutputPort<'a> {
     pub fn channels(
         &mut self,
     ) -> Result<SampleType<OutputChannels<'a, f32>, OutputChannels<'a, f64>>, BufferError> {
+        // SAFETY: this type ensures the buffer is valid
         Ok(unsafe { SampleType::from_raw_buffer_mut(self.inner) }?.map(
             |data| OutputChannels {
                 data,
@@ -176,6 +183,7 @@ impl<'a, S> OutputChannels<'a, S> {
     /// Retrieves the sample buffer of the channel at a given index, as a read-only slice.
     #[inline]
     pub fn channel(&self, channel_index: u32) -> Option<&[S]> {
+        // SAFETY: this type enforces that the buffer is valid, and has length frames_count.
         unsafe {
             self.data.get(channel_index as usize).map(|data| {
                 slice_from_external_parts(*data as *const _, self.frames_count as usize)
@@ -186,6 +194,8 @@ impl<'a, S> OutputChannels<'a, S> {
     /// Retrieves the sample buffer of the channel at a given index, as a mutable slice.
     #[inline]
     pub fn channel_mut(&mut self, channel_index: u32) -> Option<&mut [S]> {
+        // SAFETY: this type enforces that the buffer is valid, has length frames_count, and has
+        // exclusive access.
         unsafe {
             self.data.get(channel_index as usize).map(|data| {
                 slice_from_external_parts_mut(*data as *mut _, self.frames_count as usize)
@@ -294,6 +304,8 @@ impl<'a, T> Iterator for OutputChannelsIter<'a, T> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: iterator can only get created from an OutputChannels, which guarantees
+        // the buffer is both valid and of length frames_count
         self.data.next().map(|ptr| unsafe {
             slice_from_external_parts_mut(*ptr as *mut _, self.frames_count as usize)
         })

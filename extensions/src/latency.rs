@@ -7,6 +7,7 @@ pub struct PluginLatency {
     inner: clap_plugin_latency,
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionSide = PluginExtensionSide;
@@ -17,6 +18,7 @@ pub struct HostLatency {
     inner: clap_host_latency,
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionSide = HostExtensionSide;
@@ -32,6 +34,7 @@ mod host {
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
             match self.inner.get {
                 None => 0,
+                // SAFETY: This type ensures the function pointer is valid.
                 Some(get) => unsafe { get(plugin.as_raw()) },
             }
         }
@@ -52,6 +55,7 @@ mod host {
         };
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
         for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
@@ -74,6 +78,7 @@ mod plugin {
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
             if let Some(changed) = self.inner.changed {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.shared().as_raw()) }
             }
         }
@@ -94,6 +99,7 @@ mod plugin {
         };
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
     where
         for<'a> P::MainThread<'a>: PluginLatencyImpl,

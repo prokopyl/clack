@@ -33,6 +33,7 @@ pub struct HostWrapper<H: Host> {
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
 unsafe impl<H: Host> Send for HostWrapper<H> {}
+// SAFETY: The only non-thread-safe methods on this type are unsafe
 unsafe impl<H: Host> Sync for HostWrapper<H> {}
 
 impl<H: Host> HostWrapper<H> {
@@ -51,7 +52,7 @@ impl<H: Host> HostWrapper<H> {
     where
         F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
     {
-        match Self::handle_panic(host, handler) {
+        match Self::from_raw(host).and_then(|h| Self::handle_panic(handler, h)) {
             Ok(value) => Some(value),
             Err(_e) => {
                 // logging::plugin_log::<P>(host, &e); TODO
@@ -109,16 +110,21 @@ impl<H: Host> HostWrapper<H> {
             shared: Box::pin(shared(&())),
         });
 
+        // Safety: we never move out of pinned_wrapper, we only update main_thread.
         let pinned_wrapper = unsafe { Pin::get_unchecked_mut(wrapper.as_mut()) };
+
+        // SAFETY: This type guarantees main thread data cannot outlive shared
         pinned_wrapper.main_thread = Some(UnsafeCell::new(main_thread(unsafe {
-            // SAFETY: This type guarantees main thread data cannot outlive shared
             extend_shared_ref(&pinned_wrapper.shared)
         })));
 
         wrapper
     }
 
-    pub(crate) fn instantiated(self: Pin<&mut Self>, instance: *mut clap_plugin) {
+    /// # Safety
+    /// This must only be called on the main thread. User must ensure the provided instance pointer
+    /// is valid.
+    pub(crate) unsafe fn instantiated(self: Pin<&mut Self>, instance: *mut clap_plugin) {
         // SAFETY: we only update the fields, we don't move them
         let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
 
@@ -153,6 +159,7 @@ impl<H: Host> HostWrapper<H> {
             None => {
                 pinned_self.audio_processor = Some(UnsafeCell::new(audio_processor(
                     PluginAudioProcessorHandle::new(instance),
+                    // SAFETY: Shared lives at least as long as the audio processor does.
                     unsafe { extend_shared_ref(&pinned_self.shared) },
                     // SAFETY: At this point there is no way main_thread could not have been set.
                     unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }.get_mut(),
@@ -188,16 +195,16 @@ impl<H: Host> HostWrapper<H> {
         self.audio_processor.is_some()
     }
 
-    unsafe fn handle_panic<T, F>(host: *const clap_host, handler: F) -> Result<T, HostWrapperError>
+    fn handle_panic<T, F, Pa>(handler: F, param: Pa) -> Result<T, HostWrapperError>
     where
-        F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
+        F: FnOnce(Pa) -> Result<T, HostWrapperError>,
     {
-        let host = Self::from_raw(host)?;
-
-        panic::catch_unwind(AssertUnwindSafe(|| handler(host)))
+        panic::catch_unwind(AssertUnwindSafe(|| handler(param)))
             .map_err(|_| HostWrapperError::Panic)?
     }
 
+    /// # Safety
+    /// The host pointer must be valid (but can be null)
     unsafe fn from_raw<'a>(raw: *const clap_host) -> Result<&'a Self, HostWrapperError> {
         raw.as_ref()
             .ok_or(HostWrapperError::NullHostInstance)?

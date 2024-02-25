@@ -42,6 +42,9 @@ pub struct Process<'a> {
 }
 
 impl<'a> Process<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the given process struct is fully valid, and for the lifetime `'a`.
     #[inline]
     pub(crate) unsafe fn from_raw(raw: *const clap_process) -> Process<'a> {
         let transport = (*raw).transport;
@@ -71,6 +74,9 @@ pub struct Events<'a> {
 }
 
 impl<'a> Events<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the given process struct is fully valid, and for the lifetime `'a`.
     pub(crate) unsafe fn from_raw(process: &clap_process) -> Self {
         Self {
             input: InputEvents::from_raw(&*process.in_events),
@@ -208,18 +214,16 @@ impl<'a> Audio<'a> {
     /// it points to stay valid for the given lifetime.
     #[inline]
     pub unsafe fn from_raw(raw_process: &clap_process) -> Audio {
-        unsafe {
-            Audio {
-                frames_count: raw_process.frames_count,
-                inputs: slice_from_external_parts(
-                    raw_process.audio_inputs,
-                    raw_process.audio_inputs_count as usize,
-                ),
-                outputs: slice_from_external_parts_mut(
-                    raw_process.audio_outputs,
-                    raw_process.audio_outputs_count as usize,
-                ),
-            }
+        Audio {
+            frames_count: raw_process.frames_count,
+            inputs: slice_from_external_parts(
+                raw_process.audio_inputs,
+                raw_process.audio_inputs_count as usize,
+            ),
+            outputs: slice_from_external_parts_mut(
+                raw_process.audio_outputs,
+                raw_process.audio_outputs_count as usize,
+            ),
         }
     }
 
@@ -233,6 +237,7 @@ impl<'a> Audio<'a> {
     pub fn input_port(&self, index: usize) -> Option<InputPort> {
         self.inputs
             .get(index)
+            // SAFETY: this type ensures the provided buffer is valid and frames_count is correct
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
     }
 
@@ -261,7 +266,8 @@ impl<'a> Audio<'a> {
     pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
         self.outputs
             .get_mut(index)
-            // SAFETY: &mut ensures there is no input being read concurrently
+            // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
+            // Also, &mut ensures there is no input being read concurrently
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
@@ -285,9 +291,10 @@ impl<'a> Audio<'a> {
     /// This returns [`None`] if there is no available port at the given index.
     ///
     /// See also the [`port_pair_count`](Audio::port_pair_count) method to know how many port
-    /// port pairs are available, and the [`port_pairs`](Audio::port_pairs) method to get all port pairs at once.
+    /// pairs are available, and the [`port_pairs`](Audio::port_pairs) method to get all port pairs at once.
     #[inline]
     pub fn port_pair(&mut self, index: usize) -> Option<PortPair> {
+        // SAFETY: this type ensures the provided buffers are valid and frames_count is correct
         unsafe {
             PortPair::from_raw(
                 self.inputs.get(index),

@@ -9,6 +9,8 @@ pub struct PluginParams(clap_plugin_params);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginParams {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginParams {}
 
 #[repr(C)]
@@ -17,17 +19,21 @@ pub struct HostParams(clap_host_params);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostParams {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostParams {}
 
 #[cfg(feature = "clack-plugin")]
 pub mod implementation;
 pub mod info;
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginParams {
     const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionSide = PluginExtensionSide;
 }
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostParams {
     const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionSide = HostExtensionSide;

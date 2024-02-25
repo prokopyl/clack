@@ -269,6 +269,9 @@ impl<F32, F64> SampleType<F32, F64> {
 }
 
 impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
+    /// # Safety
+    ///
+    /// The caller must ensure the provided buffer is valid.
     #[inline]
     pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
@@ -302,6 +305,10 @@ impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
 }
 
 impl<'a> SampleType<&'a mut [*mut f32], &'a mut [*mut f64]> {
+    /// # Safety
+    ///
+    /// The caller must ensure the provided buffer is valid, and that we have exclusive `&mut`
+    /// access to its contents.
     #[inline]
     pub(crate) unsafe fn from_raw_buffer_mut(
         raw: &mut clap_audio_buffer,

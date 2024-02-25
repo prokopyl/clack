@@ -14,8 +14,11 @@ pub struct PluginThreadPool(clap_plugin_thread_pool);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginThreadPool {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginThreadPool {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
     type ExtensionSide = PluginExtensionSide;
@@ -28,8 +31,11 @@ pub struct HostThreadPool(clap_host_thread_pool);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostThreadPool {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostThreadPool {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
     type ExtensionSide = HostExtensionSide;
@@ -72,6 +78,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn exec<P: Plugin>(plugin: *const clap_plugin, task_index: u32)
     where
         for<'a> P::Shared<'a>: PluginThreadPoolImpl,
@@ -101,6 +108,7 @@ mod plugin {
             task_count: u32,
         ) -> Result<(), ThreadPoolRequestError> {
             let request_exec = self.0.request_exec.ok_or(ThreadPoolRequestError)?;
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { request_exec(host.as_raw(), task_count) };
 
             match success {
@@ -145,6 +153,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn request_exec<H: Host>(host: *const clap_host, num_tasks: u32) -> bool
     where
         for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
@@ -166,6 +175,7 @@ mod host {
         /// The index of the requested task to execute is given, and must be in the `0..task_count` range.
         pub fn exec(&self, plugin: &PluginSharedHandle, task_index: u32) {
             if let Some(exec) = self.0.exec {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { exec(plugin.as_raw(), task_index) }
             }
         }

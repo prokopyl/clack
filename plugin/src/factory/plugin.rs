@@ -51,11 +51,13 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         &self.raw
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get_plugin_count(factory: *const clap_plugin_factory) -> u32 {
         let this = &*(factory as *const Self);
         this.factory.plugin_count()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get_plugin_descriptor(
         factory: *const clap_plugin_factory,
         index: u32,
@@ -68,6 +70,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         }
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn create_plugin(
         factory: *const clap_plugin_factory,
         clap_host: *const clap_host,
@@ -89,6 +92,8 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
     }
 }
 
+// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_factory as its first field, and matches
+// CLAP_PLUGIN_FACTORY_ID.
 unsafe impl<F> Factory for PluginFactoryWrapper<F> {
     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
 }

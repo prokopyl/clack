@@ -17,10 +17,18 @@ use std::fmt::{Display, Formatter};
 #[repr(C)]
 pub struct PluginRender(clap_plugin_render);
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginRender {
     const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
     type ExtensionSide = PluginExtensionSide;
 }
+
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for PluginRender {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Sync for PluginRender {}
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 #[repr(i32)]
@@ -99,6 +107,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn set<P: Plugin>(
         plugin: *const clap_plugin,
         mode: clap_plugin_render_mode,
@@ -116,6 +125,7 @@ mod plugin {
         .unwrap_or(false)
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn has_hard_realtime_requirement<P: Plugin>(
         plugin: *const clap_plugin,
     ) -> bool
@@ -147,6 +157,7 @@ mod host {
         #[inline]
         pub fn has_realtime_requirement(&self, handle: &mut PluginMainThreadHandle) -> bool {
             if let Some(has_hard_realtime_requirement) = self.0.has_hard_realtime_requirement {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { has_hard_realtime_requirement(handle.as_raw()) }
             } else {
                 false
@@ -164,8 +175,9 @@ mod host {
             handle: &mut PluginMainThreadHandle,
             render_mode: RenderMode,
         ) -> Result<(), PluginRenderError> {
+            // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe {
-                (self.0.set.ok_or(PluginRenderError)?)(handle.as_raw(), render_mode.as_raw())
+                self.0.set.ok_or(PluginRenderError)?(handle.as_raw(), render_mode.as_raw())
             };
 
             match success {

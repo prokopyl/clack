@@ -21,6 +21,10 @@ pub struct PortPair<'a> {
 }
 
 impl<'a> PortPair<'a> {
+    /// # Safety
+    ///
+    /// * Both provided buffers must be valid (if not `None`);
+    /// * `frames_count` *must* match the size of the buffers.
     #[inline]
     pub(crate) unsafe fn from_raw(
         input: Option<&'a clap_audio_buffer>,
@@ -43,6 +47,7 @@ impl<'a> PortPair<'a> {
     #[inline]
     pub fn input(&self) -> Option<InputPort> {
         self.input
+            // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { InputPort::from_raw(i, self.frames_count) })
     }
 
@@ -53,6 +58,7 @@ impl<'a> PortPair<'a> {
     pub fn output(&mut self) -> Option<OutputPort> {
         self.output
             .as_mut()
+            // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { OutputPort::from_raw(i, self.frames_count) })
     }
 
@@ -64,7 +70,7 @@ impl<'a> PortPair<'a> {
     /// # Errors
     ///
     /// This method returns a [`BufferError::InvalidChannelBuffer`] if the host provided neither
-    /// [`f32`] or [`f64`] buffer type, which is invalid per the CLAP specification.
+    /// [`f32`] nor [`f64`] buffer type, which is invalid per the CLAP specification.
     ///
     /// Additionally, if the two port have different buffer sample types (i.e. one holds [`f32`]
     /// and the other holds [`f64`]), then a [`BufferError::MismatchedBufferPair`] error is returned.
@@ -96,11 +102,13 @@ impl<'a> PortPair<'a> {
     ) -> Result<SampleType<PairedChannels<'a, f32>, PairedChannels<'a, f64>>, BufferError> {
         let input = match self.input {
             None => SampleType::Both([].as_slice(), [].as_slice()),
+            // SAFETY: this type ensures the buffer is valid
             Some(buffer) => unsafe { SampleType::from_raw_buffer(buffer)? },
         };
 
         let output = match self.output.as_mut() {
             None => SampleType::Both([].as_mut_slice(), [].as_mut_slice()),
+            // SAFETY: this type ensures the buffer is valid
             Some(buffer) => unsafe { SampleType::from_raw_buffer_mut(buffer)? },
         };
 
@@ -227,17 +235,19 @@ impl<'a, S> PairedChannels<'a, S> {
         let input = self
             .input_data
             .get(index)
+            // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
             .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
 
         let output = self
             .output_data
             .get(index)
+            // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
             .map(|ptr| unsafe { slice_from_external_parts_mut(*ptr, self.frames_count as usize) });
 
         ChannelPair::from_optional_io(input, output)
     }
 
-    /// Gets an iterator over all of the ports' [`ChannelPair`]s.
+    /// Gets an iterator over all the ports' [`ChannelPair`]s.
     #[inline]
     pub fn iter_mut(&mut self) -> PairedChannelsIter<S> {
         PairedChannelsIter {
@@ -277,8 +287,10 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
         let input = self
             .input_iter
             .next()
+            // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
             .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
 
+        // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
         let output = self.output_iter.next().map(|ptr| unsafe {
             slice_from_external_parts_mut((*ptr) as *mut _, self.frames_count as usize)
         });
@@ -322,6 +334,7 @@ impl<'a> Iterator for PortPairsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: the audio type this is created from
         unsafe { PortPair::from_raw(self.inputs.next(), self.outputs.next(), self.frames_count) }
     }
 

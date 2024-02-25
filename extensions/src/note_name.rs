@@ -10,6 +10,14 @@ use std::ffi::CStr;
 #[repr(C)]
 pub struct PluginNoteName(clap_plugin_note_name);
 
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for PluginNoteName {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Sync for PluginNoteName {}
+
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
     type ExtensionSide = PluginExtensionSide;
@@ -19,6 +27,14 @@ unsafe impl Extension for PluginNoteName {
 #[repr(C)]
 pub struct HostNoteName(clap_host_note_name);
 
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Send for HostNoteName {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
+unsafe impl Sync for HostNoteName {}
+
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
     type ExtensionSide = HostExtensionSide;
@@ -41,13 +57,14 @@ pub struct NoteName<'a> {
 }
 
 impl<'a> NoteName<'a> {
+    /// # Safety
+    ///
+    /// Users must ensure the given port info is valid.
     #[cfg(feature = "clack-host")]
     // TODO: make pub?
     unsafe fn from_raw(raw: &'a clap_note_name) -> Self {
-        use crate::utils::data_from_array_buf;
-
         Self {
-            name: data_from_array_buf(&raw.name),
+            name: crate::utils::data_from_array_buf(&raw.name),
 
             port: raw.port,
             key: raw.key,

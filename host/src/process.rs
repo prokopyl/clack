@@ -220,8 +220,9 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
 
         let instance = self.inner.as_ref().unwrap().raw_instance();
 
+        // SAFETY: this type ensures the function pointer is valid
         let status = ProcessStatus::from_raw(unsafe {
-            (instance.process.ok_or(HostError::NullProcessFunction)?)(instance, &process)
+            instance.process.ok_or(HostError::NullProcessFunction)?(instance, &process)
         })
         .ok_or(())
         .and_then(|r| r)
@@ -281,7 +282,8 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
 
     #[inline]
     pub fn shared_plugin_handle(&mut self) -> PluginSharedHandle {
-        PluginSharedHandle::new((self.inner.as_ref().unwrap().raw_instance() as *const _) as *mut _)
+        // SAFETY: the raw instance is guaranteed to be valid
+        unsafe { PluginSharedHandle::new(self.inner.as_ref().unwrap().raw_instance()) }
     }
 
     #[inline]
@@ -352,7 +354,8 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
 
     #[inline]
     pub fn shared_plugin_data(&mut self) -> PluginSharedHandle {
-        PluginSharedHandle::new((self.inner.raw_instance() as *const _) as *mut _)
+        // SAFETY: the raw instance is guaranteed to be valid
+        unsafe { PluginSharedHandle::new(self.inner.raw_instance()) }
     }
 
     #[inline]

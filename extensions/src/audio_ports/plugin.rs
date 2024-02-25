@@ -13,6 +13,10 @@ pub struct AudioPortInfoWriter<'a> {
 }
 
 impl<'a> AudioPortInfoWriter<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the provided pointer is aligned and points to a valid allocation.
+    /// However, it doesn't have to be initialized.
     #[inline]
     unsafe fn from_raw(raw: *mut clap_audio_port_info) -> Self {
         Self {
@@ -27,6 +31,7 @@ impl<'a> AudioPortInfoWriter<'a> {
 
         let buf = self.buf.as_mut_ptr();
 
+        // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
@@ -69,6 +74,7 @@ where
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
@@ -77,6 +83,7 @@ where
         .unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
@@ -103,6 +110,7 @@ impl HostAudioPorts {
     pub fn is_rescan_flag_supported(&self, host: &HostMainThreadHandle, flag: RescanType) -> bool {
         match self.0.is_rescan_flag_supported {
             None => false,
+            // SAFETY: This type ensures the function pointer is valid.
             Some(supported) => unsafe { supported(host.as_raw(), flag.bits) },
         }
     }
@@ -110,6 +118,7 @@ impl HostAudioPorts {
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: RescanType) {
         if let Some(rescan) = self.0.rescan {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flag.bits) }
         }
     }

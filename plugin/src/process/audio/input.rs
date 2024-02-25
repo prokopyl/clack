@@ -28,6 +28,8 @@ impl<'a> Iterator for InputPortsIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.inputs
             .next()
+            // SAFETY: The Audio type this is built from ensures each buffer is valid
+            // and is of length frames_count.
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
     }
 
@@ -52,6 +54,10 @@ pub struct InputPort<'a> {
 }
 
 impl<'a> InputPort<'a> {
+    /// # Safety
+    ///
+    /// * The provided buffer must be valid;
+    /// * `frames_count` *must* match the size of the buffers.
     #[inline]
     pub(crate) unsafe fn from_raw(inner: &'a clap_audio_buffer, frames_count: u32) -> Self {
         Self {
@@ -95,6 +101,7 @@ impl<'a> InputPort<'a> {
     pub fn channels(
         &self,
     ) -> Result<SampleType<InputChannels<'a, f32>, InputChannels<'a, f64>>, BufferError> {
+        // SAFETY: this type ensures the provided buffer is valid
         Ok(unsafe { SampleType::from_raw_buffer(self.inner) }?.map(
             |data| InputChannels {
                 data,
@@ -174,6 +181,7 @@ impl<'a, S> InputChannels<'a, S> {
     /// [`channel_count`](Self::channel_count)), this returns [`None`].
     #[inline]
     pub fn channel(&self, channel_index: u32) -> Option<&'a [S]> {
+        // SAFETY: this type guarantees the buffer pointer is valid and of size frames_count
         unsafe {
             self.data
                 .get(channel_index as usize)
@@ -224,6 +232,8 @@ impl<'a, T> Iterator for InputChannelsIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.data
             .next()
+            // SAFETY: iterator can only get created from an InputChannels, which guarantees
+            // the buffer is both valid and of length frames_count
             .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) })
     }
 

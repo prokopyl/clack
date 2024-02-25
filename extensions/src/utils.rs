@@ -10,6 +10,9 @@ pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
         .unwrap_or(data)
 }
 
+/// # Safety
+///
+/// The pointer must be non-null and well-aligned. However, the array doesn't need to be initialized.
 #[cfg(feature = "clack-plugin")]
 #[inline]
 pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
@@ -28,6 +31,11 @@ pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &
 /// Rust, as all references must be aligned and non-null.
 ///
 /// This helper avoids that pitfall by ignoring the pointer if the length is zero.
+///
+/// # Safety
+///
+/// Same requirements as [`core::slice::from_raw_parts_mut`], except the pointer *can* be null or
+/// dangling if `len == 0`.
 #[cfg(feature = "clack-plugin")]
 #[inline]
 pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {

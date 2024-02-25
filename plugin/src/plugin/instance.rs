@@ -41,6 +41,7 @@ where
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
         let main_thread = UnsafeCell::new(main_thread_initializer(host, shared_ref)?);
 
+        // SAFETY: we just created the shared and main_thread together
         Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
     }
 }
@@ -61,6 +62,7 @@ where
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
         let main_thread = UnsafeCell::new(main_thread_initializer(shared_ref)?);
 
+        // SAFETY: we just created the shared and main_thread together
         Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
     }
 }
@@ -127,6 +129,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         &self.host
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn init(plugin: *const clap_plugin) -> bool {
         PluginWrapper::<P>::handle_plugin_data(plugin, |mut data| {
             let data = data.as_mut();
@@ -149,6 +152,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         .is_some()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn destroy(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
             let _ = Box::from_raw(data.as_ptr());
@@ -167,6 +171,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         }
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn activate(
         plugin: *const clap_plugin,
         sample_rate: f64,
@@ -185,10 +190,12 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         .is_some()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn deactivate(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.deactivate());
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn reset(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
             p.audio_processor()?.as_mut().reset();
@@ -196,6 +203,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn start_processing(plugin: *const clap_plugin) -> bool {
         PluginWrapper::<P>::handle(plugin, |p| {
             Ok(p.audio_processor()?.as_mut().start_processing()?)
@@ -203,6 +211,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         .is_some()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn stop_processing(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle(plugin, |p| {
             p.audio_processor()?.as_mut().stop_processing();
@@ -210,6 +219,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn process(
         plugin: *const clap_plugin,
         process: *const clap_process,
@@ -226,6 +236,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         .unwrap_or(CLAP_PROCESS_ERROR)
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get_extension(
         plugin: *const clap_plugin,
         identifier: *const std::os::raw::c_char,
@@ -240,6 +251,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         builder.found()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn on_main_thread(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle(plugin, |p| {
             p.main_thread().as_mut().on_main_thread();
@@ -376,6 +388,7 @@ impl<'a> Drop for PluginInstance<'a> {
     #[inline]
     fn drop(&mut self) {
         if let Some(destroy) = self.inner.destroy {
+            // SAFETY: the destroy fn is valid as it's provided by us directly.
             unsafe { destroy(self.inner.as_ref()) }
         }
     }

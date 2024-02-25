@@ -30,6 +30,7 @@ impl PluginNoteName {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
         match self.0.count {
             None => 0,
+            // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw()) as usize },
         }
     }
@@ -45,9 +46,11 @@ impl PluginNoteName {
         buffer: &'b mut NoteNameBuffer,
     ) -> Option<NoteName<'b>> {
         let success =
-            unsafe { (self.0.get?)(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
+            // SAFETY: This type ensures the function pointer is valid.
+            unsafe { self.0.get?(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
 
         if success {
+            // SAFETY: we just checked the buffer was successfully written to.
             Some(unsafe { NoteName::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
@@ -72,6 +75,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
 where
     for<'a> <H as Host>::MainThread<'a>: HostNoteNameImpl,

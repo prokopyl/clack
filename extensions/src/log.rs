@@ -70,8 +70,11 @@ pub struct HostLog(clap_host_log);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostLog {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostLog {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLog {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
     type ExtensionSide = HostExtensionSide;
@@ -86,6 +89,7 @@ mod plugin {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
             if let Some(log) = self.0.log {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { log(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
             }
         }

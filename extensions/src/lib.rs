@@ -1,4 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![deny(clippy::undocumented_unsafe_blocks)]
 
 #[cfg(feature = "audio-ports")]
 pub mod audio_ports;

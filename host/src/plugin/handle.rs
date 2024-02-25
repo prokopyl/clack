@@ -10,7 +10,10 @@ pub struct PluginMainThreadHandle<'a> {
 }
 
 impl<'a> PluginMainThreadHandle<'a> {
-    pub(crate) fn new(raw: *mut clap_plugin) -> Self {
+    /// # Safety
+    /// The user must ensure the provided plugin pointer is valid.
+    /// This can only be called on the main thread.
+    pub(crate) unsafe fn new(raw: *mut clap_plugin) -> Self {
         Self {
             raw,
             lifetime: PhantomData,
@@ -33,15 +36,20 @@ impl<'a> PluginMainThreadHandle<'a> {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct PluginSharedHandle<'a> {
-    raw: *mut clap_plugin,
+    raw: *const clap_plugin,
     lifetime: PhantomData<&'a clap_plugin>,
 }
 
+// SAFETY: The Shared handle only exposes thread-safe methods
 unsafe impl<'a> Send for PluginSharedHandle<'a> {}
+// SAFETY: The Shared handle only exposes thread-safe methods
 unsafe impl<'a> Sync for PluginSharedHandle<'a> {}
 
 impl<'a> PluginSharedHandle<'a> {
-    pub(crate) fn new(raw: *mut clap_plugin) -> Self {
+    /// # Safety
+    ///
+    /// Users must ensure the provided instance pointer is valid.
+    pub(crate) unsafe fn new(raw: *const clap_plugin) -> Self {
         Self {
             raw,
             lifetime: PhantomData,
@@ -49,15 +57,16 @@ impl<'a> PluginSharedHandle<'a> {
     }
 
     #[inline]
-    pub fn as_raw(&self) -> *mut clap_plugin {
+    pub fn as_raw(&self) -> *const clap_plugin {
         self.raw
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
         &self,
     ) -> Option<&'a E> {
-        let ext =
-            unsafe { ((*self.raw).get_extension?)(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
+        // SAFETY: This type ensures the function pointer is valid
+        let ext = unsafe { (*self.raw).get_extension?(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
+        // SAFETY: Extension is valid for the instance's lifetime 'a, and pointer comes from E's Identifier
         NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
     }
 }
@@ -68,6 +77,7 @@ pub struct PluginAudioProcessorHandle<'a> {
     lifetime: PhantomData<&'a clap_plugin>,
 }
 
+// SAFETY: This type only exposes audio-thread methods
 unsafe impl<'a> Send for PluginAudioProcessorHandle<'a> {}
 
 impl<'a> PluginAudioProcessorHandle<'a> {

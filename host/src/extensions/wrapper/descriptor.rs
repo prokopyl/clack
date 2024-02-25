@@ -43,6 +43,7 @@ impl RawHostDescriptor {
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_extension<H: Host>(
     host: *const clap_host,
     identifier: *const std::os::raw::c_char,
@@ -57,6 +58,7 @@ unsafe extern "C" fn get_extension<H: Host>(
     builder.found()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_restart<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_restart();
@@ -64,6 +66,7 @@ unsafe extern "C" fn request_restart<H: Host>(host: *const clap_host) {
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_process<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_process();
@@ -71,6 +74,7 @@ unsafe extern "C" fn request_process<H: Host>(host: *const clap_host) {
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_callback<H: Host>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_callback();

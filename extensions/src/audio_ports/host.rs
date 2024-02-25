@@ -27,6 +27,7 @@ impl PluginAudioPorts {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match self.0.count {
             None => 0,
+            // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw(), is_input) },
         }
     }
@@ -39,9 +40,11 @@ impl PluginAudioPorts {
         buffer: &'b mut AudioPortInfoBuffer,
     ) -> Option<AudioPortInfoData<'b>> {
         let success =
-            unsafe { (self.0.get?)(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
+            // SAFETY: This type ensures the function pointer is valid.
+            unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
+            // SAFETY: we checked if the buffer was successfully written to
             Some(unsafe { AudioPortInfoData::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
@@ -67,6 +70,7 @@ where
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn is_rescan_flag_supported<H: Host>(host: *const clap_host, flag: u32) -> bool
 where
     for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,
@@ -80,6 +84,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
 where
     for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,

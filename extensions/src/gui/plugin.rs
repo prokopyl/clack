@@ -7,6 +7,7 @@ impl HostGui {
     /// `get_resize_hints` should be called again.
     pub fn resize_hints_changed(&self, host: &HostHandle) {
         if let Some(resize_hints_changed) = self.inner.resize_hints_changed {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { resize_hints_changed(host.as_raw()) }
         }
     }
@@ -30,11 +31,11 @@ impl HostGui {
         width: u32,
         height: u32,
     ) -> Result<(), GuiError> {
+        // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
-            (self
-                .inner
+            self.inner
                 .request_resize
-                .ok_or(GuiError::RequestResizeError)?)(host.as_raw(), width, height)
+                .ok_or(GuiError::RequestResizeError)?(host.as_raw(), width, height)
         } {
             Ok(())
         } else {
@@ -49,7 +50,8 @@ impl HostGui {
     /// This may return a [`GuiError::RequestShowError`] if the host denied or was unable to fulfill the
     /// request.
     pub fn request_show(&self, host: &HostHandle) -> Result<(), GuiError> {
-        if unsafe { (self.inner.request_show.ok_or(GuiError::RequestShowError)?)(host.as_raw()) } {
+        // SAFETY: This type ensures the function pointer is valid.
+        if unsafe { self.inner.request_show.ok_or(GuiError::RequestShowError)?(host.as_raw()) } {
             Ok(())
         } else {
             Err(GuiError::RequestShowError)
@@ -63,7 +65,8 @@ impl HostGui {
     /// This may return a [`GuiError::RequestHideError`] if the host denied or was unable to fulfill the
     /// request.
     pub fn request_hide(&self, host: &HostHandle) -> Result<(), GuiError> {
-        if unsafe { (self.inner.request_hide.ok_or(GuiError::RequestHideError)?)(host.as_raw()) } {
+        // SAFETY: This type ensures the function pointer is valid.
+        if unsafe { self.inner.request_hide.ok_or(GuiError::RequestHideError)?(host.as_raw()) } {
             Ok(())
         } else {
             Err(GuiError::RequestHideError)
@@ -73,9 +76,10 @@ impl HostGui {
     /// Notifies the host that either the floating window has been closed, or that the connection to
     /// the GUI was lost.
     ///
-    /// If `is_destroyed` is true, than the host must call `destroy` to acknowledge the GUI destruction.
+    /// If `is_destroyed` is true, then the host must call `destroy` to acknowledge the GUI destruction.
     pub fn closed(&self, host: &HostHandle, was_destroyed: bool) {
         if let Some(closed) = self.inner.closed {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { closed(host.as_raw(), was_destroyed) }
         }
     }
@@ -199,6 +203,7 @@ where
     };
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn is_api_supported<P: Plugin>(
     plugin: *const clap_plugin,
     api: *const c_char,
@@ -219,6 +224,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_preferred_api<P: Plugin>(
     plugin: *const clap_plugin,
     api: *mut *const c_char,
@@ -248,6 +254,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn create<P: Plugin>(
     plugin: *const clap_plugin,
     api: *const c_char,
@@ -269,6 +276,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn destroy<P: Plugin>(plugin: *const clap_plugin)
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
@@ -279,6 +287,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn set_scale<P: Plugin>(plugin: *const clap_plugin, scale: f64) -> bool
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
@@ -289,6 +298,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_size<P: Plugin>(
     plugin: *const clap_plugin,
     width: *mut u32,
@@ -311,6 +321,7 @@ where
     .is_some()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn can_resize<P: Plugin>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
@@ -321,6 +332,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_resize_hints<P: Plugin>(
     plugin: *const clap_plugin,
     hints: *mut clap_gui_resize_hints,
@@ -347,6 +359,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn adjust_size<P: Plugin>(
     plugin: *const clap_plugin,
     width_adj: *mut u32,
@@ -380,6 +393,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn set_size<P: Plugin>(
     plugin: *const clap_plugin,
     width: u32,
@@ -395,6 +409,7 @@ where
     .is_some()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn set_parent<P: Plugin>(
     plugin: *const clap_plugin,
     window: *const clap_window,
@@ -416,6 +431,7 @@ where
     .is_some()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn set_transient<P: Plugin>(
     plugin: *const clap_plugin,
     window: *const clap_window,
@@ -437,6 +453,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn suggest_title<P: Plugin>(plugin: *const clap_plugin, title: *const c_char)
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
@@ -452,6 +469,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn show<P: Plugin>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
@@ -462,6 +480,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn hide<P: Plugin>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,

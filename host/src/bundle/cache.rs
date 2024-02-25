@@ -8,7 +8,10 @@ use std::sync::{Arc, Mutex, OnceLock};
 #[derive(Hash, Eq, PartialEq)]
 struct EntryPointer(*const EntryDescriptor);
 
+// SAFETY: we're treating those pointers as pure addresses, we never read from them
 unsafe impl Send for EntryPointer {}
+
+// SAFETY: we're treating those pointers as pure addresses, we never read from them
 unsafe impl Sync for EntryPointer {}
 
 static ENTRY_CACHE: OnceLock<Mutex<HashMap<EntryPointer, Arc<EntrySourceInner>>>> = OnceLock::new();
@@ -21,10 +24,7 @@ fn get_or_insert(
         .get_or_init(|| Mutex::new(HashMap::new()))
         .lock();
 
-    let mut cache = match cache {
-        Ok(guard) => guard,
-        Err(e) => e.into_inner(),
-    };
+    let mut cache = cache.unwrap_or_else(|e| e.into_inner());
 
     let s = match cache.entry(entry_pointer) {
         Entry::Occupied(e) => Arc::clone(e.get()),
@@ -39,12 +39,16 @@ fn get_or_insert(
 }
 
 #[cfg(feature = "libloading")]
+/// # Safety
+///
+/// Users must ensure the given library is valid.
 pub(crate) unsafe fn load_from_library(
     library: crate::bundle::library::PluginEntryLibrary,
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
         Ok(EntrySourceInner::FromLibrary(
+            // SAFETY: parent function is unsafe to cover this
             selfie::Selfie::try_new(std::pin::Pin::new(library), |entry| unsafe {
                 LoadedEntry::load(entry, plugin_path)
             })
@@ -54,6 +58,9 @@ pub(crate) unsafe fn load_from_library(
     })
 }
 
+/// # Safety
+///
+/// User must ensure that the provided entry is fully valid, as well as everything it exposes.
 pub(crate) unsafe fn load_from_raw(
     entry_descriptor: &'static EntryDescriptor,
     plugin_path: &str,
@@ -94,17 +101,14 @@ impl Drop for CachedEntry {
     fn drop(&mut self) {
         let ptr = EntryPointer(self.raw_entry());
 
-        // Drop the Arc. If it was the only one outside of the cache, then its refcount should be 1.
+        // Drop the Arc. If it was the only one outside the cache, then its refcount should be 1.
         self.0 = None;
 
         let cache = ENTRY_CACHE
             .get_or_init(|| Mutex::new(HashMap::new()))
             .lock();
 
-        let mut cache = match cache {
-            Ok(guard) => guard,
-            Err(e) => e.into_inner(),
-        };
+        let mut cache = cache.unwrap_or_else(|e| e.into_inner());
 
         if let Entry::Occupied(mut o) = cache.entry(ptr) {
             if Arc::get_mut(o.get_mut()).is_some() {

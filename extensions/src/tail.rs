@@ -13,8 +13,11 @@ pub struct PluginTail(clap_plugin_tail);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginTail {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginTail {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
     type ExtensionSide = PluginExtensionSide;
@@ -27,8 +30,11 @@ pub struct HostTail(clap_host_tail);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostTail {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostTail {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
     type ExtensionSide = HostExtensionSide;
@@ -107,6 +113,7 @@ mod host {
         #[inline]
         pub fn get(&self, plugin: &PluginAudioProcessorHandle) -> TailLength {
             match self.0.get {
+                // SAFETY: This type ensures the function pointer is valid.
                 Some(get) => TailLength::from_raw(unsafe { get(plugin.as_raw()) }),
                 None => TailLength::default(),
             }
@@ -129,6 +136,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
     where
         for<'a> <H as Host>::AudioProcessor<'a>: HostTailImpl,
@@ -153,6 +161,7 @@ mod plugin {
         #[inline]
         pub fn changed(&self, host: &mut HostAudioThreadHandle) {
             if let Some(changed) = self.0.changed {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }
             }
         }
@@ -174,6 +183,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
     where
         for<'a> P::AudioProcessor<'a>: PluginTailImpl,

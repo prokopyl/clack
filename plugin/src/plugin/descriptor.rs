@@ -4,6 +4,7 @@ use clap_sys::plugin::clap_plugin_descriptor;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::pin::Pin;
 
 /// Represents a type that can provide metadata about a given Plugin, such as its ID, name, version,
 /// and more.
@@ -28,17 +29,17 @@ use std::os::raw::c_char;
 /// }
 /// ```
 pub struct PluginDescriptor {
-    id: CString,
-    name: CString,
+    id: Pin<Box<CStr>>,
+    name: Pin<Box<CStr>>,
 
-    vendor: Option<CString>,
-    url: Option<CString>,
-    manual_url: Option<CString>,
-    support_url: Option<CString>,
-    version: Option<CString>,
-    description: Option<CString>,
+    vendor: Option<Pin<Box<CStr>>>,
+    url: Option<Pin<Box<CStr>>>,
+    manual_url: Option<Pin<Box<CStr>>>,
+    support_url: Option<Pin<Box<CStr>>>,
+    version: Option<Pin<Box<CStr>>>,
+    description: Option<Pin<Box<CStr>>>,
 
-    features: Vec<CString>,
+    features: Vec<Box<CStr>>,
     features_array: Vec<*const c_char>,
 
     raw_descriptor: clap_plugin_descriptor,
@@ -68,8 +69,17 @@ impl PluginDescriptor {
     /// This function will also panic if either the given ID or name contain invalid NULL-byte
     /// characters, which are invalid.
     pub fn new(id: &str, name: &str) -> Self {
-        let id = CString::new(id).expect("Invalid Plugin ID");
-        let name = CString::new(name).expect("Invalid Plugin Name");
+        let id = Pin::new(
+            CString::new(id)
+                .expect("Invalid Plugin ID")
+                .into_boxed_c_str(),
+        );
+
+        let name = Pin::new(
+            CString::new(name)
+                .expect("Invalid Plugin Name")
+                .into_boxed_c_str(),
+        );
 
         if id.is_empty() {
             panic!("Plugin ID must not be blank!");
@@ -133,7 +143,11 @@ impl PluginDescriptor {
             panic!("Plugin ID must not be blank!");
         }
 
-        let id = CString::new(id).expect("Invalid Plugin ID");
+        let id = Pin::new(
+            CString::new(id)
+                .expect("Invalid Plugin ID")
+                .into_boxed_c_str(),
+        );
 
         self.raw_descriptor.id = id.as_ptr();
         self.id = id;
@@ -166,7 +180,11 @@ impl PluginDescriptor {
             panic!("Plugin name must not be blank!");
         }
 
-        let name = CString::new(name).expect("Invalid Plugin name");
+        let name = Pin::new(
+            CString::new(name)
+                .expect("Invalid Plugin name")
+                .into_boxed_c_str(),
+        );
 
         self.raw_descriptor.name = name.as_ptr();
         self.name = name;
@@ -198,7 +216,11 @@ impl PluginDescriptor {
             self.raw_descriptor.vendor = EMPTY.as_ptr();
             self.vendor = None;
         } else {
-            let vendor = CString::new(vendor).expect("Invalid Plugin vendor");
+            let vendor = Pin::new(
+                CString::new(vendor)
+                    .expect("Invalid Plugin vendor")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.vendor = vendor.as_ptr();
             self.vendor = Some(vendor);
@@ -231,7 +253,11 @@ impl PluginDescriptor {
             self.raw_descriptor.url = EMPTY.as_ptr();
             self.url = None;
         } else {
-            let url = CString::new(url).expect("Invalid Plugin URL");
+            let url = Pin::new(
+                CString::new(url)
+                    .expect("Invalid Plugin URL")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.url = url.as_ptr();
             self.url = Some(url);
@@ -264,7 +290,11 @@ impl PluginDescriptor {
             self.raw_descriptor.manual_url = EMPTY.as_ptr();
             self.manual_url = None;
         } else {
-            let manual_url = CString::new(manual_url).expect("Invalid Plugin Manual URL");
+            let manual_url = Pin::new(
+                CString::new(manual_url)
+                    .expect("Invalid Plugin Manual URL")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.manual_url = manual_url.as_ptr();
             self.manual_url = Some(manual_url);
@@ -297,7 +327,11 @@ impl PluginDescriptor {
             self.raw_descriptor.support_url = EMPTY.as_ptr();
             self.support_url = None;
         } else {
-            let support_url = CString::new(support_url).expect("Invalid Plugin Support URL");
+            let support_url = Pin::new(
+                CString::new(support_url)
+                    .expect("Invalid Plugin Support URL")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.support_url = support_url.as_ptr();
             self.support_url = Some(support_url);
@@ -333,7 +367,11 @@ impl PluginDescriptor {
             self.raw_descriptor.version = EMPTY.as_ptr();
             self.version = None;
         } else {
-            let version = CString::new(version).expect("Invalid Plugin version");
+            let version = Pin::new(
+                CString::new(version)
+                    .expect("Invalid Plugin version")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.version = version.as_ptr();
             self.version = Some(version);
@@ -366,7 +404,11 @@ impl PluginDescriptor {
             self.raw_descriptor.description = EMPTY.as_ptr();
             self.description = None;
         } else {
-            let description = CString::new(description).expect("Invalid Plugin description");
+            let description = Pin::new(
+                CString::new(description)
+                    .expect("Invalid Plugin description")
+                    .into_boxed_c_str(),
+            );
 
             self.raw_descriptor.description = description.as_ptr();
             self.description = Some(description);
@@ -381,7 +423,7 @@ impl PluginDescriptor {
     ///
     /// Example: `"instrument", "synthesizer", "stereo"`.
     #[inline]
-    pub fn features(&self) -> &[CString] {
+    pub fn features(&self) -> &[Box<CStr>] {
         &self.features
     }
 
@@ -389,7 +431,10 @@ impl PluginDescriptor {
     ///
     /// See the [`features`](PluginDescriptor::features) method documentation for more information.
     pub fn with_features<'a>(mut self, features: impl IntoIterator<Item = &'a CStr>) -> Self {
-        self.features = features.into_iter().map(CString::from).collect();
+        self.features = features
+            .into_iter()
+            .map(|s| CString::from(s).into_boxed_c_str())
+            .collect();
 
         self.features_array = self.features.iter().map(|f| f.as_ptr()).collect();
         self.features_array.push(core::ptr::null());

@@ -16,7 +16,11 @@ pub struct ParamInfoWriter<'a> {
 }
 
 impl<'a> ParamInfoWriter<'a> {
-    fn new(ptr: *mut clap_param_info) -> Self {
+    /// # Safety
+    ///
+    /// The user must ensure the provided pointer is aligned and points to a valid allocation.
+    /// However, it doesn't have to be initialized.
+    unsafe fn new(ptr: *mut clap_param_info) -> Self {
         Self {
             initialized: false,
             // SAFETY: MaybeUninit<T> and T have same memory representation
@@ -28,6 +32,7 @@ impl<'a> ParamInfoWriter<'a> {
     pub fn set(&mut self, param: &ParamInfoData) {
         let buf = self.inner.as_mut_ptr();
 
+        // SAFETY: all pointers come from `inner`, which is valid for writes and well-aligned
         unsafe {
             core::ptr::addr_of_mut!((*buf).id).write(param.id);
             core::ptr::addr_of_mut!((*buf).flags).write(param.flags.bits());
@@ -120,6 +125,7 @@ pub trait PluginAudioProcessorParams {
     );
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
@@ -127,6 +133,7 @@ where
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_info<P: Plugin>(
     plugin: *const clap_plugin,
     param_index: u32,
@@ -144,6 +151,7 @@ where
         && info.initialized
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_value<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
@@ -165,6 +173,7 @@ where
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn value_to_text<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
@@ -187,6 +196,7 @@ where
         && writer.finish()
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn text_to_value<P: Plugin>(
     plugin: *const clap_plugin,
     param_id: clap_id,
@@ -214,6 +224,7 @@ where
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn flush<P: Plugin>(
     plugin: *const clap_plugin,
     input_parameter_changes: *const clap_input_events,
@@ -259,6 +270,7 @@ impl HostParams {
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
         if let Some(rescan) = self.0.rescan {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flags.bits) }
         }
     }
@@ -266,6 +278,7 @@ impl HostParams {
     #[inline]
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
         if let Some(clear) = self.0.clear {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { clear(host.as_raw(), param_id, flags.bits) }
         }
     }
@@ -273,6 +286,7 @@ impl HostParams {
     #[inline]
     pub fn request_flush(&self, host: &HostHandle) {
         if let Some(request_flush) = self.0.request_flush {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { request_flush(host.as_raw()) }
         }
     }

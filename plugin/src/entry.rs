@@ -381,11 +381,19 @@ impl<E: Entry> EntryHolder<E> {
         }
     }
 
+    /// # Safety
+    ///
+    /// Users *must* ensure this is called at least once before any other method, and that
+    /// `plugin_path` points to a valid, NULL-terminated C string.
     #[inline]
     pub unsafe fn init(&self, plugin_path: *const core::ffi::c_char) -> bool {
         self.init_with(plugin_path, |p| E::new(p))
     }
 
+    /// # Safety
+    ///
+    /// Users *must* ensure this is called at least once before any other method, and that
+    /// `plugin_path` points to a valid, NULL-terminated C string.
     pub unsafe fn init_with(
         &self,
         plugin_path: *const core::ffi::c_char,
@@ -419,7 +427,10 @@ impl<E: Entry> EntryHolder<E> {
         }
     }
 
-    pub fn de_init(&self) {
+    /// # Safety
+    ///
+    /// Users must *only* call this after they are done with the whole entry.
+    pub unsafe fn de_init(&self) {
         let Ok(mut inner) = self.inner.lock() else {
             return;
         };
@@ -436,6 +447,10 @@ impl<E: Entry> EntryHolder<E> {
         }
     }
 
+    /// # Safety
+    ///
+    /// This must only be called between calls to init and de_init, and identifier must point to a
+    /// valid, NULL-terminated C string.
     pub unsafe fn get_factory(&self, identifier: *const core::ffi::c_char) -> *const c_void {
         if identifier.is_null() {
             return core::ptr::null();

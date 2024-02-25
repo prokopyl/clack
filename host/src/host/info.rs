@@ -55,7 +55,7 @@ impl HostInfo {
     /// An infallible version of [`new`](HostInfo::new).
     ///
     /// This method takes ownership of preexisting [`CString`] buffers, and therefore cannot fail
-    /// from null byte errors, and performs less allocations compared to [`new`](HostInfo::new).
+    /// from null byte errors, and performs fewer allocations compared to [`new`](HostInfo::new).
     ///
     /// See the documentation for [`new`](HostInfo::new) for more information about the arguments.
     pub fn new_from_cstring(

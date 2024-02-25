@@ -29,7 +29,10 @@ pub use header::*;
 /// this trait must enforce the following:
 ///
 /// * The [`EventSpace`](Event::EventSpace) type *must* be the [`EventSpace`] implementation that
-/// * [`TYPE_ID`](Event::TYPE_ID) *must* match the event ID from its
+///   it belongs to;
+/// * [`TYPE_ID`](Event::TYPE_ID) *must* match the event ID from its type.
+/// * The type *must* be ABI-compatible with the matching raw, C-FFI compatible event type.
+/// * All instances of this type *must* be initialized and valid.
 pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     const TYPE_ID: u16;
     type EventSpace: EventSpace<'a>;
@@ -41,11 +44,14 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
 
     #[inline]
     fn header(&self) -> &EventHeader<Self> {
+        // SAFETY: this trait guarantees the raw_header points to an initialized and valid event
+        // header that matches the current type.
         unsafe { EventHeader::from_raw_unchecked(&*self.raw_header()) }
     }
 
     #[inline]
     fn as_unknown(&self) -> &UnknownEvent<'a> {
+        // SAFETY: this trait guarantees the raw_header points to an initialized and valid event.
         unsafe { UnknownEvent::from_raw(self.raw_header()) }
     }
 }
@@ -128,6 +134,7 @@ impl<'a> UnknownEvent<'a> {
             return None;
         }
 
+        // SAFETY: we just checked the event space ID is valid for the current event.
         unsafe { S::from_unknown(self) }
     }
 

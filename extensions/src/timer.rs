@@ -18,8 +18,11 @@ pub struct HostTimer(clap_host_timer_support);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for HostTimer {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for HostTimer {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
     type ExtensionSide = HostExtensionSide;
@@ -32,8 +35,11 @@ pub struct PluginTimer(clap_plugin_timer_support);
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
 // the input handles, not on the descriptor itself.
 unsafe impl Send for PluginTimer {}
+// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
+// the input handles, not on the descriptor itself.
 unsafe impl Sync for PluginTimer {}
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
     type ExtensionSide = PluginExtensionSide;
@@ -99,6 +105,7 @@ mod plugin {
             let mut id = 0u32;
             let register_timer = self.0.register_timer.ok_or(TimerError::RegisterError)?;
 
+            // SAFETY: This type ensures the function pointer is valid.
             match unsafe { register_timer(host.as_raw(), period_ms, &mut id) } {
                 true => Ok(TimerId(id)),
                 false => Err(TimerError::RegisterError),
@@ -121,6 +128,7 @@ mod plugin {
         ) -> Result<(), TimerError> {
             let unregister_timer = self.0.unregister_timer.ok_or(TimerError::UnregisterError)?;
 
+            // SAFETY: This type ensures the function pointer is valid.
             match unsafe { unregister_timer(host.as_raw(), timer_id.0) } {
                 true => Ok(()),
                 false => Err(TimerError::RegisterError),
@@ -147,6 +155,7 @@ mod plugin {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn on_timer<P: Plugin>(plugin: *const clap_plugin, timer_id: u32)
     where
         for<'a> P::MainThread<'a>: PluginTimerImpl,
@@ -202,6 +211,7 @@ mod host {
         });
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn register_timer<H: Host>(
         host: *const clap_host,
         period_ms: u32,
@@ -225,6 +235,7 @@ mod host {
         .unwrap_or(false)
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn unregister_timer<H: Host>(host: *const clap_host, timer_id: u32) -> bool
     where
         for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
@@ -247,6 +258,7 @@ mod host {
         #[inline]
         pub fn on_timer(&self, plugin: &mut PluginMainThreadHandle, timer_id: TimerId) {
             if let Some(on_timer) = self.0.on_timer {
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_timer(plugin.as_raw(), timer_id.0) }
             }
         }

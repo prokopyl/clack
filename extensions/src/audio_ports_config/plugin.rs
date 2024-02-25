@@ -38,6 +38,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
@@ -45,6 +46,7 @@ where
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get<P: Plugin>(
     plugin: *const clap_plugin,
     index: u32,
@@ -65,6 +67,7 @@ where
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn select<P: Plugin>(plugin: *const clap_plugin, config_id: u32) -> bool
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
@@ -81,13 +84,17 @@ where
     .unwrap_or(false)
 }
 
-/// An helper struct to write an [`AudioPortsConfiguration`] into the host's provided buffer.
+/// A helper struct to write an [`AudioPortsConfiguration`] into the host's provided buffer.
 pub struct AudioPortConfigWriter<'a> {
     buf: &'a mut MaybeUninit<clap_audio_ports_config>,
     is_set: bool,
 }
 
 impl<'a> AudioPortConfigWriter<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the provided pointer is aligned and points to a valid allocation.
+    /// However, it doesn't have to be initialized.
     #[inline]
     unsafe fn from_raw(raw: *mut clap_audio_ports_config) -> Self {
         Self {
@@ -103,6 +110,7 @@ impl<'a> AudioPortConfigWriter<'a> {
 
         let buf = self.buf.as_mut_ptr();
 
+        // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
             write(addr_of_mut!((*buf).id), data.id);
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
@@ -163,6 +171,7 @@ impl HostAudioPortsConfig {
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle) {
         if let Some(rescan) = self.0.rescan {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw()) }
         }
     }

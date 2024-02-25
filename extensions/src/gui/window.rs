@@ -11,6 +11,9 @@ pub struct Window<'a> {
 }
 
 impl<'a> Window<'a> {
+    /// # Safety
+    ///
+    /// Users must ensure the provided window is fully valid.
     #[cfg(feature = "clack-plugin")]
     #[inline]
     pub(crate) unsafe fn from_raw(raw: clap_window) -> Self {
@@ -23,6 +26,7 @@ impl<'a> Window<'a> {
     /// Returns the windowing API that is used to handle this window.
     #[inline]
     pub fn api_type(&self) -> GuiApiType {
+        // SAFETY: This type ensures the function pointer is valid.
         unsafe { GuiApiType(CStr::from_ptr(self.raw.api)) }
     }
 
@@ -152,20 +156,24 @@ const _: () = {
         XlibWindowHandle,
     };
 
+    // SAFETY: this type ensures the handles are valid and are consistent across calls
     unsafe impl<'a> HasRawWindowHandle for Window<'a> {
         fn raw_window_handle(&self) -> RawWindowHandle {
             let api_type = self.api_type();
 
             if api_type == GuiApiType::WIN32 {
                 let mut handle = Win32WindowHandle::empty();
+                // SAFETY: we just checked api_type matched
                 handle.hwnd = unsafe { self.raw.specific.win32 };
                 RawWindowHandle::Win32(handle)
             } else if api_type == GuiApiType::COCOA {
                 let mut handle = AppKitWindowHandle::empty();
+                // SAFETY: we just checked api_type matched
                 handle.ns_view = unsafe { self.raw.specific.cocoa };
                 RawWindowHandle::AppKit(handle)
             } else if api_type == GuiApiType::X11 {
                 let mut handle = XlibWindowHandle::empty();
+                // SAFETY: we just checked api_type matched
                 handle.window = unsafe { self.raw.specific.x11 };
                 RawWindowHandle::Xlib(handle)
             } else {
@@ -188,17 +196,16 @@ const _: () = {
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
         pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
-            match handle {
-                RawWindowHandle::Win32(handle) => unsafe {
-                    Some(Self::from_win32_hwnd(handle.hwnd))
-                },
-                RawWindowHandle::AppKit(handle) => unsafe {
-                    Some(Self::from_cocoa_nsview(handle.ns_view))
-                },
-                RawWindowHandle::Xlib(handle) => unsafe {
-                    Some(Self::from_x11_handle(handle.window))
-                },
-                _ => None,
+            // SAFETY: handle guarantees the inner pointers are valid for 'a.
+            unsafe {
+                match handle {
+                    RawWindowHandle::Win32(handle) => Some(Self::from_win32_hwnd(handle.hwnd)),
+                    RawWindowHandle::AppKit(handle) => {
+                        Some(Self::from_cocoa_nsview(handle.ns_view))
+                    }
+                    RawWindowHandle::Xlib(handle) => Some(Self::from_x11_handle(handle.window)),
+                    _ => None,
+                }
             }
         }
     }
@@ -219,18 +226,22 @@ const _: () = {
 
             let raw = if api_type == GuiApiType::WIN32 {
                 RawWindowHandle::Win32(Win32WindowHandle::new(
+                    // SAFETY: we just checked api_type matched
                     NonZeroIsize::new((unsafe { self.raw.specific.win32 }) as isize).unwrap(),
                 ))
             } else if api_type == GuiApiType::COCOA {
                 RawWindowHandle::AppKit(AppKitWindowHandle::new(
+                    // SAFETY: we just checked api_type matched
                     NonNull::new(unsafe { self.raw.specific.cocoa }).unwrap(),
                 ))
             } else if api_type == GuiApiType::X11 {
+                // SAFETY: we just checked api_type matched
                 RawWindowHandle::Xlib(XlibWindowHandle::new(unsafe { self.raw.specific.x11 }))
             } else {
                 return Err(HandleError::NotSupported);
             };
 
+            // SAFETY: this type ensures the handle is valid for 'a
             Ok(unsafe { WindowHandle::borrow_raw(raw) })
         }
     }
@@ -249,17 +260,18 @@ const _: () = {
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
         pub fn from_window_handle(handle: WindowHandle<'a>) -> Option<Self> {
-            match handle.as_raw() {
-                RawWindowHandle::Win32(handle) => unsafe {
-                    Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
-                },
-                RawWindowHandle::AppKit(handle) => unsafe {
-                    Some(Self::from_cocoa_nsview(handle.ns_view.as_ptr()))
-                },
-                RawWindowHandle::Xlib(handle) => unsafe {
-                    Some(Self::from_x11_handle(handle.window))
-                },
-                _ => None,
+            // SAFETY: handle guarantees the inner pointers are valid for 'a.
+            unsafe {
+                match handle.as_raw() {
+                    RawWindowHandle::Win32(handle) => {
+                        Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
+                    }
+                    RawWindowHandle::AppKit(handle) => {
+                        Some(Self::from_cocoa_nsview(handle.ns_view.as_ptr()))
+                    }
+                    RawWindowHandle::Xlib(handle) => Some(Self::from_x11_handle(handle.window)),
+                    _ => None,
+                }
             }
         }
     }

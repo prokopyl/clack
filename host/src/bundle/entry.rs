@@ -8,6 +8,9 @@ pub struct LoadedEntry<'a> {
 }
 
 impl<'a> LoadedEntry<'a> {
+    /// # Safety
+    ///
+    /// User must ensure that the provided entry is fully valid, as well as everything it exposes.
     pub unsafe fn load(entry: &'a EntryDescriptor, path: &str) -> Result<Self, PluginBundleError> {
         let plugin_version = ClapVersion::from_raw(entry.clap_version);
         if !plugin_version.is_compatible() {
@@ -34,6 +37,7 @@ impl<'a> LoadedEntry<'a> {
 impl<'a> Drop for LoadedEntry<'a> {
     fn drop(&mut self) {
         if let Some(deinit) = self.entry.deinit {
+            // SAFETY: this type ensures deinit() is valid, and this can only be called once.
             unsafe { deinit() }
         }
     }
@@ -41,4 +45,5 @@ impl<'a> Drop for LoadedEntry<'a> {
 
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
 unsafe impl<'a> Send for LoadedEntry<'a> {}
+// SAFETY: Entries and factories are all thread-safe by the CLAP spec
 unsafe impl<'a> Sync for LoadedEntry<'a> {}

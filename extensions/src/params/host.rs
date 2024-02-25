@@ -8,6 +8,7 @@ impl PluginParams {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
         match self.0.count {
             None => 0,
+            // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw()) },
         }
     }
@@ -18,11 +19,12 @@ impl PluginParams {
         param_index: u32,
         info: &'b mut MaybeUninit<ParamInfo>,
     ) -> Option<&'b mut ParamInfo> {
-        let valid = unsafe {
-            (self.0.get_info?)(plugin.as_raw(), param_index, info.as_mut_ptr() as *mut _)
-        };
+        // SAFETY: This type ensures the function pointer is valid.
+        let valid =
+            unsafe { self.0.get_info?(plugin.as_raw(), param_index, info.as_mut_ptr() as *mut _) };
 
         if valid {
+            // SAFETY: we just checked the buffer was successfully written to.
             unsafe { Some(info.assume_init_mut()) }
         } else {
             None
@@ -35,9 +37,11 @@ impl PluginParams {
         param_id: u32,
     ) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
-        let valid = unsafe { (self.0.get_value?)(plugin.as_raw(), param_id, value.as_mut_ptr()) };
+        // SAFETY: This type ensures the function pointer is valid.
+        let valid = unsafe { self.0.get_value?(plugin.as_raw(), param_id, value.as_mut_ptr()) };
 
         if valid {
+            // SAFETY: we just checked the value was successfully written to.
             unsafe { Some(value.assume_init()) }
         } else {
             None
@@ -51,8 +55,9 @@ impl PluginParams {
         value: f64,
         buffer: &'b mut [MaybeUninit<u8>],
     ) -> Option<&'b mut [u8]> {
+        // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            (self.0.value_to_text?)(
+            self.0.value_to_text?(
                 plugin.as_raw(),
                 param_id,
                 value,
@@ -62,7 +67,7 @@ impl PluginParams {
         };
 
         if valid {
-            // SAFETY: technically not all of the buffer may be initialized, but uninit u8 is fine
+            // SAFETY: technically the whole buffer may not be fully initialized, but uninit u8 is fine
             let buffer = unsafe { assume_init_slice(buffer) };
             // If no nul byte found, we take the entire buffer
             let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(buffer.len());
@@ -80,8 +85,9 @@ impl PluginParams {
     ) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
 
+        // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            (self.0.text_to_value?)(
+            self.0.text_to_value?(
                 plugin.as_raw(),
                 param_id,
                 display.as_ptr(),
@@ -90,6 +96,7 @@ impl PluginParams {
         };
 
         if valid {
+            // SAFETY: We just checked the buffer was successfully written to.
             unsafe { Some(value.assume_init()) }
         } else {
             None
@@ -104,6 +111,7 @@ impl PluginParams {
         output_event_list: &mut OutputEvents,
     ) {
         if let Some(flush) = self.0.flush {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
                     plugin.as_raw(),
@@ -122,6 +130,7 @@ impl PluginParams {
         output_event_list: &mut OutputEvents,
     ) {
         if let Some(flush) = self.0.flush {
+            // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
                     plugin.as_raw(),
@@ -133,6 +142,7 @@ impl PluginParams {
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 #[inline]
 unsafe fn assume_init_slice<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
     &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
@@ -159,6 +169,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flags: clap_param_rescan_flags)
 where
     for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
@@ -172,6 +183,7 @@ where
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn clear<H: Host>(
     host: *const clap_host,
     param_id: u32,
@@ -188,6 +200,7 @@ unsafe extern "C" fn clear<H: Host>(
     });
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn request_flush<H: Host>(host: *const clap_host)
 where
     for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,

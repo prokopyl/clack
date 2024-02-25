@@ -238,14 +238,9 @@ impl InputEventBuffer<'static> for EventBuffer {
 
         let event = &self.headers[header_index..header_end_index];
 
-        let event_bytes_padded = unsafe {
-            core::slice::from_raw_parts(
-                event.as_ptr() as *const _,
-                event.len() * core::mem::size_of::<AlignedEventHeader>(),
-            )
-        };
-
-        let event_bytes = &event_bytes_padded[..event_size];
+        // SAFETY: we know the [0..event_size] slice is initialized
+        let event_bytes =
+            unsafe { core::slice::from_raw_parts(event.as_ptr() as *const u8, event_size) };
 
         // SAFETY: the event header was written from a valid UnknownEvent in append_header_data
         Some(unsafe { UnknownEvent::from_bytes_unchecked(event_bytes) })

@@ -26,6 +26,7 @@ use std::fmt::{Display, Formatter};
 #[repr(C)]
 pub struct PluginAudioPortsConfig(clap_plugin_audio_ports_config);
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
     type ExtensionSide = PluginExtensionSide;
@@ -35,6 +36,7 @@ unsafe impl Extension for PluginAudioPortsConfig {
 #[repr(C)]
 pub struct HostAudioPortsConfig(clap_host_audio_ports_config);
 
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
     type ExtensionSide = HostExtensionSide;
@@ -57,14 +59,17 @@ pub struct AudioPortsConfiguration<'a> {
     pub output_port_count: u32,
 
     /// Information about the main input Audio Port of this configuration, if it has one.
-    pub main_input: Option<MainPortInfo>,
+    pub main_input: Option<MainPortInfo<'a>>,
 
     /// Information about the main output Audio Port of this configuration, if it has one.
-    pub main_output: Option<MainPortInfo>,
+    pub main_output: Option<MainPortInfo<'a>>,
 }
 
 #[cfg(feature = "clack-host")]
 impl<'a> AudioPortsConfiguration<'a> {
+    /// # Safety
+    ///
+    /// User must make sure all fields are valid for the lifetime of 'a.
     unsafe fn from_raw(raw: &'a clap_audio_ports_config) -> Self {
         use crate::utils::data_from_array_buf;
 
@@ -75,12 +80,12 @@ impl<'a> AudioPortsConfiguration<'a> {
             input_port_count: raw.input_port_count,
             output_port_count: raw.output_port_count,
 
-            main_input: MainPortInfo::try_from_raw(
+            main_input: MainPortInfo::from_raw(
                 raw.has_main_input,
                 raw.main_input_channel_count,
                 raw.main_input_port_type,
             ),
-            main_output: MainPortInfo::try_from_raw(
+            main_output: MainPortInfo::from_raw(
                 raw.has_main_output,
                 raw.main_output_channel_count,
                 raw.main_output_port_type,
@@ -91,16 +96,20 @@ impl<'a> AudioPortsConfiguration<'a> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 /// Information about a main port.
-pub struct MainPortInfo {
+pub struct MainPortInfo<'a> {
     /// The number of channels of this port.
     pub channel_count: u32,
     /// The type of this port.
-    pub port_type: Option<AudioPortType<'static>>,
+    pub port_type: Option<AudioPortType<'a>>,
 }
 
 #[cfg(feature = "clack-host")]
-impl MainPortInfo {
-    unsafe fn try_from_raw(
+impl<'a> MainPortInfo<'a> {
+    /// # Safety
+    ///
+    /// User must make sure port_type is either null or points to a NULL-terminated C string that
+    /// is valid for the lifetime of 'a.
+    unsafe fn from_raw(
         exists: bool,
         channel_count: u32,
         port_type: *const std::os::raw::c_char,

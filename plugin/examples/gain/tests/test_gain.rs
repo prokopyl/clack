@@ -16,27 +16,12 @@ pub fn it_works() {
         b"Clack Gain Example"
     );
 
-    assert!(host.descriptor().vendor().unwrap().to_bytes().is_empty());
-    assert!(host.descriptor().url().unwrap().to_bytes().is_empty());
-    assert!(host
-        .descriptor()
-        .manual_url()
-        .unwrap()
-        .to_bytes()
-        .is_empty());
-    assert!(host
-        .descriptor()
-        .support_url()
-        .unwrap()
-        .to_bytes()
-        .is_empty());
-    assert!(host
-        .descriptor()
-        .description()
-        .unwrap()
-        .to_bytes()
-        .is_empty());
-    assert!(host.descriptor().version().unwrap().to_bytes().is_empty());
+    assert!(host.descriptor().vendor().is_none());
+    assert!(host.descriptor().url().is_none());
+    assert!(host.descriptor().manual_url().is_none());
+    assert!(host.descriptor().support_url().is_none());
+    assert!(host.descriptor().description().is_none());
+    assert!(host.descriptor().version().is_none());
 
     assert_eq!(
         host.descriptor()

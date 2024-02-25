@@ -4,35 +4,46 @@ use std::marker::PhantomData;
 
 /// Various textual information about a plugin.
 ///
-/// The information contained in this type can be exposed to an host's user in e.g. a list, to
+/// The information contained in this type can be exposed to a host's user in e.g. a list, to
 /// select which plugin to load.
 ///
 /// All fields of this type as exposed as optional, however the CLAP specification requires the
 /// [`id`](PluginDescriptor::id) and [`name`](PluginDescriptor::name) fields to be present. It is
-/// acceptable for an host to refuse loading a plugin that returns [`None`] for these fields.
+/// acceptable for a host to refuse loading a plugin that returns [`None`] for these fields.
 ///
 /// Note that all the fields of this type as exposed as the CLAP-native [`CStr`], as they are not
 /// required by the CLAP spec to be UTF-8 compliant, only exposing byte slices. Hosts are left to
 /// interpret non-UTF-8 data best they can.
 ///
 /// See [`PluginFactory::plugin_descriptors`](super::PluginFactory::plugin_descriptors), which
-/// which returns all the plugin descriptors exposed by a [plugin bundle](crate::bundle).
+/// returns all the plugin descriptors exposed by a [plugin bundle](crate::bundle).
 #[derive(Copy, Clone)]
 pub struct PluginDescriptor<'a> {
     descriptor: &'a clap_plugin_descriptor,
 }
 
+/// # Safety
+///
+/// Same as [`CStr::from_ptr`], except the given pointer *can* be null.
 unsafe fn cstr_to_str<'a>(ptr: *const std::os::raw::c_char) -> Option<&'a CStr> {
     if ptr.is_null() {
         return None;
     }
 
-    Some(CStr::from_ptr(ptr))
+    let string = CStr::from_ptr(ptr);
+
+    if string.is_empty() {
+        None
+    } else {
+        Some(string)
+    }
 }
 
 impl<'a> PluginDescriptor<'a> {
+    /// # Safety
+    /// The user must ensure the provided descriptor is valid, including all of its pointers.
     #[inline]
-    pub(crate) fn from_raw(descriptor: &'a clap_plugin_descriptor) -> Self {
+    pub(crate) unsafe fn from_raw(descriptor: &'a clap_plugin_descriptor) -> Self {
         Self { descriptor }
     }
 
@@ -44,8 +55,8 @@ impl<'a> PluginDescriptor<'a> {
     /// This is required to be globally-unique, and is therefore safe and intended for host to use
     /// to uniquely refer to this plugin across different saves and machines.
     ///
-    /// This is as exposed as optional, however the CLAP specification requires the it to be
-    /// present. It is acceptable for an host to refuse loading a plugin that returns [`None`] here.
+    /// This is as exposed as optional, however the CLAP specification requires it to be
+    /// present. It is acceptable for a host to refuse loading a plugin that returns [`None`] here.
     ///
     /// # Example
     /// ```
@@ -58,13 +69,14 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn id(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.id) }
     }
 
     /// The user-facing display name of this plugin.
     ///
-    /// This is as exposed as optional, however the CLAP specification requires the it to be
-    /// present. It is acceptable for an host to refuse loading a plugin that returns [`None`] here.
+    /// This is as exposed as optional, however the CLAP specification requires it to be
+    /// present. It is acceptable for a host to refuse loading a plugin that returns [`None`] here.
     ///
     /// # Example
     /// ```
@@ -77,6 +89,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn name(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.name) }
     }
 
@@ -93,6 +106,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn vendor(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.vendor) }
     }
 
@@ -109,6 +123,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn url(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.url) }
     }
 
@@ -128,6 +143,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn manual_url(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.manual_url) }
     }
 
@@ -144,6 +160,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn support_url(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.support_url) }
     }
 
@@ -163,6 +180,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn version(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.version) }
     }
 
@@ -179,6 +197,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     pub fn description(&self) -> Option<&'a CStr> {
+        // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.description) }
     }
 

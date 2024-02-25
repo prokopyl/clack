@@ -1,4 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![deny(clippy::undocumented_unsafe_blocks)]
 
 //! A small crate containing various CLAP utilities and definitions that are common to both
 //! plugins and hosts.

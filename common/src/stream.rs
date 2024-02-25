@@ -68,6 +68,7 @@ impl<'a> InputStream<'a> {
 impl<'a> Read for InputStream<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let ret = if let Some(read) = self.0.read {
+            // SAFETY: this function pointer is guaranteed to be valid by from_raw_mut and from_reader
             unsafe { read(&self.0, buf.as_mut_ptr().cast(), buf.len() as u64) }
         } else {
             return Ok(0);
@@ -117,6 +118,7 @@ impl<'a> OutputStream<'a> {
 impl<'a> Write for OutputStream<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let ret = if let Some(write) = self.0.write {
+            // SAFETY: this function pointer is guaranteed to be valid by from_raw_mut and from_reader
             unsafe { write(&self.0, buf.as_ptr().cast(), buf.len() as u64) }
         } else {
             return Ok(0);
@@ -134,6 +136,7 @@ impl<'a> Write for OutputStream<'a> {
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn read<R: Read + Sized>(
     istream: *const clap_istream,
     buffer: *mut c_void,
@@ -148,6 +151,7 @@ unsafe extern "C" fn read<R: Read + Sized>(
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn write<W: Write + Sized>(
     ostream: *const clap_ostream,
     buffer: *const c_void,

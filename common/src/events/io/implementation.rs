@@ -69,10 +69,13 @@ pub(crate) const fn void_output_events() -> clap_output_events {
         try_push: Some(void_push),
     }
 }
+
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn size<'a, I: InputEventBuffer<'a>>(list: *const clap_input_events) -> u32 {
     handle_panic(|| I::len(&*((*list).ctx as *const _))).unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get<'a, I: InputEventBuffer<'a>>(
     list: *const clap_input_events,
     index: u32,
@@ -85,6 +88,7 @@ unsafe extern "C" fn get<'a, I: InputEventBuffer<'a>>(
     .unwrap_or(core::ptr::null())
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn try_push<'a, O: OutputEventBuffer<'a>>(
     list: *const clap_output_events,
     event: *const clap_event_header,
@@ -99,6 +103,7 @@ unsafe extern "C" fn try_push<'a, O: OutputEventBuffer<'a>>(
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn void_push(
     _list: *const clap_output_events,
     _event: *const clap_event_header,

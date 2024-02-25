@@ -47,6 +47,9 @@ pub struct PluginWrapper<'a, P: Plugin> {
 }
 
 impl<'a, P: Plugin> PluginWrapper<'a, P> {
+    /// # Safety
+    ///
+    /// `shared` and `main_thread` must be related and correctly initialized.
     pub(crate) unsafe fn new(
         host: HostHandle<'a>,
         shared: Pin<Box<P::Shared<'a>>>,
@@ -268,6 +271,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         }
     }
 
+    /// # Safety
+    /// The plugin pointer must be valid
     unsafe fn from_raw<'p>(raw: *const clap_plugin) -> Result<&'p Self, PluginWrapperError> {
         raw.as_ref()
             .ok_or(PluginWrapperError::NullPluginInstance)?
@@ -278,6 +283,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
             .wrapper()
     }
 
+    /// # Safety
+    /// The plugin pointer must be valid
     unsafe fn from_raw_mut<'p>(
         raw: *const clap_plugin,
     ) -> Result<Pin<&'p mut Self>, PluginWrapperError> {
@@ -292,6 +299,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         ))
     }
 
+    /// # Safety
+    /// The plugin pointer must be valid
     unsafe fn plugin_data_from_raw(
         raw: *const clap_plugin,
     ) -> Result<NonNull<PluginBoxInner<'a, P>>, PluginWrapperError> {
@@ -304,7 +313,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         NonNull::new(data).ok_or(PluginWrapperError::AlreadyDestroyed)
     }
 
-    unsafe fn handle_panic<Pa, T, F>(parameter: Pa, handler: F) -> Result<T, PluginWrapperError>
+    #[inline]
+    fn handle_panic<Pa, T, F>(parameter: Pa, handler: F) -> Result<T, PluginWrapperError>
     where
         F: FnOnce(Pa) -> Result<T, PluginWrapperError>,
     {
@@ -313,7 +323,11 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     }
 }
 
+// SAFETY: the wrapper itself can be shared and used across threads, accessing any inner part that
+// isn't requires unsafe.
 unsafe impl<'a, P: Plugin> Send for PluginWrapper<'a, P> {}
+// SAFETY: the wrapper itself can be shared and used across threads, accessing any inner part that
+// isn't requires unsafe.
 unsafe impl<'a, P: Plugin> Sync for PluginWrapper<'a, P> {}
 
 /// Errors raised by a [`PluginWrapper`].
