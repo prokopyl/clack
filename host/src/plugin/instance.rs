@@ -4,12 +4,13 @@ use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
+use std::ptr::NonNull;
 use std::sync::Arc;
 
 pub struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
-    plugin_ptr: *mut clap_plugin,
+    plugin_ptr: Option<NonNull<clap_plugin>>,
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
@@ -31,7 +32,7 @@ impl<H: Host> PluginInstanceInner<H> {
         let mut instance = Arc::new(Self {
             host_wrapper,
             host_descriptor,
-            plugin_ptr: core::ptr::null_mut(),
+            plugin_ptr: None,
             _plugin_bundle: entry.clone(),
         });
 
@@ -48,12 +49,7 @@ impl<H: Host> PluginInstanceInner<H> {
                     .get_plugin_factory()
                     .ok_or(HostError::MissingPluginFactory)?
                     .create_plugin(plugin_id, raw_descriptor)?
-                    .as_ptr()
             };
-
-            if plugin_instance_ptr.is_null() {
-                return Err(HostError::InstantiationFailed);
-            }
 
             // SAFETY: we just checked the pointer is non-null
             unsafe {
@@ -62,7 +58,7 @@ impl<H: Host> PluginInstanceInner<H> {
                     .as_mut()
                     .instantiated(plugin_instance_ptr)
             };
-            instance.plugin_ptr = plugin_instance_ptr;
+            instance.plugin_ptr = Some(plugin_instance_ptr);
         }
 
         Ok(instance)
@@ -75,8 +71,8 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
-        // SAFETY: this type ensures the instance pointer is valid
-        unsafe { &*self.plugin_ptr }
+        // SAFETY: This can only be None in the middle of instantiate()
+        unsafe { self.plugin_ptr.unwrap_unchecked().as_ref() }
     }
 
     pub fn activate<FA>(
@@ -91,6 +87,8 @@ impl<H: Host> PluginInstanceInner<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
+        let raw_instance = self.raw_instance().into();
+
         let activate = self
             .raw_instance()
             .activate
@@ -99,12 +97,12 @@ impl<H: Host> PluginInstanceInner<H> {
         // FIXME: reentrancy if activate() calls audio_processor methods
         self.host_wrapper
             .as_mut()
-            .setup_audio_processor(audio_processor, self.plugin_ptr)?;
+            .setup_audio_processor(audio_processor, raw_instance)?;
 
         // SAFETY: this type ensures the function pointer is valid
         let success = unsafe {
             activate(
-                self.plugin_ptr,
+                self.raw_instance(),
                 configuration.sample_rate,
                 *configuration.frames_count_range.start(),
                 *configuration.frames_count_range.end(),
@@ -134,7 +132,7 @@ impl<H: Host> PluginInstanceInner<H> {
         if let Some(deactivate) = self.raw_instance().deactivate {
             // SAFETY: this type ensures the function pointer is valid.
             // We just checked the instance is in an active state.
-            unsafe { deactivate(self.plugin_ptr) };
+            unsafe { deactivate(self.raw_instance()) };
         }
 
         self.host_wrapper.as_mut().deactivate(drop)
@@ -144,8 +142,8 @@ impl<H: Host> PluginInstanceInner<H> {
     /// User must ensure the instance is not in a processing state.
     #[inline]
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
-        if let Some(start_processing) = (*self.plugin_ptr).start_processing {
-            if start_processing(self.plugin_ptr) {
+        if let Some(start_processing) = self.raw_instance().start_processing {
+            if start_processing(self.raw_instance()) {
                 return Ok(());
             }
 
@@ -159,8 +157,8 @@ impl<H: Host> PluginInstanceInner<H> {
     /// User must ensure the instance is in a processing state.
     #[inline]
     pub unsafe fn stop_processing(&self) {
-        if let Some(stop_processing) = (*self.plugin_ptr).stop_processing {
-            stop_processing(self.plugin_ptr)
+        if let Some(stop_processing) = self.raw_instance().stop_processing {
+            stop_processing(self.raw_instance())
         }
     }
 
@@ -168,8 +166,8 @@ impl<H: Host> PluginInstanceInner<H> {
     /// User must ensure this is only called on the main thread.
     #[inline]
     pub unsafe fn on_main_thread(&self) {
-        if let Some(on_main_thread) = (*self.plugin_ptr).on_main_thread {
-            on_main_thread(self.plugin_ptr)
+        if let Some(on_main_thread) = self.raw_instance().on_main_thread {
+            on_main_thread(self.raw_instance())
         }
     }
 }
@@ -178,9 +176,9 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
         // Happens only if instantiate didn't complete
-        if self.plugin_ptr.is_null() {
+        let Some(plugin_ptr) = self.plugin_ptr else {
             return;
-        }
+        };
 
         // Check if instance hasn't been properly deactivated
         if self.host_wrapper.is_active() {
@@ -191,8 +189,8 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
         // other concurrent calls.
         // This type also ensures the function pointer type is valid.
         unsafe {
-            if let Some(destroy) = (*self.plugin_ptr).destroy {
-                destroy(self.plugin_ptr)
+            if let Some(destroy) = plugin_ptr.as_ref().destroy {
+                destroy(plugin_ptr.as_ptr())
             }
         }
     }

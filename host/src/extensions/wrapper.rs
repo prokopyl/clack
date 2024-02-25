@@ -124,7 +124,7 @@ impl<H: Host> HostWrapper<H> {
     /// # Safety
     /// This must only be called on the main thread. User must ensure the provided instance pointer
     /// is valid.
-    pub(crate) unsafe fn instantiated(self: Pin<&mut Self>, instance: *mut clap_plugin) {
+    pub(crate) unsafe fn instantiated(self: Pin<&mut Self>, instance: NonNull<clap_plugin>) {
         // SAFETY: we only update the fields, we don't move them
         let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
 
@@ -142,7 +142,7 @@ impl<H: Host> HostWrapper<H> {
     pub(crate) fn setup_audio_processor<FA>(
         self: Pin<&mut Self>,
         audio_processor: FA,
-        instance: *mut clap_plugin,
+        instance: NonNull<clap_plugin>,
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(

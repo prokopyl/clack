@@ -283,14 +283,12 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     #[inline]
     pub fn shared_plugin_handle(&mut self) -> PluginSharedHandle {
         // SAFETY: the raw instance is guaranteed to be valid
-        unsafe { PluginSharedHandle::new(self.inner.as_ref().unwrap().raw_instance()) }
+        unsafe { PluginSharedHandle::new(self.inner.as_ref().unwrap().raw_instance().into()) }
     }
 
     #[inline]
     pub fn audio_processor_plugin_handle(&mut self) -> PluginAudioProcessorHandle {
-        PluginAudioProcessorHandle::new(
-            (self.inner.as_ref().unwrap().raw_instance() as *const _) as *mut _,
-        )
+        PluginAudioProcessorHandle::new(self.inner.as_ref().unwrap().raw_instance().into())
     }
 }
 
@@ -355,12 +353,12 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     #[inline]
     pub fn shared_plugin_data(&mut self) -> PluginSharedHandle {
         // SAFETY: the raw instance is guaranteed to be valid
-        unsafe { PluginSharedHandle::new(self.inner.raw_instance()) }
+        unsafe { PluginSharedHandle::new(self.inner.raw_instance().into()) }
     }
 
     #[inline]
     pub fn audio_processor_plugin_data(&mut self) -> PluginAudioProcessorHandle {
-        PluginAudioProcessorHandle::new((self.inner.raw_instance() as *const _) as *mut _)
+        PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 }
 

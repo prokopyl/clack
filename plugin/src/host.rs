@@ -10,7 +10,7 @@ use std::ptr::NonNull;
 /// Various information about the host, provided at plugin instantiation time.
 #[derive(Copy, Clone)]
 pub struct HostInfo<'a> {
-    raw: *const clap_host,
+    raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
@@ -21,7 +21,7 @@ impl<'a> HostInfo<'a> {
     /// Pointer must be valid for the duration of the `'a` lifetime. Moreover, the contents of
     /// the `clap_host` struct must all also be valid.
     #[inline]
-    pub unsafe fn from_raw(raw: *const clap_host) -> Self {
+    pub unsafe fn from_raw(raw: NonNull<clap_host>) -> Self {
         Self {
             raw,
             _lifetime: PhantomData,
@@ -72,7 +72,7 @@ impl<'a> HostInfo<'a> {
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
         let ext =
             // SAFETY: this type ensure the function pointers are valid
-            unsafe { self.as_raw().get_extension?(self.raw, E::IDENTIFIER.as_ptr()) } as *mut _;
+            unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) } as *mut _;
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.
         NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
@@ -91,7 +91,7 @@ impl<'a> HostInfo<'a> {
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type ensures the raw pointer is valid
-        unsafe { &*self.raw }
+        unsafe { self.raw.as_ref() }
     }
 }
 
@@ -101,7 +101,7 @@ impl<'a> HostInfo<'a> {
 /// requests to the host.
 #[derive(Copy, Clone)]
 pub struct HostHandle<'a> {
-    raw: *const clap_host,
+    raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
@@ -124,7 +124,7 @@ impl<'a> HostHandle<'a> {
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
-        unsafe { &*self.raw }
+        unsafe { self.raw.as_ref() }
     }
 
     /// Requests the host to [deactivate](crate::plugin::PluginAudioProcessor::deactivate) and then
@@ -134,7 +134,7 @@ impl<'a> HostHandle<'a> {
     pub fn request_restart(&self) {
         if let Some(request_restart) = self.as_raw().request_restart {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-            unsafe { request_restart(self.raw) }
+            unsafe { request_restart(self.raw.as_ptr()) }
         }
     }
 
@@ -145,7 +145,7 @@ impl<'a> HostHandle<'a> {
     pub fn request_process(&self) {
         if let Some(request_process) = self.as_raw().request_process {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-            unsafe { request_process(self.raw) }
+            unsafe { request_process(self.raw.as_ptr()) }
         }
     }
 
@@ -155,7 +155,7 @@ impl<'a> HostHandle<'a> {
     pub fn request_callback(&self) {
         if let Some(request_callback) = self.as_raw().request_callback {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
-            unsafe { request_callback(self.raw) }
+            unsafe { request_callback(self.raw.as_ptr()) }
         }
     }
 
@@ -196,7 +196,7 @@ impl<'a> From<HostHandle<'a>> for HostInfo<'a> {
 
 #[derive(Copy, Clone)]
 pub struct HostMainThreadHandle<'a> {
-    raw: *const clap_host,
+    raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
@@ -212,7 +212,7 @@ impl<'a> HostMainThreadHandle<'a> {
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
-        unsafe { &*self.raw }
+        unsafe { self.raw.as_ref() }
     }
 }
 
@@ -225,7 +225,7 @@ impl<'a> From<HostMainThreadHandle<'a>> for HostHandle<'a> {
 
 #[derive(Copy, Clone)]
 pub struct HostAudioThreadHandle<'a> {
-    raw: *const clap_host,
+    raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
@@ -244,7 +244,7 @@ impl<'a> HostAudioThreadHandle<'a> {
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
-        unsafe { &*self.raw }
+        unsafe { self.raw.as_ref() }
     }
 }
 

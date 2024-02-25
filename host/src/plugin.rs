@@ -136,13 +136,13 @@ impl<H: Host> PluginInstance<H> {
     #[inline]
     pub fn shared_plugin_data(&self) -> PluginSharedHandle {
         // SAFETY: the raw instance is guaranteed to be valid
-        unsafe { PluginSharedHandle::new(self.inner.raw_instance()) }
+        unsafe { PluginSharedHandle::new(self.inner.raw_instance().into()) }
     }
 
     #[inline]
     pub fn main_thread_plugin_data(&mut self) -> PluginMainThreadHandle {
         // SAFETY: this type can only exist on the main thread.
-        unsafe { PluginMainThreadHandle::new((self.inner.raw_instance() as *const _) as *mut _) }
+        unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
     }
 }
 

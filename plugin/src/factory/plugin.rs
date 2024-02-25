@@ -15,6 +15,7 @@ use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use std::ffi::CStr;
+use std::ptr::NonNull;
 
 /// A wrapper around a given [`PluginFactory`] implementation.
 ///
@@ -77,7 +78,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         plugin_id: *const std::os::raw::c_char,
     ) -> *const clap_plugin {
         let plugin_id = CStr::from_ptr(plugin_id);
-        if clap_host.is_null() {
+        let Some(clap_host) = NonNull::new(clap_host as *mut _) else {
             eprintln!("[ERROR] Null clap_host pointer was provided to entry::create_plugin.");
             return core::ptr::null();
         };
