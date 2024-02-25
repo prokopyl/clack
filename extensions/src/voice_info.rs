@@ -51,6 +51,7 @@ unsafe impl Extension for HostVoiceInfo {
 bitflags! {
     /// Option flags for [`VoiceInfo`].
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct VoiceInfoFlags: u64 {
         /// Allows the host to send overlapping NOTE_On events.
         /// The plugin will then have to rely upon the note_id to distinguish between the different notes.
@@ -86,7 +87,7 @@ impl VoiceInfo {
         clap_voice_info {
             voice_count: self.voice_count,
             voice_capacity: self.voice_capacity,
-            flags: self.flags.bits,
+            flags: self.flags.bits(),
         }
     }
 }

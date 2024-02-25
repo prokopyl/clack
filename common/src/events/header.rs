@@ -94,7 +94,7 @@ impl<'a, E: Event<'a>> EventHeader<E> {
                 time,
                 space_id: space_id.id(),
                 type_: E::TYPE_ID,
-                flags: flags.bits,
+                flags: flags.bits(),
             },
             _event: PhantomData,
         }
@@ -126,6 +126,7 @@ use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlags: u32 {
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
         const DONT_RECORD = CLAP_EVENT_DONT_RECORD;

@@ -41,6 +41,7 @@ unsafe impl Extension for HostParams {
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ParamRescanFlags: u32 {
         const VALUES = CLAP_PARAM_RESCAN_VALUES;
         const INFO = CLAP_PARAM_RESCAN_INFO;
@@ -51,6 +52,7 @@ bitflags! {
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ParamClearFlags: u32 {
         const ALL = CLAP_PARAM_CLEAR_ALL;
         const AUTOMATIONS = CLAP_PARAM_CLEAR_AUTOMATIONS;

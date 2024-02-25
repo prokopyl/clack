@@ -36,7 +36,7 @@ impl<'a> AudioPortInfoWriter<'a> {
             write(addr_of_mut!((*buf).id), data.id);
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
-            write(addr_of_mut!((*buf).flags), data.flags.bits);
+            write(addr_of_mut!((*buf).flags), data.flags.bits());
             write(addr_of_mut!((*buf).channel_count), data.channel_count);
 
             write(
@@ -111,7 +111,7 @@ impl HostAudioPorts {
         match self.0.is_rescan_flag_supported {
             None => false,
             // SAFETY: This type ensures the function pointer is valid.
-            Some(supported) => unsafe { supported(host.as_raw(), flag.bits) },
+            Some(supported) => unsafe { supported(host.as_raw(), flag.bits()) },
         }
     }
 
@@ -119,7 +119,7 @@ impl HostAudioPorts {
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: RescanType) {
         if let Some(rescan) = self.0.rescan {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { rescan(host.as_raw(), flag.bits) }
+            unsafe { rescan(host.as_raw(), flag.bits()) }
         }
     }
 }

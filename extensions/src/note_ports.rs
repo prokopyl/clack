@@ -18,6 +18,7 @@ pub struct HostNotePorts(
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct NoteDialects: u32 {
         const CLAP = CLAP_NOTE_DIALECT_CLAP;
         const MIDI = CLAP_NOTE_DIALECT_MIDI;
@@ -112,6 +113,7 @@ impl<'a> NotePortInfoData<'a> {
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct NotePortRescanFlags: u32 {
         const ALL = CLAP_NOTE_PORTS_RESCAN_ALL;
         const NAMES = CLAP_NOTE_PORTS_RESCAN_NAMES;

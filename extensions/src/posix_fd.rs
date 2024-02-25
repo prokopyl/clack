@@ -14,6 +14,7 @@ use std::os::unix::io::RawFd;
 bitflags! {
     /// IO events flags for file descriptors.
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct FdFlags: u32 {
         /// A read event
         const READ = CLAP_POSIX_FD_READ;
@@ -99,7 +100,7 @@ mod host {
         pub fn on_fd(&self, plugin: &mut PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
             if let Some(on_fd) = self.0.on_fd {
                 // SAFETY: This type ensures the function pointer is valid.
-                unsafe { on_fd(plugin.as_raw(), fd, flags.bits) }
+                unsafe { on_fd(plugin.as_raw(), fd, flags.bits()) }
             }
         }
     }
@@ -200,7 +201,7 @@ mod plugin {
             let register_fd = self.0.register_fd.ok_or(FdError::Register((fd, flags)))?;
 
             // SAFETY: This type ensures the function pointer is valid.
-            let success = unsafe { register_fd(host.as_raw(), fd, flags.bits) };
+            let success = unsafe { register_fd(host.as_raw(), fd, flags.bits()) };
             match success {
                 true => Ok(()),
                 false => Err(FdError::Register((fd, flags))),
@@ -217,7 +218,7 @@ mod plugin {
             let modify_fd = self.0.modify_fd.ok_or(FdError::Modify((fd, flags)))?;
 
             // SAFETY: This type ensures the function pointer is valid.
-            let success = unsafe { modify_fd(host.as_raw(), fd, flags.bits) };
+            let success = unsafe { modify_fd(host.as_raw(), fd, flags.bits()) };
             match success {
                 true => Ok(()),
                 false => Err(FdError::Modify((fd, flags))),

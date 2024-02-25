@@ -271,7 +271,7 @@ impl HostParams {
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
         if let Some(rescan) = self.0.rescan {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { rescan(host.as_raw(), flags.bits) }
+            unsafe { rescan(host.as_raw(), flags.bits()) }
         }
     }
 
@@ -279,7 +279,7 @@ impl HostParams {
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
         if let Some(clear) = self.0.clear {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { clear(host.as_raw(), param_id, flags.bits) }
+            unsafe { clear(host.as_raw(), param_id, flags.bits()) }
         }
     }
 

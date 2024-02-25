@@ -11,6 +11,7 @@ use clap_sys::events::{
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct TransportFlags: u32 {
         const HAS_TEMPO = CLAP_TRANSPORT_HAS_TEMPO;
         const HAS_BEATS_TIMELINE = CLAP_TRANSPORT_HAS_BEATS_TIMELINE;

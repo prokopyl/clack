@@ -37,6 +37,7 @@ impl<'a> AudioPortType<'a> {
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct RescanType: u32 {
         const NAMES = CLAP_AUDIO_PORTS_RESCAN_NAMES;
         const FLAGS = CLAP_AUDIO_PORTS_RESCAN_FLAGS;
@@ -49,6 +50,7 @@ bitflags! {
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct AudioPortFlags: u32 {
         const IS_MAIN = CLAP_AUDIO_PORT_IS_MAIN;
         const SUPPORTS_64BITS = CLAP_AUDIO_PORT_SUPPORTS_64BITS;
@@ -104,7 +106,7 @@ impl<'a> AudioPortInfoData<'a> {
             id: raw.id,
             name: data_from_array_buf(&raw.name),
             channel_count: raw.channel_count,
-            flags: AudioPortFlags { bits: raw.flags },
+            flags: AudioPortFlags::from_bits_truncate(raw.flags),
             port_type: NonNull::new(raw.port_type as *mut _)
                 .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr())))
                 .filter(|t| !t.0.to_bytes().is_empty()),

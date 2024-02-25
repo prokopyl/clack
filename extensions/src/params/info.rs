@@ -6,6 +6,7 @@ use std::str::Utf8Error;
 
 bitflags! {
     #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ParamInfoFlags: u32 {
         const IS_AUTOMATABLE = CLAP_PARAM_IS_AUTOMATABLE;
         const IS_AUTOMATABLE_PER_CHANNEL = CLAP_PARAM_IS_AUTOMATABLE_PER_CHANNEL;
@@ -83,7 +84,7 @@ impl<'a> TryFrom<&'a ParamInfo> for ParamInfoData<'a> {
     fn try_from(info: &'a ParamInfo) -> Result<Self, Self::Error> {
         Ok(Self {
             id: info.id(),
-            flags: ParamInfoFlags { bits: info.flags() },
+            flags: ParamInfoFlags::from_bits_truncate(info.flags()),
             cookie: info.cookie(),
             name: std::str::from_utf8(info.name())?,
             module: std::str::from_utf8(info.module())?,

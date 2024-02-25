@@ -35,7 +35,7 @@ impl<'a> NotePortInfoWriter<'a> {
 
             write(
                 addr_of_mut!((*buf).supported_dialects),
-                data.supported_dialects.bits,
+                data.supported_dialects.bits(),
             );
             write(
                 addr_of_mut!((*buf).preferred_dialect),
@@ -112,7 +112,7 @@ impl HostNotePorts {
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: NotePortRescanFlags) {
         if let Some(rescan) = self.0.rescan {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { rescan(host.as_raw(), flags.bits) }
+            unsafe { rescan(host.as_raw(), flags.bits()) }
         }
     }
 }

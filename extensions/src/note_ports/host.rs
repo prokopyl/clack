@@ -76,7 +76,7 @@ where
     for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
-        Ok(host.main_thread().as_ref().supported_dialects().bits)
+        Ok(host.main_thread().as_ref().supported_dialects().bits())
     })
     .unwrap_or(0)
 }
