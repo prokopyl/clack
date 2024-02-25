@@ -10,6 +10,8 @@ pub(crate) mod instance;
 pub use handle::*;
 use instance::*;
 
+pub use clack_common::plugin::*;
+
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {
     inner: Arc<PluginInstanceInner<H>>,

@@ -62,6 +62,8 @@ pub use descriptor::*;
 pub use error::PluginError;
 pub use instance::*;
 
+pub use clack_common::plugin::*;
+
 /// The part of the data and operations of a plugin that are thread-safe.
 ///
 /// The associated lifetime `'a` represents the lifetime of the plugin itself, as well as the
