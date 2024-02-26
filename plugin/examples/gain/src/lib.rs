@@ -1,28 +1,29 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(unsafe_code)]
+#![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
+#![doc = include_str!("../README.md")]
 
-use clack_extensions::params::info::ParamInfoFlags;
-use clack_extensions::params::{implementation::*, info::ParamInfoData, PluginParams};
-
+use crate::params::GainParams;
+use clack_extensions::state::PluginState;
+use clack_extensions::{audio_ports::*, params::*};
 use clack_plugin::prelude::*;
 
-use clack_extensions::audio_ports::{
-    AudioPortFlags, AudioPortInfoData, AudioPortInfoWriter, AudioPortType, PluginAudioPorts,
-    PluginAudioPortsImpl,
-};
-use clack_plugin::utils::Cookie;
+mod params;
 
+/// The type that represents our plugin in Clack.
+///
+/// This is what implements the [`Plugin`] trait, where all the other subtypes are attached.
 pub struct GainPlugin;
 
 impl Plugin for GainPlugin {
     type AudioProcessor<'a> = GainPluginAudioProcessor<'a>;
-    type Shared<'a> = GainPluginShared<'a>;
+    type Shared<'a> = GainPluginShared;
     type MainThread<'a> = GainPluginMainThread<'a>;
 
     fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
         builder
+            .register::<PluginAudioPorts>()
             .register::<PluginParams>()
-            .register::<PluginAudioPorts>();
+            .register::<PluginState>();
     }
 }
 
@@ -34,79 +35,96 @@ impl DefaultPluginFactory for GainPlugin {
             .with_features([AUDIO_EFFECT, STEREO])
     }
 
-    fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
-        Ok(GainPluginShared { _host: host })
+    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+        Ok(GainPluginShared {
+            params: GainParams::new(),
+        })
     }
 
     fn new_main_thread<'a>(
-        host: HostMainThreadHandle<'a>,
+        _host: HostMainThreadHandle<'a>,
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
-        Ok(Self::MainThread {
-            rusting: 0,
-            shared,
-            _host: host,
-        })
+        Ok(Self::MainThread { shared })
     }
 }
 
+/// Our plugin's audio processor. It lives in the audio thread.
+///
+/// It receives parameter events, and process a stereo audio signal by operating on the given audio
+/// buffer.
 pub struct GainPluginAudioProcessor<'a> {
-    _host: HostAudioThreadHandle<'a>,
+    /// A reference to the plugin's shared data.
+    shared: &'a GainPluginShared,
 }
 
-impl<'a> PluginAudioProcessor<'a, GainPluginShared<'a>, GainPluginMainThread<'a>>
+impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
     for GainPluginAudioProcessor<'a>
 {
     fn activate(
-        host: HostAudioThreadHandle<'a>,
+        _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
-        _shared: &'a GainPluginShared,
+        shared: &'a GainPluginShared,
         _audio_config: AudioConfiguration,
     ) -> Result<Self, PluginError> {
-        Ok(Self { _host: host })
+        // This is where we would allocate intermediate buffers and such if we needed them.
+        Ok(Self { shared })
     }
 
     fn process(
         &mut self,
         _process: Process,
         mut audio: Audio,
-        _events: Events,
+        events: Events,
     ) -> Result<ProcessStatus, PluginError> {
-        for channel_pair in audio
-            .port_pairs()
-            // Filter out any non-f32 data, in case host is misbehaving and sends f64 data
-            .filter_map(|mut p| p.channels().ok()?.into_f32())
-            .flatten()
-        {
-            let buf = match channel_pair {
-                ChannelPair::InputOnly(_) => continue, // Ignore extra inputs
-                ChannelPair::OutputOnly(o) => {
-                    // Just set extra outputs to 0
-                    o.fill(0.0);
-                    continue;
-                }
+        // First, we have to make a few sanity checks.
+        // We want at least a single input/output port pair, which contains channels of `f32`
+        // audio sample data.
+        let mut port_pair = audio
+            .port_pair(0)
+            .ok_or(PluginError::Message("No input/output ports found"))?;
+
+        let mut output_channels = port_pair
+            .channels()?
+            .into_f32()
+            .ok_or(PluginError::Message("Expected f32 input/output"))?;
+
+        let mut channel_buffers = [None, None];
+
+        // Extract the buffer slices that we need, while making sure they are paired correctly and
+        // check for either in-place or separate buffers.
+        for (pair, buf) in output_channels.iter_mut().zip(&mut channel_buffers) {
+            *buf = match pair {
+                ChannelPair::InputOnly(_) => None,
+                ChannelPair::OutputOnly(_) => None,
+                ChannelPair::InPlace(b) => Some(b),
                 ChannelPair::InputOutput(i, o) => {
                     o.copy_from_slice(i);
-                    o
+                    Some(o)
                 }
-                ChannelPair::InPlace(o) => o,
-            };
+            }
+        }
 
-            for x in buf {
-                *x *= 2.0;
+        // Now let's process the audio, while splitting the processing in batches between each
+        // sample-accurate event.
+
+        for event_batch in events.input.batch() {
+            // Process all param events in this batch
+            for event in event_batch.events() {
+                self.shared.params.handle_event(event)
+            }
+
+            // Get the volume value after all parameter changes have been handled.
+            let volume = self.shared.params.get_volume();
+
+            for buf in channel_buffers.iter_mut().flatten() {
+                for sample in buf.iter_mut() {
+                    *sample *= volume
+                }
             }
         }
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
-    }
-}
-
-impl<'a> PluginAudioProcessorParams for GainPluginAudioProcessor<'a> {
-    fn flush(
-        &mut self,
-        _input_parameter_changes: &InputEvents,
-        _output_parameter_changes: &mut OutputEvents,
-    ) {
     }
 }
 
@@ -129,84 +147,20 @@ impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
     }
 }
 
-pub struct GainPluginShared<'a> {
-    _host: HostHandle<'a>,
+/// The plugin data that gets shared between the Main Thread and the Audio Thread.
+pub struct GainPluginShared {
+    /// The plugin's parameter values.
+    params: GainParams,
 }
 
-impl<'a> PluginShared<'a> for GainPluginShared<'a> {}
+impl<'a> PluginShared<'a> for GainPluginShared {}
 
+/// The data that belongs to the main thread of our plugin.
 pub struct GainPluginMainThread<'a> {
-    rusting: u32,
-    #[allow(unused)]
-    shared: &'a GainPluginShared<'a>,
-
-    _host: HostMainThreadHandle<'a>,
+    /// A reference to the plugin's shared data.
+    shared: &'a GainPluginShared,
 }
 
-impl<'a> PluginMainThread<'a, GainPluginShared<'a>> for GainPluginMainThread<'a> {}
-
-impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
-    fn count(&mut self) -> u32 {
-        1
-    }
-
-    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
-        if param_index > 0 {
-            return;
-        }
-
-        info.set(&ParamInfoData {
-            id: 0,
-            name: "Rusting",
-            module: "gain/rusting",
-            default_value: 0.0,
-            min_value: 0.0,
-            max_value: 1000.0,
-            flags: ParamInfoFlags::IS_STEPPED | ParamInfoFlags::IS_AUTOMATABLE,
-            cookie: Cookie::empty(),
-        })
-    }
-
-    fn get_value(&mut self, param_id: u32) -> Option<f64> {
-        if param_id == 0 {
-            Some(self.rusting as f64)
-        } else {
-            None
-        }
-    }
-
-    fn value_to_text(
-        &mut self,
-        param_id: u32,
-        value: f64,
-        writer: &mut ParamDisplayWriter,
-    ) -> core::fmt::Result {
-        use ::core::fmt::Write;
-        println!("Format param {param_id}, value {value}");
-
-        if param_id == 0 {
-            write!(writer, "{} crabz", value as u32)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn text_to_value(&mut self, _param_id: u32, _text: &str) -> Option<f64> {
-        None
-    }
-
-    fn flush(&mut self, _input_events: &InputEvents, _output_events: &mut OutputEvents) {
-        /*let value_events = input_events.iter().filter_map(|e| match e.as_event()? {
-            Event::ParamValue(v) => Some(v),
-            _ => None,
-        });
-
-        for value in value_events {
-            if value.param_id() == 0 {
-                self.rusting = value.value() as u32;
-            }
-        }*/
-    }
-}
+impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {}
 
 clack_export_entry!(SinglePluginEntry<GainPlugin>);

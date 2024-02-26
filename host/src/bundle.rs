@@ -64,7 +64,7 @@ use clack_common::utils::ClapVersion;
 
 /// A handle to a loaded CLAP plugin bundle file.
 ///
-/// This allows getting all of the [factories](FactoryPointer) exposed by the bundle, mainly the
+/// This allows getting all the [factories](FactoryPointer) exposed by the bundle, mainly the
 /// [`PluginFactory`] which allows to list plugin instances.
 ///
 /// This is only a lightweight handle: plugin bundles are only loaded once, and the [`Clone`]

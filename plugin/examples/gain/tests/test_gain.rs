@@ -1,4 +1,7 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
+use clack_plugin::events::event_types::ParamValueEvent;
+use clack_plugin::events::{EventFlags, EventHeader};
+use clack_plugin::utils::Cookie;
 use clack_test_host::TestHost;
 
 use clack_plugin_gain::clap_entry;
@@ -51,6 +54,17 @@ pub fn it_works() {
 
     host.activate();
 
+    host.input_events_mut().push(&ParamValueEvent::new(
+        EventHeader::new_core(0, EventFlags::empty()),
+        Cookie::empty(),
+        -1,
+        1,
+        -1,
+        -1,
+        -1,
+        0.5,
+    ));
+
     host.inputs_mut()[0].fill(69f32);
     host.inputs_mut()[1].fill(69f32);
 
@@ -61,7 +75,7 @@ pub fn it_works() {
         let inbuf = &host.inputs()[channel_index];
         let outbuf = &host.outputs()[channel_index];
         for (input, output) in inbuf.iter().zip(outbuf.iter()) {
-            assert_eq!(*output, *input * 2.0)
+            assert_eq!(*output, *input * 0.5)
         }
     }
 

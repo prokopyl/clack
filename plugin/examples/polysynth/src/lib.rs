@@ -14,7 +14,7 @@ mod poly_oscillator;
 
 /// The type that represents our plugin in Clack.
 ///
-/// This is what implements the [`Plugin`] trait, where all the other subtypes are attached.
+/// This is what implements the [`Plugin`] trait, and where all the other subtypes are attached.
 pub struct PolySynthPlugin;
 
 impl Plugin for PolySynthPlugin {
@@ -105,7 +105,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 
         // We use the `EventBatcher` to handle incoming events in a sample-accurate way.
         for event_batch in events.input.batch() {
-            // Handle all of the events (note or param) for this batch.
+            // Handle all the events (note or param) for this batch.
             for event in event_batch.events() {
                 self.poly_osc.handle_event(event);
                 self.shared.params.handle_event(event);
@@ -126,7 +126,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             // PANIC: we just checked that channel_count is > 1.
             let first_channel = first_channel.channel(0).unwrap();
 
-            // Copy the first channel into all of the other channels.
+            // Copy the first channel into all the other channels.
             for other_channel in other_channels {
                 other_channel.copy_from_slice(first_channel)
             }
