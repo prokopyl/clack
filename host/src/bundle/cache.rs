@@ -1,5 +1,4 @@
 use crate::bundle::entry::LoadedEntry;
-use crate::bundle::library::PluginEntryLibrary;
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use std::collections::hash_map::Entry;
@@ -44,7 +43,7 @@ fn get_or_insert(
 ///
 /// Users must ensure the given library is valid.
 pub(crate) unsafe fn load_from_library(
-    library: PluginEntryLibrary,
+    library: crate::bundle::library::PluginEntryLibrary,
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
@@ -79,7 +78,7 @@ enum EntrySourceInner {
     FromLibrary {
         // SAFETY: drop order is important! We must deinit the entry before unloading the library.
         entry: LoadedEntry,
-        _library: PluginEntryLibrary,
+        _library: crate::bundle::library::PluginEntryLibrary,
     },
 }
 
