@@ -28,11 +28,6 @@ pub enum HostError {
     PluginDestroyed,
     /// The plugin's audio processing failed.
     ProcessingFailed,
-    /// The plugin's audio processor handle was poisoned.
-    ///
-    /// This is only possible if starting or stopping the audio processor panicked or crashed, but
-    /// the handle was kept alive.
-    ProcessorHandlePoisoned,
     /// Tried to perform or stop processing when the audio processor was not started yet.
     ProcessingStopped,
     /// Tried to start processing when the processing was already started.
@@ -67,7 +62,6 @@ impl fmt::Display for HostError {
             Self::InstantiationFailed => write!(f, "Could not instantiate"),
             Self::PluginDestroyed => write!(f, "Plugin was destroyed"),
             Self::ProcessingFailed => write!(f, "Could not process"),
-            Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
             Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
             Self::ProcessingStarted => write!(f, "Audio Processor is currently started"),
             Self::NullProcessFunction => write!(f, "Plugin's process function is null"),

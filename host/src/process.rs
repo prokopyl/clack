@@ -36,7 +36,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         match self {
             Started(s) => Ok(s),
             Stopped(_) => Err(HostError::ProcessingStopped),
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!(),
         }
     }
 
@@ -45,7 +45,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         match self {
             Started(s) => Ok(s),
             Stopped(_) => Err(HostError::ProcessingStopped),
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!(),
         }
     }
 
@@ -54,7 +54,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         match self {
             Stopped(s) => Ok(s),
             Started(_) => Err(HostError::ProcessingStarted),
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!(),
         }
     }
 
@@ -63,7 +63,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         match self {
             Stopped(s) => Ok(s),
             Started(_) => Err(HostError::ProcessingStarted),
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!(),
         }
     }
 
@@ -96,9 +96,8 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
 
     pub fn is_started(&self) -> bool {
         match self {
-            Poisoned => false,
+            Stopped(_) | Poisoned => false,
             Started(_) => true,
-            Stopped(_) => false,
         }
     }
 
@@ -115,7 +114,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!("Audio processor handle somehow panicked and got poisoned."),
             Started(s) => {
                 *self = Started(s);
                 Err(HostError::ProcessingStarted)
@@ -149,7 +148,7 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
-            Poisoned => Err(HostError::ProcessorHandlePoisoned),
+            Poisoned => unreachable!(),
             Stopped(s) => {
                 *self = Stopped(s);
                 Err(HostError::ProcessingStopped)
@@ -161,6 +160,22 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
                     _ => unreachable!(),
                 })
             }
+        }
+    }
+
+    pub fn into_started(self) -> Result<StartedPluginAudioProcessor<H>, ProcessingStartError<H>> {
+        match self {
+            Started(s) => Ok(s),
+            Stopped(s) => s.start_processing(),
+            Poisoned => unreachable!(),
+        }
+    }
+
+    pub fn into_stopped(self) -> StoppedPluginAudioProcessor<H> {
+        match self {
+            Started(s) => s.stop_processing(),
+            Stopped(s) => s,
+            Poisoned => unreachable!(),
         }
     }
 }

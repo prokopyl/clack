@@ -150,7 +150,8 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 
     /// # Safety
-    /// User must ensure the instance is not in a processing state.
+    /// User must ensure the instance is not in a processing state, and that this is only called
+    /// on the audio thread.
     #[inline]
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
         if let Some(start_processing) = self.raw_instance().start_processing {
@@ -165,7 +166,8 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 
     /// # Safety
-    /// User must ensure the instance is in a processing state.
+    /// User must ensure the instance is in a processing state, and that this is only called
+    /// on the audio thread.
     #[inline]
     pub unsafe fn stop_processing(&self) {
         if let Some(stop_processing) = self.raw_instance().stop_processing {
