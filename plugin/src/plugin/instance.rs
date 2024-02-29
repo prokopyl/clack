@@ -154,6 +154,10 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn destroy(plugin: *const clap_plugin) {
+        // Deactivate the plugin, in case the host didn't call deactivate() first.
+        // This does nothing if the instance was already deactivated.
+        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.deactivate());
+
         PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
             let _ = Box::from_raw(data.as_ptr());
             Ok(())
@@ -165,6 +169,8 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
                 return;
             }
 
+            // This allows destroy() to be called twice safely: all PluginWrapper methods immediately
+            // fail if plugin_data is null, and we check it against above before deallocating.
             plugin.plugin_data = core::ptr::null_mut();
 
             let _ = Box::from_raw(plugin as *mut clap_plugin);

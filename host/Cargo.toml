@@ -22,5 +22,4 @@ clack-extensions = { workspace = true, features = ["clack-host", "latency", "log
 clack-test-host = { workspace = true }
 
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
-serial_test = "2.0.0"
 static_assertions = "1.1.0"
