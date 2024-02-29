@@ -1,9 +1,11 @@
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
+use std::thread;
+use std::thread::{current, ThreadId};
+use std::time::Duration;
 
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
-use serial_test::serial;
 
 pub struct DivaPluginStubAudioProcessor {
     processing: bool,
@@ -11,6 +13,7 @@ pub struct DivaPluginStubAudioProcessor {
 
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread {
+    thread_id: ThreadId,
     active: bool,
 }
 
@@ -37,7 +40,10 @@ impl DefaultPluginFactory for DivaPluginStub {
         _host: HostMainThreadHandle<'a>,
         _shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
-        Ok(DivaPluginStubMainThread { active: false })
+        Ok(DivaPluginStubMainThread {
+            active: false,
+            thread_id: current().id(),
+        })
     }
 }
 
@@ -92,6 +98,7 @@ impl Drop for DivaPluginStubAudioProcessor {
 impl Drop for DivaPluginStubMainThread {
     fn drop(&mut self) {
         assert!(!self.active);
+        assert_eq!(self.thread_id, current().id())
     }
 }
 
@@ -137,7 +144,6 @@ fn instantiate() -> PluginInstance<MyHost> {
 }
 
 #[test]
-#[serial]
 pub fn handles_normal_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
@@ -150,7 +156,6 @@ pub fn handles_normal_deactivate() {
 }
 
 #[test]
-#[serial]
 pub fn handles_try_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
@@ -167,7 +172,6 @@ pub fn handles_try_deactivate() {
 }
 
 #[test]
-#[serial]
 pub fn stops_when_dropping() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
@@ -183,7 +187,6 @@ pub fn stops_when_dropping() {
 }
 
 #[test]
-#[serial]
 pub fn works_with_reverse_drop() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
@@ -196,4 +199,25 @@ pub fn works_with_reverse_drop() {
 
     drop(instance);
     drop(processor);
+}
+
+#[test]
+pub fn works_with_forgotten_audio_processor() {
+    let mut instance = instantiate();
+    let config = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        frames_count_range: 5..=5,
+    };
+
+    let processor = instance.activate(|_, _, _| (), config).unwrap();
+
+    let t = thread::spawn(move || {
+        let processor = processor.start_processing().unwrap();
+        thread::sleep(Duration::from_millis(200));
+        drop(processor);
+    });
+
+    drop(instance);
+
+    t.join().unwrap();
 }

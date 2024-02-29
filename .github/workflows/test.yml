@@ -76,11 +76,10 @@ jobs:
       - name: Validate
         run: cd clap-validator; cargo run --release -- validate ../clack/target/release/libclack_plugin_gain.so ../clack/target/release/libclack_plugin_polysynth.so
 
-
   miri:
     runs-on: ubuntu-latest
     env:
-      MIRIFLAGS: "-Zmiri-tree-borrows"
+      MIRIFLAGS: "-Zmiri-tree-borrows -Zmiri-backtrace=full -Zmiri-ignore-leaks" # TODO: only ignore leaks for the specific tests that need it
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
