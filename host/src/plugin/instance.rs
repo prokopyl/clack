@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::Arc;
 
-pub struct PluginInstanceInner<H: Host> {
+pub(crate) struct PluginInstanceInner<H: Host> {
     host_wrapper: Pin<Box<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     plugin_ptr: Option<NonNull<clap_plugin>>,
@@ -75,6 +75,12 @@ impl<H: Host> PluginInstanceInner<H> {
         unsafe { self.plugin_ptr.unwrap_unchecked().as_ref() }
     }
 
+    #[inline]
+    pub fn plugin_shared(&self) -> PluginSharedHandle {
+        // SAFETY: the raw instance is guaranteed to be valid
+        unsafe { PluginSharedHandle::new(self.raw_instance().into()) }
+    }
+
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,
@@ -115,6 +121,11 @@ impl<H: Host> PluginInstanceInner<H> {
         }
 
         Ok(())
+    }
+
+    #[inline]
+    pub fn is_active(&self) -> bool {
+        self.wrapper().is_active()
     }
 
     #[inline]

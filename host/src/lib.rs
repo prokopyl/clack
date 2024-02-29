@@ -267,6 +267,7 @@ pub mod factory;
 pub mod host;
 pub mod plugin;
 pub mod process;
+mod util;
 
 pub use clack_common::events;
 pub use clack_common::stream;

@@ -24,6 +24,8 @@ pub enum HostError {
     MissingPluginFactory,
     /// The plugin's instantiation failed.
     InstantiationFailed,
+    /// The plugin has already been destroyed.
+    PluginDestroyed,
     /// The plugin's audio processing failed.
     ProcessingFailed,
     /// The plugin's audio processor handle was poisoned.
@@ -63,6 +65,7 @@ impl fmt::Display for HostError {
             Self::PluginNotFound => write!(f, "Specified plugin was not found"),
             Self::MissingPluginFactory => write!(f, "No plugin factory was provided"),
             Self::InstantiationFailed => write!(f, "Could not instantiate"),
+            Self::PluginDestroyed => write!(f, "Plugin was destroyed"),
             Self::ProcessingFailed => write!(f, "Could not process"),
             Self::ProcessorHandlePoisoned => write!(f, "Audio Processor handle was poisoned"),
             Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),

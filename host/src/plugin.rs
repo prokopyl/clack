@@ -2,7 +2,6 @@ use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::marker::PhantomData;
-use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 mod handle;
@@ -11,11 +10,12 @@ pub(crate) mod instance;
 pub use handle::*;
 use instance::*;
 
+use crate::util::{WeakReader, WriterLock};
 pub use clack_common::plugin::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {
-    inner: ManuallyDrop<Arc<PluginInstanceInner<H>>>,
+    inner: WriterLock<PluginInstanceInner<H>>,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -40,7 +40,7 @@ impl<H: Host> PluginInstance<H> {
         )?;
 
         Ok(Self {
-            inner: ManuallyDrop::new(inner),
+            inner: WriterLock::new(inner),
             _no_send: PhantomData,
         })
     }
@@ -57,11 +57,15 @@ impl<H: Host> PluginInstance<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
+        self.inner.use_mut(|inner| {
+            let wrapper = Arc::get_mut(inner).ok_or(HostError::AlreadyActivatedPlugin)?;
 
-        wrapper.activate(audio_processor, configuration)?;
+            wrapper.activate(audio_processor, configuration)
+        })?;
 
-        Ok(StoppedPluginAudioProcessor::new(Arc::clone(&self.inner)))
+        Ok(StoppedPluginAudioProcessor::new(Arc::clone(
+            self.inner.get(),
+        )))
     }
 
     #[inline]
@@ -82,7 +86,7 @@ impl<H: Host> PluginInstance<H> {
     where
         D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
     {
-        if !Arc::ptr_eq(&self.inner, &processor.inner) {
+        if !Arc::ptr_eq(self.inner.get(), &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
         }
 
@@ -96,67 +100,91 @@ impl<H: Host> PluginInstance<H> {
     where
         D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
     {
-        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::StillActivatedPlugin)?;
+        self.inner.use_mut(|inner| {
+            let wrapper = Arc::get_mut(inner).ok_or(HostError::StillActivatedPlugin)?;
 
-        wrapper.deactivate_with(drop_with)
+            wrapper.deactivate_with(drop_with)
+        })
     }
 
     #[inline]
     pub fn call_on_main_thread_callback(&mut self) {
         // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing
-        unsafe { self.inner.on_main_thread() }
+        unsafe { self.inner.get().on_main_thread() }
     }
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
-        self.inner.raw_instance()
+        self.inner.get().raw_instance()
     }
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        Arc::strong_count(&self.inner) > 1
+        self.inner.get().is_active()
     }
 
     #[inline]
     pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
-        self.inner.wrapper().shared()
+        self.inner.get().wrapper().shared()
     }
 
     #[inline]
     pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.inner.wrapper().main_thread().as_ref() }
+        unsafe { self.inner.get().wrapper().main_thread().as_ref() }
     }
 
     #[inline]
     pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.inner.wrapper().main_thread().as_mut() }
+        unsafe { self.inner.get().wrapper().main_thread().as_mut() }
     }
 
     #[inline]
     pub fn shared_plugin_data(&self) -> PluginSharedHandle {
-        // SAFETY: the raw instance is guaranteed to be valid
-        unsafe { PluginSharedHandle::new(self.inner.raw_instance().into()) }
+        self.inner.get().plugin_shared()
     }
 
     #[inline]
     pub fn main_thread_plugin_data(&mut self) -> PluginMainThreadHandle {
         // SAFETY: this type can only exist on the main thread.
-        unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
+        unsafe { PluginMainThreadHandle::new(self.inner.get().raw_instance().into()) }
+    }
+
+    // TODO: bikeshed
+    pub fn handle(&self) -> PluginInstanceHandle<H> {
+        PluginInstanceHandle {
+            inner: self.inner.make_reader(),
+        }
     }
 }
 
-impl<H: Host> Drop for PluginInstance<H> {
-    fn drop(&mut self) {
-        // Only drop the inner value if we are the sole owner.
-        if Arc::get_mut(&mut self.inner).is_some() {
-            // SAFETY: We can only call this once (as we're in Drop), and we never use the inner
-            // value again afterward.
-            unsafe { ManuallyDrop::drop(&mut self.inner) }
-        };
+// TODO: bikeshed
+pub struct PluginInstanceHandle<H: Host> {
+    inner: WeakReader<PluginInstanceInner<H>>,
+}
+
+impl<H: Host> PluginInstanceHandle<H> {
+    #[inline]
+    pub fn use_shared_host_data<T>(
+        &self,
+        lambda: impl FnOnce(&H::Shared<'_>) -> T,
+    ) -> Result<T, HostError> {
+        self.inner
+            .use_with(|inner| lambda(inner.wrapper().shared()))
+            .ok_or(HostError::PluginDestroyed)
+    }
+
+    #[inline]
+    pub fn use_shared_plugin_data<T>(
+        &self,
+        lambda: impl FnOnce(PluginSharedHandle) -> T,
+    ) -> Result<T, HostError> {
+        self.inner
+            .use_with(|inner| lambda(inner.plugin_shared()))
+            .ok_or(HostError::PluginDestroyed)
     }
 }
 
