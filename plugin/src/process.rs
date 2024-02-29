@@ -227,6 +227,24 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Returns the raw input and output buffers structs, respectively.
+    #[inline]
+    pub fn raw_buffers(&mut self) -> (&[clap_audio_buffer], &mut [clap_audio_buffer]) {
+        (self.inputs, self.outputs)
+    }
+
+    /// Returns the raw input buffers structs.
+    #[inline]
+    pub fn raw_input_buffers(&self) -> &[clap_audio_buffer] {
+        self.inputs
+    }
+
+    /// Returns the raw output buffers structs.
+    #[inline]
+    pub fn raw_output_buffers(&mut self) -> &mut [clap_audio_buffer] {
+        self.outputs
+    }
+
     /// Retrieves the [`InputPort`] at a given index.
     ///
     /// This returns [`None`] if there is no input port at the given index.

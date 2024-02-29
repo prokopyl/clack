@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 clap-sys = { workspace = true }
 clack-common = { workspace = true }
+clack-plugin = { workspace = true, optional = true }
 
 libloading = { workspace = true, optional = true }
 stable_deref_trait = { workspace = true, optional = true }

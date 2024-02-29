@@ -79,6 +79,22 @@ unsafe impl Send for AudioPorts {}
 unsafe impl Sync for AudioPorts {}
 
 impl AudioPorts {
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin_audio<'a>(
+        audio: &'a mut clack_plugin::prelude::Audio<'a>,
+    ) -> (InputAudioBuffers<'a>, OutputAudioBuffers<'a>) {
+        let frames_count = audio.frames_count();
+        let (ins, outs) = audio.raw_buffers();
+
+        // SAFETY: the validity of the buffers is guaranteed by the Audio type
+        unsafe {
+            (
+                InputAudioBuffers::from_raw_buffers(ins, frames_count),
+                OutputAudioBuffers::from_raw_buffers(outs, frames_count),
+            )
+        }
+    }
+
     pub fn with_capacity(total_channel_count: usize, port_count: usize) -> Self {
         let mut bufs = Self {
             buffer_configs: Vec::with_capacity(port_count),
@@ -185,7 +201,7 @@ impl AudioPorts {
             }
         }
 
-        // If a realloc occured, we must rewrite all of the pointers.
+        // If a realloc occurred, we must rewrite all the pointers.
         // Thankfully, we know we wrote them sequentially, and we stored the lengths, so it's easy
         // to find them back.
         if has_reallocated {
@@ -208,7 +224,11 @@ impl AudioPorts {
 
         InputAudioBuffers {
             buffers: &self.buffer_configs[..total],
-            min_channel_buffer_length,
+            frames_count: if min_channel_buffer_length == usize::MAX {
+                0
+            } else {
+                min_channel_buffer_length as u32
+            },
         }
     }
 
@@ -279,7 +299,7 @@ impl AudioPorts {
             }
         }
 
-        // If a realloc occured, we must rewrite all of the pointers.
+        // If a realloc occurred, we must rewrite all the pointers.
         // Thankfully, we know we wrote them sequentially, and we stored the lengths, so it's easy
         // to find them back.
         if has_reallocated {
@@ -302,7 +322,11 @@ impl AudioPorts {
 
         OutputAudioBuffers {
             buffers: &mut self.buffer_configs[..total],
-            min_channel_buffer_length,
+            frames_count: if min_channel_buffer_length == usize::MAX {
+                0
+            } else {
+                min_channel_buffer_length as u32
+            },
         }
     }
 
@@ -328,7 +352,7 @@ impl AudioPorts {
 
 pub struct InputAudioBuffers<'a> {
     buffers: &'a [clap_audio_buffer],
-    min_channel_buffer_length: usize,
+    frames_count: u32,
 }
 
 impl<'a> InputAudioBuffers<'a> {
@@ -336,8 +360,32 @@ impl<'a> InputAudioBuffers<'a> {
     pub const fn empty() -> Self {
         Self {
             buffers: &[],
-            min_channel_buffer_length: 0,
+            frames_count: 0,
         }
+    }
+
+    /// # Safety
+    ///
+    /// The caller must ensure all buffer structs are valid for 'a, including all the buffer
+    /// pointers they contain.
+    ///
+    /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
+    /// channel buffers pointed to by `buffers`.
+    #[inline]
+    pub unsafe fn from_raw_buffers(buffers: &'a [clap_audio_buffer], frames_count: u32) -> Self {
+        Self {
+            buffers,
+            frames_count,
+        }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin_audio(audio: &'a clack_plugin::prelude::Audio<'a>) -> InputAudioBuffers<'a> {
+        let frames_count = audio.frames_count();
+        let ins = audio.raw_input_buffers();
+
+        // SAFETY: the validity of the buffers is guaranteed by the Audio type
+        unsafe { InputAudioBuffers::from_raw_buffers(ins, frames_count) }
     }
 
     #[inline]
@@ -346,14 +394,14 @@ impl<'a> InputAudioBuffers<'a> {
     }
 
     #[inline]
-    pub fn min_channel_buffer_length(&self) -> usize {
-        self.min_channel_buffer_length
+    pub fn frames_count(&self) -> u32 {
+        self.frames_count
     }
 }
 
 pub struct OutputAudioBuffers<'a> {
     buffers: &'a mut [clap_audio_buffer],
-    min_channel_buffer_length: usize,
+    frames_count: u32,
 }
 
 impl<'a> OutputAudioBuffers<'a> {
@@ -361,8 +409,37 @@ impl<'a> OutputAudioBuffers<'a> {
     pub fn empty() -> Self {
         Self {
             buffers: &mut [],
-            min_channel_buffer_length: 0,
+            frames_count: 0,
         }
+    }
+
+    /// # Safety
+    ///
+    /// The caller must ensure all buffer structs are valid for 'a, including all the buffer
+    /// pointers they contain.
+    ///
+    /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
+    /// channel buffers pointed to by `buffers`.
+    #[inline]
+    pub unsafe fn from_raw_buffers(
+        buffers: &'a mut [clap_audio_buffer],
+        frames_count: u32,
+    ) -> Self {
+        Self {
+            buffers,
+            frames_count,
+        }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin_audio(
+        audio: &'a mut clack_plugin::prelude::Audio<'a>,
+    ) -> OutputAudioBuffers<'a> {
+        let frames_count = audio.frames_count();
+        let outs = audio.raw_output_buffers();
+
+        // SAFETY: the validity of the buffers is guaranteed by the Audio type
+        unsafe { OutputAudioBuffers::from_raw_buffers(outs, frames_count) }
     }
 
     #[inline]
@@ -376,8 +453,8 @@ impl<'a> OutputAudioBuffers<'a> {
     }
 
     #[inline]
-    pub fn min_channel_buffer_length(&self) -> usize {
-        self.min_channel_buffer_length
+    pub fn frames_count(&self) -> u32 {
+        self.frames_count
     }
 }
 
@@ -403,7 +480,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_channel_buffer_length, 4);
+        assert_eq!(buffers.frames_count, 4);
     }
 
     #[test]
@@ -419,7 +496,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_channel_buffer_length, 4);
+        assert_eq!(buffers.frames_count, 4);
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
@@ -442,7 +519,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_channel_buffer_length, 4);
+        assert_eq!(buffers.frames_count, 4);
     }
 
     #[test]
@@ -459,7 +536,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.min_channel_buffer_length, 4);
+        assert_eq!(buffers.frames_count, 4);
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
@@ -492,9 +569,9 @@ mod test {
             }));
 
         assert_eq!(input_buffers.buffers.len(), 2);
-        assert_eq!(input_buffers.min_channel_buffer_length, 4);
+        assert_eq!(input_buffers.frames_count, 4);
         assert_eq!(output_buffers.buffers.len(), 2);
-        assert_eq!(output_buffers.min_channel_buffer_length, 4);
+        assert_eq!(output_buffers.frames_count, 4);
 
         let raw_input_buffers = input_buffers.as_raw_buffers();
         let raw_output_buffers = output_buffers.as_raw_buffers();
@@ -511,6 +588,7 @@ mod test {
             out_events: null_mut(),
         };
 
+        // SAFETY: we built the process struct above, it should be good.
         let mut audio = unsafe { Audio::from_raw(&process) };
 
         for (port, bufs) in audio.input_ports().zip(&input_bufs) {

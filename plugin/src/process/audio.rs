@@ -39,11 +39,12 @@ pub mod tests {
             ),
         }]);
 
+        // TODO: make that into a helper
         Audio {
             inputs: input_buffers.as_raw_buffers(),
             frames_count: input_buffers
-                .min_channel_buffer_length()
-                .min(output_buffers.min_channel_buffer_length()) as u32,
+                .frames_count()
+                .min(output_buffers.frames_count()),
             outputs: output_buffers.into_raw_buffers(),
         }
     }

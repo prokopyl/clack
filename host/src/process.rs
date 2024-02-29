@@ -193,11 +193,11 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         events_input: &InputEvents,
         events_output: &mut OutputEvents,
         steady_time: i64,
-        max_frame_count: Option<usize>,
+        max_frame_count: Option<u32>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, HostError> {
-        let min_input_sample_count = audio_inputs.min_channel_buffer_length();
-        let min_output_sample_count = audio_outputs.min_channel_buffer_length();
+        let min_input_sample_count = audio_inputs.frames_count();
+        let min_output_sample_count = audio_outputs.frames_count();
 
         let mut frames_count = min_input_sample_count.min(min_output_sample_count);
         if let Some(max_frame_count) = max_frame_count {
@@ -206,7 +206,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
 
         let process = clap_process {
             steady_time,
-            frames_count: frames_count as u32,
+            frames_count,
             transport: transport
                 .map(|e| e.as_raw_ref() as *const _)
                 .unwrap_or(core::ptr::null()),
