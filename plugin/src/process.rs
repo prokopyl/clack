@@ -251,19 +251,31 @@ impl<'a> Audio<'a> {
 
     /// Returns the raw input and output buffers structs, respectively.
     #[inline]
-    pub fn raw_buffers(&mut self) -> (&[clap_audio_buffer], &mut [clap_audio_buffer]) {
+    pub fn raw_buffers(&mut self) -> (&'a [clap_audio_buffer], &mut [clap_audio_buffer]) {
+        (self.inputs, self.outputs)
+    }
+
+    /// Returns the raw input and output buffers structs, respectively, consuming the audio struct.
+    #[inline]
+    pub fn to_raw_buffers(self) -> (&'a [clap_audio_buffer], &'a mut [clap_audio_buffer]) {
         (self.inputs, self.outputs)
     }
 
     /// Returns the raw input buffers structs.
     #[inline]
-    pub fn raw_input_buffers(&self) -> &[clap_audio_buffer] {
+    pub fn raw_input_buffers(&self) -> &'a [clap_audio_buffer] {
         self.inputs
     }
 
     /// Returns the raw output buffers structs.
     #[inline]
     pub fn raw_output_buffers(&mut self) -> &mut [clap_audio_buffer] {
+        self.outputs
+    }
+
+    /// Returns the raw output buffers structs, consuming the audio struct.
+    #[inline]
+    pub fn to_raw_output_buffers(self) -> &'a mut [clap_audio_buffer] {
         self.outputs
     }
 

@@ -80,11 +80,27 @@ unsafe impl Sync for AudioPorts {}
 
 impl AudioPorts {
     #[cfg(feature = "clack-plugin")]
-    pub fn from_plugin_audio<'a>(
+    pub fn from_plugin_audio_mut<'a>(
         audio: &'a mut clack_plugin::prelude::Audio<'a>,
     ) -> (InputAudioBuffers<'a>, OutputAudioBuffers<'a>) {
         let frames_count = audio.frames_count();
         let (ins, outs) = audio.raw_buffers();
+
+        // SAFETY: the validity of the buffers is guaranteed by the Audio type
+        unsafe {
+            (
+                InputAudioBuffers::from_raw_buffers(ins, frames_count),
+                OutputAudioBuffers::from_raw_buffers(outs, frames_count),
+            )
+        }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin_audio(
+        audio: clack_plugin::prelude::Audio,
+    ) -> (InputAudioBuffers, OutputAudioBuffers) {
+        let frames_count = audio.frames_count();
+        let (ins, outs) = audio.to_raw_buffers();
 
         // SAFETY: the validity of the buffers is guaranteed by the Audio type
         unsafe {
@@ -440,7 +456,16 @@ impl<'a> OutputAudioBuffers<'a> {
     }
 
     #[cfg(feature = "clack-plugin")]
-    pub fn from_plugin_audio(
+    pub fn from_plugin_audio(audio: clack_plugin::prelude::Audio<'a>) -> OutputAudioBuffers<'a> {
+        let frames_count = audio.frames_count();
+        let outs = audio.to_raw_output_buffers();
+
+        // SAFETY: the validity of the buffers is guaranteed by the Audio type
+        unsafe { OutputAudioBuffers::from_raw_buffers(outs, frames_count) }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin_audio_mut(
         audio: &'a mut clack_plugin::prelude::Audio<'a>,
     ) -> OutputAudioBuffers<'a> {
         let frames_count = audio.frames_count();
