@@ -39,7 +39,6 @@ pub mod tests {
             ),
         }]);
 
-        // TODO: make that into a helper
         Audio {
             inputs: input_buffers.as_raw_buffers(),
             frames_count: input_buffers

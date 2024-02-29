@@ -227,6 +227,28 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Create a new [`Audio`] from raw buffer structs.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure all buffer structs are valid for 'a, including all the buffer
+    /// pointers they contain.
+    ///
+    /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
+    /// channel buffers pointed to by `buffers`.
+    #[inline]
+    pub unsafe fn from_raw_buffers(
+        inputs: &'a [clap_audio_buffer],
+        outputs: &'a mut [clap_audio_buffer],
+        frames_count: u32,
+    ) -> Self {
+        Self {
+            inputs,
+            outputs,
+            frames_count,
+        }
+    }
+
     /// Returns the raw input and output buffers structs, respectively.
     #[inline]
     pub fn raw_buffers(&mut self) -> (&[clap_audio_buffer], &mut [clap_audio_buffer]) {

@@ -120,7 +120,7 @@ impl MidiReceiver {
         }))
     }
 
-    /// Receives all of the MIDI events since the last call to the method.
+    /// Receives all the MIDI events since the last call to the method.
     ///
     /// Event's timestamps are interpolated to sample time between 0 and the given sample count.
     ///

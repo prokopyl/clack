@@ -12,4 +12,4 @@ clap-sys = { workspace = true }
 clack-common = { workspace = true }
 
 [dev-dependencies]
-clack-host = { workspace = true, default-features = false }
+clack-host = { workspace = true, default-features = false, features = ["clack-plugin"] }

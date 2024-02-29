@@ -134,7 +134,7 @@ impl StreamAudioProcessor {
     /// first ensures the host internal buffers are big enough, and resizes and reallocates them if
     /// necessary.
     ///
-    /// This methods also collects all of the MIDI events that have been received since the last
+    /// This method also collects all the MIDI events that have been received since the last
     /// process call., and feeds them to the plugin.
     pub fn process<S: FromSample<f32>>(&mut self, data: &mut [S]) {
         self.buffers.ensure_buffer_size_matches(data.len());
@@ -154,7 +154,7 @@ impl StreamAudioProcessor {
             &events,
             &mut OutputEvents::void(),
             self.steady_counter,
-            Some(sample_count),
+            Some(sample_count as u32),
             None,
         ) {
             Ok(_) => self.buffers.write_to_cpal_buffer(data),

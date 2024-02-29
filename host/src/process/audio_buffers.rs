@@ -388,6 +388,29 @@ impl<'a> InputAudioBuffers<'a> {
         unsafe { InputAudioBuffers::from_raw_buffers(ins, frames_count) }
     }
 
+    #[cfg(feature = "clack-plugin")]
+    pub fn as_plugin_audio(&self) -> clack_plugin::prelude::Audio<'a> {
+        // SAFETY: the validity of the buffers is guaranteed by this type
+        unsafe {
+            clack_plugin::prelude::Audio::from_raw_buffers(self.buffers, &mut [], self.frames_count)
+        }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn as_plugin_audio_with_outputs(
+        &self,
+        outputs: &'a mut OutputAudioBuffers<'a>,
+    ) -> clack_plugin::prelude::Audio<'a> {
+        // SAFETY: the validity of the buffers is guaranteed by this type
+        unsafe {
+            clack_plugin::prelude::Audio::from_raw_buffers(
+                self.buffers,
+                outputs.buffers,
+                self.frames_count.min(outputs.frames_count),
+            )
+        }
+    }
+
     #[inline]
     pub fn as_raw_buffers(&self) -> &'a [clap_audio_buffer] {
         self.buffers
@@ -440,6 +463,29 @@ impl<'a> OutputAudioBuffers<'a> {
 
         // SAFETY: the validity of the buffers is guaranteed by the Audio type
         unsafe { OutputAudioBuffers::from_raw_buffers(outs, frames_count) }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn as_plugin_audio(&'a mut self) -> clack_plugin::prelude::Audio<'a> {
+        // SAFETY: the validity of the buffers is guaranteed by this type
+        unsafe {
+            clack_plugin::prelude::Audio::from_raw_buffers(&[], self.buffers, self.frames_count)
+        }
+    }
+
+    #[cfg(feature = "clack-plugin")]
+    pub fn as_plugin_audio_with_inputs(
+        &'a mut self,
+        inputs: &InputAudioBuffers<'a>,
+    ) -> clack_plugin::prelude::Audio<'a> {
+        // SAFETY: the validity of the buffers is guaranteed by this type
+        unsafe {
+            clack_plugin::prelude::Audio::from_raw_buffers(
+                inputs.buffers,
+                self.buffers,
+                self.frames_count.min(inputs.frames_count),
+            )
+        }
     }
 
     #[inline]
