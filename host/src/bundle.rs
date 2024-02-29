@@ -43,9 +43,10 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::NulError;
+use std::ffi::{CStr, NulError};
 use std::fmt::{Display, Formatter};
 
+use libloading::Library;
 use std::ptr::NonNull;
 
 mod cache;
@@ -96,7 +97,7 @@ pub struct PluginBundle {
 }
 
 impl PluginBundle {
-    /// Loads a CLAP bundle from a file located a the given path.
+    /// Loads a CLAP bundle from a file located at the given path.
     ///
     /// # Errors
     ///
@@ -124,8 +125,54 @@ impl PluginBundle {
         // SAFETY: TODO: make this function actually unsafe
         let library = unsafe { PluginEntryLibrary::load(path)? };
 
-        // SAFETY: TODO
-        let inner = unsafe { cache::load_from_library(library, path_str)? };
+        let inner = cache::load_from_library(library, path_str)?;
+
+        Ok(Self { inner })
+    }
+
+    /// Loads a CLAP bundle from a given symbol in a given [`Library`].
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if loading the bundle fails.
+    /// See [`PluginBundleError`] for all the possible errors that may occur.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use std::ffi::CStr;
+    /// use libloading::Library;
+    /// use clack_host::prelude::PluginBundle;
+    ///
+    /// let path = "/home/user/.clap/u-he/libdiva.so";
+    /// let lib = unsafe { Library::new(path) }.unwrap();
+    /// let symbol_name = CStr::from_bytes_with_nul(b"clap_entry\0").unwrap();
+    ///
+    /// let bundle = unsafe { PluginBundle::load_from_symbol_in_library(path, lib, symbol_name)? };
+    ///
+    /// println!("Loaded bundle CLAP version: {}", bundle.version());
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// The given path must match the file location the library was loaded from. Moreover, the
+    /// symbol named `symbol_name` must be a valid CLAP entry.
+    #[cfg(feature = "libloading")]
+    pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
+        path: P,
+        library: Library,
+        symbol_name: &CStr,
+    ) -> Result<Self, PluginBundleError> {
+        use crate::bundle::library::PluginEntryLibrary;
+
+        let path = path.as_ref();
+        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+
+        let library = PluginEntryLibrary::load_from_symbol_in_library(library, symbol_name)?;
+
+        let inner = cache::load_from_library(library, path_str)?;
 
         Ok(Self { inner })
     }

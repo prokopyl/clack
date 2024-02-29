@@ -39,15 +39,12 @@ fn get_or_insert(
 }
 
 #[cfg(feature = "libloading")]
-/// # Safety
-///
-/// Users must ensure the given library is valid.
-pub(crate) unsafe fn load_from_library(
+pub(crate) fn load_from_library(
     library: crate::bundle::library::PluginEntryLibrary,
     plugin_path: &str,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
-        // SAFETY: parent function is unsafe to cover this
+        // SAFETY: PluginEntryLibrary type guarantees the entry
         let entry = unsafe { LoadedEntry::load(library.entry(), plugin_path) }?;
         Ok(EntrySourceInner::FromLibrary {
             entry,
