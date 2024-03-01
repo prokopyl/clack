@@ -51,11 +51,7 @@ impl PluginParams {
         }
     }
 
-    pub fn get_value<H: Host>(
-        &self,
-        plugin: &mut PluginMainThreadHandle,
-        param_id: u32,
-    ) -> Option<f64> {
+    pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: u32) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe { self.0.get_value?(plugin.as_raw(), param_id, value.as_mut_ptr()) };
@@ -68,7 +64,7 @@ impl PluginParams {
         }
     }
 
-    pub fn value_to_text<'b, H: Host>(
+    pub fn value_to_text<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
         param_id: u32,
@@ -97,7 +93,7 @@ impl PluginParams {
         }
     }
 
-    pub fn text_to_value<H: Host>(
+    pub fn text_to_value(
         &self,
         plugin: &mut PluginMainThreadHandle,
         param_id: u32,
