@@ -19,6 +19,15 @@ pub struct HostNotePorts(
 bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct NotePortRescanFlags: u32 {
+        const ALL = CLAP_NOTE_PORTS_RESCAN_ALL;
+        const NAMES = CLAP_NOTE_PORTS_RESCAN_NAMES;
+    }
+}
+
+bitflags! {
+    #[repr(C)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct NoteDialects: u32 {
         const CLAP = CLAP_NOTE_DIALECT_CLAP;
         const MIDI = CLAP_NOTE_DIALECT_MIDI;
@@ -88,35 +97,21 @@ unsafe impl Send for HostNotePorts {}
 // the input handles, not on the descriptor itself.
 unsafe impl Sync for HostNotePorts {}
 
-pub struct NotePortInfoData<'a> {
+pub struct NotePortInfo<'a> {
     pub id: u32,
     pub name: &'a [u8],
     pub supported_dialects: NoteDialects,
     pub preferred_dialect: Option<NoteDialect>,
 }
 
-impl<'a> NotePortInfoData<'a> {
-    /// # Safety
-    ///
-    /// Users must ensure the given port info is valid.
-    #[cfg(feature = "clack-host")]
-    // TODO: make pub?
-    unsafe fn from_raw(raw: &'a clap_note_port_info) -> Self {
+impl<'a> NotePortInfo<'a> {
+    pub fn from_raw(raw: &'a clap_note_port_info) -> Self {
         Self {
             id: raw.id,
             name: crate::utils::data_from_array_buf(&raw.name),
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
             preferred_dialect: NoteDialect::from_raw(raw.preferred_dialect),
         }
-    }
-}
-
-bitflags! {
-    #[repr(C)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct NotePortRescanFlags: u32 {
-        const ALL = CLAP_NOTE_PORTS_RESCAN_ALL;
-        const NAMES = CLAP_NOTE_PORTS_RESCAN_NAMES;
     }
 }
 

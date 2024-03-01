@@ -38,14 +38,14 @@ impl PluginAudioPorts {
         index: u32,
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,
-    ) -> Option<AudioPortInfoData<'b>> {
+    ) -> Option<AudioPortInfo<'b>> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
-            Some(unsafe { AudioPortInfoData::from_raw(buffer.inner.assume_init_ref()) })
+            Some(unsafe { AudioPortInfo::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }

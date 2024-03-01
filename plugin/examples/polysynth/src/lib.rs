@@ -158,7 +158,7 @@ impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
         if !is_input && index == 0 {
-            writer.set(&AudioPortInfoData {
+            writer.set(&AudioPortInfo {
                 id: 1,
                 name: b"main",
                 channel_count: 1,
@@ -181,7 +181,7 @@ impl<'a> PluginNotePortsImpl for PolySynthPluginMainThread<'a> {
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter) {
         if is_input && index == 0 {
-            writer.set(&NotePortInfoData {
+            writer.set(&NotePortInfo {
                 id: 1,
                 name: b"main",
                 preferred_dialect: Some(NoteDialect::Clap),

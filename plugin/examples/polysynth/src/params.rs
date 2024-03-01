@@ -1,10 +1,7 @@
 //! Contains all types and implementations related to parameter management.
 
 use crate::{PolySynthAudioProcessor, PolySynthPluginMainThread};
-use clack_extensions::params::implementation::{
-    ParamDisplayWriter, ParamInfoWriter, PluginAudioProcessorParams, PluginMainThreadParams,
-};
-use clack_extensions::params::info::{ParamInfoData, ParamInfoFlags};
+use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
@@ -93,12 +90,12 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         if param_index != 0 {
             return;
         }
-        info.set(&ParamInfoData {
+        info.set(&ParamInfo {
             id: 1,
             flags: ParamInfoFlags::IS_AUTOMATABLE,
             cookie: Default::default(),
-            name: "Volume",
-            module: "",
+            name: b"Volume",
+            module: b"",
             min_value: 0.0,
             max_value: 1.0,
             default_value: DEFAULT_VOLUME as f64,

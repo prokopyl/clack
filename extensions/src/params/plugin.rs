@@ -1,18 +1,15 @@
-use crate::params::info::ParamInfoData;
-use crate::params::{HostParams, ParamClearFlags, ParamRescanFlags};
+use super::*;
 use crate::utils::{slice_from_external_parts_mut, write_to_array_buf};
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_plugin::extensions::prelude::*;
 use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
-use clap_sys::ext::params::{clap_param_info, clap_plugin_params};
 use clap_sys::id::clap_id;
-use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 pub struct ParamInfoWriter<'a> {
-    initialized: bool,
-    inner: &'a mut MaybeUninit<clap_param_info>,
+    buf: &'a mut MaybeUninit<clap_param_info>,
+    is_set: bool,
 }
 
 impl<'a> ParamInfoWriter<'a> {
@@ -20,34 +17,31 @@ impl<'a> ParamInfoWriter<'a> {
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.
     /// However, it doesn't have to be initialized.
-    unsafe fn new(ptr: *mut clap_param_info) -> Self {
+    unsafe fn new(raw: *mut clap_param_info) -> Self {
         Self {
-            initialized: false,
             // SAFETY: MaybeUninit<T> and T have same memory representation
-            inner: unsafe { &mut *(ptr as *mut _) },
+            buf: unsafe { &mut *raw.cast() },
+            is_set: false,
         }
     }
 
     #[inline]
-    pub fn set(&mut self, param: &ParamInfoData) {
-        let buf = self.inner.as_mut_ptr();
+    pub fn set(&mut self, info: &ParamInfo) {
+        let buf = self.buf.as_mut_ptr();
 
         // SAFETY: all pointers come from `inner`, which is valid for writes and well-aligned
         unsafe {
-            core::ptr::addr_of_mut!((*buf).id).write(param.id);
-            core::ptr::addr_of_mut!((*buf).flags).write(param.flags.bits());
-            core::ptr::addr_of_mut!((*buf).min_value).write(param.min_value);
-            core::ptr::addr_of_mut!((*buf).max_value).write(param.max_value);
-            core::ptr::addr_of_mut!((*buf).default_value).write(param.default_value);
-            core::ptr::addr_of_mut!((*buf).cookie).write(param.cookie.as_raw());
+            core::ptr::addr_of_mut!((*buf).id).write(info.id);
+            core::ptr::addr_of_mut!((*buf).flags).write(info.flags.bits());
+            core::ptr::addr_of_mut!((*buf).min_value).write(info.min_value);
+            core::ptr::addr_of_mut!((*buf).max_value).write(info.max_value);
+            core::ptr::addr_of_mut!((*buf).default_value).write(info.default_value);
+            core::ptr::addr_of_mut!((*buf).cookie).write(info.cookie.as_raw());
 
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), param.name.as_bytes());
-            write_to_array_buf(
-                core::ptr::addr_of_mut!((*buf).module),
-                param.module.as_bytes(),
-            );
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), info.name);
+            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), info.module);
         }
-        self.initialized = true;
+        self.is_set = true;
     }
 }
 
@@ -148,7 +142,7 @@ where
         Ok(())
     })
     .is_some()
-        && info.initialized
+        && info.is_set
 }
 
 #[allow(clippy::missing_safety_doc)]

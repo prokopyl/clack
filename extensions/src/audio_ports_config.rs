@@ -129,7 +129,6 @@ impl<'a> MainPortInfo<'a> {
 }
 
 /// An error that can occur as a plugin selects a new port configuration
-// TODO: make global Clack error type all of these can be turned into
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
 pub struct AudioPortConfigSelectError;
 

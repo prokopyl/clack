@@ -23,23 +23,23 @@ impl<'a> NotePortInfoWriter<'a> {
     }
 
     #[inline]
-    pub fn set(&mut self, data: &NotePortInfoData) {
+    pub fn set(&mut self, info: &NotePortInfo) {
         use core::ptr::write;
 
         let buf = self.buf.as_mut_ptr();
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), data.id);
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
+            write(addr_of_mut!((*buf).id), info.id);
+            write_to_array_buf(addr_of_mut!((*buf).name), info.name);
 
             write(
                 addr_of_mut!((*buf).supported_dialects),
-                data.supported_dialects.bits(),
+                info.supported_dialects.bits(),
             );
             write(
                 addr_of_mut!((*buf).preferred_dialect),
-                data.preferred_dialect.map(|d| d as u32).unwrap_or(0),
+                info.preferred_dialect.map(|d| d as u32).unwrap_or(0),
             );
         }
 

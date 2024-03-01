@@ -38,14 +38,14 @@ impl PluginNotePorts {
         index: u32,
         is_input: bool,
         buffer: &'b mut NotePortInfoBuffer,
-    ) -> Option<NotePortInfoData<'b>> {
+    ) -> Option<NotePortInfo<'b>> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to
-            Some(unsafe { NotePortInfoData::from_raw(buffer.inner.assume_init_ref()) })
+            Some(unsafe { NotePortInfo::from_raw(buffer.inner.assume_init_ref()) })
         } else {
             None
         }

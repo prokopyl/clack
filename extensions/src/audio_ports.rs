@@ -85,8 +85,8 @@ unsafe impl Send for HostAudioPorts {}
 // the input handles, not on the descriptor itself.
 unsafe impl Sync for HostAudioPorts {}
 
-#[derive(Clone)]
-pub struct AudioPortInfoData<'a> {
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct AudioPortInfo<'a> {
     pub id: u32, // TODO: ClapId
     pub name: &'a [u8],
     pub channel_count: u32,
@@ -95,7 +95,7 @@ pub struct AudioPortInfoData<'a> {
     pub in_place_pair: Option<u32>,
 }
 
-impl<'a> AudioPortInfoData<'a> {
+impl<'a> AudioPortInfo<'a> {
     /// # Safety
     /// The raw port_type pointer must be a valid C string for the 'a lifetime.
     pub unsafe fn from_raw(raw: &'a clap_audio_port_info) -> Self {
@@ -120,7 +120,7 @@ impl<'a> AudioPortInfoData<'a> {
     }
 }
 
-impl<'a> Debug for AudioPortInfoData<'a> {
+impl<'a> Debug for AudioPortInfo<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AudioPortInfoData")
             .field("id", &self.id)

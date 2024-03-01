@@ -1,4 +1,4 @@
-use crate::audio_ports::{AudioPortInfoData, HostAudioPorts, PluginAudioPorts, RescanType};
+use crate::audio_ports::{AudioPortInfo, HostAudioPorts, PluginAudioPorts, RescanType};
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
@@ -26,7 +26,7 @@ impl<'a> AudioPortInfoWriter<'a> {
     }
 
     #[inline]
-    pub fn set(&mut self, data: &AudioPortInfoData) {
+    pub fn set(&mut self, data: &AudioPortInfo) {
         use core::ptr::write;
 
         let buf = self.buf.as_mut_ptr();

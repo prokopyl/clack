@@ -1,8 +1,28 @@
 use super::*;
-use crate::params::info::ParamInfo;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
+
+#[derive(Clone)]
+pub struct ParamInfoBuffer {
+    inner: MaybeUninit<clap_param_info>,
+}
+
+impl Default for ParamInfoBuffer {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ParamInfoBuffer {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            inner: MaybeUninit::uninit(),
+        }
+    }
+}
 
 impl PluginParams {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
@@ -16,16 +36,16 @@ impl PluginParams {
     pub fn get_info<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        param_index: u32,
-        info: &'b mut MaybeUninit<ParamInfo>,
-    ) -> Option<&'b mut ParamInfo> {
+        index: u32,
+        buffer: &'b mut ParamInfoBuffer,
+    ) -> Option<ParamInfo<'b>> {
         // SAFETY: This type ensures the function pointer is valid.
-        let valid =
-            unsafe { self.0.get_info?(plugin.as_raw(), param_index, info.as_mut_ptr() as *mut _) };
+        let success =
+            unsafe { self.0.get_info?(plugin.as_raw(), index, buffer.inner.as_mut_ptr()) };
 
-        if valid {
+        if success {
             // SAFETY: we just checked the buffer was successfully written to.
-            unsafe { Some(info.assume_init_mut()) }
+            unsafe { Some(ParamInfo::from_raw(buffer.inner.assume_init_mut())) }
         } else {
             None
         }
