@@ -49,7 +49,7 @@ impl<'a> NotePortInfoWriter<'a> {
 
 pub trait PluginNotePortsImpl {
     fn count(&mut self, is_input: bool) -> u32;
-    fn get(&mut self, is_input: bool, index: u32, writer: &mut NotePortInfoWriter);
+    fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter);
 }
 
 impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
@@ -90,7 +90,7 @@ where
         };
 
         let mut writer = NotePortInfoWriter::from_raw(info);
-        p.main_thread().as_mut().get(is_input, index, &mut writer);
+        p.main_thread().as_mut().get(index, is_input, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

@@ -133,7 +133,7 @@ impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
         1
     }
 
-    fn get(&mut self, _is_input: bool, index: u32, writer: &mut AudioPortInfoWriter) {
+    fn get(&mut self, index: u32, _is_input: bool, writer: &mut AudioPortInfoWriter) {
         if index == 0 {
             writer.set(&AudioPortInfoData {
                 id: 0,

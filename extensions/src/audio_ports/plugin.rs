@@ -58,7 +58,7 @@ impl<'a> AudioPortInfoWriter<'a> {
 
 pub trait PluginAudioPortsImpl {
     fn count(&mut self, is_input: bool) -> u32;
-    fn get(&mut self, is_input: bool, index: u32, writer: &mut AudioPortInfoWriter);
+    fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 
 impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPorts
@@ -99,7 +99,7 @@ where
         };
 
         let mut writer = AudioPortInfoWriter::from_raw(info);
-        p.main_thread().as_mut().get(is_input, index, &mut writer);
+        p.main_thread().as_mut().get(index, is_input, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)
