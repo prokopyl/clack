@@ -129,7 +129,7 @@ impl PluginBundle {
         Ok(Self { inner })
     }
 
-    /// Loads a CLAP bundle from a given symbol in a given [`Library`].
+    /// Loads a CLAP bundle from a given symbol in a given [`libloading::Library`].
     ///
     /// # Errors
     ///
