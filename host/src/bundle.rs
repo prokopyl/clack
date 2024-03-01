@@ -46,7 +46,6 @@ use std::error::Error;
 use std::ffi::{CStr, NulError};
 use std::fmt::{Display, Formatter};
 
-use libloading::Library;
 use std::ptr::NonNull;
 
 mod cache;
@@ -162,7 +161,7 @@ impl PluginBundle {
     #[cfg(feature = "libloading")]
     pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
         path: P,
-        library: Library,
+        library: libloading::Library,
         symbol_name: &CStr,
     ) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
