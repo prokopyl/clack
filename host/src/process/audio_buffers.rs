@@ -81,7 +81,7 @@ unsafe impl Sync for AudioPorts {}
 impl AudioPorts {
     #[cfg(feature = "clack-plugin")]
     pub fn from_plugin_audio_mut<'a>(
-        audio: &'a mut clack_plugin::prelude::Audio<'a>,
+        audio: &'a mut clack_plugin::prelude::Audio,
     ) -> (InputAudioBuffers<'a>, OutputAudioBuffers<'a>) {
         let frames_count = audio.frames_count();
         let (ins, outs) = audio.raw_buffers();
@@ -396,7 +396,7 @@ impl<'a> InputAudioBuffers<'a> {
     }
 
     #[cfg(feature = "clack-plugin")]
-    pub fn from_plugin_audio(audio: &'a clack_plugin::prelude::Audio<'a>) -> InputAudioBuffers<'a> {
+    pub fn from_plugin_audio(audio: &clack_plugin::prelude::Audio<'a>) -> InputAudioBuffers<'a> {
         let frames_count = audio.frames_count();
         let ins = audio.raw_input_buffers();
 
@@ -466,7 +466,7 @@ impl<'a> OutputAudioBuffers<'a> {
 
     #[cfg(feature = "clack-plugin")]
     pub fn from_plugin_audio_mut(
-        audio: &'a mut clack_plugin::prelude::Audio<'a>,
+        audio: &'a mut clack_plugin::prelude::Audio,
     ) -> OutputAudioBuffers<'a> {
         let frames_count = audio.frames_count();
         let outs = audio.raw_output_buffers();

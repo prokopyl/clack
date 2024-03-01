@@ -43,7 +43,7 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::{CStr, NulError};
+use std::ffi::NulError;
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
@@ -162,7 +162,7 @@ impl PluginBundle {
     pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
         path: P,
         library: libloading::Library,
-        symbol_name: &CStr,
+        symbol_name: &core::ffi::CStr,
     ) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
 
