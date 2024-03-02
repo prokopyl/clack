@@ -99,7 +99,7 @@ mod plugin {
         #[inline]
         pub fn register_timer(
             &self,
-            host: &HostHandle,
+            host: &mut HostMainThreadHandle,
             period_ms: u32,
         ) -> Result<TimerId, TimerError> {
             let mut id = 0u32;
@@ -123,7 +123,7 @@ mod plugin {
         #[inline]
         pub fn unregister_timer(
             &self,
-            host: &HostHandle,
+            host: &mut HostMainThreadHandle,
             timer_id: TimerId,
         ) -> Result<(), TimerError> {
             let unregister_timer = self.0.unregister_timer.ok_or(TimerError::UnregisterError)?;
