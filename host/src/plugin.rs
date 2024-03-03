@@ -15,7 +15,7 @@ pub use clack_common::plugin::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: Host> {
-    inner: WriterLock<PluginInstanceInner<H>>,
+    pub(crate) inner: WriterLock<PluginInstanceInner<H>>,
     _no_send: PhantomData<*const ()>,
 }
 

@@ -2,7 +2,7 @@ use self::audio_buffers::InputAudioBuffers;
 use crate::host::Host;
 use crate::host::HostError;
 use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
-use crate::prelude::OutputAudioBuffers;
+use crate::prelude::{OutputAudioBuffers, PluginInstance};
 use crate::process::PluginAudioProcessor::*;
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
@@ -178,6 +178,15 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
             Poisoned => unreachable!(),
         }
     }
+
+    #[inline]
+    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
+        match &self {
+            Started(s) => s.matches(instance),
+            Stopped(s) => s.matches(instance),
+            Poisoned => unreachable!(),
+        }
+    }
 }
 
 impl<'a, H: 'a + Host> From<StartedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
@@ -304,6 +313,11 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     pub fn audio_processor_plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.as_ref().unwrap().raw_instance().into())
     }
+
+    #[inline]
+    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
+        Arc::ptr_eq(self.inner.as_ref().unwrap(), instance.inner.get())
+    }
 }
 
 impl<H: Host> Drop for StartedPluginAudioProcessor<H> {
@@ -341,6 +355,11 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
             }),
             Err(_) => Err(ProcessingStartError { processor: self }),
         }
+    }
+
+    #[inline]
+    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
+        Arc::ptr_eq(&self.inner, instance.inner.get())
     }
 
     #[inline]
