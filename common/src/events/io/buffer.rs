@@ -4,6 +4,7 @@ use crate::events::io::{InputEvents, OutputEvents, TryPushError};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
 use core::mem::{size_of_val, MaybeUninit};
+use std::fmt::{Debug, Formatter};
 use std::ops::{Index, Range};
 
 #[repr(C, align(8))]
@@ -259,6 +260,21 @@ impl Default for EventBuffer {
     #[inline]
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Debug for EventBuffer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut list = f.debug_list();
+        for event in self {
+            if let Some(event) = event.as_core_event() {
+                list.entry(&event);
+            } else {
+                list.entry(&event);
+            }
+        }
+
+        list.finish()
     }
 }
 

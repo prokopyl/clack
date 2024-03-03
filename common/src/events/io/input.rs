@@ -2,6 +2,7 @@ use crate::events::io::implementation::{raw_input_events, InputEventBuffer};
 use crate::events::io::EventBatcher;
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_input_events;
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Index, Range};
 
@@ -269,6 +270,21 @@ impl<'a> Index<usize> for InputEvents<'a> {
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         self.get(index as u32).expect(INDEX_ERROR)
+    }
+}
+
+impl<'a> Debug for InputEvents<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut list = f.debug_list();
+        for event in self {
+            if let Some(event) = event.as_core_event() {
+                list.entry(&event);
+            } else {
+                list.entry(&event);
+            }
+        }
+
+        list.finish()
     }
 }
 
