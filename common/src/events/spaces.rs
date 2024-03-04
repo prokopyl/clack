@@ -7,7 +7,7 @@ pub use id::*;
 use crate::events::UnknownEvent;
 use std::ffi::CStr;
 
-/// Holds all of the possible event types included in a given event space.  
+/// Holds all the possible event types included in a given event space.  
 ///
 /// # Safety
 ///

@@ -151,6 +151,19 @@ impl<'a, T: Event<'a>> InputEventBuffer<'a> for &[T] {
     }
 }
 
+impl<'a, T: Event<'a>> InputEventBuffer<'a> for Vec<T> {
+    #[inline]
+    fn len(&self) -> u32 {
+        let len = <[T]>::len(self);
+        len.min((u32::MAX - 1) as usize) as u32
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+        <[T]>::get(self, index as usize).map(|e| e.as_unknown())
+    }
+}
+
 impl<'a> InputEventBuffer<'a> for &UnknownEvent<'a> {
     #[inline]
     fn len(&self) -> u32 {
@@ -191,6 +204,19 @@ impl<'a> InputEventBuffer<'a> for &[&UnknownEvent<'a>] {
     }
 }
 
+impl<'a> InputEventBuffer<'a> for Vec<&UnknownEvent<'a>> {
+    #[inline]
+    fn len(&self) -> u32 {
+        let len = <[&UnknownEvent<'a>]>::len(self);
+        len.min((u32::MAX - 1) as usize) as u32
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+        <[&UnknownEvent<'a>]>::get(self, index as usize).copied()
+    }
+}
+
 impl<'a, T: InputEventBuffer<'a>> InputEventBuffer<'a> for Option<T> {
     #[inline]
     fn len(&self) -> u32 {
@@ -219,6 +245,17 @@ impl<'a, T: Event<'a, EventSpace = CoreEventSpace<'a>> + Clone> OutputEventBuffe
 
         if let Some(event) = event.as_event::<T>() {
             *self = Some(event.clone());
+            Ok(())
+        } else {
+            Err(TryPushError)
+        }
+    }
+}
+
+impl<'a, T: Event<'a, EventSpace = CoreEventSpace<'a>> + Clone> OutputEventBuffer<'a> for Vec<T> {
+    fn try_push(&mut self, event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
+        if let Some(event) = event.as_event::<T>() {
+            self.push(event.clone());
             Ok(())
         } else {
             Err(TryPushError)
