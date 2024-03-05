@@ -43,6 +43,17 @@ impl ProcessStatus {
             _ => None,
         }
     }
+
+    pub fn combined_with(self, other: ProcessStatus) -> ProcessStatus {
+        use ProcessStatus::*;
+
+        match (self, other) {
+            (Continue, _) | (_, Continue) => Continue,
+            (ContinueIfNotQuiet, _) | (_, ContinueIfNotQuiet) => ContinueIfNotQuiet,
+            (Tail, _) | (_, Tail) => Tail,
+            (Sleep, Sleep) => Sleep,
+        }
+    }
 }
 
 /// A hint that indicates which channels of an audio port are constant.
