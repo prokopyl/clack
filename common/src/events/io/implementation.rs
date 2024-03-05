@@ -126,6 +126,26 @@ impl<'a, T: Event<'a>> InputEventBuffer<'a> for T {
     }
 }
 
+impl<'a, 't: 'a, 'u: 'a, T: InputEventBuffer<'t>, U: InputEventBuffer<'u>> InputEventBuffer<'a>
+    for (&T, &U)
+{
+    #[inline]
+    fn len(&self) -> u32 {
+        self.0.len() + self.1.len()
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+        let first_len = self.0.len();
+        if index < first_len {
+            self.0.get(index)
+        } else {
+            // No underflow possible: we checked if index was >= first_len above
+            self.1.get(index - first_len)
+        }
+    }
+}
+
 impl<'a, T: Event<'a>, const N: usize> InputEventBuffer<'a> for [T; N] {
     #[inline]
     fn len(&self) -> u32 {

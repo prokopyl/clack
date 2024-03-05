@@ -110,9 +110,23 @@ impl EventBuffer {
     /// Returns the event located at the given `index`.
     ///
     /// If `index` is out of bounds, this returns [`None`].
-    #[inline]
     pub fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
-        <Self as InputEventBuffer>::get(self, index)
+        let header_index = (*self.indexes.get(index as usize)?) as usize;
+        // SAFETY: Registered indexes always have actual event headers written by append_header_data
+        // PANIC: We used registered indexes, this should never panic
+        let event = unsafe { self.headers[header_index].assume_init_ref() };
+        let event_size = event.0.size as usize;
+        let header_end_index =
+            byte_index_to_value_index::<AlignedEventHeader>(event_size) + header_index;
+
+        let event = &self.headers[header_index..header_end_index];
+
+        // SAFETY: we know the [0..event_size] slice is initialized
+        let event_bytes =
+            unsafe { core::slice::from_raw_parts(event.as_ptr() as *const u8, event_size) };
+
+        // SAFETY: the event header was written from a valid UnknownEvent in append_header_data
+        Some(unsafe { UnknownEvent::from_bytes_unchecked(event_bytes) })
     }
 
     /// Returns an iterator of all the events contained in this buffer.
@@ -225,26 +239,12 @@ impl<'a> IntoIterator for &'a EventBuffer {
 impl InputEventBuffer<'static> for EventBuffer {
     #[inline]
     fn len(&self) -> u32 {
-        self.indexes.len() as u32
+        EventBuffer::len(self) as u32
     }
 
+    #[inline]
     fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
-        let header_index = (*self.indexes.get(index as usize)?) as usize;
-        // SAFETY: Registered indexes always have actual event headers written by append_header_data
-        // PANIC: We used registered indexes, this should never panic
-        let event = unsafe { self.headers[header_index].assume_init_ref() };
-        let event_size = event.0.size as usize;
-        let header_end_index =
-            byte_index_to_value_index::<AlignedEventHeader>(event_size) + header_index;
-
-        let event = &self.headers[header_index..header_end_index];
-
-        // SAFETY: we know the [0..event_size] slice is initialized
-        let event_bytes =
-            unsafe { core::slice::from_raw_parts(event.as_ptr() as *const u8, event_size) };
-
-        // SAFETY: the event header was written from a valid UnknownEvent in append_header_data
-        Some(unsafe { UnknownEvent::from_bytes_unchecked(event_bytes) })
+        EventBuffer::get(self, index)
     }
 }
 

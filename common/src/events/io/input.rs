@@ -262,6 +262,18 @@ impl<'a, I: InputEventBuffer<'a>> From<&'a I> for InputEvents<'a> {
     }
 }
 
+impl<'a> InputEventBuffer<'a> for InputEvents<'a> {
+    #[inline]
+    fn len(&self) -> u32 {
+        InputEvents::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+        InputEvents::get(self, index)
+    }
+}
+
 const INDEX_ERROR: &str = "Indexed InputEvents list out of bounds";
 
 impl<'a> Index<usize> for InputEvents<'a> {
