@@ -167,6 +167,13 @@ impl<'a, I: OutputEventBuffer<'a>> From<&'a mut I> for OutputEvents<'a> {
     }
 }
 
+impl<'a> OutputEventBuffer<'a> for OutputEvents<'a> {
+    #[inline]
+    fn try_push(&mut self, event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
+        OutputEvents::try_push(self, event)
+    }
+}
+
 impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
     #[inline]
     fn extend<T: IntoIterator<Item = &'b UnknownEvent<'a>>>(&mut self, iter: T) {
