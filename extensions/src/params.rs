@@ -15,6 +15,13 @@ bitflags! {
     }
 }
 
+impl ParamRescanFlags {
+    #[inline]
+    pub fn requires_restart(&self) -> bool {
+        self.contains(Self::ALL)
+    }
+}
+
 bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -46,6 +53,26 @@ bitflags! {
         const IS_STEPPED = CLAP_PARAM_IS_STEPPED;
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
     }
+}
+
+impl ParamInfoFlags {
+    pub const FLAGS_REQUIRING_INFO_RESCAN: Self =
+        Self::from_bits_truncate(Self::IS_PERIODIC.bits() | Self::IS_HIDDEN.bits());
+    pub const FLAGS_REQUIRING_FULL_RESCAN: Self = Self::from_bits_truncate(
+        Self::IS_AUTOMATABLE.bits()
+            | Self::IS_AUTOMATABLE_PER_NOTE_ID.bits()
+            | Self::IS_AUTOMATABLE_PER_KEY.bits()
+            | Self::IS_AUTOMATABLE_PER_CHANNEL.bits()
+            | Self::IS_AUTOMATABLE_PER_PORT.bits()
+            | Self::IS_MODULATABLE.bits()
+            | Self::IS_MODULATABLE_PER_NOTE_ID.bits()
+            | Self::IS_MODULATABLE_PER_KEY.bits()
+            | Self::IS_MODULATABLE_PER_CHANNEL.bits()
+            | Self::IS_MODULATABLE_PER_PORT.bits()
+            | Self::IS_READONLY.bits()
+            | Self::IS_BYPASS.bits()
+            | Self::IS_STEPPED.bits(),
+    );
 }
 
 #[repr(C)]
@@ -103,6 +130,44 @@ impl<'a> ParamInfo<'a> {
             max_value: raw.max_value,
             default_value: raw.default_value,
         })
+    }
+
+    pub fn diff_for_rescan(&self, other: &ParamInfo) -> ParamRescanFlags {
+        #[inline]
+        fn flags_differ(
+            a: ParamInfoFlags,
+            b: ParamInfoFlags,
+            flags_to_check: ParamInfoFlags,
+        ) -> bool {
+            a.intersection(flags_to_check) != b.intersection(flags_to_check)
+        }
+
+        let mut flags = ParamRescanFlags::empty();
+
+        if self.name != other.name
+            || self.module != other.module
+            || flags_differ(
+                self.flags,
+                other.flags,
+                ParamInfoFlags::FLAGS_REQUIRING_INFO_RESCAN,
+            )
+        {
+            flags |= ParamRescanFlags::INFO;
+        }
+
+        if self.min_value != other.min_value
+            || self.max_value != other.max_value
+            || self.cookie != other.cookie
+            || flags_differ(
+                self.flags,
+                other.flags,
+                ParamInfoFlags::FLAGS_REQUIRING_FULL_RESCAN,
+            )
+        {
+            flags |= ParamRescanFlags::ALL
+        }
+
+        flags
     }
 }
 
