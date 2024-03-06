@@ -1,5 +1,6 @@
 use crate::host::Host;
 use crate::process::ProcessingStartError;
+use clack_plugin::plugin::PluginError;
 use core::fmt;
 
 /// All errors that can arise using plugin instances.
@@ -46,30 +47,35 @@ pub enum HostError {
     NullActivateFunction,
 }
 
-impl fmt::Display for HostError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl HostError {
+    fn msg(&self) -> &'static str {
         match self {
-            Self::StartProcessingFailed => write!(f, "Could not start processing"),
-            Self::AlreadyActivatedPlugin => write!(f, "Plugin was already activated"),
-            Self::StillActivatedPlugin => write!(
-                f,
+            Self::StartProcessingFailed => "Could not start processing",
+            Self::AlreadyActivatedPlugin => "Plugin was already activated",
+            Self::StillActivatedPlugin => {
                 "Attempted to deactivate Plugin which still has an active AudioProcessor"
-            ),
-            Self::DeactivatedPlugin => write!(f, "Plugin is currently deactivated"),
-            Self::ActivationFailed => write!(f, "Unable to activate"),
-            Self::PluginNotFound => write!(f, "Specified plugin was not found"),
-            Self::MissingPluginFactory => write!(f, "No plugin factory was provided"),
-            Self::InstantiationFailed => write!(f, "Could not instantiate"),
-            Self::PluginDestroyed => write!(f, "Plugin was destroyed"),
-            Self::ProcessingFailed => write!(f, "Could not process"),
-            Self::ProcessingStopped => write!(f, "Audio Processor is currently stopped"),
-            Self::ProcessingStarted => write!(f, "Audio Processor is currently started"),
-            Self::NullProcessFunction => write!(f, "Plugin's process function is null"),
-            Self::NullActivateFunction => write!(f, "Plugin's activate function is null"),
+            }
+            Self::DeactivatedPlugin => "Plugin is currently deactivated",
+            Self::ActivationFailed => "Unable to activate",
+            Self::PluginNotFound => "Specified plugin was not found",
+            Self::MissingPluginFactory => "No plugin factory was provided",
+            Self::InstantiationFailed => "Could not instantiate",
+            Self::PluginDestroyed => "Plugin was destroyed",
+            Self::ProcessingFailed => "Could not process",
+            Self::ProcessingStopped => "Audio Processor is currently stopped",
+            Self::ProcessingStarted => "Audio Processor is currently started",
+            Self::NullProcessFunction => "Plugin's process function is null",
+            Self::NullActivateFunction => "Plugin's activate function is null",
             Self::NullFactoryCreatePluginFunction => {
-                write!(f, "Plugin Factory's create_plugin function is null")
+                "Plugin Factory's create_plugin function is null"
             }
         }
+    }
+}
+
+impl fmt::Display for HostError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.msg())
     }
 }
 
@@ -79,5 +85,20 @@ impl<H: Host> From<ProcessingStartError<H>> for HostError {
     #[inline]
     fn from(_: ProcessingStartError<H>) -> Self {
         Self::StartProcessingFailed
+    }
+}
+
+#[cfg(feature = "clack-plugin")]
+impl From<HostError> for PluginError {
+    fn from(value: HostError) -> Self {
+        PluginError::Message(value.msg())
+    }
+}
+
+#[cfg(feature = "clack-plugin")]
+impl<H: Host> From<ProcessingStartError<H>> for PluginError {
+    #[inline]
+    fn from(_: ProcessingStartError<H>) -> Self {
+        HostError::StartProcessingFailed.into()
     }
 }
