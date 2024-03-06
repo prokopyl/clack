@@ -144,12 +144,22 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         }
     }
 
-    pub fn ensure_processing_stopped(
-        &mut self,
-    ) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn ensure_processing_stopped(&mut self) -> &mut StoppedPluginAudioProcessor<H> {
+        let inner = core::mem::replace(self, Poisoned);
+
+        match inner {
+            Poisoned => unreachable!(),
+            Stopped(s) => {
+                *self = Stopped(s);
+            }
+            Started(s) => {
+                *self = Stopped(s.stop_processing());
+            }
+        }
+
         match self {
-            Stopped(s) => Ok(s),
-            _ => self.stop_processing(),
+            Stopped(s) => s,
+            _ => unreachable!(),
         }
     }
 
