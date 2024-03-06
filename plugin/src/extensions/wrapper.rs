@@ -348,6 +348,8 @@ pub enum PluginWrapperError {
     InvalidParameter(&'static str),
     /// The plugin was not properly initialized (i.e. `init` was not called).
     UninitializedPlugin,
+    /// The host tried to call a plugin method while `init` is running.
+    PluginCalledDuringInitialization,
     /// The plugin's initialization (`init`) has failed.
     InitializationAlreadyFailed,
     /// The plugin is already initialized (i.e. a second call to `init` was attempted).
@@ -434,6 +436,9 @@ impl Display for PluginWrapperError {
             PluginWrapperError::AlreadyDestroyed => f.write_str(
                 "Plugin instance was already destroyed (clap_plugin.plugin_data pointer is null)",
             ),
+            PluginWrapperError::PluginCalledDuringInitialization => {
+                f.write_str("Host tried to call plugin function during initialization")
+            }
             PluginWrapperError::InitializationAlreadyFailed => {
                 f.write_str("Plugin initialization has already failed")
             }

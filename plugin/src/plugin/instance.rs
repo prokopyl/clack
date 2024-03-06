@@ -71,6 +71,7 @@ pub(crate) enum WrapperState<'a, P: Plugin> {
     Initialized(PluginWrapper<'a, P>),
     Uninitialized(Box<dyn PluginInitializer<'a, P>>),
     InitializationFailed,
+    Initializing,
 }
 
 pub(crate) struct PluginBoxInner<'a, P: Plugin> {
@@ -84,6 +85,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         match &self.plugin_data {
             Initialized(w) => Ok(w),
             InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
+            Initializing => Err(PluginWrapperError::PluginCalledDuringInitialization),
             Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
         }
     }
@@ -93,6 +95,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         match &mut self.plugin_data {
             Initialized(w) => Ok(w),
             InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
+            Initializing => Err(PluginWrapperError::PluginCalledDuringInitialization),
             Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
         }
     }
@@ -135,19 +138,27 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             let data = data.as_mut();
 
             let uninit_data = match &mut data.plugin_data {
-                data @ Uninitialized(_) => Ok(core::mem::replace(data, InitializationFailed)),
+                data @ Uninitialized(_) => Ok(core::mem::replace(data, Initializing)),
                 Initialized(_) => Err(PluginWrapperError::AlreadyInitialized),
-                InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
+                InitializationFailed | Initializing => {
+                    Err(PluginWrapperError::InitializationAlreadyFailed)
+                }
             }?;
 
             let Uninitialized(initializer) = uninit_data else {
                 unreachable!()
             };
 
-            let wrapper = initializer.init(data.host.as_main_thread_unchecked())?;
-
-            data.plugin_data = Initialized(wrapper);
-            Ok(())
+            match initializer.init(data.host.as_main_thread_unchecked()) {
+                Ok(wrapper) => {
+                    data.plugin_data = Initialized(wrapper);
+                    Ok(())
+                }
+                Err(e) => {
+                    data.plugin_data = InitializationFailed;
+                    Err(e.into())
+                }
+            }
         })
         .is_some()
     }
