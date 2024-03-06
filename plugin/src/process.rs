@@ -11,7 +11,7 @@ use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::process::clap_process;
 use std::ops::RangeBounds;
 
-pub use clack_common::process::ProcessStatus;
+pub use clack_common::process::*;
 pub mod audio;
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use audio::*;

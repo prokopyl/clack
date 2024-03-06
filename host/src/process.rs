@@ -218,28 +218,23 @@ pub struct StartedPluginAudioProcessor<H: Host> {
 }
 
 impl<H: Host> StartedPluginAudioProcessor<H> {
-    #[allow(clippy::too_many_arguments)]
     pub fn process(
         &mut self,
         audio_inputs: &InputAudioBuffers,
         audio_outputs: &mut OutputAudioBuffers,
         events_input: &InputEvents,
         events_output: &mut OutputEvents,
-        steady_time: i64,
-        max_frame_count: Option<u32>,
+        steady_time: Option<u64>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, HostError> {
-        let min_input_sample_count = audio_inputs.frames_count();
-        let min_output_sample_count = audio_outputs.frames_count();
-
-        let mut frames_count = min_input_sample_count.min(min_output_sample_count);
-        if let Some(max_frame_count) = max_frame_count {
-            frames_count = frames_count.min(max_frame_count)
-        }
-
         let process = clap_process {
-            steady_time,
-            frames_count,
+            steady_time: match steady_time {
+                None => -1,
+                Some(steady_time) => steady_time.min(i64::MAX as u64) as i64,
+            },
+            frames_count: audio_inputs
+                .frames_count()
+                .min(audio_outputs.frames_count()),
             transport: transport
                 .map(|e| e.as_raw_ref() as *const _)
                 .unwrap_or(core::ptr::null()),

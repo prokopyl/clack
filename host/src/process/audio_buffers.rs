@@ -380,6 +380,10 @@ impl<'a> InputAudioBuffers<'a> {
         }
     }
 
+    pub fn truncate(&mut self, max_buffer_size: u32) {
+        self.frames_count = self.frames_count.min(max_buffer_size)
+    }
+
     /// # Safety
     ///
     /// The caller must ensure all buffer structs are valid for 'a, including all the buffer
@@ -435,6 +439,10 @@ impl<'a> OutputAudioBuffers<'a> {
             buffers: &mut [],
             frames_count: 0,
         }
+    }
+
+    pub fn truncate(&mut self, max_buffer_size: u32) {
+        self.frames_count = self.frames_count.min(max_buffer_size)
     }
 
     /// # Safety

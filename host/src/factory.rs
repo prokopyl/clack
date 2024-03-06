@@ -35,7 +35,7 @@ pub use plugin_descriptor::*;
 ///
 /// # Safety
 ///
-/// Types implementing this trait **MUST** be expect the same C-FFI representation as the CLAP
+/// Types implementing this trait **MUST** be the exact same C-FFI representation as the CLAP
 /// factory struct matching the factory's [`IDENTIFIER`](FactoryPointer::IDENTIFIER).
 pub unsafe trait FactoryPointer<'a>: Sized + 'a {
     /// The standard identifier for this factory.

@@ -225,7 +225,6 @@
 //!        &mut output_audio,
 //!        &input_events,
 //!        &mut output_events,
-//!        0,
 //!        None,
 //!        None
 //!    ).unwrap();

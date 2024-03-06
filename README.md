@@ -230,7 +230,6 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
             &mut output_audio,
             &input_events,
             &mut output_events,
-            0,
             None,
             None
         ).unwrap();

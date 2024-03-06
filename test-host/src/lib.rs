@@ -145,7 +145,6 @@ impl TestHost {
             &mut output_channels,
             &self.input_events.as_input(),
             &mut self.output_events.as_output(),
-            0,
             None,
             None,
         );

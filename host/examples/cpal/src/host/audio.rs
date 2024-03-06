@@ -110,7 +110,7 @@ struct StreamAudioProcessor {
     /// The MIDI event receiver.
     midi_receiver: Option<MidiReceiver>,
     /// A steady frame counter, used by the plugin's process() method.
-    steady_counter: i64,
+    steady_counter: u64,
 }
 
 impl StreamAudioProcessor {
@@ -153,14 +153,13 @@ impl StreamAudioProcessor {
             &mut outs,
             &events,
             &mut OutputEvents::void(),
-            self.steady_counter,
-            Some(sample_count as u32),
+            Some(self.steady_counter),
             None,
         ) {
             Ok(_) => self.buffers.write_to_cpal_buffer(data),
             Err(e) => eprintln!("{e}"),
         }
 
-        self.steady_counter += sample_count as i64;
+        self.steady_counter += sample_count as u64;
     }
 }
