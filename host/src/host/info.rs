@@ -74,6 +74,24 @@ impl HostInfo {
         }
     }
 
+    /// Creates a new host information container using the data originally provided to a plugin.
+    #[cfg(feature = "clack-plugin")]
+    pub fn from_plugin(info: &clack_plugin::host::HostInfo) -> Self {
+        fn from_opt(str: Option<&CStr>) -> CString {
+            match str {
+                None => CString::new("").unwrap(),
+                Some(str) => CString::from(str),
+            }
+        }
+
+        Self::new_from_cstring(
+            from_opt(info.name()),
+            from_opt(info.vendor()),
+            from_opt(info.url()),
+            from_opt(info.version()),
+        )
+    }
+
     pub(crate) fn write_to_raw(&self, host: &mut clap_host) {
         host.name = self.inner.name.as_ptr();
         host.vendor = self.inner.vendor.as_ptr();
