@@ -101,6 +101,15 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
+    pub fn reset(&mut self) {
+        match self {
+            Started(s) => s.reset(),
+            Stopped(s) => s.reset(),
+            Poisoned => unreachable!(),
+        }
+    }
+
     pub fn ensure_processing_started(
         &mut self,
     ) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
@@ -256,6 +265,12 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
+    pub fn reset(&mut self) {
+        // SAFETY: This type ensures this can only be called in the main thread.
+        unsafe { self.inner.as_mut().unwrap().reset() }
+    }
+
+    #[inline]
     pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<H> {
         let inner = self.inner.take().unwrap();
         // SAFETY: this is called on the audio thread
@@ -341,6 +356,12 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
             inner,
             _no_sync: PhantomData,
         }
+    }
+
+    #[inline]
+    pub fn reset(&mut self) {
+        // SAFETY: This type ensures this can only be called in the main thread.
+        unsafe { self.inner.reset() }
     }
 
     #[inline]

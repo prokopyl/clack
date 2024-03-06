@@ -166,6 +166,15 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 
     /// # Safety
+    /// User must ensure that this is only called on the audio thread.
+    #[inline]
+    pub unsafe fn reset(&self) {
+        if let Some(reset) = self.raw_instance().reset {
+            reset(self.raw_instance())
+        }
+    }
+
+    /// # Safety
     /// User must ensure the instance is in a processing state, and that this is only called
     /// on the audio thread.
     #[inline]
