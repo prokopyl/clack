@@ -81,6 +81,18 @@ pub(crate) struct PluginBoxInner<'a, P: Plugin> {
 
 impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[inline]
+    pub(crate) fn wrapper_uninit(
+        &self,
+    ) -> Result<Option<&PluginWrapper<'a, P>>, PluginWrapperError> {
+        match &self.plugin_data {
+            Initialized(w) => Ok(Some(w)),
+            Initializing => Ok(None),
+            InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
+            Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
+        }
+    }
+
+    #[inline]
     pub(crate) fn wrapper(&self) -> Result<&PluginWrapper<'a, P>, PluginWrapperError> {
         match &self.plugin_data {
             Initialized(w) => Ok(w),
@@ -266,8 +278,9 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         let identifier = CStr::from_ptr(identifier);
         let mut builder = PluginExtensions::new(identifier);
 
-        PluginWrapper::<P>::handle(plugin, |p| {
-            P::declare_extensions(&mut builder, p.shared());
+        PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
+            let p = data.as_ref().wrapper_uninit()?;
+            P::declare_extensions(&mut builder, p.map(|p| p.shared()));
             Ok(())
         });
         builder.found()

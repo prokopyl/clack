@@ -48,7 +48,10 @@ mod diva_stub {
         type Shared<'a> = DivaPluginStubShared<'a>;
         type MainThread<'a> = DivaPluginStubMainThread;
 
-        fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &Self::Shared<'_>) {
+        fn declare_extensions(
+            builder: &mut PluginExtensions<Self>,
+            _shared: Option<&Self::Shared<'_>>,
+        ) {
             builder.register::<PluginState>();
         }
     }

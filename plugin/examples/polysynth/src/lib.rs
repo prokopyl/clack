@@ -22,7 +22,10 @@ impl Plugin for PolySynthPlugin {
     type Shared<'a> = PolySynthPluginShared;
     type MainThread<'a> = PolySynthPluginMainThread<'a>;
 
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &PolySynthPluginShared) {
+    fn declare_extensions(
+        builder: &mut PluginExtensions<Self>,
+        _shared: Option<&PolySynthPluginShared>,
+    ) {
         builder
             .register::<PluginAudioPorts>()
             .register::<PluginNotePorts>()

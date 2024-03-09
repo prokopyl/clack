@@ -134,7 +134,8 @@ pub trait Plugin: 'static {
 
     #[inline]
     #[allow(unused_variables)]
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, shared: &Self::Shared<'_>) {}
+    fn declare_extensions(builder: &mut PluginExtensions<Self>, shared: Option<&Self::Shared<'_>>) {
+    }
 }
 
 /// The audio processor and main part of a plugin.

@@ -19,7 +19,10 @@ impl Plugin for GainPlugin {
     type Shared<'a> = GainPluginShared;
     type MainThread<'a> = GainPluginMainThread<'a>;
 
-    fn declare_extensions(builder: &mut PluginExtensions<Self>, _shared: &GainPluginShared) {
+    fn declare_extensions(
+        builder: &mut PluginExtensions<Self>,
+        _shared: Option<&GainPluginShared>,
+    ) {
         builder
             .register::<PluginAudioPorts>()
             .register::<PluginParams>()
