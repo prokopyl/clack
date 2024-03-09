@@ -1,6 +1,5 @@
 use crate::host::Host;
 use crate::process::ProcessingStartError;
-use clack_plugin::plugin::PluginError;
 use core::fmt;
 
 /// All errors that can arise using plugin instances.
@@ -89,14 +88,14 @@ impl<H: Host> From<ProcessingStartError<H>> for HostError {
 }
 
 #[cfg(feature = "clack-plugin")]
-impl From<HostError> for PluginError {
+impl From<HostError> for clack_plugin::plugin::PluginError {
     fn from(value: HostError) -> Self {
-        PluginError::Message(value.msg())
+        clack_plugin::plugin::PluginError::Message(value.msg())
     }
 }
 
 #[cfg(feature = "clack-plugin")]
-impl<H: Host> From<ProcessingStartError<H>> for PluginError {
+impl<H: Host> From<ProcessingStartError<H>> for clack_plugin::plugin::PluginError {
     #[inline]
     fn from(_: ProcessingStartError<H>) -> Self {
         HostError::StartProcessingFailed.into()
