@@ -79,6 +79,12 @@ impl<'a> CpalHostMainThread<'a> {
             gui.is_open = false;
         }
     }
+
+    pub fn set_gui_scale(&mut self, scale: f64) {
+        let gui = self.gui.as_mut().unwrap();
+        let plugin = self.plugin.as_mut().unwrap();
+        let _ = gui.plugin_gui.set_scale(plugin, scale);
+    }
 }
 
 /// Tracks a plugin's GUI state and configuration.
@@ -213,6 +219,9 @@ impl<'a> Gui<'a> {
             })
             .with_resizable(self.is_resizeable)
             .build(event_loop)?;
+
+        dbg!(window.scale_factor());
+        let _ = gui.set_scale(plugin, window.scale_factor());
 
         gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
         // Some plugins don't show anything until this is called, others return an error.

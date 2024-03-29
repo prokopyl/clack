@@ -64,9 +64,10 @@ impl FullAudioConfig {
 
     /// Returns the CLAP plugin audio configuration describing this configuration.
     pub fn as_clack_plugin_config(&self) -> PluginAudioConfiguration {
+        let min_frames_count_range = self.min_buffer_size.max(1);
         PluginAudioConfiguration {
             sample_rate: self.sample_rate as f64,
-            frames_count_range: self.min_buffer_size..=self.max_likely_buffer_size,
+            frames_count_range: min_frames_count_range..=self.max_likely_buffer_size,
         }
     }
 }

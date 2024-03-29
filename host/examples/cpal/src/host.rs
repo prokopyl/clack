@@ -8,6 +8,7 @@ use clack_extensions::params::{
 };
 use clack_extensions::timer::{HostTimer, PluginTimer};
 use clack_host::prelude::*;
+use cpal::traits::StreamTrait;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
@@ -188,6 +189,7 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     };
 
     let _stream = activate_to_stream(&mut instance)?;
+    _stream.play()?;
 
     run_ui(instance, receiver)?;
 
@@ -279,6 +281,12 @@ fn run_gui_embedded(
                 WindowEvent::Destroyed => {
                     target.exit();
                     return;
+                }
+                WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                    dbg!(scale_factor);
+                    instance
+                        .main_thread_host_data_mut()
+                        .set_gui_scale(scale_factor);
                 }
                 WindowEvent::Resized(size) => {
                     let window = window.as_ref().unwrap();

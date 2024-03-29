@@ -57,7 +57,7 @@ fn build_output_stream_for_sample_format(
     config: &StreamConfig,
     sample_format: SampleFormat,
 ) -> Result<Stream, BuildStreamError> {
-    let err = |e| eprintln!("{e}");
+    let err = |e| eprintln!("CPAL STREAM ERROR: {e}");
 
     match sample_format {
         SampleFormat::I8 => {
@@ -137,6 +137,10 @@ impl StreamAudioProcessor {
     /// This methods also collects all of the MIDI events that have been received since the last
     /// process call., and feeds them to the plugin.
     pub fn process<S: FromSample<f32>>(&mut self, data: &mut [S]) {
+        if data.is_empty() {
+            return;
+        }
+
         self.buffers.ensure_buffer_size_matches(data.len());
         let sample_count = self.buffers.cpal_buf_len_to_frame_count(data.len());
 
