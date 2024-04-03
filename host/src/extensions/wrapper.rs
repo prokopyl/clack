@@ -1,9 +1,9 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
 use crate::prelude::*;
+use crate::util::UnsafeOptionCell;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use std::cell::UnsafeCell;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -29,8 +29,8 @@ pub(crate) mod descriptor;
 // Safety note: once this type is constructed, a pointer to it will be given to the plugin instance,
 // which means we can never
 pub struct HostWrapper<H: Host> {
-    audio_processor: UnsafeCell<Option<<H as Host>::AudioProcessor<'static>>>,
-    main_thread: UnsafeCell<Option<<H as Host>::MainThread<'static>>>,
+    audio_processor: UnsafeOptionCell<<H as Host>::AudioProcessor<'static>>,
+    main_thread: UnsafeOptionCell<<H as Host>::MainThread<'static>>,
     shared: Pin<Box<<H as Host>::Shared<'static>>>,
 }
 
@@ -74,7 +74,7 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        let ptr: NonNull<_> = (*self.main_thread.get()).as_ref().unwrap_unchecked().into();
+        let ptr: NonNull<_> = self.main_thread.as_ptr().unwrap_unchecked();
 
         ptr.cast()
     }
@@ -91,10 +91,10 @@ impl<H: Host> HostWrapper<H> {
     pub unsafe fn audio_processor(
         &self,
     ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
-        let ptr: NonNull<_> = (*self.audio_processor.get())
-            .as_ref()
-            .ok_or(HostError::DeactivatedPlugin)?
-            .into();
+        let ptr = self
+            .audio_processor
+            .as_ptr()
+            .ok_or(HostError::DeactivatedPlugin)?;
 
         Ok(ptr.cast())
     }
@@ -114,8 +114,8 @@ impl<H: Host> HostWrapper<H> {
         // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
         // will effectively hold a shared pointer to this.
         let mut wrapper = Arc::new(Self {
-            audio_processor: UnsafeCell::new(None),
-            main_thread: UnsafeCell::new(None),
+            audio_processor: UnsafeOptionCell::new(),
+            main_thread: UnsafeOptionCell::new(),
             shared: Box::pin(shared(&())),
         });
 
@@ -123,9 +123,11 @@ impl<H: Host> HostWrapper<H> {
         let wrapper_mut = Arc::get_mut(&mut wrapper).unwrap();
 
         // SAFETY: This type guarantees main thread data cannot outlive shared
-        *wrapper_mut.main_thread.get_mut() = Some(main_thread(unsafe {
-            extend_shared_ref(&wrapper_mut.shared)
-        }));
+        unsafe {
+            wrapper_mut
+                .main_thread
+                .put(main_thread(extend_shared_ref(&wrapper_mut.shared)));
+        }
 
         // SAFETY: wrapper is the only reference to the data, we can guarantee it will remain pinned
         // until drop happens.
@@ -151,7 +153,7 @@ impl<H: Host> HostWrapper<H> {
     #[inline]
     pub(crate) unsafe fn setup_audio_processor<FA>(
         &self,
-        audio_processor_builder: FA,
+        audio_processor: FA,
         instance: NonNull<clap_plugin>,
     ) -> Result<(), HostError>
     where
@@ -161,23 +163,19 @@ impl<H: Host> HostWrapper<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        // SAFETY: the user enforces this is called non-concurrently to any other audio-thread method.
-        let audio_processor = unsafe { &mut *self.audio_processor.get() };
-
-        match audio_processor {
-            Some(_) => Err(HostError::AlreadyActivatedPlugin),
-            None => {
-                *audio_processor = Some(audio_processor_builder(
-                    PluginAudioProcessorHandle::new(instance),
-                    // SAFETY: Shared lives at least as long as the audio processor does.
-                    unsafe { extend_shared_ref(&self.shared) },
-                    // SAFETY: The user enforces that this is only called on the main thread, and
-                    // non-concurrently to any other main-thread method.
-                    unsafe { self.main_thread().cast().as_mut() },
-                ));
-                Ok(())
-            }
+        if self.audio_processor.is_some() {
+            return Err(HostError::AlreadyActivatedPlugin);
         }
+
+        self.audio_processor.put(audio_processor(
+            PluginAudioProcessorHandle::new(instance),
+            // SAFETY: Shared lives at least as long as the audio processor does.
+            unsafe { extend_shared_ref(&self.shared) },
+            // SAFETY: The user enforces that this is only called on the main thread, and
+            // non-concurrently to any other main-thread method.
+            unsafe { self.main_thread().cast().as_mut() },
+        ));
+        Ok(())
     }
 
     /// # Safety
@@ -192,9 +190,7 @@ impl<H: Host> HostWrapper<H> {
         ) -> T,
     ) -> Result<T, HostError> {
         // SAFETY: The user enforces that this is called and non-concurrently to any other audio-thread method.
-        let audio_processor = unsafe { &mut *self.audio_processor.get() };
-
-        match audio_processor.take() {
+        match self.audio_processor.take() {
             None => Err(HostError::DeactivatedPlugin),
             Some(audio_processor) => Ok(drop(
                 audio_processor,
@@ -209,11 +205,8 @@ impl<H: Host> HostWrapper<H> {
     /// the user must ensure this is not called concurrently
     /// to [`Self::setup_audio_processor`] or [`Self::teardown_audio_processor`]
     #[inline]
-    pub(crate) unsafe fn is_active(&self) -> bool {
-        // SAFETY: The user enforces this isn't called to any audio processor method that would
-        // get a mutable reference to this
-        // TODO: make this actually the case
-        unsafe { (*self.audio_processor.get()).is_some() }
+    pub(crate) fn is_active(&self) -> bool {
+        self.audio_processor.is_some()
     }
 
     fn handle_panic<T, F, Pa>(handler: F, param: Pa) -> Result<T, HostWrapperError>

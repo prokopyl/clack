@@ -10,7 +10,6 @@ use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
-use std::cell::UnsafeCell;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
@@ -39,7 +38,7 @@ where
 
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
-        let main_thread = UnsafeCell::new(main_thread_initializer(host, shared_ref)?);
+        let main_thread = main_thread_initializer(host, shared_ref)?;
 
         // SAFETY: we just created the shared and main_thread together
         Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
@@ -60,7 +59,7 @@ where
 
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
-        let main_thread = UnsafeCell::new(main_thread_initializer(shared_ref)?);
+        let main_thread = main_thread_initializer(shared_ref)?;
 
         // SAFETY: we just created the shared and main_thread together
         Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
@@ -95,16 +94,6 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[inline]
     pub(crate) fn wrapper(&self) -> Result<&PluginWrapper<'a, P>, PluginWrapperError> {
         match &self.plugin_data {
-            Initialized(w) => Ok(w),
-            InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
-            Initializing => Err(PluginWrapperError::PluginCalledDuringInitialization),
-            Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
-        }
-    }
-
-    #[inline]
-    pub(crate) fn wrapper_mut(&mut self) -> Result<&mut PluginWrapper<'a, P>, PluginWrapperError> {
-        match &mut self.plugin_data {
             Initialized(w) => Ok(w),
             InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
             Initializing => Err(PluginWrapperError::PluginCalledDuringInitialization),
@@ -178,7 +167,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn destroy(plugin: *const clap_plugin) {
         // Deactivate the plugin, in case the host didn't call deactivate() first.
-        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             if p.is_active() {
                 p.deactivate()
             } else {
@@ -212,7 +201,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         min_sample_count: u32,
         max_sample_count: u32,
     ) -> bool {
-        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             let config = AudioConfiguration {
                 sample_rate,
                 min_sample_count,
@@ -226,12 +215,12 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn deactivate(plugin: *const clap_plugin) {
-        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| p.deactivate());
+        PluginWrapper::<P>::handle(plugin, |p| p.deactivate());
     }
 
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn reset(plugin: *const clap_plugin) {
-        PluginWrapper::<P>::handle_plugin_mut(plugin, |p| {
+        PluginWrapper::<P>::handle(plugin, |p| {
             p.audio_processor()?.as_mut().reset();
             Ok(())
         });

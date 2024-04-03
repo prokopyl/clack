@@ -18,7 +18,7 @@ impl<H: Host> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
-        entry: &PluginBundle,
+        plugin_bundle: &PluginBundle,
         plugin_id: &CStr,
         host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
@@ -26,7 +26,7 @@ impl<H: Host> PluginInstanceInner<H> {
         FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
-        let plugin_factory = entry
+        let plugin_factory = plugin_bundle
             .get_plugin_factory()
             .ok_or(HostError::MissingPluginFactory)?;
 
@@ -37,7 +37,7 @@ impl<H: Host> PluginInstanceInner<H> {
             host_wrapper,
             host_descriptor,
             plugin_ptr: None,
-            _plugin_bundle: entry.clone(),
+            _plugin_bundle: plugin_bundle.clone(),
         });
 
         {
@@ -138,8 +138,7 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        // SAFETY: this type ensures activate or deactivate cannot be called concurrently to this.
-        unsafe { self.wrapper().is_active() }
+        self.wrapper().is_active()
     }
 
     #[inline]
