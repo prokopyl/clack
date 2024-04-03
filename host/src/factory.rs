@@ -148,26 +148,14 @@ impl<'a> PluginFactory<'a> {
         plugin_id: &CStr,
         host: *const clap_host,
     ) -> Result<NonNull<clap_plugin>, HostError> {
-        let plugin = NonNull::new((*self.inner)
+        NonNull::new((*self.inner)
             .create_plugin
             .ok_or(HostError::NullFactoryCreatePluginFunction)?(
             self.inner,
             host,
             plugin_id.as_ptr(),
         ) as *mut clap_plugin)
-        .ok_or(HostError::PluginNotFound)?;
-
-        if let Some(init) = plugin.as_ref().init {
-            if !init(plugin.as_ptr()) {
-                if let Some(destroy) = plugin.as_ref().destroy {
-                    destroy(plugin.as_ptr());
-                }
-
-                return Err(HostError::InstantiationFailed);
-            }
-        }
-
-        Ok(plugin)
+        .ok_or(HostError::PluginNotFound)
     }
 }
 

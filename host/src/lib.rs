@@ -285,7 +285,10 @@ pub mod prelude {
             HostShared,
         },
         plugin::PluginInstance,
-        plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
+        plugin::{
+            PluginAudioProcessorHandle, PluginInitializingHandle, PluginMainThreadHandle,
+            PluginSharedHandle,
+        },
         process::{
             audio_buffers::{
                 AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,

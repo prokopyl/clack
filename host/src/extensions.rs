@@ -85,8 +85,8 @@
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
-//!     // Once the plugin is fully instantiated, we can query its extensions
-//!     fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+//!     // We can query the plugin's extensions as soon as the plugin starts initializing
+//!     fn initializing(&self, instance: PluginInitializingHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
 //!     

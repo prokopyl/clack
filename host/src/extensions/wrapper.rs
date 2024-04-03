@@ -7,6 +7,7 @@ use std::cell::UnsafeCell;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
+use std::sync::Arc;
 
 mod panic {
     #[cfg(not(test))]
@@ -25,9 +26,11 @@ mod panic {
 
 pub(crate) mod descriptor;
 
+// Safety note: once this type is constructed, a pointer to it will be given to the plugin instance,
+// which means we can never
 pub struct HostWrapper<H: Host> {
-    audio_processor: Option<UnsafeCell<<H as Host>::AudioProcessor<'static>>>,
-    main_thread: Option<UnsafeCell<<H as Host>::MainThread<'static>>>,
+    audio_processor: UnsafeCell<Option<<H as Host>::AudioProcessor<'static>>>,
+    main_thread: UnsafeCell<Option<<H as Host>::MainThread<'static>>>,
     shared: Pin<Box<<H as Host>::Shared<'static>>>,
 }
 
@@ -71,7 +74,9 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        NonNull::new_unchecked(self.main_thread.as_ref().unwrap_unchecked().get()).cast()
+        let ptr: NonNull<_> = (*self.main_thread.get()).as_ref().unwrap_unchecked().into();
+
+        ptr.cast()
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
@@ -86,10 +91,12 @@ impl<H: Host> HostWrapper<H> {
     pub unsafe fn audio_processor(
         &self,
     ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
-        match &self.audio_processor {
-            None => Err(HostError::DeactivatedPlugin),
-            Some(ap) => Ok(NonNull::new_unchecked(ap.get()).cast()),
-        }
+        let ptr: NonNull<_> = (*self.audio_processor.get())
+            .as_ref()
+            .ok_or(HostError::DeactivatedPlugin)?
+            .into();
+
+        Ok(ptr.cast())
     }
 
     /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
@@ -99,49 +106,52 @@ impl<H: Host> HostWrapper<H> {
         unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
 
-    pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Box<Self>>
+    pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Arc<Self>>
     where
         FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
-        let mut wrapper = Box::pin(Self {
-            audio_processor: None,
-            main_thread: None,
+        // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
+        // will effectively hold a shared pointer to this.
+        let mut wrapper = Arc::new(Self {
+            audio_processor: UnsafeCell::new(None),
+            main_thread: UnsafeCell::new(None),
             shared: Box::pin(shared(&())),
         });
 
-        // Safety: we never move out of pinned_wrapper, we only update main_thread.
-        let pinned_wrapper = unsafe { Pin::get_unchecked_mut(wrapper.as_mut()) };
+        // PANIC: we have the only Arc copy of this wrapper data.
+        let wrapper_mut = Arc::get_mut(&mut wrapper).unwrap();
 
         // SAFETY: This type guarantees main thread data cannot outlive shared
-        pinned_wrapper.main_thread = Some(UnsafeCell::new(main_thread(unsafe {
-            extend_shared_ref(&pinned_wrapper.shared)
-        })));
+        *wrapper_mut.main_thread.get_mut() = Some(main_thread(unsafe {
+            extend_shared_ref(&wrapper_mut.shared)
+        }));
 
-        wrapper
+        // SAFETY: wrapper is the only reference to the data, we can guarantee it will remain pinned
+        // until drop happens.
+        unsafe { Pin::new_unchecked(wrapper) }
     }
 
     /// # Safety
     /// This must only be called on the main thread. User must ensure the provided instance pointer
     /// is valid.
-    pub(crate) unsafe fn instantiated(self: Pin<&mut Self>, instance: NonNull<clap_plugin>) {
-        // SAFETY: we only update the fields, we don't move them
-        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
-
+    pub(crate) unsafe fn instantiated(&self, instance: NonNull<clap_plugin>) {
         // SAFETY: At this point there is no way main_thread could not have been set.
-        unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }
-            .get_mut()
+        self.main_thread()
+            .as_mut()
             .instantiated(PluginMainThreadHandle::new(instance));
 
-        pinned_self
-            .shared
-            .instantiated(PluginSharedHandle::new(instance));
+        self.shared
+            .initializing(PluginInitializingHandle::new(instance));
     }
 
+    /// # Safety
+    /// The user must ensure this is only called on the main thread, and not concurrently
+    /// to any other main-thread OR audio-thread method.
     #[inline]
-    pub(crate) fn setup_audio_processor<FA>(
-        self: Pin<&mut Self>,
-        audio_processor: FA,
+    pub(crate) unsafe fn setup_audio_processor<FA>(
+        &self,
+        audio_processor_builder: FA,
         instance: NonNull<clap_plugin>,
     ) -> Result<(), HostError>
     where
@@ -151,48 +161,59 @@ impl<H: Host> HostWrapper<H> {
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        // SAFETY: we only update the fields, we don't move the struct
-        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+        // SAFETY: the user enforces this is called non-concurrently to any other audio-thread method.
+        let audio_processor = unsafe { &mut *self.audio_processor.get() };
 
-        match &mut pinned_self.audio_processor {
+        match audio_processor {
             Some(_) => Err(HostError::AlreadyActivatedPlugin),
             None => {
-                pinned_self.audio_processor = Some(UnsafeCell::new(audio_processor(
+                *audio_processor = Some(audio_processor_builder(
                     PluginAudioProcessorHandle::new(instance),
                     // SAFETY: Shared lives at least as long as the audio processor does.
-                    unsafe { extend_shared_ref(&pinned_self.shared) },
-                    // SAFETY: At this point there is no way main_thread could not have been set.
-                    unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }.get_mut(),
-                )));
+                    unsafe { extend_shared_ref(&self.shared) },
+                    // SAFETY: The user enforces that this is only called on the main thread, and
+                    // non-concurrently to any other main-thread method.
+                    unsafe { self.main_thread().cast().as_mut() },
+                ));
                 Ok(())
             }
         }
     }
 
+    /// # Safety
+    /// The user must ensure this is only called on the main thread, and not concurrently
+    /// to any other main-thread OR audio-thread method.
     #[inline]
-    pub(crate) fn deactivate<T>(
-        self: Pin<&mut Self>,
+    pub(crate) unsafe fn teardown_audio_processor<T>(
+        &self,
         drop: impl for<'s> FnOnce(
             <H as Host>::AudioProcessor<'s>,
             &mut <H as Host>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
-        // SAFETY: we only update the fields, we don't move the struct
-        let pinned_self = unsafe { Pin::get_unchecked_mut(self) };
+        // SAFETY: The user enforces that this is called and non-concurrently to any other audio-thread method.
+        let audio_processor = unsafe { &mut *self.audio_processor.get() };
 
-        match pinned_self.audio_processor.take() {
+        match audio_processor.take() {
             None => Err(HostError::DeactivatedPlugin),
-            Some(cell) => Ok(drop(
-                cell.into_inner(),
-                // SAFETY: At this point there is no way main_thread could not have been set.
-                unsafe { pinned_self.main_thread.as_mut().unwrap_unchecked() }.get_mut(),
+            Some(audio_processor) => Ok(drop(
+                audio_processor,
+                // SAFETY: The user enforces that this is only called on the main thread, and
+                // non-concurrently to any other main-thread method.
+                unsafe { self.main_thread().cast().as_mut() },
             )),
         }
     }
 
+    /// # Safety
+    /// the user must ensure this is not called concurrently
+    /// to [`Self::setup_audio_processor`] or [`Self::teardown_audio_processor`]
     #[inline]
-    pub(crate) fn is_active(&self) -> bool {
-        self.audio_processor.is_some()
+    pub(crate) unsafe fn is_active(&self) -> bool {
+        // SAFETY: The user enforces this isn't called to any audio processor method that would
+        // get a mutable reference to this
+        // TODO: make this actually the case
+        unsafe { (*self.audio_processor.get()).is_some() }
     }
 
     fn handle_panic<T, F, Pa>(handler: F, param: Pa) -> Result<T, HostWrapperError>

@@ -103,7 +103,7 @@
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
 //!     // Once the plugin is fully instantiated, we can query its extensions
-//!     fn instantiated(&self, instance: PluginSharedHandle<'a>) {
+//!     fn initializing(&self, instance: PluginInitializingHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
 //!     
@@ -198,7 +198,7 @@ pub use error::HostError;
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 
-use crate::plugin::{PluginMainThreadHandle, PluginSharedHandle};
+use crate::plugin::{PluginInitializingHandle, PluginMainThreadHandle};
 
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
@@ -249,7 +249,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// plugin instance's lifetime.
     #[inline]
     #[allow(unused)]
-    fn instantiated(&self, instance: PluginSharedHandle<'a>) {}
+    fn initializing(&self, instance: PluginInitializingHandle<'a>) {}
 
     /// Called by the plugin when it requests to be deactivated and then restarted by the host.
     ///
@@ -285,7 +285,7 @@ pub trait Host: 'static {
     /// See the [`HostAudioProcessor`] docs and the [module docs](self) for more information.
     type AudioProcessor<'a>: HostAudioProcessor<'a> + 'a;
 
-    /// Declares all of the extensions supported by this host.
+    /// Declares all the extensions supported by this host.
     ///
     /// Extension declaration is done using the [`HostExtensions::register`] method.
     ///

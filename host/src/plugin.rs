@@ -84,7 +84,7 @@ impl<H: Host> PluginInstance<H> {
         drop_with: D,
     ) -> T
     where
-        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
+        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'_>, &mut <H as Host>::MainThread<'s>) -> T,
     {
         if !Arc::ptr_eq(self.inner.get(), &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
@@ -98,7 +98,7 @@ impl<H: Host> PluginInstance<H> {
 
     pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, HostError>
     where
-        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'s>, &mut <H as Host>::MainThread<'s>) -> T,
+        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'_>, &mut <H as Host>::MainThread<'s>) -> T,
     {
         self.inner.use_mut(|inner| {
             let wrapper = Arc::get_mut(inner).ok_or(HostError::StillActivatedPlugin)?;

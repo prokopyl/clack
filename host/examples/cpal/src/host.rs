@@ -63,20 +63,22 @@ impl Host for CpalHost {
 /// (This is unused in this example, but this is kept here for demonstration purposes)
 #[allow(dead_code)]
 struct PluginCallbacks<'a> {
-    /// The plugin's own shared handle.
-    handle: PluginSharedHandle<'a>,
     /// A handle to the plugin's Audio Ports extension, if it supports it.
     audio_ports: Option<&'a PluginAudioPorts>,
 }
 
-/// Data, accessible by all of the plugin's threads.
+/// Data, accessible by all the plugin's threads.
 pub struct CpalHostShared<'a> {
     /// The sender side of the channel to the main thread.
     sender: Sender<MainThreadMessage>,
     /// The plugin callbacks.
-    /// This is stored in a separate, thread-safe lock because the instantiated method might be
-    /// called concurrently with any other thread-safe host methods.  
-    plugin: OnceLock<PluginCallbacks<'a>>,
+    /// This is stored in a separate, thread-safe lock because the initializing method might be
+    /// called concurrently with any other thread-safe host methods.
+    callbacks: OnceLock<PluginCallbacks<'a>>,
+    /// The plugin's shared handle.
+    /// This is stored in a separate, thread-safe lock because the instantiation might complete
+    /// concurrently with any other thread-safe host methods.
+    plugin: OnceLock<PluginSharedHandle<'a>>,
 }
 
 impl<'a> CpalHostShared<'a> {
@@ -84,15 +86,15 @@ impl<'a> CpalHostShared<'a> {
     fn new(sender: Sender<MainThreadMessage>) -> Self {
         Self {
             sender,
+            callbacks: OnceLock::new(),
             plugin: OnceLock::new(),
         }
     }
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
-    fn instantiated(&self, instance: PluginSharedHandle<'a>) {
-        let _ = self.plugin.set(PluginCallbacks {
-            handle: instance,
+    fn initializing(&self, instance: PluginInitializingHandle<'a>) {
+        let _ = self.callbacks.set(PluginCallbacks {
             audio_ports: instance.get_extension(),
         });
     }
@@ -150,6 +152,10 @@ impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
             .map(|gui| Gui::new(gui, &mut instance));
 
         self.timer_support = instance.shared().get_extension();
+        self._shared
+            .plugin
+            .set(instance.shared())
+            .expect("This is the only method that should set the instance handles.");
         self.plugin = Some(instance);
     }
 }

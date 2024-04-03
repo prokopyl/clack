@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 use std::sync::Arc;
 
 pub(crate) struct PluginInstanceInner<H: Host> {
-    host_wrapper: Pin<Box<HostWrapper<H>>>,
+    host_wrapper: Pin<Arc<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     plugin_ptr: Option<NonNull<clap_plugin>>,
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
@@ -26,6 +26,10 @@ impl<H: Host> PluginInstanceInner<H> {
         FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
         FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
     {
+        let plugin_factory = entry
+            .get_plugin_factory()
+            .ok_or(HostError::MissingPluginFactory)?;
+
         let host_wrapper = HostWrapper::new(shared, main_thread);
         let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
 
@@ -44,20 +48,25 @@ impl<H: Host> PluginInstanceInner<H> {
 
             // SAFETY: the host pointer comes from a valid allocation that is pinned for the
             // lifetime of the instance
-            let plugin_instance_ptr = unsafe {
-                entry
-                    .get_plugin_factory()
-                    .ok_or(HostError::MissingPluginFactory)?
-                    .create_plugin(plugin_id, raw_descriptor)?
-            };
+            let plugin_instance_ptr =
+                unsafe { plugin_factory.create_plugin(plugin_id, raw_descriptor)? };
+
+            // Now instantiate the plugin
+            // SAFETY: TODO
+            unsafe {
+                if let Some(init) = plugin_instance_ptr.as_ref().init {
+                    if !init(plugin_instance_ptr.as_ptr()) {
+                        if let Some(destroy) = plugin_instance_ptr.as_ref().destroy {
+                            destroy(plugin_instance_ptr.as_ptr());
+                        }
+
+                        return Err(HostError::InstantiationFailed);
+                    }
+                }
+            }
 
             // SAFETY: we just checked the pointer is non-null
-            unsafe {
-                instance
-                    .host_wrapper
-                    .as_mut()
-                    .instantiated(plugin_instance_ptr)
-            };
+            unsafe { instance.host_wrapper.instantiated(plugin_instance_ptr) };
             instance.plugin_ptr = Some(plugin_instance_ptr);
         }
 
@@ -101,9 +110,12 @@ impl<H: Host> PluginInstanceInner<H> {
             .ok_or(HostError::NullActivateFunction)?;
 
         // FIXME: reentrancy if activate() calls audio_processor methods
-        self.host_wrapper
-            .as_mut()
-            .setup_audio_processor(audio_processor, raw_instance)?;
+
+        // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
+        unsafe {
+            self.host_wrapper
+                .setup_audio_processor(audio_processor, raw_instance)?;
+        }
 
         // SAFETY: this type ensures the function pointer is valid
         let success = unsafe {
@@ -116,7 +128,8 @@ impl<H: Host> PluginInstanceInner<H> {
         };
 
         if !success {
-            let _ = self.host_wrapper.as_mut().deactivate(|_, _| ());
+            // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
+            let _ = unsafe { self.host_wrapper.teardown_audio_processor(|_, _| ()) };
             return Err(HostError::ActivationFailed);
         }
 
@@ -125,7 +138,8 @@ impl<H: Host> PluginInstanceInner<H> {
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        self.wrapper().is_active()
+        // SAFETY: this type ensures activate or deactivate cannot be called concurrently to this.
+        unsafe { self.wrapper().is_active() }
     }
 
     #[inline]
@@ -136,7 +150,7 @@ impl<H: Host> PluginInstanceInner<H> {
             &mut <H as Host>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
-        if !self.wrapper().is_active() {
+        if !self.is_active() {
             return Err(HostError::DeactivatedPlugin);
         }
 
@@ -146,7 +160,8 @@ impl<H: Host> PluginInstanceInner<H> {
             unsafe { deactivate(self.raw_instance()) };
         }
 
-        self.host_wrapper.as_mut().deactivate(drop)
+        // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
+        unsafe { self.host_wrapper.teardown_audio_processor(drop) }
     }
 
     /// # Safety
@@ -203,7 +218,7 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
         };
 
         // Check if instance hasn't been properly deactivated
-        if self.host_wrapper.is_active() {
+        if self.is_active() {
             let _ = self.deactivate_with(|_, _| ());
         }
 
