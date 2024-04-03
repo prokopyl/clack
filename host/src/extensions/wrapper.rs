@@ -7,7 +7,8 @@ use clap_sys::plugin::clap_plugin;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Once, OnceLock};
 
 mod panic {
     #[cfg(not(test))]
@@ -32,6 +33,11 @@ pub struct HostWrapper<H: Host> {
     audio_processor: UnsafeOptionCell<<H as Host>::AudioProcessor<'static>>,
     main_thread: UnsafeOptionCell<<H as Host>::MainThread<'static>>,
     shared: Pin<Box<<H as Host>::Shared<'static>>>,
+
+    // Init stuff
+    init_guard: Once,
+    init_started: AtomicBool,
+    plugin_ptr: OnceLock<NonNull<clap_plugin>>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -55,7 +61,14 @@ impl<H: Host> HostWrapper<H> {
     where
         F: FnOnce(&HostWrapper<H>) -> Result<T, HostWrapperError>,
     {
-        match Self::from_raw(host).and_then(|h| Self::handle_panic(handler, h)) {
+        let result = Self::from_raw(host).and_then(|h| {
+            Self::handle_panic(h, |h| {
+                h.ensure_initializing_called();
+                handler(h)
+            })
+        });
+
+        match result {
             Ok(value) => Some(value),
             Err(_e) => {
                 // logging::plugin_log::<P>(host, &e); TODO
@@ -117,6 +130,9 @@ impl<H: Host> HostWrapper<H> {
             audio_processor: UnsafeOptionCell::new(),
             main_thread: UnsafeOptionCell::new(),
             shared: Box::pin(shared(&())),
+            init_guard: Once::new(),
+            init_started: AtomicBool::new(false),
+            plugin_ptr: OnceLock::new(),
         });
 
         // PANIC: we have the only Arc copy of this wrapper data.
@@ -134,10 +150,16 @@ impl<H: Host> HostWrapper<H> {
         unsafe { Pin::new_unchecked(wrapper) }
     }
 
+    pub(crate) fn created(&self, instance: NonNull<clap_plugin>) {
+        let _ = self.plugin_ptr.set(instance);
+    }
+
     /// # Safety
     /// This must only be called on the main thread. User must ensure the provided instance pointer
     /// is valid.
     pub(crate) unsafe fn instantiated(&self, instance: NonNull<clap_plugin>) {
+        self.ensure_initializing_called();
+
         // SAFETY: At this point there is no way main_thread could not have been set.
         self.main_thread()
             .as_mut()
@@ -209,7 +231,7 @@ impl<H: Host> HostWrapper<H> {
         self.audio_processor.is_some()
     }
 
-    fn handle_panic<T, F, Pa>(handler: F, param: Pa) -> Result<T, HostWrapperError>
+    fn handle_panic<T, F, Pa>(param: Pa, handler: F) -> Result<T, HostWrapperError>
     where
         F: FnOnce(Pa) -> Result<T, HostWrapperError>,
     {
@@ -226,6 +248,25 @@ impl<H: Host> HostWrapper<H> {
             .cast::<HostWrapper<H>>()
             .as_ref()
             .ok_or(HostWrapperError::NullHostData)
+    }
+
+    fn ensure_initializing_called(&self) {
+        // This can only happen if the plugin tried to call a host method before init().
+        let Some(ptr) = self.plugin_ptr.get().copied() else {
+            return;
+        };
+
+        self.init_guard.call_once_force(|_| {
+            let result =
+                self.init_started
+                    .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst);
+
+            // The comparison succeeded, and false was indeed the bool's value
+            if result == Ok(false) {
+                let handle = unsafe { PluginInitializingHandle::new(ptr) };
+                self.shared().initializing(handle);
+            }
+        })
     }
 }
 

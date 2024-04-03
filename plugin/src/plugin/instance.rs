@@ -150,6 +150,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
                 unreachable!()
             };
 
+            // FIXME: we can't use &mut on data as soon as init runs anymore.
             match initializer.init(data.host.as_main_thread_unchecked()) {
                 Ok(wrapper) => {
                     data.plugin_data = Initialized(wrapper);

@@ -51,6 +51,8 @@ impl<H: Host> PluginInstanceInner<H> {
             let plugin_instance_ptr =
                 unsafe { plugin_factory.create_plugin(plugin_id, raw_descriptor)? };
 
+            instance.host_wrapper.created(plugin_instance_ptr);
+
             // Now instantiate the plugin
             // SAFETY: TODO
             unsafe {

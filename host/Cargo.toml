@@ -19,7 +19,7 @@ libloading = ["dep:libloading", "dep:stable_deref_trait"]
 
 [dev-dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { workspace = true, features = ["clack-host", "latency", "log"] }
+clack-extensions = { workspace = true, features = ["clack-host", "latency", "log", "timer"] }
 clack-test-host = { workspace = true }
 
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
