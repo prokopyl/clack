@@ -246,7 +246,7 @@ pub trait HostShared<'a>: Send + Sync {
     ///
     /// More specifically, this is called if the plugin calls any of the host's provided callbacks
     /// during its initialization process (i.e. during the call of its provided `init()` function).
-    /// If it hasn't called any by the time `init()` finishes, the [`initializing`] method is
+    /// If it hasn't called any by the time `init()` finishes, the [`initializing`](Self::initializing) method is
     /// then called right afterward.
     ///
     /// During this time, the host is only allowed to query the plugin's extensions but nothing else.

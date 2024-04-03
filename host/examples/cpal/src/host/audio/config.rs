@@ -111,7 +111,7 @@ impl PluginAudioPortsConfig {
         PluginAudioPortsConfig {
             main_port_index: 0,
             ports: vec![PluginAudioPortInfo {
-                id: None,
+                _id: None,
                 port_layout: AudioPortLayout::Stereo,
                 name: "Default".into(),
             }],
@@ -138,7 +138,7 @@ impl PluginAudioPortsConfig {
 #[derive(Clone, Debug)]
 pub struct PluginAudioPortInfo {
     /// The plugin-provided ID of the port, if it has one.
-    pub id: Option<u32>,
+    pub _id: Option<u32>,
     /// The layout of the port.
     pub port_layout: AudioPortLayout,
     /// The user-friendly name of the port.
@@ -311,7 +311,7 @@ pub fn get_config_from_ports(
         }
 
         discovered_ports.push(PluginAudioPortInfo {
-            id: Some(info.id),
+            _id: Some(info.id),
             port_layout,
             name: String::from_utf8_lossy(info.name).into_owned(),
         })
