@@ -242,11 +242,28 @@ pub trait HostAudioProcessor<'a>: Send + 'a {}
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
 pub trait HostShared<'a>: Send + Sync {
-    /// Called when the plugin has been successfully instantiated.
+    /// Called either during the plugin's initialization, or right after it has completed.
     ///
-    /// This is given a handle to the plugin's own shared data ([`PluginSharedHandle`]),
-    /// which can be used to call plugin callbacks, and can be kept for the remainder of the
-    /// plugin instance's lifetime.
+    /// More specifically, this is called if the plugin calls any of the host's provided callbacks
+    /// during its initialization process (i.e. during the call of its provided `init()` function).
+    /// If it hasn't called any by the time `init()` finishes, the [`initializing`] method is
+    /// then called right afterward.
+    ///
+    /// During this time, the host is only allowed to query the plugin's extensions but nothing else.
+    /// The given [`PluginInitializingHandle`] therefore only allows that operation.
+    ///
+    /// The full capability of the [`PluginSharedHandle`](crate::plugin::PluginSharedHandle) is only
+    /// given once [`HostMainThread::instantiated`] is called, and can be obtained through its given
+    /// [`PluginMainThreadHandle`].
+    ///
+    /// This function may be called multiple times concurrently while the plugin is initializing, if
+    /// it performs multithreaded accesses during that time.
+    ///
+    /// It is also possible for other host callbacks to be called *before* this, if the plugin's
+    /// `get_extension()` method calls host callbacks re-entrantly for some reason.
+    ///
+    /// This [`HostShared`] implementation should handle both of these cases as gracefully as
+    /// possible.
     #[inline]
     #[allow(unused)]
     fn initializing(&self, instance: PluginInitializingHandle<'a>) {}

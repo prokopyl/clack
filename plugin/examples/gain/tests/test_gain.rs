@@ -54,6 +54,8 @@ pub fn it_works() {
 
     host.activate();
 
+    assert!(host.plugin().is_active());
+
     host.input_events_mut().push(&ParamValueEvent::new(
         EventHeader::new_core(0, EventFlags::empty()),
         Cookie::empty(),

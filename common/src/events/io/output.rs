@@ -184,15 +184,6 @@ impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
     }
 }
 
-#[derive(Copy, Clone)]
-struct VoidEvents;
-impl<'a> OutputEventBuffer<'a> for VoidEvents {
-    #[inline]
-    fn try_push(&mut self, _event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod test {
     extern crate static_assertions as sa;
