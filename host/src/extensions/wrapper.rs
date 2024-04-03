@@ -150,7 +150,10 @@ impl<H: Host> HostWrapper<H> {
         unsafe { Pin::new_unchecked(wrapper) }
     }
 
-    pub(crate) fn created(&self, instance: NonNull<clap_plugin>) {
+    /// # Safety
+    /// The pointer and the plugin instance it points to must remain valid for the lifetime of this
+    /// wrapper.
+    pub(crate) unsafe fn created(&self, instance: NonNull<clap_plugin>) {
         let _ = self.plugin_ptr.set(instance);
     }
 
@@ -260,6 +263,7 @@ impl<H: Host> HostWrapper<H> {
 
             // The comparison succeeded, and false was indeed the bool's value
             if result == Ok(false) {
+                // SAFETY: The pointer is guaranteed to be valid by the caller of created()
                 let handle = unsafe { PluginInitializingHandle::new(ptr) };
                 self.shared().initializing(handle);
             }

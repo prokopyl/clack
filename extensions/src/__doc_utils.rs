@@ -125,6 +125,7 @@ where
 {
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
+    // SAFETY: we're loading our own bundle here
     let bundle = unsafe {
         PluginBundle::load_from_raw(
             &diva_stub::DIVA_STUB_ENTRY,

@@ -124,49 +124,6 @@ impl<T> WeakReader<T> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::thread;
-    use std::time::Duration;
-
-    #[test]
-    pub fn works_with_simultaneous_drop_and_access() {
-        let mut writer = WriterLock::new(Arc::new(false));
-
-        let reader = writer.make_reader();
-
-        // EVIL!!!
-        let upgraded = reader.lock.upgrade().unwrap();
-
-        // Write to it
-        writer.use_mut(|b| *Arc::get_mut(b).unwrap() = true);
-
-        let evil_thread = thread::spawn(move || {
-            {
-                let lock = upgraded.read().unwrap();
-                thread::sleep(Duration::from_millis(300));
-
-                // Read it, it should still be valid
-                let data = unsafe { lock.0.unwrap().as_ref() };
-                assert!(*data);
-            }
-
-            // Wait for drop to do its work
-            thread::sleep(Duration::from_millis(200));
-
-            assert_eq!(reader.use_with(|d| *d), None);
-        });
-
-        thread::sleep(Duration::from_millis(100));
-
-        // Drop. This should lock until the other thread has locked it itself.
-        drop(writer);
-
-        evil_thread.join().unwrap();
-    }
-}
-
 /// Equivalent in spirit to `UnsafeCell<Option<T>>`, except you can read if the cell is set or not
 /// without invalidating potential active &mut references to the data.
 pub(crate) struct UnsafeOptionCell<T> {
@@ -224,5 +181,49 @@ impl<T> UnsafeOptionCell<T> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    pub fn works_with_simultaneous_drop_and_access() {
+        let mut writer = WriterLock::new(Arc::new(false));
+
+        let reader = writer.make_reader();
+
+        // EVIL!!!
+        let upgraded = reader.lock.upgrade().unwrap();
+
+        // Write to it
+        writer.use_mut(|b| *Arc::get_mut(b).unwrap() = true);
+
+        let evil_thread = thread::spawn(move || {
+            {
+                let lock = upgraded.read().unwrap();
+                thread::sleep(Duration::from_millis(300));
+
+                // Read it, it should still be valid
+                // SAFETY: the data is guaranteed to still be alive at this time
+                let data = unsafe { lock.0.unwrap().as_ref() };
+                assert!(*data);
+            }
+
+            // Wait for drop to do its work
+            thread::sleep(Duration::from_millis(200));
+
+            assert_eq!(reader.use_with(|d| *d), None);
+        });
+
+        thread::sleep(Duration::from_millis(100));
+
+        // Drop. This should lock until the other thread has locked it itself.
+        drop(writer);
+
+        evil_thread.join().unwrap();
     }
 }

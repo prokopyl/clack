@@ -51,7 +51,10 @@ impl<H: Host> PluginInstanceInner<H> {
             let plugin_instance_ptr =
                 unsafe { plugin_factory.create_plugin(plugin_id, raw_descriptor)? };
 
-            instance.host_wrapper.created(plugin_instance_ptr);
+            // SAFETY: The pointer comes from the plugin factory
+            unsafe {
+                instance.host_wrapper.created(plugin_instance_ptr);
+            }
 
             // Now instantiate the plugin
             // SAFETY: TODO
@@ -67,7 +70,7 @@ impl<H: Host> PluginInstanceInner<H> {
                 }
             }
 
-            // SAFETY: we just checked the pointer is non-null
+            // SAFETY: The pointer comes from the plugin factory
             unsafe { instance.host_wrapper.instantiated(plugin_instance_ptr) };
             instance.plugin_ptr = Some(plugin_instance_ptr);
         }
