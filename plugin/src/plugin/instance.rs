@@ -1,7 +1,7 @@
 use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
 use crate::host::{HostHandle, HostInfo, HostMainThreadHandle};
-use crate::plugin::instance::WrapperState::*;
+use crate::plugin::instance::WrapperData::*;
 use crate::plugin::{
     AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
 };
@@ -10,9 +10,11 @@ use crate::process::{Audio, Events, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
+use std::cell::UnsafeCell;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 pub(crate) trait PluginInitializer<'a, P: Plugin>: 'a {
     fn init(
@@ -66,38 +68,57 @@ where
     }
 }
 
-pub(crate) enum WrapperState<'a, P: Plugin> {
+pub(crate) enum WrapperData<'a, P: Plugin> {
     Initialized(PluginWrapper<'a, P>),
-    Uninitialized(Box<dyn PluginInitializer<'a, P>>),
-    InitializationFailed,
     Initializing,
+    Uninitialized(Box<dyn PluginInitializer<'a, P>>),
 }
 
 pub(crate) struct PluginBoxInner<'a, P: Plugin> {
     host: HostHandle<'a>,
-    plugin_data: WrapperState<'a, P>,
+    state: AtomicU8,
+    plugin_data: UnsafeCell<WrapperData<'a, P>>,
 }
+
+const UNINITIALIZED: u8 = 0;
+const INITIALIZED: u8 = 1;
+const INITIALIZING: u8 = 2;
+const INITIALIZATION_FAILED: u8 = 3;
 
 impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[inline]
     pub(crate) fn wrapper_uninit(
         &self,
     ) -> Result<Option<&PluginWrapper<'a, P>>, PluginWrapperError> {
-        match &self.plugin_data {
-            Initialized(w) => Ok(Some(w)),
-            Initializing => Ok(None),
-            InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
-            Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
+        match self.state.load(Ordering::Acquire) {
+            INITIALIZING => Ok(None),
+            UNINITIALIZED => Err(PluginWrapperError::UninitializedPlugin),
+            INITIALIZATION_FAILED => Err(PluginWrapperError::InitializationAlreadyFailed),
+
+            // SAFETY: when in the initialized state, it is guarantee that plugin_data is never written to again.
+            INITIALIZED => match unsafe { &*self.plugin_data.get() } {
+                Initialized(w) => Ok(Some(w)),
+                // If the state is Initialized, then the enum should have been set properly
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
         }
     }
 
     #[inline]
     pub(crate) fn wrapper(&self) -> Result<&PluginWrapper<'a, P>, PluginWrapperError> {
-        match &self.plugin_data {
-            Initialized(w) => Ok(w),
-            InitializationFailed => Err(PluginWrapperError::InitializationAlreadyFailed),
-            Initializing => Err(PluginWrapperError::PluginCalledDuringInitialization),
-            Uninitialized(_) => Err(PluginWrapperError::UninitializedPlugin),
+        match self.state.load(Ordering::Acquire) {
+            INITIALIZING => Err(PluginWrapperError::InitializationAlreadyFailed),
+            UNINITIALIZED => Err(PluginWrapperError::UninitializedPlugin),
+            INITIALIZATION_FAILED => Err(PluginWrapperError::InitializationAlreadyFailed),
+
+            // SAFETY: when in the initialized state, it is guarantee that plugin_data is never written to again.
+            INITIALIZED => match unsafe { &*self.plugin_data.get() } {
+                Initialized(w) => Ok(w),
+                // If the state is Initialized, then the enum should have been set properly
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
         }
     }
 }
@@ -112,7 +133,8 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             desc,
             plugin_data: Box::into_raw(Box::new(Self {
                 host,
-                plugin_data: Uninitialized(initializer),
+                plugin_data: UnsafeCell::new(Uninitialized(initializer)),
+                state: AtomicU8::new(UNINITIALIZED),
             }))
             .cast(),
             init: Some(Self::init),
@@ -135,29 +157,44 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn init(plugin: *const clap_plugin) -> bool {
-        PluginWrapper::<P>::handle_plugin_data(plugin, |mut data| {
-            let data = data.as_mut();
+        PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
+            // We can only keep a &mut reference in here, until init() is called.
+            let data = data.as_ref();
 
-            let uninit_data = match &mut data.plugin_data {
-                data @ Uninitialized(_) => Ok(core::mem::replace(data, Initializing)),
-                Initialized(_) => Err(PluginWrapperError::AlreadyInitialized),
-                InitializationFailed | Initializing => {
-                    Err(PluginWrapperError::InitializationAlreadyFailed)
-                }
-            }?;
+            let current_state = data.state.compare_exchange(
+                UNINITIALIZED,
+                INITIALIZING,
+                Ordering::SeqCst,
+                Ordering::Acquire,
+            );
+
+            let uninit_data = match current_state {
+                Ok(UNINITIALIZED) => data.plugin_data.get().replace(Initializing),
+                Ok(s) | Err(s) => match s {
+                    INITIALIZED => return Err(PluginWrapperError::AlreadyInitialized),
+                    INITIALIZATION_FAILED | INITIALIZING => {
+                        return Err(PluginWrapperError::InitializationAlreadyFailed)
+                    }
+                    _ => unreachable!(),
+                },
+            };
 
             let Uninitialized(initializer) = uninit_data else {
                 unreachable!()
             };
 
-            // FIXME: we can't use &mut on data as soon as init runs anymore.
-            match initializer.init(data.host.as_main_thread_unchecked()) {
+            let init_result = initializer.init(data.host.as_main_thread_unchecked());
+
+            match init_result {
                 Ok(wrapper) => {
-                    data.plugin_data = Initialized(wrapper);
+                    // We now guaranteed that the current state is INITIALIZING, so there is nothing to drop.
+                    data.plugin_data.get().write(Initialized(wrapper));
+                    // The write operation completed, we can now inform other threads that initialization is complete.
+                    data.state.store(INITIALIZED, Ordering::Release);
                     Ok(())
                 }
                 Err(e) => {
-                    data.plugin_data = InitializationFailed;
+                    data.state.store(INITIALIZATION_FAILED, Ordering::Release);
                     Err(e.into())
                 }
             }

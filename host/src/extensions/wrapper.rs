@@ -164,9 +164,6 @@ impl<H: Host> HostWrapper<H> {
         self.main_thread()
             .as_mut()
             .instantiated(PluginMainThreadHandle::new(instance));
-
-        self.shared
-            .initializing(PluginInitializingHandle::new(instance));
     }
 
     /// # Safety
