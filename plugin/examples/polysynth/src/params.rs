@@ -60,6 +60,43 @@ impl PolySynthParams {
     }
 }
 
+/// Manages the parameter modulations for our plugin.
+///
+/// For now, it only manages a single, `volume` parameter.
+///
+/// This struct will only be used by the [`PolySynthAudioProcessor`], to store temporary modulations
+/// applied to the parameters by the host's automation, LFOs, etc.
+///
+/// This value needs to be stored separately, as it must not be changing the value of the parameter
+/// that the user set when saving the plugin's state.
+pub struct PolySynthParamModulations {
+    /// The modulation amount of the volume parameter, in a -1..1 scale
+    volume_mod: f32,
+}
+impl PolySynthParamModulations {
+    /// Initializes the modulation values.
+    /// There is no modulation applied by default.
+    pub fn new() -> Self {
+        Self { volume_mod: 0.0 }
+    }
+
+    /// Returns the current modulation value.
+    #[inline]
+    pub fn volume(&self) -> f32 {
+        self.volume_mod
+    }
+
+    /// Handles an incoming event.
+    /// This will update the modulation value of the parameter if the event is a matching `ParamMod`.
+    pub fn handle_event(&mut self, event: &UnknownEvent) {
+        if let Some(CoreEventSpace::ParamMod(event)) = event.as_core_event() {
+            if event.param_id() == 1 {
+                self.volume_mod = event.amount() as f32
+            }
+        }
+    }
+}
+
 /// Implementation of the State extension.
 ///
 /// Our state "serialization" is extremely simple and basic: we only have the value of the
@@ -87,26 +124,24 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
-        if param_index != 0 {
-            return;
+        if param_index == 0 {
+            info.set(&ParamInfo {
+                id: 1.into(),
+                flags: ParamInfoFlags::IS_AUTOMATABLE | ParamInfoFlags::IS_MODULATABLE,
+                cookie: Default::default(),
+                name: b"Volume",
+                module: b"",
+                min_value: 0.0,
+                max_value: 1.0,
+                default_value: DEFAULT_VOLUME as f64,
+            })
         }
-        info.set(&ParamInfo {
-            id: 1.into(),
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
-            cookie: Default::default(),
-            name: b"Volume",
-            module: b"",
-            min_value: 0.0,
-            max_value: 1.0,
-            default_value: DEFAULT_VOLUME as f64,
-        })
     }
 
     fn get_value(&mut self, param_id: u32) -> Option<f64> {
-        if param_id == 1 {
-            Some(self.shared.params.get_volume() as f64)
-        } else {
-            None
+        match param_id {
+            1 => Some(self.shared.params.get_volume() as f64),
+            _ => None,
         }
     }
 
@@ -116,10 +151,9 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result {
-        if param_id == 1 {
-            write!(writer, "{0:.2} %", value * 100.0)
-        } else {
-            Err(std::fmt::Error)
+        match param_id {
+            1 => write!(writer, "{0:.2} %", value * 100.0),
+            _ => Err(std::fmt::Error),
         }
     }
 

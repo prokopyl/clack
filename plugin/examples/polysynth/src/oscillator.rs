@@ -1,6 +1,6 @@
 //! Oscillator implementation.
 //!
-//! This is where all of the DSP math happens.
+//! This is where all the DSP math happens.
 
 use std::f32::consts::{PI, TAU};
 
@@ -10,7 +10,7 @@ use std::f32::consts::{PI, TAU};
 #[derive(Copy, Clone)]
 pub struct SquareOscillator {
     /// The ratio between the frequency (in Hz) and the per-sample phase increment.
-    /// This is only dependant on the sample rate.
+    /// This is only dependent on the sample rate.
     frequency_to_phase_increment_ratio: f32,
     /// The per-sample phase increment.
     phase_increment: f32,

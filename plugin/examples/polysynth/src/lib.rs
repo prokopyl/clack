@@ -2,7 +2,7 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
 
-use crate::params::PolySynthParams;
+use crate::params::{PolySynthParamModulations, PolySynthParams};
 use crate::poly_oscillator::PolyOscillator;
 use clack_extensions::state::PluginState;
 use clack_extensions::{audio_ports::*, note_ports::*, params::*};
@@ -38,11 +38,14 @@ impl DefaultPluginFactory for PolySynthPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 
-        PluginDescriptor::new("org.rust-audio.clack.polysynth", "Clack PolySynth Example")
-            .with_features([SYNTHESIZER, MONO, INSTRUMENT])
+        PluginDescriptor::new(
+            "org.rust-audio.clack-hotreload.polysynth",
+            "Clack PolySynth Example (Hot reload version)",
+        )
+        .with_features([SYNTHESIZER, MONO, INSTRUMENT])
     }
 
-    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostHandle) -> Result<PolySynthPluginShared, PluginError> {
         Ok(PolySynthPluginShared {
             params: PolySynthParams::new(),
         })
@@ -50,8 +53,8 @@ impl DefaultPluginFactory for PolySynthPlugin {
 
     fn new_main_thread<'a>(
         _host: HostMainThreadHandle<'a>,
-        shared: &'a Self::Shared<'a>,
-    ) -> Result<Self::MainThread<'a>, PluginError> {
+        shared: &'a PolySynthPluginShared,
+    ) -> Result<PolySynthPluginMainThread<'a>, PluginError> {
         Ok(PolySynthPluginMainThread { shared })
     }
 }
@@ -62,6 +65,8 @@ impl DefaultPluginFactory for PolySynthPlugin {
 pub struct PolySynthAudioProcessor<'a> {
     /// The oscillator bank.
     poly_osc: PolyOscillator,
+    /// The modulation values for the plugin's parameters.
+    modulation_values: PolySynthParamModulations,
     /// A reference to the plugin's shared data.
     shared: &'a PolySynthPluginShared,
 }
@@ -77,6 +82,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     ) -> Result<Self, PluginError> {
         Ok(Self {
             poly_osc: PolyOscillator::new(16, audio_config.sample_rate as f32),
+            modulation_values: PolySynthParamModulations::new(),
             shared,
         })
     }
@@ -112,10 +118,11 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
             for event in event_batch.events() {
                 self.poly_osc.handle_event(event);
                 self.shared.params.handle_event(event);
+                self.modulation_values.handle_event(event);
             }
 
             // Received the updated volume parameter
-            let volume = self.shared.params.get_volume();
+            let volume = self.shared.params.get_volume() + self.modulation_values.volume();
 
             // With all the events out of the way, we can now handle a whole batch of sample
             // all at once.
