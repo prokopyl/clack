@@ -53,7 +53,6 @@ impl Error for ThreadPoolRequestError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     /// Implementation of the Plugin-side of the Thread Pool extension.
@@ -126,7 +125,6 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Thread Pool extension.

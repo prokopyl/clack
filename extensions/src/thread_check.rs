@@ -39,7 +39,6 @@ mod plugin {
 #[cfg(feature = "clack-host")]
 mod host {
     use crate::thread_check::HostThreadCheck;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
 

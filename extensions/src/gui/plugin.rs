@@ -1,5 +1,4 @@
 use super::*;
-use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use std::os::raw::c_char;
 

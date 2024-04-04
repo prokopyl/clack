@@ -102,7 +102,6 @@ impl TailLength {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     impl PluginTail {
@@ -152,7 +151,6 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     impl HostTail {

@@ -1,5 +1,4 @@
 use super::*;
-use clack_common::extensions::RawExtensionImplementation;
 use clack_common::stream::{InputStream, OutputStream};
 use clack_plugin::extensions::prelude::*;
 use clap_sys::stream::{clap_istream, clap_ostream};

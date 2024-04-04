@@ -93,6 +93,7 @@ struct MyHostMainThread<'a> {
 
 impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
+        assert!(instance.get_extension::<PluginState>().is_some());
         self.instance = Some(instance)
     }
 }
@@ -100,12 +101,12 @@ impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
 impl<'a> Drop for MyHostMainThread<'a> {
     fn drop(&mut self) {
         let instance = self.instance.as_ref().unwrap();
-        instance.get_extension::<PluginState>().unwrap();
+        assert!(instance.get_extension::<PluginState>().is_none());
     }
 }
 
 #[test]
-#[ignore] // FIXME: actually fix this test
+//#[ignore] // FIXME: actually fix this test
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 

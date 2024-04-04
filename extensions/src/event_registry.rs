@@ -45,7 +45,6 @@ const _: () = {
 mod host {
     use super::*;
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
     use std::os::raw::c_char;
 

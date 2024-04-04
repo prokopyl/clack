@@ -76,7 +76,7 @@ impl<'a> HostInfo<'a> {
 
         let ext = NonNull::new(ext)?;
         // SAFETY: TODO
-        let raw = unsafe { RawExtension::<HostExtensionSide, _>::from_raw(ext, self.raw) };
+        let raw = unsafe { RawExtension::<HostExtensionSide>::from_raw(ext, self.raw) };
 
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.
@@ -193,8 +193,13 @@ impl<'a> HostHandle<'a> {
 
     #[inline]
     pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+        if self.raw != extension.host_ptr() {
+            mismatched_instance();
+        }
+
+        // SAFETY: the RawExtension type enforces the pointee is valid for as long as the matching
+        // instance is still alive.
+        unsafe { extension.as_ptr().as_ref() }
     }
 }
 
@@ -228,8 +233,7 @@ impl<'a> HostMainThreadHandle<'a> {
 
     #[inline]
     pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+        self.shared().use_extension(extension)
     }
 }
 
@@ -266,8 +270,7 @@ impl<'a> HostAudioThreadHandle<'a> {
 
     #[inline]
     pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+        self.shared().use_extension(extension)
     }
 }
 
@@ -278,15 +281,6 @@ impl<'a> From<HostAudioThreadHandle<'a>> for HostHandle<'a> {
     }
 }
 
-// Extract logic to allow for a lightweight generic instantiation
-// TODO: bikeshed
-fn inner(
-    handle: NonNull<clap_host>,
-    extension: &RawExtension<HostExtensionSide, ()>,
-) -> NonNull<()> {
-    if handle != extension.host_ptr() {
-        todo!(); // Probably just panic
-    }
-
-    extension.as_ptr()
+fn mismatched_instance() -> ! {
+    panic!("Given host handle doesn't match the extension pointer it was used on.")
 }

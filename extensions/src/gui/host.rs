@@ -1,5 +1,4 @@
 use super::*;
-use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 
 impl PluginGui {

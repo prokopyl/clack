@@ -9,7 +9,7 @@ use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::{Window, WindowBuilder};
 
-impl<'a> HostGuiImpl for CpalHostShared {
+impl HostGuiImpl for CpalHostShared {
     fn resize_hints_changed(&self) {
         // We don't support any resize hints
     }

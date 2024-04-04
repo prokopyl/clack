@@ -18,12 +18,17 @@
 //! use clack_plugin::extensions::prelude::*;
 //!
 //! // The struct end-users will actually interact with.
-//! #[repr(C)]
-//! pub struct PluginState(clap_plugin_state);
+//! #[derive(Copy, Clone)]
+//! pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
 //!
 //! unsafe impl Extension for PluginState {
 //!     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
 //!     type ExtensionSide = PluginExtensionSide;
+//!
+//!     #[inline]
+//!     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+//!         Self(raw.cast())
+//!     }
 //! }
 //!
 //! // For implementors of the extensions (here, on the plugin side):
@@ -40,15 +45,16 @@
 //!
 //! impl<P: Plugin> ExtensionImplementation<P> for PluginState
 //! where
-//!     // In this case, all of the CLAP State methods belong to the main thread.
+//!     // In this case, all the CLAP State methods belong to the main thread.
 //!     // Other extensions may have other requirements, possibly split between multiple threads.
 //!     for<'a> P::MainThread<'a>: PluginStateImplementation,
 //! {
-//!     const IMPLEMENTATION: &'static Self = &PluginState(clap_plugin_state {
-//!         # save: Some(save),
-//!         // For the sake of this example, we are only implementing the load() method.
-//!         load: Some(load::<P>),
-//!     });
+//!     const IMPLEMENTATION: RawExtensionImplementation =
+//!         RawExtensionImplementation::new(&clap_plugin_state {
+//!             # save: Some(save),
+//!             // For the sake of this example, we are only implementing the load() method.
+//!             load: Some(load::<P>),
+//!         });
 //! }
 //! # unsafe extern "C" fn save(_: *const clap_plugin, _: *const clap_sys::stream::clap_ostream) -> bool {
 //! #    unimplemented!()
@@ -133,7 +139,8 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
 pub mod prelude {
     pub use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
     pub use crate::extensions::{
-        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
+        RawExtensionImplementation,
     };
     pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
     pub use crate::plugin::{Plugin, PluginError};

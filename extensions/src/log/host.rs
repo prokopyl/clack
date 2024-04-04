@@ -1,5 +1,4 @@
 use super::{HostLog, LogSeverity};
-use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use std::borrow::Cow::Owned;

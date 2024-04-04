@@ -177,7 +177,7 @@
 //!     sample_rate: 48_000.0,
 //!     frames_count_range: 4..=4
 //! };
-//! let audio_processor = plugin_instance.activate(|_, _, _| (), audio_configuration)?;
+//! let audio_processor = plugin_instance.activate(|_, _| (), audio_configuration)?;
 //!
 //! // Event buffers
 //! // For this example, we'll only have a single input event.

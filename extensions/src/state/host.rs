@@ -1,5 +1,4 @@
 use super::*;
-use clack_common::extensions::RawExtensionImplementation;
 use clack_common::stream::{InputStream, OutputStream};
 use clack_host::extensions::prelude::*;
 use std::io::{Read, Write};

@@ -1,6 +1,5 @@
 use super::*;
 use clack_common::events::io::{InputEvents, OutputEvents};
-use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 

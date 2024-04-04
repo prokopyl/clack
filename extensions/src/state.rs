@@ -21,7 +21,7 @@
 //! struct MyHost;
 //!
 //! impl Host for MyHost {
-//!     type Shared<'a> = MyHostShared<'a>;
+//!     type Shared<'a> = MyHostShared;
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
 //!
@@ -30,11 +30,11 @@
 //!     }
 //! }
 //!
-//! struct MyHostShared<'a> {
+//! struct MyHostShared {
 //!     state_ext: OnceLock<Option<PluginState>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared<'a> {
+//! impl<'a> HostShared<'a> for MyHostShared {
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.state_ext.set(instance.get_extension());
 //!     }
@@ -44,7 +44,7 @@
 //! }
 //!
 //! struct MyHostMainThread<'a> {
-//!     shared: &'a MyHostShared<'a>,
+//!     shared: &'a MyHostShared,
 //!     is_state_dirty: bool
 //! }
 //!
@@ -62,51 +62,25 @@
 //!     }
 //! }
 //!
-//! // Implement our helper functions for loading and saving state.
-//!
-//! impl<'a> MyHostMainThread<'a> {
-//!     /// This loads the plugin's state from the given raw byte array
-//!     pub fn load_state(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
-//!         let plugin = self.plugin.as_mut()
-//!             .expect("Plugin is not yet instantiated");
-//!         let state_ext = self.shared.state_ext
-//!             .get()
-//!             .expect("Plugin is not yet instantiated")
-//!             .expect("Plugin does not implement State extension");
-//!
-//!         let mut reader = Cursor::new(data);
-//!         state_ext.load(plugin, &mut reader)?;
-//!
-//!         Ok(())
-//!     }
-//!
-//!     /// Exports the current plugin state into a raw byte array (Vec) to be reloaded later.
-//!     pub fn save_state(&mut self) -> Result<Vec<u8>, Box<dyn Error>> {
-//!         let plugin = self.plugin.as_mut()
-//!             .expect("Plugin is not yet instantiated");
-//!         let state_ext = self.shared.state_ext
-//!             .get()
-//!             .expect("Plugin is not yet instantiated")
-//!             .expect("Plugin does not implement State extension");
-//!
-//!         let mut buffer = Vec::new();
-//!         state_ext.save(plugin, &mut buffer)?;
-//!  
-//!         Ok(buffer)
-//!     }
-//! }
 //! # pub fn main() -> Result<(), Box<dyn Error>> {
 //! # mod utils { include!("./__doc_utils.rs"); }
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
 //! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared })?;
 //!
+//! let state_ext = plugin_instance.shared_host_data().state_ext
+//!     .get()
+//!     .expect("Plugin is not yet instantiated")
+//!     .expect("Plugin does not implement State extension");
+//!
 //! // We just loaded our plugin, but we have a preset to initialize it to.
 //! let preset_data = b"I'm a totally legit preset.";
-//! plugin_instance.main_thread_host_data_mut().load_state(preset_data)?;
+//! let mut reader = Cursor::new(preset_data);
+//! state_ext.load(&mut plugin_instance.main_thread_plugin_data(), &mut reader)?;
 //!
 //! // Some time passes, user interacts with the plugin, etc.
 //! // Now the user wants to save the state.
-//! let saved_state: Vec<u8> = plugin_instance.main_thread_host_data_mut().save_state()?;
+//! let mut buffer = Vec::new();
+//! state_ext.save(&mut plugin_instance.main_thread_plugin_data(), &mut buffer)?;
 //! # Ok(()) }
 //! ```
 

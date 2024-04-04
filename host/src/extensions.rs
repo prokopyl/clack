@@ -77,14 +77,14 @@
 //! use clack_extensions::latency::*;
 //!
 //! #[derive(Default)]
-//! struct MyHostShared<'a> {
+//! struct MyHostShared {
 //!     // Queried extension
 //!     // Note this may be None even after instantiation,
 //!     // in case the extension isn't supported by the plugin.
-//!     latency_extension: OnceLock<Option<&'a PluginLatency>>
+//!     latency_extension: OnceLock<Option<PluginLatency>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared<'a> {
+//! impl<'a> HostShared<'a> for MyHostShared {
 //!     // We can query the plugin's extensions as soon as the plugin starts initializing
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
@@ -97,16 +97,16 @@
 //! }
 //!
 //! struct MyHostMainThread<'a> {
-//!     shared: &'a MyHostShared<'a>,
-//!     instance: Option<PluginMainThreadHandle<'a>>,
+//!     shared: &'a MyHostShared,
+//!     instance: Option<InitializedPluginHandle<'a>>,
 //!
 //!     // The latency that is sent to us by the plugin's Latency extension.
-//!     reported_latency: Option<u32>
+//!     latency_changed: bool
 //! }
 //!
 //! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
 //!     // The plugin's instance handle is required to call extension methods.
-//!     fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) {
+//!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
 //!         self.instance = Some(instance);
 //!     }
 //! }
@@ -115,15 +115,15 @@
 //!     // This method is called by the plugin whenever its latency changed.
 //!     fn changed(&mut self) {
 //!         // Ensure that the plugin is instantiated and supports the Latency extension.
-//!         if let (Some(Some(latency)), Some(instance)) = (self.shared.latency_extension.get(), &mut self.instance) {
-//!             self.reported_latency = Some(latency.get(instance));
+//!         if let Some(Some(_latency)) = self.shared.latency_extension.get() {
+//!             self.latency_changed = true
 //!         }   
 //!     }
 //! }
 //!
 //! struct MyHost;
 //! impl Host for MyHost {
-//!     type Shared<'a> = MyHostShared<'a>;
+//!     type Shared<'a> = MyHostShared;
 //!
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
@@ -146,27 +146,33 @@
 //! use std::ffi::CStr;
 //!
 //! /// The type we will receive from a plugin implementing the Latency extension
-//! #[repr(C)]
-//! pub struct PluginLatency {
-//!     inner: clap_plugin_latency,
-//! }
+//! #[derive(Copy, Clone)]
+//! pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>);
 //!
 //! // Mark this type as being the plugin side of an extension, and tie it to its ID
 //! unsafe impl Extension for PluginLatency {
 //!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
 //!     type ExtensionSide = PluginExtensionSide;
+//!
+//!     #[inline]
+//!     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+//!         Self(raw.cast())
+//!     }
 //! }
 //!
 //! /// The type we will expose to a plugin by implementing the Latency extension
-//! #[repr(C)]
-//! pub struct HostLatency {
-//!     inner: clap_host_latency,
-//! }
+//! #[derive(Copy, Clone)]
+//! pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 //!
 //! // Mark this type as being the host side of an extension, and tie it to its ID
 //! unsafe impl Extension for HostLatency {
 //!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
 //!     type ExtensionSide = HostExtensionSide;
+//!
+//!     #[inline]
+//!     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+//!         Self(raw.cast())
+//!     }
 //! }
 //!
 //! // Implement calling to the plugin-side
@@ -175,7 +181,7 @@
 //!     // Therefore, we will require the `PluginMainThreadHandle` to be passed.
 //!     #[inline]
 //!     pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
-//!         match self.inner.get {
+//!         match plugin.use_extension(&self.0).get {
 //!             None => 0,
 //!             Some(get) => unsafe { get(plugin.as_raw()) },
 //!         }
@@ -190,11 +196,10 @@
 //! impl<H: Host> ExtensionImplementation<H> for HostLatency
 //!     where for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
 //! {
-//!     const IMPLEMENTATION: &'static Self = &HostLatency {
-//!         inner: clap_host_latency {
+//!     const IMPLEMENTATION: RawExtensionImplementation =
+//!         RawExtensionImplementation::new(&clap_host_latency {
 //!             changed: Some(changed::<H>),
-//!         },
-//!     };
+//!         });
 //! }
 //!
 //! unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
@@ -216,7 +221,8 @@ pub mod wrapper;
 pub mod prelude {
     pub use crate::extensions::wrapper::{HostWrapper, HostWrapperError};
     pub use crate::extensions::{
-        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
+        RawExtensionImplementation,
     };
     pub use crate::host::Host;
     pub use crate::plugin::{

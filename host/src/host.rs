@@ -88,7 +88,7 @@
 //! use std::ffi::CStr;
 //!
 //! #[derive(Default)]
-//! struct MyHostShared<'a> {
+//! struct MyHostShared {
 //!     // A real-world implementation may use a fancier notification system.
 //!     // For this example, we are simply checking a handful of atomics from time to time.
 //!     restart_requested: AtomicBool,
@@ -98,10 +98,10 @@
 //!     // Queried extensions
 //!     // Note this may be None even after instantiation,
 //!     // in case the extension isn't supported by the plugin.
-//!     latency_extension: OnceLock<Option<&'a PluginLatency>>
+//!     latency_extension: OnceLock<Option<PluginLatency>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared<'a> {
+//! impl<'a> HostShared<'a> for MyHostShared {
 //!     // Once the plugin is fully instantiated, we can query its extensions
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
@@ -112,7 +112,7 @@
 //!     fn request_callback(&self) { self.callback_requested.store(true, Ordering::SeqCst) }
 //! }
 //!
-//! impl<'a> HostLogImpl for MyHostShared<'a> {
+//! impl HostLogImpl for MyHostShared {
 //!     fn log(&self, severity: LogSeverity, message: &str) {
 //!         // A real-world implementation would make sure this is wait-free.
 //!         // But for this example, println! is good enough.
@@ -121,29 +121,29 @@
 //! }
 //!
 //! struct MyHostMainThread<'a> {
-//!     shared: &'a MyHostShared<'a>,
-//!     instance: Option<PluginMainThreadHandle<'a>>,
+//!     shared: &'a MyHostShared,
+//!     instance: Option<InitializedPluginHandle<'a>>,
 //!
-//!     reported_latency: Option<u32>
+//!     latency_changed: bool
 //! }
 //!
 //! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
-//!     fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) {
+//!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
 //!         self.instance = Some(instance);
 //!     }
 //! }
 //!
 //! impl<'a> HostLatencyImpl for MyHostMainThread<'a> {
 //!     fn changed(&mut self) {
-//!         if let (Some(Some(latency)), Some(instance)) = (self.shared.latency_extension.get(), &mut self.instance) {
-//!             self.reported_latency = Some(latency.get(instance));
+//!         if let Some(Some(_latency)) = self.shared.latency_extension.get() {
+//!             self.latency_changed = true
 //!         }   
 //!     }
 //! }
 //!
 //! struct MyHost;
 //! impl Host for MyHost {
-//!     type Shared<'a> = MyHostShared<'a>;
+//!     type Shared<'a> = MyHostShared;
 //!
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
@@ -166,7 +166,7 @@
 //!
 //! let mut plugin_instance = PluginInstance::<MyHost>::new(
 //!     |_| MyHostShared::default(),
-//!     |shared| MyHostMainThread { shared, instance: None, reported_latency: None },
+//!     |shared| MyHostMainThread { shared, instance: None, latency_changed: false },
 //!     &bundle,
 //!     // We're hard-coding a specific plugin to load for this example
 //!     CStr::from_bytes_with_nul(b"com.u-he.diva\0")?,

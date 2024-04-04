@@ -39,8 +39,7 @@ impl<'a> PluginMainThreadHandle<'a> {
         &self,
         extension: &RawExtension<PluginExtensionSide, E>,
     ) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+        self.shared().use_extension(extension)
     }
 }
 
@@ -51,6 +50,7 @@ impl Debug for PluginMainThreadHandle<'_> {
     }
 }
 
+#[repr(transparent)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct PluginSharedHandle<'a> {
     raw: NonNull<clap_plugin>,
@@ -85,7 +85,7 @@ impl<'a> PluginSharedHandle<'a> {
 
         let ext = NonNull::new(ext as *mut _)?;
         // SAFETY: TODO
-        let raw = unsafe { RawExtension::<PluginExtensionSide, _>::from_raw(ext, self.raw) };
+        let raw = unsafe { RawExtension::<PluginExtensionSide>::from_raw(ext, self.raw) };
 
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.
@@ -97,22 +97,14 @@ impl<'a> PluginSharedHandle<'a> {
         &self,
         extension: &RawExtension<PluginExtensionSide, E>,
     ) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
-    }
-}
+        if self.raw != extension.plugin_ptr() {
+            mismatched_instance();
+        }
 
-// Extract logic to allow for a lightweight generic instantiation
-// TODO: bikeshed
-fn inner(
-    handle: NonNull<clap_plugin>,
-    extension: &RawExtension<PluginExtensionSide, ()>,
-) -> NonNull<()> {
-    if handle != extension.plugin_ptr() {
-        todo!(); // Probably just panic
+        // SAFETY: the RawExtension type enforces the pointee is valid for as long as the matching
+        // instance is still alive.
+        unsafe { extension.as_ptr().as_ref() }
     }
-
-    extension.as_ptr()
 }
 
 impl Debug for PluginSharedHandle<'_> {
@@ -157,8 +149,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
         &self,
         extension: &RawExtension<PluginExtensionSide, E>,
     ) -> &'a E {
-        // SAFETY: TODO
-        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+        self.shared().use_extension(extension)
     }
 }
 impl Debug for PluginAudioProcessorHandle<'_> {
@@ -323,4 +314,8 @@ impl DestroyLock {
 
         Some(result)
     }
+}
+
+fn mismatched_instance() -> ! {
+    panic!("Given plugin instance handle doesn't match the extension pointer it was used on.")
 }

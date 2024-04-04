@@ -75,7 +75,6 @@ impl Display for PluginRenderError {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     /// Implementation of the Plugin-side of the Render extension.

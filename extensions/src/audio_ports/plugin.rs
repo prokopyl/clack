@@ -1,6 +1,5 @@
 use crate::audio_ports::{AudioPortInfo, HostAudioPorts, PluginAudioPorts, RescanType};
 use crate::utils::write_to_array_buf;
-use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
 use clap_sys::id::CLAP_INVALID_ID;

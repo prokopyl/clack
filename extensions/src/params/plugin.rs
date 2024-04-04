@@ -1,7 +1,6 @@
 use super::*;
 use crate::utils::{slice_from_external_parts_mut, write_to_array_buf};
 use clack_common::events::io::{InputEvents, OutputEvents};
-use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;

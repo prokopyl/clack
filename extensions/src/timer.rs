@@ -78,7 +78,6 @@ impl Error for TimerError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     impl HostTimer {
@@ -176,7 +175,6 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
-    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Timer extension.

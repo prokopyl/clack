@@ -345,7 +345,7 @@ fn host_info() -> HostInfo {
     .unwrap()
 }
 
-impl<'a> HostLogImpl for CpalHostShared {
+impl HostLogImpl for CpalHostShared {
     fn log(&self, severity: LogSeverity, message: &str) {
         if severity <= LogSeverity::Debug {
             return;
@@ -386,7 +386,7 @@ impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
     fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
 }
 
-impl<'a> HostParamsImplShared for CpalHostShared {
+impl HostParamsImplShared for CpalHostShared {
     fn request_flush(&self) {
         // Can never flush events when not processing: we're never not processing
     }
