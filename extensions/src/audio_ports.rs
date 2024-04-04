@@ -1,22 +1,17 @@
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::audio_ports::*;
 use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
-#[repr(C)]
-pub struct PluginAudioPorts(
-    clap_plugin_audio_ports,
-    PhantomData<*const clap_plugin_audio_ports>,
-);
+#[repr(transparent)]
+#[derive(Copy, Clone)]
+pub struct PluginAudioPorts(RawExtension<PluginExtensionSide, clap_plugin_audio_ports>);
 
-#[repr(C)]
-pub struct HostAudioPorts(
-    clap_host_audio_ports,
-    PhantomData<*const clap_host_audio_ports>,
-);
+#[repr(transparent)]
+#[derive(Copy, Clone)]
+pub struct HostAudioPorts(RawExtension<HostExtensionSide, clap_host_audio_ports>);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AudioPortType<'a>(pub &'a CStr);
@@ -63,6 +58,10 @@ bitflags! {
 unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = PluginExtensionSide;
+
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
@@ -76,6 +75,10 @@ unsafe impl Sync for PluginAudioPorts {}
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = HostExtensionSide;
+
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 // SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto

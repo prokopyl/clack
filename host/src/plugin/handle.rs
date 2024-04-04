@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, PluginExtensionSide};
+use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -32,6 +32,15 @@ impl<'a> PluginMainThreadHandle<'a> {
     pub fn shared(&self) -> PluginSharedHandle<'a> {
         // SAFETY: This type ensures the provided pointer is valid for 'a
         unsafe { PluginSharedHandle::new(self.raw) }
+    }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(
+        &self,
+        extension: &RawExtension<PluginExtensionSide, E>,
+    ) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
     }
 }
 
@@ -69,16 +78,43 @@ impl<'a> PluginSharedHandle<'a> {
         self.raw.as_ptr()
     }
 
-    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
-        &self,
-    ) -> Option<&'a E> {
+    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         // SAFETY: This type ensures the function pointer is valid
         let ext =
             unsafe { self.raw.as_ref().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
-        // SAFETY: Extension is valid for the instance's lifetime 'a, and pointer comes from E's Identifier
-        NonNull::new(ext as *mut _).map(|p| unsafe { E::from_extension_ptr(p) })
+
+        let ext = NonNull::new(ext as *mut _)?;
+        // SAFETY: TODO
+        let raw = unsafe { RawExtension::<PluginExtensionSide, _>::from_raw(ext, self.raw) };
+
+        // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
+        // E::IDENTIFIER.
+        unsafe { Some(E::from_raw(raw)) }
+    }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(
+        &self,
+        extension: &RawExtension<PluginExtensionSide, E>,
+    ) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
     }
 }
+
+// Extract logic to allow for a lightweight generic instantiation
+// TODO: bikeshed
+fn inner(
+    handle: NonNull<clap_plugin>,
+    extension: &RawExtension<PluginExtensionSide, ()>,
+) -> NonNull<()> {
+    if handle != extension.plugin_ptr() {
+        todo!(); // Probably just panic
+    }
+
+    extension.as_ptr()
+}
+
 impl Debug for PluginSharedHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -115,6 +151,15 @@ impl<'a> PluginAudioProcessorHandle<'a> {
             lifetime: PhantomData,
         }
     }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(
+        &self,
+        extension: &RawExtension<PluginExtensionSide, E>,
+    ) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+    }
 }
 impl Debug for PluginAudioProcessorHandle<'_> {
     #[inline]
@@ -145,9 +190,7 @@ impl<'a> InitializingPluginHandle<'a> {
         self.inner.as_ptr()
     }
 
-    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
-        &self,
-    ) -> Option<&'a E> {
+    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.inner.get_extension()
     }
 }
@@ -188,9 +231,7 @@ impl<'a> InitializedPluginHandle<'a> {
     }
 
     // FIXME: bogus extension lifetime
-    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
-        &self,
-    ) -> Option<&'a E> {
+    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.inner.get_extension()
     }
 }
@@ -223,17 +264,8 @@ impl RemoteHandleInner {
     }
 
     // FIXME: extension pointers may become invalid after plugin destruction, so the lifetime here is bogus
-    fn get_extension<'a, E: Extension<ExtensionSide = PluginExtensionSide>>(
-        &self,
-    ) -> Option<&'a E> {
-        self.handle(|handle| {
-            // SAFETY: This type ensures the function pointer is valid
-            let ext = unsafe {
-                handle.raw.as_ref().get_extension?(handle.raw.as_ptr(), E::IDENTIFIER.as_ptr())
-            };
-            // SAFETY: Extension is valid for the instance's lifetime 'a, and pointer comes from E's Identifier
-            NonNull::new(ext as *mut _).map(|p| unsafe { E::from_extension_ptr(p) })
-        })?
+    fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
+        self.handle(|handle| handle.get_extension())?
     }
 }
 

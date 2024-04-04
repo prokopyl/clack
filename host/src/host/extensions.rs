@@ -41,7 +41,7 @@ impl<'a, H: Host> HostExtensions<'a, H> {
         }
 
         if E::IDENTIFIER == self.requested {
-            self.found = NonNull::new(E::IMPLEMENTATION as *const _ as *mut _)
+            self.found = Some(E::IMPLEMENTATION.as_ptr())
         }
 
         self

@@ -1,6 +1,6 @@
 //! Types and handles for plugins to interact with the host.
 
-use clack_common::extensions::{Extension, HostExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use std::ffi::CStr;
@@ -69,13 +69,18 @@ impl<'a> HostInfo<'a> {
             .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
+    pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
         let ext =
             // SAFETY: this type ensure the function pointers are valid
             unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) } as *mut _;
+
+        let ext = NonNull::new(ext)?;
+        // SAFETY: TODO
+        let raw = unsafe { RawExtension::<HostExtensionSide, _>::from_raw(ext, self.raw) };
+
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.
-        NonNull::new(ext).map(|p| unsafe { E::from_extension_ptr(p) })
+        unsafe { Some(E::from_raw(raw)) }
     }
 
     /// # Safety
@@ -160,7 +165,7 @@ impl<'a> HostHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<&'a E> {
+    pub fn extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
         self.info().get_extension()
     }
 
@@ -184,6 +189,12 @@ impl<'a> HostHandle<'a> {
             raw: self.raw,
             _lifetime: PhantomData,
         }
+    }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
     }
 }
 
@@ -213,6 +224,12 @@ impl<'a> HostMainThreadHandle<'a> {
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { self.raw.as_ref() }
+    }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
     }
 }
 
@@ -246,6 +263,12 @@ impl<'a> HostAudioThreadHandle<'a> {
         // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { self.raw.as_ref() }
     }
+
+    #[inline]
+    pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
+        // SAFETY: TODO
+        unsafe { inner(self.raw, &extension.cast()).cast().as_ref() }
+    }
 }
 
 impl<'a> From<HostAudioThreadHandle<'a>> for HostHandle<'a> {
@@ -253,4 +276,17 @@ impl<'a> From<HostAudioThreadHandle<'a>> for HostHandle<'a> {
     fn from(h: HostAudioThreadHandle<'a>) -> Self {
         h.shared()
     }
+}
+
+// Extract logic to allow for a lightweight generic instantiation
+// TODO: bikeshed
+fn inner(
+    handle: NonNull<clap_host>,
+    extension: &RawExtension<HostExtensionSide, ()>,
+) -> NonNull<()> {
+    if handle != extension.host_ptr() {
+        todo!(); // Probably just panic
+    }
+
+    extension.as_ptr()
 }

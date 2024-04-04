@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use core::mem::MaybeUninit;
 
@@ -25,7 +26,7 @@ impl AudioPortInfoBuffer {
 
 impl PluginAudioPorts {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
-        match self.0.count {
+        match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw(), is_input) },
@@ -39,9 +40,15 @@ impl PluginAudioPorts {
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,
     ) -> Option<AudioPortInfo<'b>> {
-        let success =
-            // SAFETY: This type ensures the function pointer is valid.
-            unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
+        // SAFETY: This type ensures the function pointer is valid.
+        let success = unsafe {
+            plugin.use_extension(&self.0).get?(
+                plugin.as_raw(),
+                index,
+                is_input,
+                buffer.inner.as_mut_ptr(),
+            )
+        };
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
@@ -61,13 +68,11 @@ impl<H: Host> ExtensionImplementation<H> for HostAudioPorts
 where
     for<'h> <H as Host>::MainThread<'h>: HostAudioPortsImpl,
 {
-    const IMPLEMENTATION: &'static Self = &HostAudioPorts(
-        clap_host_audio_ports {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_audio_ports {
             is_rescan_flag_supported: Some(is_rescan_flag_supported::<H>),
             rescan: Some(rescan::<H>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

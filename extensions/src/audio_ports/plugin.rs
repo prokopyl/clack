@@ -1,9 +1,9 @@
 use crate::audio_ports::{AudioPortInfo, HostAudioPorts, PluginAudioPorts, RescanType};
 use crate::utils::write_to_array_buf;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
 use clap_sys::id::CLAP_INVALID_ID;
-use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
 
@@ -65,13 +65,11 @@ impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPorts
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
 {
-    const IMPLEMENTATION: &'static Self = &PluginAudioPorts(
-        clap_plugin_audio_ports {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_audio_ports {
             count: Some(count::<P>),
             get: Some(get::<P>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -108,7 +106,7 @@ where
 impl HostAudioPorts {
     #[inline]
     pub fn is_rescan_flag_supported(&self, host: &HostMainThreadHandle, flag: RescanType) -> bool {
-        match self.0.is_rescan_flag_supported {
+        match host.use_extension(&self.0).is_rescan_flag_supported {
             None => false,
             // SAFETY: This type ensures the function pointer is valid.
             Some(supported) => unsafe { supported(host.as_raw(), flag.bits()) },
@@ -117,7 +115,7 @@ impl HostAudioPorts {
 
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: RescanType) {
-        if let Some(rescan) = self.0.rescan {
+        if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flag.bits()) }
         }
