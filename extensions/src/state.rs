@@ -31,7 +31,7 @@
 //! }
 //!
 //! struct MyHostShared<'a> {
-//!     state_ext: OnceLock<Option<&'a PluginState>>
+//!     state_ext: OnceLock<Option<PluginState>>
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
@@ -45,13 +45,12 @@
 //!
 //! struct MyHostMainThread<'a> {
 //!     shared: &'a MyHostShared<'a>,
-//!     plugin: Option<PluginMainThreadHandle<'a>>,
 //!     is_state_dirty: bool
 //! }
 //!
 //! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
 //!     /* ... */
-//! #    fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) { self.plugin = Some(instance); }
+//! #    fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
 //! }
 //!
 //! // Implement the Host State extension for the plugin to notify us of its dirty save state
@@ -99,7 +98,7 @@
 //! # pub fn main() -> Result<(), Box<dyn Error>> {
 //! # mod utils { include!("./__doc_utils.rs"); }
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
-//! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared, plugin: None })?;
+//! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared })?;
 //!
 //! // We just loaded our plugin, but we have a preset to initialize it to.
 //! let preset_data = b"I'm a totally legit preset.";

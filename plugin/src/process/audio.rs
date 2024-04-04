@@ -39,11 +39,15 @@ pub mod tests {
             ),
         }]);
 
+        let frames_count = match (input_buffers.frames_count(), output_buffers.frames_count()) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) | (None, Some(a)) => a,
+            (None, None) => 0,
+        };
+
         Audio {
             inputs: input_buffers.as_raw_buffers(),
-            frames_count: input_buffers
-                .frames_count()
-                .min(output_buffers.frames_count()),
+            frames_count,
             outputs: output_buffers.into_raw_buffers(),
         }
     }

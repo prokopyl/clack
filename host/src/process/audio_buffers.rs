@@ -595,7 +595,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.frames_count, 4);
+        assert_eq!(buffers.frames_count, Some(4));
     }
 
     #[test]
@@ -611,7 +611,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.frames_count, 4);
+        assert_eq!(buffers.frames_count, Some(4));
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
@@ -634,7 +634,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.frames_count, 4);
+        assert_eq!(buffers.frames_count, Some(4));
     }
 
     #[test]
@@ -651,7 +651,7 @@ mod test {
         }]);
 
         assert_eq!(buffers.buffers.len(), 1);
-        assert_eq!(buffers.frames_count, 4);
+        assert_eq!(buffers.frames_count, Some(4));
 
         assert_eq!(bufs.len(), 2); // Check borrow still works
         assert_eq!(ports.port_count(), 1);
@@ -684,9 +684,9 @@ mod test {
             }));
 
         assert_eq!(input_buffers.buffers.len(), 2);
-        assert_eq!(input_buffers.frames_count, 4);
+        assert_eq!(input_buffers.frames_count, Some(4));
         assert_eq!(output_buffers.buffers.len(), 2);
-        assert_eq!(output_buffers.frames_count, 4);
+        assert_eq!(output_buffers.frames_count, Some(4));
 
         let raw_input_buffers = input_buffers.as_raw_buffers();
         let raw_output_buffers = output_buffers.as_raw_buffers();
