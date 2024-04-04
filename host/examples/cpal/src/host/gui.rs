@@ -9,7 +9,7 @@ use winit::dpi::{LogicalSize, PhysicalSize, Size};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::{Window, WindowBuilder};
 
-impl<'a> HostGuiImpl for CpalHostShared<'a> {
+impl<'a> HostGuiImpl for CpalHostShared {
     fn resize_hints_changed(&self) {
         // We don't support any resize hints
     }
@@ -34,57 +34,12 @@ impl<'a> HostGuiImpl for CpalHostShared<'a> {
     }
 }
 
-impl<'a> CpalHostMainThread<'a> {
-    /// Request the plugin's GUI to resize to the given physical size.
-    ///
-    /// The scale factor is also given in case the API uses logical pixel (Cocoa on macOS).
-    pub fn resize_gui(&mut self, size: PhysicalSize<u32>, scale_factor: f64) -> Size {
-        let gui = self.gui.as_mut().unwrap();
-        let plugin = self.plugin.as_mut().unwrap();
-
-        let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
-
-        let size = if uses_logical_pixels {
-            let size = size.to_logical(scale_factor);
-            GuiSize {
-                width: size.width,
-                height: size.height,
-            }
-        } else {
-            GuiSize {
-                width: size.width,
-                height: size.height,
-            }
-        };
-
-        if !gui.is_resizeable {
-            let forced_size = gui.plugin_gui.get_size(plugin).unwrap_or(size);
-
-            return gui.gui_size_to_winit_size(forced_size);
-        }
-
-        let working_size = gui.plugin_gui.adjust_size(plugin, size).unwrap_or(size);
-        gui.plugin_gui.set_size(plugin, working_size).unwrap();
-
-        gui.gui_size_to_winit_size(working_size)
-    }
-
-    /// Destroys the plugin's GUI resources, if its GUI is still open.
-    pub fn destroy_gui(&mut self) {
-        let gui = self.gui.as_mut().unwrap();
-        let plugin = self.plugin.as_mut().unwrap();
-
-        if gui.is_open {
-            gui.plugin_gui.destroy(plugin);
-            gui.is_open = false;
-        }
-    }
-}
+impl<'a> CpalHostMainThread<'a> {}
 
 /// Tracks a plugin's GUI state and configuration.
-pub struct Gui<'a> {
+pub struct Gui {
     /// The plugin's GUI extension.
-    plugin_gui: &'a PluginGui,
+    plugin_gui: PluginGui,
     /// The negociated GUI configuration, or None if no compatible setup could be found.
     pub configuration: Option<GuiConfiguration<'static>>,
     /// Whether the GUI is currently open.
@@ -93,12 +48,12 @@ pub struct Gui<'a> {
     is_resizeable: bool,
 }
 
-impl<'a> Gui<'a> {
+impl Gui {
     /// Initializes the GUI state for a given instance
-    pub fn new(plugin_gui: &'a PluginGui, instance: &mut PluginMainThreadHandle<'a>) -> Self {
+    pub fn new(plugin_gui: PluginGui, instance: &mut PluginMainThreadHandle) -> Self {
         Self {
             plugin_gui,
-            configuration: Self::negotiate_configuration(plugin_gui, instance),
+            configuration: Self::negotiate_configuration(&plugin_gui, instance),
             is_open: false,
             is_resizeable: false,
         }
@@ -109,7 +64,7 @@ impl<'a> Gui<'a> {
     /// We only support the default GUI API for the platform this is compiled for, so this method
     /// only figures out if that is okay for the plugin, and whether is supports embedding.
     fn negotiate_configuration(
-        gui: &'a PluginGui,
+        gui: &PluginGui,
         plugin: &mut PluginMainThreadHandle,
     ) -> Option<GuiConfiguration<'static>> {
         // This implementation only supports the default: Win32 on Windows, Cocoa on macOS, X11 on Unix
@@ -220,5 +175,49 @@ impl<'a> Gui<'a> {
         self.is_open = true;
 
         Ok(window)
+    }
+
+    /// Request the plugin's GUI to resize to the given physical size.
+    ///
+    /// The scale factor is also given in case the API uses logical pixel (Cocoa on macOS).
+    pub fn resize(
+        &mut self,
+        plugin: &mut PluginMainThreadHandle,
+        size: PhysicalSize<u32>,
+        scale_factor: f64,
+    ) -> Size {
+        let uses_logical_pixels = self.configuration.unwrap().api_type.uses_logical_size();
+
+        let size = if uses_logical_pixels {
+            let size = size.to_logical(scale_factor);
+            GuiSize {
+                width: size.width,
+                height: size.height,
+            }
+        } else {
+            GuiSize {
+                width: size.width,
+                height: size.height,
+            }
+        };
+
+        if !self.is_resizeable {
+            let forced_size = self.plugin_gui.get_size(plugin).unwrap_or(size);
+
+            return self.gui_size_to_winit_size(forced_size);
+        }
+
+        let working_size = self.plugin_gui.adjust_size(plugin, size).unwrap_or(size);
+        self.plugin_gui.set_size(plugin, working_size).unwrap();
+
+        self.gui_size_to_winit_size(working_size)
+    }
+
+    /// Destroys the plugin's GUI resources, if its GUI is still open.
+    pub fn destroy(&mut self, plugin: &mut PluginMainThreadHandle) {
+        if self.is_open {
+            self.plugin_gui.destroy(plugin);
+            self.is_open = false;
+        }
     }
 }

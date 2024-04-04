@@ -106,6 +106,7 @@ impl<H: Host> PluginInstance<H> {
         })
     }
 
+    // FIXME: this should be on the handle?
     #[inline]
     pub fn call_on_main_thread_callback(&mut self) {
         // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing

@@ -1,7 +1,7 @@
 use crate::discovery::FoundBundlePlugin;
 
 use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
-use clack_extensions::gui::{GuiSize, HostGui};
+use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_extensions::params::{
     HostParams, HostParamsImplMainThread, HostParamsImplShared, ParamClearFlags, ParamRescanFlags,
@@ -11,6 +11,7 @@ use clack_host::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::error::Error;
 use std::ffi::CString;
+use std::rc::Rc;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
@@ -46,7 +47,7 @@ enum MainThreadMessage {
 pub struct CpalHost;
 
 impl Host for CpalHost {
-    type Shared<'a> = CpalHostShared<'a>;
+    type Shared<'a> = CpalHostShared;
     type MainThread<'a> = CpalHostMainThread<'a>;
     type AudioProcessor<'a> = ();
 
@@ -62,37 +63,32 @@ impl Host for CpalHost {
 /// Contains all the callbacks that the plugin gave us to call.
 /// (This is unused in this example, but this is kept here for demonstration purposes)
 #[allow(dead_code)]
-struct PluginCallbacks<'a> {
+struct PluginCallbacks {
     /// A handle to the plugin's Audio Ports extension, if it supports it.
     audio_ports: Option<PluginAudioPorts>,
 }
 
 /// Data, accessible by all the plugin's threads.
-pub struct CpalHostShared<'a> {
+pub struct CpalHostShared {
     /// The sender side of the channel to the main thread.
     sender: Sender<MainThreadMessage>,
     /// The plugin callbacks.
     /// This is stored in a separate, thread-safe lock because the initializing method might be
     /// called concurrently with any other thread-safe host methods.
-    callbacks: OnceLock<PluginCallbacks<'a>>,
-    /// The plugin's shared handle.
-    /// This is stored in a separate, thread-safe lock because the instantiation might complete
-    /// concurrently with any other thread-safe host methods.
-    plugin: OnceLock<InitializedPluginHandle<'a>>,
+    callbacks: OnceLock<PluginCallbacks>,
 }
 
-impl<'a> CpalHostShared<'a> {
+impl CpalHostShared {
     /// Initializes the shared data.
     fn new(sender: Sender<MainThreadMessage>) -> Self {
         Self {
             sender,
             callbacks: OnceLock::new(),
-            plugin: OnceLock::new(),
         }
     }
 }
 
-impl<'a> HostShared<'a> for CpalHostShared<'a> {
+impl<'a> HostShared<'a> for CpalHostShared {
     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
         let _ = self.callbacks.set(PluginCallbacks {
             audio_ports: instance.get_extension(),
@@ -118,43 +114,37 @@ impl<'a> HostShared<'a> for CpalHostShared<'a> {
 pub struct CpalHostMainThread<'a> {
     /// A reference to shared host data.
     /// (this is unused in this example, but this is kept here for demonstration purposes).
-    _shared: &'a CpalHostShared<'a>,
+    _shared: &'a CpalHostShared,
     /// A handle to the plugin instance.
     plugin: Option<InitializedPluginHandle<'a>>,
 
     /// A handle to the plugin's Timer extension, if it supports it.
     /// This is placed here, since only the main thread will ever use that extension.
-    timer_support: Option<&'a PluginTimer>,
+    timer_support: Option<PluginTimer>,
     /// The timer implementation.
-    timers: Timers,
-    /// The GUI implementation, if supported.
-    gui: Option<Gui<'a>>,
+    timers: Rc<Timers>,
+    /// A handle to the plugin's GUI extension, if it supports it.
+    gui: Option<PluginGui>,
 }
 
 impl<'a> CpalHostMainThread<'a> {
     /// Initializes the main thread data.
-    fn new(shared: &'a CpalHostShared<'a>) -> Self {
+    fn new(shared: &'a CpalHostShared) -> Self {
         Self {
             _shared: shared,
             plugin: None,
             timer_support: None,
-            timers: Timers::new(),
             gui: None,
+            timers: Rc::new(Timers::new()),
         }
     }
 }
 
 impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
-        self.gui = instance
-            .get_extension()
-            .map(|gui| Gui::new(gui, &mut instance));
-
+        self.gui = instance.get_extension();
         self.timer_support = instance.get_extension();
-        self._shared
-            .plugin
-            .set(instance)
-            .expect("This is the only method that should set the instance handles.");
+
         self.plugin = Some(instance);
     }
 }
@@ -181,22 +171,24 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
         &host_info,
     )?;
 
-    let run_ui = match instance
-        .main_thread_host_data()
-        .gui
-        .as_ref()
-        .and_then(|g| g.needs_floating())
-    {
-        Some(true) => run_gui_floating,
-        Some(false) => run_gui_embedded,
-        None => run_cli,
-    };
-
     let _stream = activate_to_stream(&mut instance)?;
 
-    run_ui(instance, receiver)?;
+    let gui = instance
+        .main_thread_host_data()
+        .gui
+        .map(|gui| Gui::new(gui, &mut instance.main_thread_plugin_data()));
 
-    Ok(())
+    let gui = gui.and_then(|gui| Some((gui.needs_floating()?, gui)));
+
+    let Some((needs_floating, gui)) = gui else {
+        return run_cli(instance, receiver);
+    };
+
+    if needs_floating {
+        run_gui_floating(instance, receiver, gui)
+    } else {
+        run_gui_embedded(instance, receiver, gui)
+    }
 }
 
 /// Runs the UI in a floating-window mode.
@@ -206,13 +198,10 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
 fn run_gui_floating(
     mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
+    mut gui: Gui,
 ) -> Result<(), Box<dyn Error>> {
-    let main_thread = instance.main_thread_host_data_mut();
     println!("Opening GUI in floating mode");
-    let gui = main_thread.gui.as_mut().unwrap();
-    let plugin = main_thread.plugin.as_mut().unwrap();
-
-    gui.open_floating(plugin)?;
+    gui.open_floating(&mut instance.main_thread_plugin_data())?;
 
     for message in receiver {
         match message {
@@ -225,7 +214,7 @@ fn run_gui_floating(
         }
     }
 
-    instance.main_thread_host_data_mut().destroy_gui();
+    gui.destroy(&mut instance.main_thread_plugin_data());
 
     Ok(())
 }
@@ -236,17 +225,21 @@ fn run_gui_floating(
 fn run_gui_embedded(
     mut instance: PluginInstance<CpalHost>,
     receiver: Receiver<MainThreadMessage>,
+    mut gui: Gui,
 ) -> Result<(), Box<dyn Error>> {
-    let main_thread = instance.main_thread_host_data_mut();
     println!("Opening GUI in embedded mode");
 
     let event_loop = EventLoop::new()?;
-    let gui = main_thread.gui.as_mut().unwrap();
-    let plugin = main_thread.plugin.as_mut().unwrap();
 
-    let mut window = Some(gui.open_embedded(plugin, &event_loop)?);
+    let mut window = Some(gui.open_embedded(&mut instance.main_thread_plugin_data(), &event_loop)?);
 
     let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
+
+    let main_thread = instance.main_thread_host_data();
+
+    let timers = main_thread
+        .timer_support
+        .map(|ext| (main_thread.timers.clone(), ext));
 
     event_loop.run(move |event, target| {
         while let Ok(message) = receiver.try_recv() {
@@ -277,7 +270,7 @@ fn run_gui_embedded(
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => {
                     println!("Plugin window closed, stopping.");
-                    instance.main_thread_host_data_mut().destroy_gui();
+                    gui.destroy(&mut instance.main_thread_plugin_data());
                     window.take(); // Drop the window
                     return;
                 }
@@ -289,9 +282,8 @@ fn run_gui_embedded(
                     let window = window.as_ref().unwrap();
                     let scale_factor = window.scale_factor();
 
-                    let actual_size = instance
-                        .main_thread_host_data_mut()
-                        .resize_gui(size, scale_factor);
+                    let actual_size =
+                        gui.resize(&mut instance.main_thread_plugin_data(), size, scale_factor);
 
                     if actual_size != size.into() {
                         let _ = window.request_inner_size(actual_size);
@@ -300,17 +292,21 @@ fn run_gui_embedded(
                 _ => {}
             },
             Event::LoopExiting => {
-                instance.main_thread_host_data_mut().destroy_gui();
+                gui.destroy(&mut instance.main_thread_plugin_data());
             }
             _ => {}
         }
 
-        let main_thread = instance.main_thread_host_data_mut();
-        main_thread.tick_timers();
-        let wait_duration = main_thread
-            .timers
-            .smallest_duration()
-            .unwrap_or(Duration::from_millis(60));
+        let wait_duration = if let Some((timers, timer_ext)) = &timers {
+            timers.tick_timers(timer_ext, &mut instance.main_thread_plugin_data());
+
+            timers
+                .smallest_duration()
+                .unwrap_or(Duration::from_millis(60))
+        } else {
+            Duration::from_millis(60)
+        };
+
         target.set_control_flow(ControlFlow::WaitUntil(Instant::now() + wait_duration));
     })?;
 
@@ -320,7 +316,7 @@ fn run_gui_embedded(
     Ok(())
 }
 
-/// Runs the plugin heedlessly, without an UI event loop.
+/// Runs the plugin headlessly, without a UI event loop.
 ///
 /// This blocks forever, until the process is killed.
 fn run_cli(
@@ -349,7 +345,7 @@ fn host_info() -> HostInfo {
     .unwrap()
 }
 
-impl<'a> HostLogImpl for CpalHostShared<'a> {
+impl<'a> HostLogImpl for CpalHostShared {
     fn log(&self, severity: LogSeverity, message: &str) {
         if severity <= LogSeverity::Debug {
             return;
@@ -390,7 +386,7 @@ impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
     fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
 }
 
-impl<'a> HostParamsImplShared for CpalHostShared<'a> {
+impl<'a> HostParamsImplShared for CpalHostShared {
     fn request_flush(&self) {
         // Can never flush events when not processing: we're never not processing
     }

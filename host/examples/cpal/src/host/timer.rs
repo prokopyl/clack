@@ -1,5 +1,7 @@
 use crate::host::CpalHostMainThread;
-use clack_extensions::timer::{HostTimerImpl, TimerError, TimerId};
+use clack_extensions::timer::{HostTimerImpl, PluginTimer, TimerError, TimerId};
+use clack_host::prelude::PluginMainThreadHandle;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -19,72 +21,74 @@ impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
     }
 }
 
-impl<'a> CpalHostMainThread<'a> {
-    /// Ticks all the registered timers, and run the plugin's callback for all timers that were
-    /// triggered.
-    pub fn tick_timers(&mut self) {
-        let Some(timer) = self.timer_support else {
-            return;
-        };
-        let plugin = self.plugin.as_mut().unwrap();
-
-        for triggered in self.timers.tick_all() {
-            timer.on_timer(plugin, triggered);
-        }
-    }
-}
-
 /// Handles all Timer logic.
 pub struct Timers {
     /// All the registered timers, indexed by ID.
-    timers: HashMap<TimerId, Timer>,
+    timers: RefCell<HashMap<TimerId, Timer>>,
     /// The last timer ID that was issued.
-    latest_id: u32,
+    latest_id: Cell<u32>,
     /// The smallest timer duration that was registered.
     /// Useful for configuring the shortest timeout in the event loop without being excessive.
-    smallest_duration: Option<Duration>,
+    smallest_duration: Cell<Option<Duration>>,
 }
 
 impl Timers {
     /// Initializes timer logic.
     pub fn new() -> Self {
         Self {
-            timers: HashMap::new(),
-            latest_id: 0,
-            smallest_duration: None,
+            timers: RefCell::new(HashMap::new()),
+            latest_id: Cell::new(0),
+            smallest_duration: Cell::new(None),
         }
     }
 
-    /// Ticks all the registered timers, returning an iterator of those that have just been
+    /// Ticks all the registered timers, returning a vector of those that have just been
     /// triggered.
-    pub fn tick_all(&mut self) -> impl Iterator<Item = TimerId> + '_ {
+    fn tick_all(&self) -> Vec<TimerId> {
+        // PANIC: This method is not reentrant with any that may also borrow timers
+        let mut timers = self.timers.borrow_mut();
+
         let now = Instant::now();
 
-        self.timers
+        timers
             .values_mut()
             .filter_map(move |t| t.tick(now).then_some(t.id))
+            .collect()
+    }
+
+    /// Ticks all the registered timers, and run the plugin's callback for all timers that were
+    /// triggered.
+    pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &mut PluginMainThreadHandle) {
+        for triggered in self.tick_all() {
+            timer_ext.on_timer(plugin, triggered);
+        }
     }
 
     /// Registers a new timer that will trigger at a given interval (in ms). Returns the newly
     /// created timer's unique ID.
-    pub fn register_new(&mut self, interval: Duration) -> TimerId {
+    pub fn register_new(&self, interval: Duration) -> TimerId {
         /// The maximum interval that can be set by plugin.
         /// The spec recommends 30ms at most, we use 10ms to allow for smoth UI updates.
         const MAX_INTERVAL: Duration = Duration::from_millis(10);
         let interval = interval.max(MAX_INTERVAL);
 
-        self.latest_id += 1;
-        let id = TimerId(self.latest_id);
+        let latest_id = self.latest_id.get() + 1;
+        self.latest_id.set(latest_id);
+        let id = TimerId(latest_id);
 
         println!(
             "Plugin registered new Timer with ID ({id}), running every {}ms.",
             interval.as_millis()
         );
-        self.timers.insert(id, Timer::new(id, interval));
 
-        match self.smallest_duration {
-            None => self.smallest_duration = Some(interval),
-            Some(smallest) if smallest > interval => self.smallest_duration = Some(interval),
+        // PANIC: This method is not reentrant with any that may also borrow timers
+        self.timers
+            .borrow_mut()
+            .insert(id, Timer::new(id, interval));
+
+        match self.smallest_duration.get() {
+            None => self.smallest_duration.set(Some(interval)),
+            Some(smallest) if smallest > interval => self.smallest_duration.set(Some(interval)),
             _ => {}
         }
 
@@ -94,10 +98,13 @@ impl Timers {
     /// Unregisters a given timer, specified by its given ID.
     ///
     /// Returns `true` if there was a timer with the given ID, `false` otherwise.
-    pub fn unregister(&mut self, id: TimerId) -> bool {
-        if self.timers.remove(&id).is_some() {
+    pub fn unregister(&self, id: TimerId) -> bool {
+        // PANIC: This method is not reentrant with any that may also borrow timers
+        let mut timers = self.timers.borrow_mut();
+        if timers.remove(&id).is_some() {
             println!("Plugin unregistered Timer with ID ({id}).");
-            self.smallest_duration = self.timers.values().map(|t| t.interval).min();
+            self.smallest_duration
+                .set(timers.values().map(|t| t.interval).min());
             true
         } else {
             false
@@ -106,7 +113,7 @@ impl Timers {
 
     /// Gets the smallest duration of all registered timers.
     pub fn smallest_duration(&self) -> Option<Duration> {
-        self.smallest_duration
+        self.smallest_duration.get()
     }
 }
 
