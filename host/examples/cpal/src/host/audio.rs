@@ -33,7 +33,7 @@ pub fn activate_to_stream(
     let midi = MidiReceiver::new(44_100, instance)?;
 
     let plugin_audio_processor = instance
-        .activate(|_, _, _| (), config.as_clack_plugin_config())?
+        .activate(|_, _| (), config.as_clack_plugin_config())?
         .start_processing()?;
 
     let sample_format = config.sample_format;

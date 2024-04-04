@@ -198,7 +198,7 @@ pub use error::HostError;
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 
-use crate::plugin::{InitializingPluginHandle, PluginMainThreadHandle};
+use crate::plugin::{InitializedPluginHandle, InitializingPluginHandle};
 
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
@@ -216,7 +216,7 @@ pub trait HostMainThread<'a>: 'a {
     /// plugin instance's lifetime.
     #[inline]
     #[allow(unused)]
-    fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) {}
+    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {}
 }
 
 /// Host data and callbacks that are tied to `[audio-thread]` operations.
@@ -253,7 +253,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// The given [`InitializingPluginHandle`] therefore only allows that operation.
     ///
     /// The full capability of the [`PluginSharedHandle`](crate::plugin::PluginSharedHandle) is only
-    /// given once [`HostMainThread::instantiated`] is called, and can be obtained through its given
+    /// given once [`HostMainThread::initialized`] is called, and can be obtained through its given
     /// [`PluginMainThreadHandle`].
     ///
     /// This function may be called multiple times concurrently while the plugin is initializing, if

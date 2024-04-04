@@ -78,7 +78,7 @@ pub struct CpalHostShared<'a> {
     /// The plugin's shared handle.
     /// This is stored in a separate, thread-safe lock because the instantiation might complete
     /// concurrently with any other thread-safe host methods.
-    plugin: OnceLock<PluginSharedHandle<'a>>,
+    plugin: OnceLock<InitializedPluginHandle<'a>>,
 }
 
 impl<'a> CpalHostShared<'a> {
@@ -119,8 +119,8 @@ pub struct CpalHostMainThread<'a> {
     /// A reference to shared host data.
     /// (this is unused in this example, but this is kept here for demonstration purposes).
     _shared: &'a CpalHostShared<'a>,
-    /// A handle to the plugin's own main thread data.
-    plugin: Option<PluginMainThreadHandle<'a>>,
+    /// A handle to the plugin instance.
+    plugin: Option<InitializedPluginHandle<'a>>,
 
     /// A handle to the plugin's Timer extension, if it supports it.
     /// This is placed here, since only the main thread will ever use that extension.
@@ -145,16 +145,15 @@ impl<'a> CpalHostMainThread<'a> {
 }
 
 impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
-    fn instantiated(&mut self, mut instance: PluginMainThreadHandle<'a>) {
+    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
         self.gui = instance
-            .shared()
             .get_extension()
             .map(|gui| Gui::new(gui, &mut instance));
 
-        self.timer_support = instance.shared().get_extension();
+        self.timer_support = instance.get_extension();
         self._shared
             .plugin
-            .set(instance.shared())
+            .set(instance)
             .expect("This is the only method that should set the instance handles.");
         self.plugin = Some(instance);
     }

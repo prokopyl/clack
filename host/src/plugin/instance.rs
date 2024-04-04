@@ -61,6 +61,7 @@ impl<H: Host> PluginInstanceInner<H> {
             unsafe {
                 if let Some(init) = plugin_instance_ptr.as_ref().init {
                     if !init(plugin_instance_ptr.as_ptr()) {
+                        instance.host_wrapper.start_instance_destroy();
                         if let Some(destroy) = plugin_instance_ptr.as_ref().destroy {
                             destroy(plugin_instance_ptr.as_ptr());
                         }
@@ -71,7 +72,7 @@ impl<H: Host> PluginInstanceInner<H> {
             }
 
             // SAFETY: The pointer comes from the plugin factory
-            unsafe { instance.host_wrapper.instantiated(plugin_instance_ptr) };
+            unsafe { instance.host_wrapper.instantiated() };
             instance.plugin_ptr = Some(plugin_instance_ptr);
         }
 
@@ -102,13 +103,10 @@ impl<H: Host> PluginInstanceInner<H> {
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
-            PluginAudioProcessorHandle<'a>,
             &'a <H as Host>::Shared<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
     {
-        let raw_instance = self.raw_instance().into();
-
         let activate = self
             .raw_instance()
             .activate
@@ -118,8 +116,7 @@ impl<H: Host> PluginInstanceInner<H> {
 
         // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
         unsafe {
-            self.host_wrapper
-                .setup_audio_processor(audio_processor, raw_instance)?;
+            self.host_wrapper.setup_audio_processor(audio_processor)?;
         }
 
         // SAFETY: this type ensures the function pointer is valid
@@ -226,6 +223,7 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
             let _ = self.deactivate_with(|_, _| ());
         }
 
+        self.host_wrapper.start_instance_destroy();
         // SAFETY: we are in the drop impl, so this can only be called once and without any
         // other concurrent calls.
         // This type also ensures the function pointer type is valid.

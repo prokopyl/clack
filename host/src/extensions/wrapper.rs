@@ -1,5 +1,6 @@
 //! Helper utilities to help implementing the host side of custom CLAP extensions.
 
+use crate::plugin::DestroyLock;
 use crate::prelude::*;
 use crate::util::UnsafeOptionCell;
 use clap_sys::host::clap_host;
@@ -38,6 +39,9 @@ pub struct HostWrapper<H: Host> {
     init_guard: Once,
     init_started: AtomicBool,
     plugin_ptr: OnceLock<NonNull<clap_plugin>>,
+
+    // Drop stuff
+    destroy_lock: Arc<DestroyLock>,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -131,6 +135,7 @@ impl<H: Host> HostWrapper<H> {
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
             plugin_ptr: OnceLock::new(),
+            destroy_lock: Arc::new(DestroyLock::new()),
         });
 
         // PANIC: we have the only Arc copy of this wrapper data.
@@ -158,13 +163,22 @@ impl<H: Host> HostWrapper<H> {
     /// # Safety
     /// This must only be called on the main thread. User must ensure the provided instance pointer
     /// is valid.
-    pub(crate) unsafe fn instantiated(&self, instance: NonNull<clap_plugin>) {
+    pub(crate) unsafe fn instantiated(&self) {
         self.ensure_initializing_called();
+        let instance = *self.plugin_ptr.get().unwrap();
 
         // SAFETY: At this point there is no way main_thread could not have been set.
         self.main_thread()
             .as_mut()
-            .instantiated(PluginMainThreadHandle::new(instance));
+            .initialized(InitializedPluginHandle::new(
+                self.destroy_lock.clone(),
+                instance,
+            ));
+    }
+
+    // TODO: bikeshed
+    pub(crate) fn start_instance_destroy(&self) {
+        self.destroy_lock.start_destroying();
     }
 
     /// # Safety
@@ -174,11 +188,9 @@ impl<H: Host> HostWrapper<H> {
     pub(crate) unsafe fn setup_audio_processor<FA>(
         &self,
         audio_processor: FA,
-        instance: NonNull<clap_plugin>,
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
-            PluginAudioProcessorHandle<'a>,
             &'a <H as Host>::Shared<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,
@@ -188,7 +200,6 @@ impl<H: Host> HostWrapper<H> {
         }
 
         self.audio_processor.put(audio_processor(
-            PluginAudioProcessorHandle::new(instance),
             // SAFETY: Shared lives at least as long as the audio processor does.
             unsafe { extend_shared_ref(&self.shared) },
             // SAFETY: The user enforces that this is only called on the main thread, and
@@ -262,7 +273,8 @@ impl<H: Host> HostWrapper<H> {
             // The comparison succeeded, and false was indeed the bool's value
             if result == Ok(false) {
                 // SAFETY: The pointer is guaranteed to be valid by the caller of created()
-                let handle = unsafe { InitializingPluginHandle::new(ptr) };
+                let handle =
+                    unsafe { InitializingPluginHandle::new(self.destroy_lock.clone(), ptr) };
                 self.shared().initializing(handle);
             }
         })

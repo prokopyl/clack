@@ -89,7 +89,7 @@ struct MyHostMainThread<'a> {
 }
 
 impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
-    fn instantiated(&mut self, _instance: PluginMainThreadHandle<'a>) {}
+    fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
 }
 
 impl<'a> HostTimerImpl for MyHostMainThread<'a> {

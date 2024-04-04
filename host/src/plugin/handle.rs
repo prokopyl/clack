@@ -38,7 +38,7 @@ impl<'a> PluginMainThreadHandle<'a> {
 impl Debug for PluginMainThreadHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        debug_handle("PluginMainThreadHandle", self.raw, f)
+        write!(f, "PluginMainThreadHandle ({:p})", self.raw)
     }
 }
 
@@ -82,7 +82,7 @@ impl<'a> PluginSharedHandle<'a> {
 impl Debug for PluginSharedHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        debug_handle("PluginSharedHandle", self.raw, f)
+        write!(f, "PluginSharedHandle ({:p})", self.raw)
     }
 }
 
@@ -119,7 +119,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
 impl Debug for PluginAudioProcessorHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        debug_handle("PluginAudioProcessorHandle", self.raw, f)
+        write!(f, "PluginAudioProcessorHandle ({:p})", self.raw)
     }
 }
 
@@ -132,9 +132,12 @@ pub struct InitializingPluginHandle<'a> {
 impl<'a> InitializingPluginHandle<'a> {
     /// # Safety
     ///
-    /// Users must ensure the provided instance pointer is valid.
-    pub(crate) unsafe fn new(_raw: NonNull<clap_plugin>) -> Self {
-        todo!()
+    /// Users must ensure the provided instance pointer is valid until the given lock is marked as destroying.
+    pub(crate) unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
+        Self {
+            lifetime: PhantomData,
+            inner: RemoteHandleInner { instance, lock },
+        }
     }
 
     #[inline]
@@ -152,30 +155,69 @@ impl<'a> InitializingPluginHandle<'a> {
 impl Debug for InitializingPluginHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        debug_handle("PluginInitializingHandle", self.inner.ptr, f)
+        write!(f, "InitializingPluginHandle ({:p})", self.inner.instance)
     }
 }
 
-fn debug_handle(name: &str, ptr: NonNull<clap_plugin>, f: &mut Formatter) -> std::fmt::Result {
-    write!(f, "{name} ({ptr:p})")
+#[derive(Clone, Eq, PartialEq)]
+pub struct InitializedPluginHandle<'a> {
+    inner: RemoteHandleInner,
+    lifetime: PhantomData<&'a clap_plugin>,
+}
+
+impl<'a> InitializedPluginHandle<'a> {
+    /// # Safety
+    ///
+    /// Users must ensure the provided instance pointer is valid until the given lock is marked as destroying.
+    pub(crate) unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
+        Self {
+            lifetime: PhantomData,
+            inner: RemoteHandleInner { instance, lock },
+        }
+    }
+
+    #[inline]
+    pub fn as_raw(&self) -> NonNull<clap_plugin> {
+        self.inner.as_ptr()
+    }
+
+    // TODO: bikeshed?
+    #[inline]
+    pub fn access<T>(&self, handler: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
+        self.inner.handle(handler)
+    }
+
+    // FIXME: bogus extension lifetime
+    pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(
+        &self,
+    ) -> Option<&'a E> {
+        self.inner.get_extension()
+    }
+}
+
+impl Debug for InitializedPluginHandle<'_> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InitializingPluginHandle ({:p})", self.inner.instance)
+    }
 }
 
 #[derive(Clone)]
 struct RemoteHandleInner {
     lock: Arc<DestroyLock>,
-    ptr: NonNull<clap_plugin>,
+    instance: NonNull<clap_plugin>,
 }
 
 impl RemoteHandleInner {
     #[inline]
     fn as_ptr(&self) -> NonNull<clap_plugin> {
-        self.ptr
+        self.instance
     }
 
     fn handle<T>(&self, handler: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
         self.lock.hold_off_destruction(|| {
             // SAFETY: this type ensures the plugin is not being destroyed yet.
-            let handle = unsafe { PluginSharedHandle::new(self.ptr) };
+            let handle = unsafe { PluginSharedHandle::new(self.instance) };
             handler(handle)
         })
     }
@@ -195,10 +237,10 @@ impl RemoteHandleInner {
     }
 }
 
-impl<'a> PartialEq for RemoteHandleInner {
+impl PartialEq for RemoteHandleInner {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.ptr == other.ptr
+        self.instance == other.instance
     }
 }
 

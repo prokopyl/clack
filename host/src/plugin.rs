@@ -52,7 +52,6 @@ impl<H: Host> PluginInstance<H> {
     ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
     where
         FA: for<'a> FnOnce(
-            PluginAudioProcessorHandle<'a>,
             &'a <H as Host>::Shared<'a>,
             &mut <H as Host>::MainThread<'a>,
         ) -> <H as Host>::AudioProcessor<'a>,

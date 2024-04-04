@@ -87,9 +87,9 @@ pub struct Gui<'a> {
     plugin_gui: &'a PluginGui,
     /// The negociated GUI configuration, or None if no compatible setup could be found.
     pub configuration: Option<GuiConfiguration<'static>>,
-    /// Whether or not the GUI is currently open.
+    /// Whether the GUI is currently open.
     is_open: bool,
-    /// Whether or not the GUI accepts to be resized.
+    /// Whether the GUI accepts to be resized.
     is_resizeable: bool,
 }
 
@@ -107,12 +107,12 @@ impl<'a> Gui<'a> {
     /// Tries to find a compatible configuration for the given plugin's GUI.
     ///
     /// We only support the default GUI API for the platform this is compiled for, so this method
-    /// only figures out if that is okay for the plugin, and whether or not is supports embedding.
+    /// only figures out if that is okay for the plugin, and whether is supports embedding.
     fn negotiate_configuration(
         gui: &'a PluginGui,
         plugin: &mut PluginMainThreadHandle,
     ) -> Option<GuiConfiguration<'static>> {
-        // This implementation only supports the default: Win32 on Windows, Cocoa on MacOS, X11 on Unix
+        // This implementation only supports the default: Win32 on Windows, Cocoa on macOS, X11 on Unix
         // We completely ignore the plugin's preference here: it's platform-default or nothing.
         let api_type = GuiApiType::default_for_current_platform()?;
         let mut config = GuiConfiguration {

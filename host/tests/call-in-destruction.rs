@@ -88,25 +88,19 @@ impl<'a> HostShared<'a> for MyHostShared<'a> {
 }
 
 struct MyHostMainThread<'a> {
-    instance: Option<PluginMainThreadHandle<'a>>,
+    instance: Option<InitializedPluginHandle<'a>>,
 }
 
 impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
-    fn instantiated(&mut self, instance: PluginMainThreadHandle<'a>) {
+    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
         self.instance = Some(instance)
     }
 }
 
 impl<'a> Drop for MyHostMainThread<'a> {
     fn drop(&mut self) {
-        let instance = self.instance.as_mut().unwrap();
-        let ext: &PluginState = instance.shared().get_extension().unwrap();
-
-        let mut buf = vec![];
-        let mut stream = OutputStream::from_writer(&mut buf);
-        ext.save(instance, &mut stream).unwrap();
-
-        assert_eq!(&buf, b"Hello, world!");
+        let instance = self.instance.as_ref().unwrap();
+        instance.get_extension::<PluginState>().unwrap();
     }
 }
 

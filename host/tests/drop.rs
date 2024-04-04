@@ -151,7 +151,7 @@ pub fn handles_normal_deactivate() {
         frames_count_range: 5..=5,
     };
 
-    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = instance.activate(|_, _| (), config).unwrap();
     instance.deactivate(processor);
 }
 
@@ -163,7 +163,7 @@ pub fn handles_try_deactivate() {
         frames_count_range: 5..=5,
     };
 
-    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = instance.activate(|_, _| (), config).unwrap();
 
     assert!(instance.try_deactivate().is_err());
     drop(processor);
@@ -179,7 +179,7 @@ pub fn stops_when_dropping() {
         frames_count_range: 5..=5,
     };
 
-    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = instance.activate(|_, _| (), config).unwrap();
     let processor = processor.start_processing().unwrap();
 
     drop(processor);
@@ -194,7 +194,7 @@ pub fn works_with_reverse_drop() {
         frames_count_range: 5..=5,
     };
 
-    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = instance.activate(|_, _| (), config).unwrap();
     let processor = processor.start_processing().unwrap();
 
     drop(instance);
@@ -209,7 +209,7 @@ pub fn works_with_forgotten_audio_processor() {
         frames_count_range: 5..=5,
     };
 
-    let processor = instance.activate(|_, _, _| (), config).unwrap();
+    let processor = instance.activate(|_, _| (), config).unwrap();
 
     let t = thread::spawn(move || {
         let processor = processor.start_processing().unwrap();

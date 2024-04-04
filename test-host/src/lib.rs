@@ -114,7 +114,7 @@ impl TestHost {
 
         let processor = self
             .plugin
-            .activate(|_, _, _| TestHostAudioProcessor, configuration)
+            .activate(|_, _| TestHostAudioProcessor, configuration)
             .unwrap();
 
         self.processor = Some(processor)
