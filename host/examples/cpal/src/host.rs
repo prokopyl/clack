@@ -93,7 +93,7 @@ impl<'a> CpalHostShared<'a> {
 }
 
 impl<'a> HostShared<'a> for CpalHostShared<'a> {
-    fn initializing(&self, instance: PluginInitializingHandle<'a>) {
+    fn initializing(&self, instance: InitializingPluginHandle<'a>) {
         let _ = self.callbacks.set(PluginCallbacks {
             audio_ports: instance.get_extension(),
         });

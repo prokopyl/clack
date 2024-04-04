@@ -38,9 +38,6 @@ pub struct HostWrapper<H: Host> {
     init_guard: Once,
     init_started: AtomicBool,
     plugin_ptr: OnceLock<NonNull<clap_plugin>>,
-
-    // Destroy stuff
-    about_to_destroy: AtomicBool,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -134,7 +131,6 @@ impl<H: Host> HostWrapper<H> {
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
             plugin_ptr: OnceLock::new(),
-            about_to_destroy: AtomicBool::new(false),
         });
 
         // PANIC: we have the only Arc copy of this wrapper data.
@@ -266,7 +262,7 @@ impl<H: Host> HostWrapper<H> {
             // The comparison succeeded, and false was indeed the bool's value
             if result == Ok(false) {
                 // SAFETY: The pointer is guaranteed to be valid by the caller of created()
-                let handle = unsafe { PluginInitializingHandle::new(ptr) };
+                let handle = unsafe { InitializingPluginHandle::new(ptr) };
                 self.shared().initializing(handle);
             }
         })

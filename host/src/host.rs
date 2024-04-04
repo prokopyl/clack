@@ -103,7 +103,7 @@
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
 //!     // Once the plugin is fully instantiated, we can query its extensions
-//!     fn initializing(&self, instance: PluginInitializingHandle<'a>) {
+//!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
 //!     
@@ -198,7 +198,7 @@ pub use error::HostError;
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 
-use crate::plugin::{PluginInitializingHandle, PluginMainThreadHandle};
+use crate::plugin::{InitializingPluginHandle, PluginMainThreadHandle};
 
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
@@ -250,7 +250,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// then called right afterward.
     ///
     /// During this time, the host is only allowed to query the plugin's extensions but nothing else.
-    /// The given [`PluginInitializingHandle`] therefore only allows that operation.
+    /// The given [`InitializingPluginHandle`] therefore only allows that operation.
     ///
     /// The full capability of the [`PluginSharedHandle`](crate::plugin::PluginSharedHandle) is only
     /// given once [`HostMainThread::instantiated`] is called, and can be obtained through its given
@@ -266,7 +266,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// possible.
     #[inline]
     #[allow(unused)]
-    fn initializing(&self, instance: PluginInitializingHandle<'a>) {}
+    fn initializing(&self, instance: InitializingPluginHandle<'a>) {}
 
     /// Called by the plugin when it requests to be deactivated and then restarted by the host.
     ///

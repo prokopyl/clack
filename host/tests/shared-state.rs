@@ -62,7 +62,7 @@ struct MyHostShared {
 }
 
 impl<'a> HostShared<'a> for MyHostShared {
-    fn initializing(&self, _instance: PluginInitializingHandle<'a>) {
+    fn initializing(&self, _instance: InitializingPluginHandle<'a>) {
         match self.state_ext.set(true) {
             Ok(_) => {}
             Err(_) => panic!("Failed to set state ext"),

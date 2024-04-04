@@ -35,7 +35,7 @@
 //! }
 //!
 //! impl<'a> HostShared<'a> for MyHostShared<'a> {
-//!     fn initializing(&self, instance: PluginInitializingHandle<'a>) {
+//!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.state_ext.set(instance.get_extension());
 //!     }
 //!     # fn request_restart(&self) { unimplemented!() }

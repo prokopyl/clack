@@ -286,7 +286,7 @@ pub mod prelude {
         },
         plugin::PluginInstance,
         plugin::{
-            PluginAudioProcessorHandle, PluginInitializingHandle, PluginMainThreadHandle,
+            InitializingPluginHandle, PluginAudioProcessorHandle, PluginMainThreadHandle,
             PluginSharedHandle,
         },
         process::{
