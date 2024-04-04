@@ -237,14 +237,19 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
         steady_time: Option<u64>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, HostError> {
+        // TODO: add test for this
+        let frames_count = match (audio_inputs.frames_count(), audio_outputs.frames_count()) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) | (None, Some(a)) => a,
+            (None, None) => 0,
+        };
+
         let process = clap_process {
             steady_time: match steady_time {
                 None => -1,
                 Some(steady_time) => steady_time.min(i64::MAX as u64) as i64,
             },
-            frames_count: audio_inputs
-                .frames_count()
-                .min(audio_outputs.frames_count()),
+            frames_count,
             transport: transport
                 .map(|e| e.as_raw_ref() as *const _)
                 .unwrap_or(core::ptr::null()),

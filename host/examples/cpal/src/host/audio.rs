@@ -1,7 +1,7 @@
 use crate::host::CpalHost;
 use clack_host::prelude::*;
 use clack_host::process::StartedPluginAudioProcessor;
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
     BuildStreamError, Device, FromSample, OutputCallbackInfo, SampleFormat, Stream, StreamConfig,
 };
@@ -46,6 +46,7 @@ pub fn activate_to_stream(
         &cpal_config,
         sample_format,
     )?;
+    stream.play()?;
 
     Ok(stream)
 }
