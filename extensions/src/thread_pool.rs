@@ -1,44 +1,40 @@
-//! Allows plugins to use an host's thread pool for multi-threaded audio processing.
+//! Allows plugins to use a host's thread pool for multithreaded audio processing.
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::thread_pool::*;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 /// Plugin-side of the ThreadPool extension.
-#[repr(C)]
-pub struct PluginThreadPool(clap_plugin_thread_pool);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginThreadPool {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginThreadPool {}
+#[derive(Copy, Clone)]
+pub struct PluginThreadPool(RawExtension<PluginExtensionSide, clap_plugin_thread_pool>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// Host-side of the ThreadPool extension.
-#[repr(C)]
-pub struct HostThreadPool(clap_host_thread_pool);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostThreadPool {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostThreadPool {}
+#[derive(Copy, Clone)]
+pub struct HostThreadPool(RawExtension<HostExtensionSide, clap_host_thread_pool>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadPool {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// An error that occurred as a plugin requested access to the host's thread pool.
@@ -57,6 +53,7 @@ impl Error for ThreadPoolRequestError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     /// Implementation of the Plugin-side of the Thread Pool extension.
@@ -73,9 +70,10 @@ mod plugin {
         for<'a> P::Shared<'a>: PluginThreadPoolImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_plugin_thread_pool {
-            exec: Some(exec::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_thread_pool {
+                exec: Some(exec::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -107,7 +105,10 @@ mod plugin {
             host: &mut HostAudioThreadHandle,
             task_count: u32,
         ) -> Result<(), ThreadPoolRequestError> {
-            let request_exec = self.0.request_exec.ok_or(ThreadPoolRequestError)?;
+            let request_exec = host
+                .use_extension(&self.0)
+                .request_exec
+                .ok_or(ThreadPoolRequestError)?;
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { request_exec(host.as_raw(), task_count) };
 
@@ -125,6 +126,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Thread Pool extension.
@@ -148,9 +150,10 @@ mod host {
     where
         for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
     {
-        const IMPLEMENTATION: &'static Self = &Self(clap_host_thread_pool {
-            request_exec: Some(request_exec::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_thread_pool {
+                request_exec: Some(request_exec::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -174,7 +177,7 @@ mod host {
         ///
         /// The index of the requested task to execute is given, and must be in the `0..task_count` range.
         pub fn exec(&self, plugin: &PluginSharedHandle, task_index: u32) {
-            if let Some(exec) = self.0.exec {
+            if let Some(exec) = plugin.use_extension(&self.0).exec {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { exec(plugin.as_raw(), task_index) }
             }

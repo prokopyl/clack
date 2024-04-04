@@ -1,4 +1,5 @@
 use super::{HostLog, LogSeverity};
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use clap_sys::ext::log::{clap_host_log, clap_log_severity};
 use std::borrow::Cow::Owned;
@@ -13,9 +14,10 @@ impl<H: Host> ExtensionImplementation<H> for HostLog
 where
     for<'a> <H as Host>::Shared<'a>: HostLogImpl,
 {
-    const IMPLEMENTATION: &'static Self = &HostLog(clap_host_log {
-        log: Some(log::<H>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_log {
+            log: Some(log::<H>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

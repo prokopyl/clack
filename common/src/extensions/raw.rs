@@ -8,11 +8,17 @@ use std::ptr::NonNull;
 #[derive(Copy, Clone)]
 pub struct RawExtension<S: ExtensionSide, T = c_void> {
     extension_ptr: NonNull<T>,
-    host_or_plugin_ptr: Option<NonNull<c_void>>, // Can be either clap_host or clap_plugin
+    host_or_plugin_ptr: NonNull<c_void>, // Can be either clap_host or clap_plugin
     _side: PhantomData<fn() -> S>,
 }
 
 // TODO: impl Eq + PartialEq
+
+// SAFETY: this is just a couple of pointers, and the type doesn't care being used on any thread.
+// Thread-safety is enforced by the plugin handle type that is passed to the methods.
+unsafe impl<S: ExtensionSide, T> Send for RawExtension<S, T> {}
+// SAFETY: same as above.
+unsafe impl<S: ExtensionSide, T> Sync for RawExtension<S, T> {}
 
 impl<S: ExtensionSide, T> RawExtension<S, T> {
     pub unsafe fn cast<U>(&self) -> RawExtension<S, U> {
@@ -33,15 +39,14 @@ impl<T> RawExtension<PluginExtensionSide, T> {
     pub unsafe fn from_raw(extension_ptr: NonNull<T>, plugin_ptr: NonNull<clap_plugin>) -> Self {
         Self {
             extension_ptr,
-            host_or_plugin_ptr: Some(plugin_ptr.cast()),
+            host_or_plugin_ptr: plugin_ptr.cast(),
             _side: PhantomData,
         }
     }
 
     // TODO: docs: this can be dangling
     pub fn plugin_ptr(&self) -> NonNull<clap_plugin> {
-        // TODO: check / explain unwrap?
-        self.host_or_plugin_ptr.unwrap().cast()
+        self.host_or_plugin_ptr.cast()
     }
 }
 
@@ -49,15 +54,14 @@ impl<T> RawExtension<HostExtensionSide, T> {
     pub unsafe fn from_raw(extension_ptr: NonNull<T>, host_ptr: NonNull<clap_host>) -> Self {
         Self {
             extension_ptr,
-            host_or_plugin_ptr: Some(host_ptr.cast()),
+            host_or_plugin_ptr: host_ptr.cast(),
             _side: PhantomData,
         }
     }
 
     // TODO: docs: this can be dangling
     pub fn host_ptr(&self) -> NonNull<clap_host> {
-        // TODO: check / explain unwrap?
-        self.host_or_plugin_ptr.unwrap().cast()
+        self.host_or_plugin_ptr.cast()
     }
 }
 

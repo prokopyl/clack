@@ -5,44 +5,40 @@
 //! This extension allows plugins to register timers to the host, which will then proceed to call
 //! a plugin's callback at a given regular interval.
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::timer_support::*;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 /// Host-side of the Timer extension.
-#[repr(C)]
-pub struct HostTimer(clap_host_timer_support);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostTimer {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostTimer {}
+#[derive(Copy, Clone)]
+pub struct HostTimer(RawExtension<HostExtensionSide, clap_host_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// Plugin-side of the Timer extension.
-#[repr(C)]
-pub struct PluginTimer(clap_plugin_timer_support);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginTimer {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginTimer {}
+#[derive(Copy, Clone)]
+pub struct PluginTimer(RawExtension<PluginExtensionSide, clap_plugin_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTimer {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// An identifier representing a timer given to a plugin.
@@ -82,6 +78,7 @@ impl Error for TimerError {}
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     impl HostTimer {
@@ -103,7 +100,10 @@ mod plugin {
             period_ms: u32,
         ) -> Result<TimerId, TimerError> {
             let mut id = 0u32;
-            let register_timer = self.0.register_timer.ok_or(TimerError::RegisterError)?;
+            let register_timer = host
+                .use_extension(&self.0)
+                .register_timer
+                .ok_or(TimerError::RegisterError)?;
 
             // SAFETY: This type ensures the function pointer is valid.
             match unsafe { register_timer(host.as_raw(), period_ms, &mut id) } {
@@ -126,7 +126,10 @@ mod plugin {
             host: &mut HostMainThreadHandle,
             timer_id: TimerId,
         ) -> Result<(), TimerError> {
-            let unregister_timer = self.0.unregister_timer.ok_or(TimerError::UnregisterError)?;
+            let unregister_timer = host
+                .use_extension(&self.0)
+                .unregister_timer
+                .ok_or(TimerError::UnregisterError)?;
 
             // SAFETY: This type ensures the function pointer is valid.
             match unsafe { unregister_timer(host.as_raw(), timer_id.0) } {
@@ -150,9 +153,10 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginTimerImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &PluginTimer(clap_plugin_timer_support {
-            on_timer: Some(on_timer::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_timer_support {
+                on_timer: Some(on_timer::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -172,6 +176,7 @@ pub use plugin::*;
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     /// Implementation of the Host-side of the Timer extension.
@@ -205,10 +210,11 @@ mod host {
         for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &HostTimer(clap_host_timer_support {
-            register_timer: Some(register_timer::<H>),
-            unregister_timer: Some(unregister_timer::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_timer_support {
+                register_timer: Some(register_timer::<H>),
+                unregister_timer: Some(unregister_timer::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -257,7 +263,7 @@ mod host {
         /// it.
         #[inline]
         pub fn on_timer(&self, plugin: &mut PluginMainThreadHandle, timer_id: TimerId) {
-            if let Some(on_timer) = self.0.on_timer {
+            if let Some(on_timer) = plugin.use_extension(&self.0).on_timer {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_timer(plugin.as_raw(), timer_id.0) }
             }

@@ -64,7 +64,7 @@ impl Host for CpalHost {
 #[allow(dead_code)]
 struct PluginCallbacks<'a> {
     /// A handle to the plugin's Audio Ports extension, if it supports it.
-    audio_ports: Option<&'a PluginAudioPorts>,
+    audio_ports: Option<PluginAudioPorts>,
 }
 
 /// Data, accessible by all the plugin's threads.

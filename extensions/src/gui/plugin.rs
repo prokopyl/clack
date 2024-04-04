@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use std::os::raw::c_char;
 
@@ -6,7 +7,7 @@ impl HostGui {
     /// Notify the host that the plugin window's [`GuiResizeHints`] have changed, and
     /// `get_resize_hints` should be called again.
     pub fn resize_hints_changed(&self, host: &HostHandle) {
-        if let Some(resize_hints_changed) = self.inner.resize_hints_changed {
+        if let Some(resize_hints_changed) = host.use_extension(&self.0).resize_hints_changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { resize_hints_changed(host.as_raw()) }
         }
@@ -33,7 +34,7 @@ impl HostGui {
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
-            self.inner
+            host.use_extension(&self.0)
                 .request_resize
                 .ok_or(GuiError::RequestResizeError)?(host.as_raw(), width, height)
         } {
@@ -51,7 +52,11 @@ impl HostGui {
     /// request.
     pub fn request_show(&self, host: &HostHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
-        if unsafe { self.inner.request_show.ok_or(GuiError::RequestShowError)?(host.as_raw()) } {
+        if unsafe {
+            host.use_extension(&self.0)
+                .request_show
+                .ok_or(GuiError::RequestShowError)?(host.as_raw())
+        } {
             Ok(())
         } else {
             Err(GuiError::RequestShowError)
@@ -66,7 +71,11 @@ impl HostGui {
     /// request.
     pub fn request_hide(&self, host: &HostHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
-        if unsafe { self.inner.request_hide.ok_or(GuiError::RequestHideError)?(host.as_raw()) } {
+        if unsafe {
+            host.use_extension(&self.0)
+                .request_hide
+                .ok_or(GuiError::RequestHideError)?(host.as_raw())
+        } {
             Ok(())
         } else {
             Err(GuiError::RequestHideError)
@@ -78,7 +87,7 @@ impl HostGui {
     ///
     /// If `is_destroyed` is true, then the host must call `destroy` to acknowledge the GUI destruction.
     pub fn closed(&self, host: &HostHandle, was_destroyed: bool) {
-        if let Some(closed) = self.inner.closed {
+        if let Some(closed) = host.use_extension(&self.0).closed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { closed(host.as_raw(), was_destroyed) }
         }
@@ -182,8 +191,8 @@ impl<P: Plugin> ExtensionImplementation<P> for PluginGui
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl<'a>,
 {
-    const IMPLEMENTATION: &'static Self = &PluginGui {
-        inner: clap_plugin_gui {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_gui {
             is_api_supported: Some(is_api_supported::<P>),
             get_preferred_api: Some(get_preferred_api::<P>),
             create: Some(create::<P>),
@@ -199,8 +208,7 @@ where
             suggest_title: Some(suggest_title::<P>),
             show: Some(show::<P>),
             hide: Some(hide::<P>),
-        },
-    };
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

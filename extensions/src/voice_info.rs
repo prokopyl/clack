@@ -15,37 +15,33 @@ use clap_sys::ext::voice_info::*;
 use std::ffi::CStr;
 
 /// Plugin-side of the Voice Info extension.
-#[repr(C)]
-pub struct PluginVoiceInfo(clap_plugin_voice_info);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginVoiceInfo {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginVoiceInfo {}
+#[derive(Copy, Clone)]
+pub struct PluginVoiceInfo(RawExtension<PluginExtensionSide, clap_plugin_voice_info>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// Host-side of the Voice Info extension.
-#[repr(C)]
-pub struct HostVoiceInfo(clap_host_voice_info);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostVoiceInfo {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostVoiceInfo {}
+#[derive(Copy, Clone)]
+pub struct HostVoiceInfo(RawExtension<HostExtensionSide, clap_host_voice_info>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostVoiceInfo {
     const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 bitflags! {
@@ -106,7 +102,9 @@ mod host {
             let info = MaybeUninit::uninit();
 
             // SAFETY: This type ensures the function pointer is valid.
-            let success = unsafe { self.0.get?(plugin.as_raw(), info.as_ptr() as *mut _) };
+            let success = unsafe {
+                plugin.use_extension(&self.0).get?(plugin.as_raw(), info.as_ptr() as *mut _)
+            };
 
             // SAFETY: we only read the buffer if the plugin returned a successful state
             unsafe { success.then(|| VoiceInfo::from_raw(info.assume_init_ref())) }
@@ -124,9 +122,10 @@ mod host {
     where
         for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
     {
-        const IMPLEMENTATION: &'static Self = &Self(clap_host_voice_info {
-            changed: Some(changed::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_voice_info {
+                changed: Some(changed::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -153,7 +152,7 @@ mod plugin {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
         /// it by calling [`get`](PluginVoiceInfoImpl::get) again.
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
-            if let Some(changed) = self.0.changed {
+            if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }
             }
@@ -172,9 +171,10 @@ mod plugin {
     where
         for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
     {
-        const IMPLEMENTATION: &'static Self = &Self(clap_plugin_voice_info {
-            get: Some(get::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_voice_info {
+                get: Some(get::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]

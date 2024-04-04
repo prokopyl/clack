@@ -20,7 +20,7 @@ impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
 }
 
 impl<'a> CpalHostMainThread<'a> {
-    /// Ticks all of the registered timers, and run the plugin's callback for all timers that were
+    /// Ticks all the registered timers, and run the plugin's callback for all timers that were
     /// triggered.
     pub fn tick_timers(&mut self) {
         let Some(timer) = self.timer_support else {
@@ -55,7 +55,7 @@ impl Timers {
         }
     }
 
-    /// Ticks all of the registered timer, returning an iterator of those that have just been
+    /// Ticks all the registered timers, returning an iterator of those that have just been
     /// triggered.
     pub fn tick_all(&mut self) -> impl Iterator<Item = TimerId> + '_ {
         let now = Instant::now();

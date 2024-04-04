@@ -8,27 +8,25 @@
 //! If this information does not influence your rendering code, your plugin should **NOT**
 //! implement this extension.
 
-use clack_common::extensions::{Extension, PluginExtensionSide};
+use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::ext::render::*;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 /// The Plugin-side of the Render extension.
-#[repr(C)]
-pub struct PluginRender(clap_plugin_render);
+#[derive(Copy, Clone)]
+pub struct PluginRender(RawExtension<PluginExtensionSide, clap_plugin_render>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginRender {
     const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
     type ExtensionSide = PluginExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginRender {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginRender {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 #[repr(i32)]
@@ -77,6 +75,7 @@ impl Display for PluginRenderError {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     /// Implementation of the Plugin-side of the Render extension.
@@ -101,10 +100,11 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_plugin_render {
-            set: Some(set::<P>),
-            has_hard_realtime_requirement: Some(has_hard_realtime_requirement::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_render {
+                set: Some(set::<P>),
+                has_hard_realtime_requirement: Some(has_hard_realtime_requirement::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -155,10 +155,12 @@ mod host {
         /// This is especially useful for plugins that are acting as a proxy to hardware devices, or
         /// other real-time events.
         #[inline]
-        pub fn has_realtime_requirement(&self, handle: &mut PluginMainThreadHandle) -> bool {
-            if let Some(has_hard_realtime_requirement) = self.0.has_hard_realtime_requirement {
+        pub fn has_realtime_requirement(&self, plugin: &mut PluginMainThreadHandle) -> bool {
+            if let Some(has_hard_realtime_requirement) =
+                plugin.use_extension(&self.0).has_hard_realtime_requirement
+            {
                 // SAFETY: This type ensures the function pointer is valid.
-                unsafe { has_hard_realtime_requirement(handle.as_raw()) }
+                unsafe { has_hard_realtime_requirement(plugin.as_raw()) }
             } else {
                 false
             }
@@ -172,12 +174,15 @@ mod host {
         /// to the given render mode.
         pub fn set(
             &self,
-            handle: &mut PluginMainThreadHandle,
+            plugin: &mut PluginMainThreadHandle,
             render_mode: RenderMode,
         ) -> Result<(), PluginRenderError> {
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe {
-                self.0.set.ok_or(PluginRenderError)?(handle.as_raw(), render_mode.as_raw())
+                plugin.use_extension(&self.0).set.ok_or(PluginRenderError)?(
+                    plugin.as_raw(),
+                    render_mode.as_raw(),
+                )
             };
 
             match success {

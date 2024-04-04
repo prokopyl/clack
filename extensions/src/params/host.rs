@@ -1,5 +1,6 @@
 use super::*;
 use clack_common::events::io::{InputEvents, OutputEvents};
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
@@ -26,7 +27,7 @@ impl ParamInfoBuffer {
 
 impl PluginParams {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
-        match self.0.count {
+        match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw()) },
@@ -40,8 +41,13 @@ impl PluginParams {
         buffer: &'b mut ParamInfoBuffer,
     ) -> Option<ParamInfo<'b>> {
         // SAFETY: This type ensures the function pointer is valid.
-        let success =
-            unsafe { self.0.get_info?(plugin.as_raw(), index, buffer.inner.as_mut_ptr()) };
+        let success = unsafe {
+            plugin.use_extension(&self.0).get_info?(
+                plugin.as_raw(),
+                index,
+                buffer.inner.as_mut_ptr(),
+            )
+        };
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to.
@@ -54,7 +60,9 @@ impl PluginParams {
     pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: u32) -> Option<f64> {
         let mut value = MaybeUninit::uninit();
         // SAFETY: This type ensures the function pointer is valid.
-        let valid = unsafe { self.0.get_value?(plugin.as_raw(), param_id, value.as_mut_ptr()) };
+        let valid = unsafe {
+            plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id, value.as_mut_ptr())
+        };
 
         if valid {
             // SAFETY: we just checked the value was successfully written to.
@@ -73,7 +81,7 @@ impl PluginParams {
     ) -> Option<&'b mut [u8]> {
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            self.0.value_to_text?(
+            plugin.use_extension(&self.0).value_to_text?(
                 plugin.as_raw(),
                 param_id,
                 value,
@@ -103,7 +111,7 @@ impl PluginParams {
 
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            self.0.text_to_value?(
+            plugin.use_extension(&self.0).text_to_value?(
                 plugin.as_raw(),
                 param_id,
                 display.as_ptr(),
@@ -126,7 +134,7 @@ impl PluginParams {
         input_event_list: &InputEvents,
         output_event_list: &mut OutputEvents,
     ) {
-        if let Some(flush) = self.0.flush {
+        if let Some(flush) = plugin.use_extension(&self.0).flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
@@ -145,7 +153,7 @@ impl PluginParams {
         input_event_list: &InputEvents,
         output_event_list: &mut OutputEvents,
     ) {
-        if let Some(flush) = self.0.flush {
+        if let Some(flush) = plugin.use_extension(&self.0).flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
@@ -178,11 +186,12 @@ where
     for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,
     for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
 {
-    const IMPLEMENTATION: &'static Self = &HostParams(clap_host_params {
-        rescan: Some(rescan::<H>),
-        clear: Some(clear::<H>),
-        request_flush: Some(request_flush::<H>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_params {
+            rescan: Some(rescan::<H>),
+            clear: Some(clear::<H>),
+            request_flush: Some(request_flush::<H>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

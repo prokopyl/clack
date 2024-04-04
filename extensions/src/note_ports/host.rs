@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
@@ -25,7 +26,7 @@ impl NotePortInfoBuffer {
 
 impl PluginNotePorts {
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
-        match self.0.count {
+        match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw(), is_input) },
@@ -41,7 +42,7 @@ impl PluginNotePorts {
     ) -> Option<NotePortInfo<'b>> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { self.0.get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
+            unsafe { plugin.use_extension(&self.0).get?(plugin.as_raw(), index, is_input, buffer.inner.as_mut_ptr()) };
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to
@@ -61,13 +62,11 @@ impl<H: Host> ExtensionImplementation<H> for HostNotePorts
 where
     for<'h> <H as Host>::MainThread<'h>: HostNotePortsImpl,
 {
-    const IMPLEMENTATION: &'static Self = &HostNotePorts(
-        clap_host_note_ports {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&&clap_host_note_ports {
             supported_dialects: Some(supported_dialects::<H>),
             rescan: Some(rescan::<H>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

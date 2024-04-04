@@ -111,44 +111,39 @@
 //! # Ok(()) }
 //! ```
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
-use std::marker::PhantomData;
 
-#[repr(C)]
-pub struct PluginState(clap_plugin_state, PhantomData<*const clap_plugin_state>);
+#[derive(Copy, Clone)]
+pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginState {
     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginState {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginState {}
-
-#[repr(C)]
-pub struct HostState(clap_host_state, PhantomData<*const clap_host_state>);
+#[derive(Copy, Clone)]
+pub struct HostState(RawExtension<HostExtensionSide, clap_host_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostState {
     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
     type ExtensionSide = HostExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostState {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostState {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct StateError {

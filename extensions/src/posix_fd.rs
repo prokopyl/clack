@@ -5,7 +5,7 @@
 #![deny(missing_docs)]
 
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::posix_fd_support::*;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -26,38 +26,34 @@ bitflags! {
 }
 
 /// Plugin-side of the POSIX File Descriptors extension.
-#[repr(C)]
-pub struct PluginPosixFd(clap_plugin_posix_fd_support);
+#[derive(Copy, Clone)]
+pub struct PluginPosixFd(RawExtension<PluginExtensionSide, clap_plugin_posix_fd_support>);
 
 /// Plugin-side of the POSIX File Descriptors extension.
-#[repr(C)]
-pub struct HostPosixFd(clap_host_posix_fd_support);
+#[derive(Copy, Clone)]
+pub struct HostPosixFd(RawExtension<HostExtensionSide, clap_host_posix_fd_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
     type ExtensionSide = PluginExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginPosixFd {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginPosixFd {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostPosixFd {
     const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
     type ExtensionSide = HostExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostPosixFd {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostPosixFd {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 /// Errors that can occur with the POSIX File Descriptors extension.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -89,6 +85,7 @@ impl Display for FdError {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     impl PluginPosixFd {
@@ -98,7 +95,7 @@ mod host {
         /// Descriptor will continuously produce "on_fd()" events.
         #[inline]
         pub fn on_fd(&self, plugin: &mut PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
-            if let Some(on_fd) = self.0.on_fd {
+            if let Some(on_fd) = plugin.use_extension(&self.0).on_fd {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_fd(plugin.as_raw(), fd, flags.bits()) }
             }
@@ -123,11 +120,12 @@ mod host {
         for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_host_posix_fd_support {
-            register_fd: Some(register_fd::<H>),
-            modify_fd: Some(modify_fd::<H>),
-            unregister_fd: Some(unregister_fd::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_posix_fd_support {
+                register_fd: Some(register_fd::<H>),
+                modify_fd: Some(modify_fd::<H>),
+                unregister_fd: Some(unregister_fd::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -185,6 +183,7 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     impl HostPosixFd {
@@ -198,7 +197,10 @@ mod plugin {
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
-            let register_fd = self.0.register_fd.ok_or(FdError::Register((fd, flags)))?;
+            let register_fd = host
+                .use_extension(&self.0)
+                .register_fd
+                .ok_or(FdError::Register((fd, flags)))?;
 
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { register_fd(host.as_raw(), fd, flags.bits()) };
@@ -215,7 +217,10 @@ mod plugin {
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
-            let modify_fd = self.0.modify_fd.ok_or(FdError::Modify((fd, flags)))?;
+            let modify_fd = host
+                .use_extension(&self.0)
+                .modify_fd
+                .ok_or(FdError::Modify((fd, flags)))?;
 
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { modify_fd(host.as_raw(), fd, flags.bits()) };
@@ -231,7 +236,10 @@ mod plugin {
             host: &mut HostMainThreadHandle,
             fd: RawFd,
         ) -> Result<(), FdError> {
-            let unregister_fd = self.0.unregister_fd.ok_or(FdError::Unregister(fd))?;
+            let unregister_fd = host
+                .use_extension(&self.0)
+                .unregister_fd
+                .ok_or(FdError::Unregister(fd))?;
 
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe { unregister_fd(host.as_raw(), fd) };
@@ -259,9 +267,10 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginPosixFdImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_plugin_posix_fd_support {
-            on_fd: Some(on_fd::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_posix_fd_support {
+                on_fd: Some(on_fd::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]

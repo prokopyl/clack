@@ -1,5 +1,6 @@
 use super::*;
 use crate::utils::write_to_array_buf;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
@@ -21,10 +22,11 @@ where
     for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &Self(clap_plugin_note_name {
-        count: Some(count::<P>),
-        get: Some(get::<P>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_note_name {
+            count: Some(count::<P>),
+            get: Some(get::<P>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -100,7 +102,7 @@ impl HostNoteName {
     /// be rescanned.
     #[inline]
     pub fn changed(&self, host: &mut HostMainThreadHandle) {
-        if let Some(changed) = self.0.changed {
+        if let Some(changed) = host.use_extension(&self.0).changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { changed(host.as_raw()) }
         }

@@ -1,5 +1,6 @@
 use super::*;
 use crate::utils::write_to_array_buf;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
@@ -31,11 +32,12 @@ where
     for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &PluginAudioPortsConfig(clap_plugin_audio_ports_config {
-        count: Some(count::<P>),
-        get: Some(get::<P>),
-        select: Some(select::<P>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_audio_ports_config {
+            count: Some(count::<P>),
+            get: Some(get::<P>),
+            select: Some(select::<P>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -170,7 +172,7 @@ impl HostAudioPortsConfig {
     /// be rescanned.
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle) {
-        if let Some(rescan) = self.0.rescan {
+        if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw()) }
         }

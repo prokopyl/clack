@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clack_common::utils::{ClapId, Cookie};
 use clap_sys::ext::params::*;
 use std::ffi::CStr;
@@ -75,38 +75,33 @@ impl ParamInfoFlags {
     );
 }
 
-#[repr(C)]
-pub struct PluginParams(clap_plugin_params);
+#[derive(Copy, Clone)]
+pub struct PluginParams(RawExtension<PluginExtensionSide, clap_plugin_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginParams {
     const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginParams {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginParams {}
-
-#[repr(C)]
-pub struct HostParams(clap_host_params);
+#[derive(Copy, Clone)]
+pub struct HostParams(RawExtension<HostExtensionSide, clap_host_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostParams {
     const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostParams {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostParams {}
-
 pub struct ParamInfo<'a> {
     pub id: ClapId,
     pub flags: ParamInfoFlags,

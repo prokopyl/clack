@@ -2,26 +2,32 @@ use clack_common::extensions::*;
 use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
 use std::ffi::CStr;
 
-#[repr(C)]
-pub struct PluginLatency {
-    inner: clap_plugin_latency,
-}
+#[derive(Copy, Clone)]
+pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
-#[repr(C)]
-pub struct HostLatency {
-    inner: clap_host_latency,
-}
+#[derive(Copy, Clone)]
+pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLatency {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 #[cfg(feature = "clack-host")]
@@ -32,7 +38,7 @@ mod host {
     impl PluginLatency {
         #[inline]
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
-            match self.inner.get {
+            match plugin.use_extension(&self.0).get {
                 None => 0,
                 // SAFETY: This type ensures the function pointer is valid.
                 Some(get) => unsafe { get(plugin.as_raw()) },
@@ -48,11 +54,10 @@ mod host {
     where
         for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
     {
-        const IMPLEMENTATION: &'static Self = &HostLatency {
-            inner: clap_host_latency {
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_latency {
                 changed: Some(changed::<H>),
-            },
-        };
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -77,7 +82,7 @@ mod plugin {
     impl HostLatency {
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
-            if let Some(changed) = self.inner.changed {
+            if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.shared().as_raw()) }
             }
@@ -92,11 +97,10 @@ mod plugin {
     where
         for<'a> P::MainThread<'a>: PluginLatencyImpl,
     {
-        const IMPLEMENTATION: &'static Self = &PluginLatency {
-            inner: clap_plugin_latency {
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_latency {
                 get: Some(get::<P>),
-            },
-        };
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]

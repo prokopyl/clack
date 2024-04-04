@@ -5,11 +5,9 @@ use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 
-#[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct PluginAudioPorts(RawExtension<PluginExtensionSide, clap_plugin_audio_ports>);
 
-#[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct HostAudioPorts(RawExtension<HostExtensionSide, clap_host_audio_ports>);
 
@@ -59,34 +57,22 @@ unsafe impl Extension for PluginAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = PluginExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
         Self(raw.cast())
     }
 }
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginAudioPorts {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginAudioPorts {}
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
     type ExtensionSide = HostExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
         Self(raw.cast())
     }
 }
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostAudioPorts {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostAudioPorts {}
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPortInfo<'a> {

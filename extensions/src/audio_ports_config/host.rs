@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
@@ -28,7 +29,8 @@ impl AudioPortsConfigBuffer {
 impl PluginAudioPortsConfig {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
-        match self.0.count {
+        // SAFETY: This type ensures the function pointer is valid.
+        match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw()) as usize },
@@ -45,9 +47,14 @@ impl PluginAudioPortsConfig {
         index: usize,
         buffer: &'b mut AudioPortsConfigBuffer,
     ) -> Option<AudioPortsConfiguration<'b>> {
-        let success =
-            // SAFETY: This type ensures the function pointer is valid.
-            unsafe { self.0.get?(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
+        // SAFETY: This type ensures the function pointer is valid.
+        let success = unsafe {
+            plugin.use_extension(&self.0).get?(
+                plugin.as_raw(),
+                index as u32,
+                buffer.inner.as_mut_ptr(),
+            )
+        };
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
@@ -73,7 +80,10 @@ impl PluginAudioPortsConfig {
     ) -> Result<(), AudioPortConfigSelectError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.0.select.ok_or(AudioPortConfigSelectError)?(plugin.as_raw(), configuration_id)
+            plugin
+                .use_extension(&self.0)
+                .select
+                .ok_or(AudioPortConfigSelectError)?(plugin.as_raw(), configuration_id)
         };
 
         match success {
@@ -95,9 +105,10 @@ where
     for<'h> <H as Host>::MainThread<'h>: HostAudioPortsConfigImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &HostAudioPortsConfig(clap_host_audio_ports_config {
-        rescan: Some(rescan::<H>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_audio_ports_config {
+            rescan: Some(rescan::<H>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

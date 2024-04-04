@@ -16,30 +16,42 @@
 //! port rescan to the host.
 
 use crate::audio_ports::AudioPortType;
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::audio_ports_config::*;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 /// The Plugin-side of the Audio Ports Configurations extension.
-#[repr(C)]
-pub struct PluginAudioPortsConfig(clap_plugin_audio_ports_config);
+#[derive(Copy, Clone)]
+pub struct PluginAudioPortsConfig(
+    RawExtension<PluginExtensionSide, clap_plugin_audio_ports_config>,
+);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// The Host-side of the Audio Ports Configurations extension.
-#[repr(C)]
-pub struct HostAudioPortsConfig(clap_host_audio_ports_config);
+#[derive(Copy, Clone)]
+pub struct HostAudioPortsConfig(RawExtension<HostExtensionSide, clap_host_audio_ports_config>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPortsConfig {
     const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

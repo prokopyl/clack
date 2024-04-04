@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_common::stream::{InputStream, OutputStream};
 use clack_host::extensions::prelude::*;
 use std::io::{Read, Write};
@@ -13,7 +14,12 @@ impl PluginState {
 
         // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
-            (self.0.load.ok_or(StateError { saving: false })?)(plugin.as_raw(), stream.as_raw_mut())
+            (plugin
+                .use_extension(&self.0)
+                .load
+                .ok_or(StateError { saving: false })?)(
+                plugin.as_raw(), stream.as_raw_mut()
+            )
         } {
             Ok(())
         } else {
@@ -30,7 +36,12 @@ impl PluginState {
 
         // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
-            (self.0.save.ok_or(StateError { saving: true })?)(plugin.as_raw(), stream.as_raw_mut())
+            (plugin
+                .use_extension(&self.0)
+                .save
+                .ok_or(StateError { saving: true })?)(
+                plugin.as_raw(), stream.as_raw_mut()
+            )
         } {
             Ok(())
         } else {
@@ -48,12 +59,10 @@ where
     for<'a> <H as Host>::MainThread<'a>: HostStateImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &Self(
-        clap_host_state {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_state {
             mark_dirty: Some(mark_dirty::<H>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

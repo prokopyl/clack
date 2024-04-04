@@ -1,4 +1,4 @@
-use clack_common::extensions::{Extension, HostExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -64,20 +64,18 @@ impl Display for LogSeverity {
     }
 }
 
-#[repr(C)]
-pub struct HostLog(clap_host_log);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostLog {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostLog {}
+#[derive(Copy, Clone)]
+pub struct HostLog(RawExtension<HostExtensionSide, clap_host_log>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLog {
     const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -88,7 +86,7 @@ mod plugin {
     impl HostLog {
         #[inline]
         pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
-            if let Some(log) = self.0.log {
+            if let Some(log) = host.use_extension(&self.0).log {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { log(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }
             }

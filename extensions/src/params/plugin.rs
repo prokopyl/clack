@@ -1,6 +1,7 @@
 use super::*;
 use crate::utils::{slice_from_external_parts_mut, write_to_array_buf};
 use clack_common::events::io::{InputEvents, OutputEvents};
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::events::{clap_input_events, clap_output_events};
 use clap_sys::ext::log::CLAP_LOG_ERROR;
@@ -245,25 +246,26 @@ unsafe extern "C" fn flush<P: Plugin>(
     });
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for super::PluginParams
+impl<P: Plugin> ExtensionImplementation<P> for PluginParams
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
     for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,
 {
-    const IMPLEMENTATION: &'static Self = &super::PluginParams(clap_plugin_params {
-        count: Some(count::<P>),
-        get_info: Some(get_info::<P>),
-        get_value: Some(get_value::<P>),
-        value_to_text: Some(value_to_text::<P>),
-        text_to_value: Some(text_to_value::<P>),
-        flush: Some(flush::<P>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_params {
+            count: Some(count::<P>),
+            get_info: Some(get_info::<P>),
+            get_value: Some(get_value::<P>),
+            value_to_text: Some(value_to_text::<P>),
+            text_to_value: Some(text_to_value::<P>),
+            flush: Some(flush::<P>),
+        });
 }
 
 impl HostParams {
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
-        if let Some(rescan) = self.0.rescan {
+        if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flags.bits()) }
         }
@@ -271,7 +273,7 @@ impl HostParams {
 
     #[inline]
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
-        if let Some(clear) = self.0.clear {
+        if let Some(clear) = host.use_extension(&self.0).clear {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { clear(host.as_raw(), param_id, flags.bits()) }
         }
@@ -279,7 +281,7 @@ impl HostParams {
 
     #[inline]
     pub fn request_flush(&self, host: &HostHandle) {
-        if let Some(request_flush) = self.0.request_flush {
+        if let Some(request_flush) = host.use_extension(&self.0).request_flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { request_flush(host.as_raw()) }
         }

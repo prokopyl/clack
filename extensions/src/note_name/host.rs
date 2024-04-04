@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
@@ -28,7 +29,7 @@ impl NoteNameBuffer {
 impl PluginNoteName {
     /// Returns the number of available [`NoteName`]s.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
-        match self.0.count {
+        match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
             Some(count) => unsafe { count(plugin.as_raw()) as usize },
@@ -47,7 +48,7 @@ impl PluginNoteName {
     ) -> Option<NoteName<'b>> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { self.0.get?(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
+            unsafe { plugin.use_extension(&self.0).get?(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to.
@@ -70,9 +71,10 @@ where
     for<'h> <H as Host>::MainThread<'h>: HostNoteNameImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &HostNoteName(clap_host_note_name {
-        changed: Some(changed::<H>),
-    });
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_note_name {
+            changed: Some(changed::<H>),
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

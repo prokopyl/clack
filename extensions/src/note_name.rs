@@ -2,42 +2,38 @@
 
 //! A way for plugins to list custom note names for hosts to display in e.g. a piano roll.
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::note_name::*;
 use std::ffi::CStr;
 
 /// The Plugin-side of the Note Name extension.
-#[repr(C)]
-pub struct PluginNoteName(clap_plugin_note_name);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginNoteName {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginNoteName {}
+#[derive(Copy, Clone)]
+pub struct PluginNoteName(RawExtension<PluginExtensionSide, clap_plugin_note_name>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// The Host-side of the Note Name extension.
-#[repr(C)]
-pub struct HostNoteName(clap_host_note_name);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostNoteName {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostNoteName {}
+#[derive(Copy, Clone)]
+pub struct HostNoteName(RawExtension<HostExtensionSide, clap_host_note_name>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNoteName {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

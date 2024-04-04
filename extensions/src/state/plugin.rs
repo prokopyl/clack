@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_common::stream::{InputStream, OutputStream};
 use clack_plugin::extensions::prelude::*;
 use clap_sys::stream::{clap_istream, clap_ostream};
@@ -6,7 +7,7 @@ use clap_sys::stream::{clap_istream, clap_ostream};
 impl HostState {
     #[inline]
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
-        if let Some(mark_dirty) = self.0.mark_dirty {
+        if let Some(mark_dirty) = host.use_extension(&self.0).mark_dirty {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { mark_dirty(host.shared().as_raw()) }
         }
@@ -22,13 +23,11 @@ impl<P: Plugin> ExtensionImplementation<P> for PluginState
 where
     for<'a> P::MainThread<'a>: PluginStateImpl,
 {
-    const IMPLEMENTATION: &'static Self = &PluginState(
-        clap_plugin_state {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_state {
             save: Some(save::<P>),
             load: Some(load::<P>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]

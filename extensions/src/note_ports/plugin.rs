@@ -1,5 +1,6 @@
 use super::*;
 use crate::utils::write_to_array_buf;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
 use std::ptr::addr_of_mut;
@@ -56,13 +57,11 @@ impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
 where
     for<'a> P::MainThread<'a>: PluginNotePortsImpl,
 {
-    const IMPLEMENTATION: &'static Self = &PluginNotePorts(
-        clap_plugin_note_ports {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_note_ports {
             count: Some(count::<P>),
             get: Some(get::<P>),
-        },
-        PhantomData,
-    );
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -99,7 +98,7 @@ where
 impl HostNotePorts {
     #[inline]
     pub fn supported_dialects(&self, host: &HostMainThreadHandle) -> NoteDialects {
-        match self.0.supported_dialects {
+        match host.use_extension(&self.0).supported_dialects {
             None => NoteDialects::empty(),
             Some(supported) => {
                 // SAFETY: This type ensures the function pointer is valid.
@@ -110,7 +109,7 @@ impl HostNotePorts {
 
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: NotePortRescanFlags) {
-        if let Some(rescan) = self.0.rescan {
+        if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flags.bits()) }
         }

@@ -1,21 +1,19 @@
-use clack_common::extensions::{Extension, HostExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
 use std::ffi::CStr;
 
-#[repr(C)]
-pub struct HostThreadCheck(clap_host_thread_check);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostThreadCheck {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostThreadCheck {}
+#[derive(Copy, Clone)]
+pub struct HostThreadCheck(RawExtension<HostExtensionSide, clap_host_thread_check>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadCheck {
     const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -27,13 +25,13 @@ mod plugin {
         #[inline]
         pub fn is_main_thread(&self, host: &HostHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
-            Some(unsafe { self.0.is_main_thread?(host.as_raw()) })
+            Some(unsafe { host.use_extension(&self.0).is_main_thread?(host.as_raw()) })
         }
 
         #[inline]
         pub fn is_audio_thread(&self, host: &HostHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
-            Some(unsafe { self.0.is_audio_thread?(host.as_raw()) })
+            Some(unsafe { host.use_extension(&self.0).is_audio_thread?(host.as_raw()) })
         }
     }
 }
@@ -41,6 +39,7 @@ mod plugin {
 #[cfg(feature = "clack-host")]
 mod host {
     use crate::thread_check::HostThreadCheck;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
 
@@ -53,10 +52,11 @@ mod host {
     where
         for<'a> <H as Host>::Shared<'a>: HostThreadCheckImpl,
     {
-        const IMPLEMENTATION: &'static Self = &HostThreadCheck(clap_host_thread_check {
-            is_main_thread: Some(is_main_thread::<H>),
-            is_audio_thread: Some(is_audio_thread::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_thread_check {
+                is_main_thread: Some(is_main_thread::<H>),
+                is_audio_thread: Some(is_audio_thread::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]

@@ -2,42 +2,38 @@
 
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::tail::*;
 use std::ffi::CStr;
 
 /// The Plugin-side of the Tail extension.
-#[repr(C)]
-pub struct PluginTail(clap_plugin_tail);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginTail {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginTail {}
+#[derive(Copy, Clone)]
+pub struct PluginTail(RawExtension<PluginExtensionSide, clap_plugin_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
     type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// The Host-side of the Tail extension.
-#[repr(C)]
-pub struct HostTail(clap_host_tail);
-
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostTail {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostTail {}
+#[derive(Copy, Clone)]
+pub struct HostTail(RawExtension<HostExtensionSide, clap_host_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTail {
     const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
     type ExtensionSide = HostExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
 }
 
 /// The length of a plugin's tail, which can potentially be infinite.
@@ -106,13 +102,14 @@ impl TailLength {
 #[cfg(feature = "clack-host")]
 mod host {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_host::extensions::prelude::*;
 
     impl PluginTail {
         /// Returns the plugin's [`TailLength`].
         #[inline]
         pub fn get(&self, plugin: &PluginAudioProcessorHandle) -> TailLength {
-            match self.0.get {
+            match plugin.use_extension(&self.0).get {
                 // SAFETY: This type ensures the function pointer is valid.
                 Some(get) => TailLength::from_raw(unsafe { get(plugin.as_raw()) }),
                 None => TailLength::default(),
@@ -131,9 +128,10 @@ mod host {
         for<'a> <H as Host>::AudioProcessor<'a>: HostTailImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_host_tail {
-            changed: Some(changed::<H>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_host_tail {
+                changed: Some(changed::<H>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -154,13 +152,14 @@ pub use host::*;
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
+    use clack_common::extensions::RawExtensionImplementation;
     use clack_plugin::extensions::prelude::*;
 
     impl HostTail {
         /// Informs the host that the plugin's tail length has changed and needs to be updated.
         #[inline]
         pub fn changed(&self, host: &mut HostAudioThreadHandle) {
-            if let Some(changed) = self.0.changed {
+            if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }
             }
@@ -178,9 +177,10 @@ mod plugin {
         for<'a> P::AudioProcessor<'a>: PluginTailImpl,
     {
         #[doc(hidden)]
-        const IMPLEMENTATION: &'static Self = &Self(clap_plugin_tail {
-            get: Some(get::<P>),
-        });
+        const IMPLEMENTATION: RawExtensionImplementation =
+            RawExtensionImplementation::new(&clap_plugin_tail {
+                get: Some(get::<P>),
+            });
     }
 
     #[allow(clippy::missing_safety_doc)]

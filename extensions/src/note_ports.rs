@@ -1,20 +1,13 @@
 use bitflags::bitflags;
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::note_ports::*;
 use std::ffi::CStr;
-use std::marker::PhantomData;
 
-#[repr(C)]
-pub struct PluginNotePorts(
-    clap_plugin_note_ports,
-    PhantomData<*const clap_plugin_note_ports>,
-);
+#[derive(Copy, Clone)]
+pub struct PluginNotePorts(RawExtension<PluginExtensionSide, clap_plugin_note_ports>);
 
-#[repr(C)]
-pub struct HostNotePorts(
-    clap_host_note_ports,
-    PhantomData<*const clap_host_note_ports>,
-);
+#[derive(Copy, Clone)]
+pub struct HostNotePorts(RawExtension<HostExtensionSide, clap_host_note_ports>);
 
 bitflags! {
     #[repr(C)]
@@ -75,27 +68,23 @@ impl From<NoteDialect> for NoteDialects {
 unsafe impl Extension for PluginNotePorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
     type ExtensionSide = PluginExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginNotePorts {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginNotePorts {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNotePorts {
     const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
     type ExtensionSide = HostExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostNotePorts {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostNotePorts {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 pub struct NotePortInfo<'a> {
     pub id: u32,

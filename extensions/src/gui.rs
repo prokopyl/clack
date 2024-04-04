@@ -58,7 +58,7 @@
 
 #![deny(missing_docs)]
 
-use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide};
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::gui::*;
 use std::cmp::Ordering;
 use std::error::Error;
@@ -83,9 +83,9 @@ pub use plugin::*;
 /// This only makes sense for embedded windows.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct GuiResizeHints {
-    /// Whether or not the window can be resized horizontally
+    /// Whether the window can be resized horizontally
     pub can_resize_horizontally: bool,
-    /// Whether or not the window can be resized vertically
+    /// Whether the window can be resized vertically
     pub can_resize_vertically: bool,
 
     /// How to approach Aspect Ratio preservation
@@ -149,42 +149,34 @@ pub enum AspectRatioStrategy {
 }
 
 /// The Plugin-side of the GUI extension.
-#[repr(C)]
-pub struct PluginGui {
-    inner: clap_plugin_gui,
-}
+#[derive(Copy, Clone)]
+pub struct PluginGui(RawExtension<PluginExtensionSide, clap_plugin_gui>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionSide = PluginExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for PluginGui {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for PluginGui {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 /// The Host-side of the GUI extension.
-#[repr(C)]
-pub struct HostGui {
-    inner: clap_host_gui,
-}
+#[derive(Copy, Clone)]
+pub struct HostGui(RawExtension<HostExtensionSide, clap_host_gui>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostGui {
     const IDENTIFIER: &'static CStr = CLAP_EXT_GUI;
     type ExtensionSide = HostExtensionSide;
-}
 
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Send for HostGui {}
-// SAFETY: The API of this extension makes it so that the Send/Sync requirements are enforced onto
-// the input handles, not on the descriptor itself.
-unsafe impl Sync for HostGui {}
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        Self(raw.cast())
+    }
+}
 
 /// Errors that can occur related to Plugin GUI handling.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -445,7 +437,7 @@ impl<'a> GuiApiType<'a> {
 
     /// Returns the default API type for the platform this executable is compiled for.
     ///
-    /// This returns [`WIN32`](Self::WIN32) on Windows, [`COCOA`](Self::COCOA) on MacOS, and
+    /// This returns [`WIN32`](Self::WIN32) on Windows, [`COCOA`](Self::COCOA) on macOS, and
     /// [`X11`](Self::X11) on other Unix OSes.
     #[inline]
     #[allow(unreachable_code)]

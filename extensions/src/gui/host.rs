@@ -1,4 +1,5 @@
 use super::*;
+use clack_common::extensions::RawExtensionImplementation;
 use clack_host::extensions::prelude::*;
 
 impl PluginGui {
@@ -8,7 +9,7 @@ impl PluginGui {
         plugin: &mut PluginMainThreadHandle,
         configuration: GuiConfiguration,
     ) -> bool {
-        match self.inner.is_api_supported {
+        match plugin.use_extension(&self.0).is_api_supported {
             // SAFETY: This type ensures the function pointer is valid.
             Some(is_api_supported) => unsafe {
                 is_api_supported(
@@ -33,7 +34,11 @@ impl PluginGui {
 
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.inner.get_preferred_api?(plugin.as_raw(), &mut api_type, &mut is_floating)
+            plugin.use_extension(&self.0).get_preferred_api?(
+                plugin.as_raw(),
+                &mut api_type,
+                &mut is_floating,
+            )
         };
 
         if success && !api_type.is_null() {
@@ -61,7 +66,10 @@ impl PluginGui {
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.inner.create.ok_or(GuiError::CreateError)?(
+            plugin
+                .use_extension(&self.0)
+                .create
+                .ok_or(GuiError::CreateError)?(
                 plugin.as_raw(),
                 configuration.api_type.0.as_ptr(),
                 configuration.is_floating,
@@ -76,7 +84,7 @@ impl PluginGui {
 
     /// Free all resources associated with the GUI
     pub fn destroy(&self, plugin: &mut PluginMainThreadHandle) {
-        if let Some(destroy) = self.inner.destroy {
+        if let Some(destroy) = plugin.use_extension(&self.0).destroy {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { destroy(plugin.as_raw()) }
         }
@@ -93,7 +101,7 @@ impl PluginGui {
     ) -> Result<(), GuiError> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { self.inner.set_scale.ok_or(GuiError::CreateError)?(plugin.as_raw(), scale) };
+            unsafe { plugin.use_extension(&self.0).set_scale.ok_or(GuiError::CreateError)?(plugin.as_raw(), scale) };
 
         match success {
             true => Ok(()),
@@ -107,7 +115,9 @@ impl PluginGui {
         let mut height = 0;
 
         // SAFETY: This type ensures the function pointer is valid.
-        let success = unsafe { self.inner.get_size?(plugin.as_raw(), &mut width, &mut height) };
+        let success = unsafe {
+            plugin.use_extension(&self.0).get_size?(plugin.as_raw(), &mut width, &mut height)
+        };
 
         if success && width != 0 && height != 0 {
             Some(GuiSize { width, height })
@@ -120,7 +130,7 @@ impl PluginGui {
     ///
     /// Only applies to embedded windows.
     pub fn can_resize(&self, plugin: &mut PluginMainThreadHandle) -> bool {
-        if let Some(can_resize) = self.inner.can_resize {
+        if let Some(can_resize) = plugin.use_extension(&self.0).can_resize {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { can_resize(plugin.as_raw()) }
         } else {
@@ -139,7 +149,8 @@ impl PluginGui {
         };
 
         // SAFETY: This type ensures the function pointer is valid.
-        let success = unsafe { self.inner.get_resize_hints?(plugin.as_raw(), &mut hints) };
+        let success =
+            unsafe { plugin.use_extension(&self.0).get_resize_hints?(plugin.as_raw(), &mut hints) };
 
         match success {
             true if hints.aspect_ratio_height != u32::MAX
@@ -164,8 +175,12 @@ impl PluginGui {
 
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
-            self.inner.adjust_size?(plugin.as_raw(), &mut new_size.width, &mut new_size.height)
-                .then_some(new_size)
+            plugin.use_extension(&self.0).adjust_size?(
+                plugin.as_raw(),
+                &mut new_size.width,
+                &mut new_size.height,
+            )
+            .then_some(new_size)
         }
     }
 
@@ -177,10 +192,11 @@ impl PluginGui {
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.inner.set_size.ok_or(GuiError::SetScaleError)?(
-                plugin.as_raw(),
-                size.width,
-                size.height,
+            plugin
+                .use_extension(&self.0)
+                .set_size
+                .ok_or(GuiError::SetScaleError)?(
+                plugin.as_raw(), size.width, size.height
             )
         };
 
@@ -195,7 +211,10 @@ impl PluginGui {
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.inner.set_parent.ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())
+            plugin
+                .use_extension(&self.0)
+                .set_parent
+                .ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())
         };
 
         success.then_some(()).ok_or(GuiError::SetParentError)
@@ -211,10 +230,10 @@ impl PluginGui {
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            self.inner.set_transient.ok_or(GuiError::SetParentError)?(
-                plugin.as_raw(),
-                window.as_raw(),
-            )
+            plugin
+                .use_extension(&self.0)
+                .set_transient
+                .ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())
         };
 
         success.then_some(()).ok_or(GuiError::SetParentError)
@@ -224,7 +243,7 @@ impl PluginGui {
     ///
     /// Only applies to floating windows.
     pub fn suggest_title(&self, plugin: &mut PluginMainThreadHandle, title: &CStr) {
-        if let Some(suggest_title) = self.inner.suggest_title {
+        if let Some(suggest_title) = plugin.use_extension(&self.0).suggest_title {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { suggest_title(plugin.as_raw(), title.as_ptr()) }
         }
@@ -233,9 +252,14 @@ impl PluginGui {
     /// Show the window
     pub fn show(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
-        unsafe { self.inner.show.ok_or(GuiError::ShowError)?(plugin.as_raw()) }
-            .then_some(())
-            .ok_or(GuiError::ShowError)
+        unsafe {
+            plugin
+                .use_extension(&self.0)
+                .show
+                .ok_or(GuiError::ShowError)?(plugin.as_raw())
+        }
+        .then_some(())
+        .ok_or(GuiError::ShowError)
     }
 
     /// Hide the window
@@ -243,9 +267,14 @@ impl PluginGui {
     /// This should not free the resources associated with the GUI, just hide it.
     pub fn hide(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
-        unsafe { self.inner.hide.ok_or(GuiError::ShowError)?(plugin.as_raw()) }
-            .then_some(())
-            .ok_or(GuiError::ShowError)
+        unsafe {
+            plugin
+                .use_extension(&self.0)
+                .hide
+                .ok_or(GuiError::ShowError)?(plugin.as_raw())
+        }
+        .then_some(())
+        .ok_or(GuiError::ShowError)
     }
 }
 
@@ -298,15 +327,14 @@ where
     for<'a> <H as Host>::Shared<'a>: HostGuiImpl,
 {
     #[doc(hidden)]
-    const IMPLEMENTATION: &'static Self = &Self {
-        inner: clap_host_gui {
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_host_gui {
             resize_hints_changed: Some(resize_hints_changed::<H>),
             request_resize: Some(request_resize::<H>),
             request_show: Some(request_show::<H>),
             request_hide: Some(request_hide::<H>),
             closed: Some(closed::<H>),
-        },
-    };
+        });
 }
 
 #[allow(clippy::missing_safety_doc)]
