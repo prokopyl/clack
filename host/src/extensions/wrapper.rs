@@ -38,6 +38,9 @@ pub struct HostWrapper<H: Host> {
     init_guard: Once,
     init_started: AtomicBool,
     plugin_ptr: OnceLock<NonNull<clap_plugin>>,
+
+    // Destroy stuff
+    about_to_destroy: AtomicBool,
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
@@ -87,9 +90,7 @@ impl<H: Host> HostWrapper<H> {
     /// aliased, as per usual safety rules.
     #[inline]
     pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
-        let ptr: NonNull<_> = self.main_thread.as_ptr().unwrap_unchecked();
-
-        ptr.cast()
+        self.main_thread.as_ptr_unchecked().cast()
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
@@ -133,6 +134,7 @@ impl<H: Host> HostWrapper<H> {
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
             plugin_ptr: OnceLock::new(),
+            about_to_destroy: AtomicBool::new(false),
         });
 
         // PANIC: we have the only Arc copy of this wrapper data.

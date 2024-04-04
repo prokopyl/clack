@@ -155,6 +155,15 @@ impl<T> UnsafeOptionCell<T> {
     }
 
     /// # Safety
+    /// Users must ensure the option is initialized to a value.
+    pub unsafe fn as_ptr_unchecked(&self) -> NonNull<T> {
+        let ptr = self.inner.get().cast();
+
+        // SAFETY: this pointer comes from an UnsafeCell, it cannot be null.
+        unsafe { NonNull::new_unchecked(ptr) }
+    }
+
+    /// # Safety
     /// Users must ensure this method is never called concurrently with itself, [`Self::take`], or
     /// while any reference to `T` is still being held.
     pub unsafe fn put(&self, value: T) {
@@ -181,6 +190,17 @@ impl<T> UnsafeOptionCell<T> {
         } else {
             None
         }
+    }
+}
+
+impl<T> Drop for UnsafeOptionCell<T> {
+    fn drop(&mut self) {
+        let is_some = self.is_some.get_mut();
+        if *is_some {
+            // SAFETY: is_some guarantees that the data is in an initialized state
+            unsafe { self.inner.get_mut().assume_init_drop() }
+        }
+        *is_some = false;
     }
 }
 

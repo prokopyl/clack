@@ -1,7 +1,6 @@
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use libloading::Library;
-use stable_deref_trait::StableDeref;
 use std::ffi::{CStr, OsStr};
 use std::ops::Deref;
 use std::ptr::NonNull;
@@ -68,9 +67,6 @@ impl Deref for PluginEntryLibrary {
         self.entry()
     }
 }
-
-// SAFETY: PluginEntryLibrary's referenced types are not affected by it being moved at all
-unsafe impl StableDeref for PluginEntryLibrary {}
 
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
 unsafe impl Send for PluginEntryLibrary {}

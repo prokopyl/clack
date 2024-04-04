@@ -24,4 +24,3 @@ bitflags = "2.4.2"
 libloading = "0.8.1"
 raw-window-handle_05 = { package = "raw-window-handle", version = "0.5.2" }
 raw-window-handle_06 = { package = "raw-window-handle", version = "0.6.0" }
-stable_deref_trait = "1.2.0"

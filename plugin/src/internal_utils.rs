@@ -99,3 +99,14 @@ impl<T> UnsafeOptionCell<T> {
         }
     }
 }
+
+impl<T> Drop for UnsafeOptionCell<T> {
+    fn drop(&mut self) {
+        let is_some = self.is_some.get_mut();
+        if *is_some {
+            // SAFETY: is_some guarantees that the data is in an initialized state
+            unsafe { self.inner.get_mut().assume_init_drop() }
+        }
+        *is_some = false;
+    }
+}
