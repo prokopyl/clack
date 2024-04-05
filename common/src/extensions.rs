@@ -1,7 +1,7 @@
 //! Traits and associated utilities to handle and implement CLAP extensions.
 //!
-//! See the documentation of the `extensions` module in `clack-plugin` and `clack-host` for
-//! implementation examples.
+//! See the documentation of the `extensions` module in the `clack-plugin` and `clack-host` crates
+//! for implementation examples.
 
 use std::ffi::CStr;
 
@@ -35,11 +35,10 @@ mod private {
     impl Sealed for HostExtensionSide {}
 }
 
-// TODO: update docs
-/// A type representing a CLAP extension ABI.
+/// A type representing a CLAP extension pointer.
 ///
 /// The role of this trait is to tie a type to a standard CLAP extension identifier.
-/// This is then used by some Clack methods to retrieve the correct extension type from its
+/// This is then used by the Clack APIs to always match the correct extension type from its
 /// identifier.
 ///
 /// This trait also defines how an extension pointer should be transformed to a reference to the

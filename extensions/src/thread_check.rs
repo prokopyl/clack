@@ -3,6 +3,7 @@ use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK}
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostThreadCheck(RawExtension<HostExtensionSide, clap_host_thread_check>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -19,17 +20,17 @@ unsafe impl Extension for HostThreadCheck {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_plugin::host::HostHandle;
+    use clack_plugin::host::HostSharedHandle;
 
     impl HostThreadCheck {
         #[inline]
-        pub fn is_main_thread(&self, host: &HostHandle) -> Option<bool> {
+        pub fn is_main_thread(&self, host: &HostSharedHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
             Some(unsafe { host.use_extension(&self.0).is_main_thread?(host.as_raw()) })
         }
 
         #[inline]
-        pub fn is_audio_thread(&self, host: &HostHandle) -> Option<bool> {
+        pub fn is_audio_thread(&self, host: &HostSharedHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
             Some(unsafe { host.use_extension(&self.0).is_audio_thread?(host.as_raw()) })
         }

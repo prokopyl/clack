@@ -3,6 +3,7 @@ use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REG
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostEventRegistry(RawExtension<HostExtensionSide, clap_host_event_registry>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

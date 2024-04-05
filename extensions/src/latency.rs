@@ -3,6 +3,7 @@ use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LA
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -17,6 +18,7 @@ unsafe impl Extension for PluginLatency {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

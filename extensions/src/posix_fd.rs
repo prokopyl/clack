@@ -27,10 +27,12 @@ bitflags! {
 
 /// Plugin-side of the POSIX File Descriptors extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginPosixFd(RawExtension<PluginExtensionSide, clap_plugin_posix_fd_support>);
 
 /// Plugin-side of the POSIX File Descriptors extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostPosixFd(RawExtension<HostExtensionSide, clap_host_posix_fd_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

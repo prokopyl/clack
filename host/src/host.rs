@@ -200,6 +200,7 @@ pub use info::HostInfo;
 
 use crate::plugin::{InitializedPluginHandle, InitializingPluginHandle};
 
+// TODO update docs to explain that these types actually live slightly longer than the plugin instance.
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
 /// This trait requires neither [`Send`] nor [`Sync`], as types implementing it are intended to
@@ -209,9 +210,10 @@ use crate::plugin::{InitializedPluginHandle, InitializingPluginHandle};
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
 pub trait HostMainThread<'a>: 'a {
+    // TODO: update those docs.
     /// Called when the plugin has been successfully instantiated.
     ///
-    /// This is given a handle to the plugin's own main thread data ([`PluginMainThreadHandle`]),
+    /// This is given a handle to the plugin's own main thread data ([`InitializedPluginHandle`]),
     /// which can be used to call plugin callbacks, and can be kept for the remainder of the
     /// plugin instance's lifetime.
     #[inline]
@@ -254,7 +256,7 @@ pub trait HostShared<'a>: Send + Sync {
     ///
     /// The full capability of the [`PluginSharedHandle`](crate::plugin::PluginSharedHandle) is only
     /// given once [`HostMainThread::initialized`] is called, and can be obtained through its given
-    /// [`PluginMainThreadHandle`].
+    /// [`InitializedPluginHandle`].
     ///
     /// This function may be called multiple times concurrently while the plugin is initializing, if
     /// it performs multithreaded accesses during that time.

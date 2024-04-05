@@ -45,7 +45,7 @@ impl DefaultPluginFactory for PolySynthPlugin {
         .with_features([SYNTHESIZER, MONO, INSTRUMENT])
     }
 
-    fn new_shared(_host: HostHandle) -> Result<PolySynthPluginShared, PluginError> {
+    fn new_shared(_host: HostSharedHandle) -> Result<PolySynthPluginShared, PluginError> {
         Ok(PolySynthPluginShared {
             params: PolySynthParams::new(),
         })

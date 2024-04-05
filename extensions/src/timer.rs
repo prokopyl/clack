@@ -13,6 +13,7 @@ use std::fmt::{Display, Formatter};
 
 /// Host-side of the Timer extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostTimer(RawExtension<HostExtensionSide, clap_host_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -28,6 +29,7 @@ unsafe impl Extension for HostTimer {
 
 /// Plugin-side of the Timer extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginTimer(RawExtension<PluginExtensionSide, clap_plugin_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

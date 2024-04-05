@@ -15,6 +15,7 @@ use std::fmt::{Display, Formatter};
 
 /// The Plugin-side of the Render extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginRender(RawExtension<PluginExtensionSide, clap_plugin_render>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

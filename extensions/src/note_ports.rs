@@ -4,9 +4,11 @@ use clap_sys::ext::note_ports::*;
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginNotePorts(RawExtension<PluginExtensionSide, clap_plugin_note_ports>);
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostNotePorts(RawExtension<HostExtensionSide, clap_host_note_ports>);
 
 bitflags! {

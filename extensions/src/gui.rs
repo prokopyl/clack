@@ -150,6 +150,7 @@ pub enum AspectRatioStrategy {
 
 /// The Plugin-side of the GUI extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginGui(RawExtension<PluginExtensionSide, clap_plugin_gui>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -165,6 +166,7 @@ unsafe impl Extension for PluginGui {
 
 /// The Host-side of the GUI extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostGui(RawExtension<HostExtensionSide, clap_host_gui>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

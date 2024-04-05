@@ -8,6 +8,7 @@ use std::ffi::CStr;
 
 /// The Plugin-side of the Note Name extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginNoteName(RawExtension<PluginExtensionSide, clap_plugin_note_name>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -23,6 +24,7 @@ unsafe impl Extension for PluginNoteName {
 
 /// The Host-side of the Note Name extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostNoteName(RawExtension<HostExtensionSide, clap_host_note_name>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

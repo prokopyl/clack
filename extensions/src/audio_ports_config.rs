@@ -24,6 +24,7 @@ use std::fmt::{Display, Formatter};
 
 /// The Plugin-side of the Audio Ports Configurations extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginAudioPortsConfig(
     RawExtension<PluginExtensionSide, clap_plugin_audio_ports_config>,
 );
@@ -41,6 +42,7 @@ unsafe impl Extension for PluginAudioPortsConfig {
 
 /// The Host-side of the Audio Ports Configurations extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostAudioPortsConfig(RawExtension<HostExtensionSide, clap_host_audio_ports_config>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

@@ -142,7 +142,7 @@ pub mod prelude {
         Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
         RawExtensionImplementation,
     };
-    pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
+    pub use crate::host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle};
     pub use crate::plugin::{Plugin, PluginError};
     pub use clap_sys::plugin::clap_plugin;
 }

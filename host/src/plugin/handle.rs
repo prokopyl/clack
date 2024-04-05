@@ -85,7 +85,9 @@ impl<'a> PluginSharedHandle<'a> {
 
         let ext = NonNull::new(ext as *mut _)?;
         // SAFETY: TODO
-        let raw = unsafe { RawExtension::<PluginExtensionSide>::from_raw(ext, self.raw) };
+        let raw = unsafe {
+            RawExtension::<PluginExtensionSide>::from_raw_plugin_extension(ext, self.raw)
+        };
 
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.

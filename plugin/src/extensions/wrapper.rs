@@ -3,7 +3,7 @@
 //! These unsafe utilities are targeted at extension implementors. Most `clack-plugin` users do not
 //! have to use those utilities to use extensions, see `clack-extensions` instead.
 
-use crate::host::HostHandle;
+use crate::host::HostSharedHandle;
 use crate::internal_utils::UnsafeOptionCell;
 use crate::plugin::{
     logging, AudioConfiguration, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError,
@@ -44,7 +44,7 @@ pub struct PluginWrapper<'a, P: Plugin> {
     audio_processor: UnsafeOptionCell<P::AudioProcessor<'a>>,
     main_thread: UnsafeCell<P::MainThread<'a>>,
     shared: Pin<Box<P::Shared<'a>>>,
-    host: HostHandle<'a>,
+    host: HostSharedHandle<'a>,
 }
 
 impl<'a, P: Plugin> PluginWrapper<'a, P> {
@@ -52,7 +52,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     ///
     /// `shared` and `main_thread` must be related and correctly initialized.
     pub(crate) unsafe fn new(
-        host: HostHandle<'a>,
+        host: HostSharedHandle<'a>,
         shared: Pin<Box<P::Shared<'a>>>,
         main_thread: P::MainThread<'a>,
     ) -> Self {

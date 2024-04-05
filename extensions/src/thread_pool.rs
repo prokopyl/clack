@@ -9,6 +9,7 @@ use std::fmt::{Display, Formatter};
 
 /// Plugin-side of the ThreadPool extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginThreadPool(RawExtension<PluginExtensionSide, clap_plugin_thread_pool>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -24,6 +25,7 @@ unsafe impl Extension for PluginThreadPool {
 
 /// Host-side of the ThreadPool extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostThreadPool(RawExtension<HostExtensionSide, clap_host_thread_pool>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

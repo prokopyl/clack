@@ -6,9 +6,11 @@ use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginAudioPorts(RawExtension<PluginExtensionSide, clap_plugin_audio_ports>);
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostAudioPorts(RawExtension<HostExtensionSide, clap_host_audio_ports>);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

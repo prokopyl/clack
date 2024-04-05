@@ -279,7 +279,7 @@ impl HostParams {
     }
 
     #[inline]
-    pub fn request_flush(&self, host: &HostHandle) {
+    pub fn request_flush(&self, host: &HostSharedHandle) {
         if let Some(request_flush) = host.use_extension(&self.0).request_flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { request_flush(host.as_raw()) }

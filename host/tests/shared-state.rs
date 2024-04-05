@@ -23,7 +23,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 
-    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 

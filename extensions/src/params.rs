@@ -76,6 +76,7 @@ impl ParamInfoFlags {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginParams(RawExtension<PluginExtensionSide, clap_plugin_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -90,6 +91,7 @@ unsafe impl Extension for PluginParams {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostParams(RawExtension<HostExtensionSide, clap_host_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

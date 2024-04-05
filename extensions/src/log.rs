@@ -65,6 +65,7 @@ impl Display for LogSeverity {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostLog(RawExtension<HostExtensionSide, clap_host_log>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -81,11 +82,11 @@ unsafe impl Extension for HostLog {
 #[cfg(feature = "clack-plugin")]
 mod plugin {
     use super::*;
-    use clack_plugin::host::HostHandle;
+    use clack_plugin::host::HostSharedHandle;
 
     impl HostLog {
         #[inline]
-        pub fn log(&self, host: &HostHandle, log_severity: LogSeverity, message: &CStr) {
+        pub fn log(&self, host: &HostSharedHandle, log_severity: LogSeverity, message: &CStr) {
             if let Some(log) = host.use_extension(&self.0).log {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { log(host.as_raw(), log_severity.to_raw(), message.as_ptr()) }

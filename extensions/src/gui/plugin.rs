@@ -5,7 +5,7 @@ use std::os::raw::c_char;
 impl HostGui {
     /// Notify the host that the plugin window's [`GuiResizeHints`] have changed, and
     /// `get_resize_hints` should be called again.
-    pub fn resize_hints_changed(&self, host: &HostHandle) {
+    pub fn resize_hints_changed(&self, host: &HostSharedHandle) {
         if let Some(resize_hints_changed) = host.use_extension(&self.0).resize_hints_changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { resize_hints_changed(host.as_raw()) }
@@ -27,7 +27,7 @@ impl HostGui {
     /// `set_size` method to revert the operation.
     pub fn request_resize(
         &self,
-        host: &HostHandle,
+        host: &HostSharedHandle,
         width: u32,
         height: u32,
     ) -> Result<(), GuiError> {
@@ -49,7 +49,7 @@ impl HostGui {
     ///
     /// This may return a [`GuiError::RequestShowError`] if the host denied or was unable to fulfill the
     /// request.
-    pub fn request_show(&self, host: &HostHandle) -> Result<(), GuiError> {
+    pub fn request_show(&self, host: &HostSharedHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
             host.use_extension(&self.0)
@@ -68,7 +68,7 @@ impl HostGui {
     ///
     /// This may return a [`GuiError::RequestHideError`] if the host denied or was unable to fulfill the
     /// request.
-    pub fn request_hide(&self, host: &HostHandle) -> Result<(), GuiError> {
+    pub fn request_hide(&self, host: &HostSharedHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         if unsafe {
             host.use_extension(&self.0)
@@ -85,7 +85,7 @@ impl HostGui {
     /// the GUI was lost.
     ///
     /// If `is_destroyed` is true, then the host must call `destroy` to acknowledge the GUI destruction.
-    pub fn closed(&self, host: &HostHandle, was_destroyed: bool) {
+    pub fn closed(&self, host: &HostSharedHandle, was_destroyed: bool) {
         if let Some(closed) = host.use_extension(&self.0).closed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { closed(host.as_raw(), was_destroyed) }

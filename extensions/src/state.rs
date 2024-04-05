@@ -91,6 +91,7 @@ use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -105,6 +106,7 @@ unsafe impl Extension for PluginState {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostState(RawExtension<HostExtensionSide, clap_host_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

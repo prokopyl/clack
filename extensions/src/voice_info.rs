@@ -16,6 +16,7 @@ use std::ffi::CStr;
 
 /// Plugin-side of the Voice Info extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginVoiceInfo(RawExtension<PluginExtensionSide, clap_plugin_voice_info>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -31,6 +32,7 @@ unsafe impl Extension for PluginVoiceInfo {
 
 /// Host-side of the Voice Info extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostVoiceInfo(RawExtension<HostExtensionSide, clap_host_voice_info>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

@@ -1,6 +1,6 @@
 use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
-use crate::host::{HostHandle, HostInfo, HostMainThreadHandle};
+use crate::host::{HostInfo, HostMainThreadHandle, HostSharedHandle};
 use crate::plugin::instance::WrapperData::*;
 use crate::plugin::{
     AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
@@ -25,7 +25,7 @@ pub(crate) trait PluginInitializer<'a, P: Plugin>: 'a {
 
 impl<'a, P: Plugin, FS: 'a, FM: 'a> PluginInitializer<'a, P> for (FS, FM)
 where
-    FS: FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError>,
+    FS: FnOnce(HostSharedHandle<'a>) -> Result<P::Shared<'a>, PluginError>,
     FM: FnOnce(
         HostMainThreadHandle<'a>,
         &'a P::Shared<'a>,
@@ -75,7 +75,7 @@ pub(crate) enum WrapperData<'a, P: Plugin> {
 }
 
 pub(crate) struct PluginBoxInner<'a, P: Plugin> {
-    host: HostHandle<'a>,
+    host: HostSharedHandle<'a>,
     state: AtomicU8,
     plugin_data: UnsafeCell<WrapperData<'a, P>>,
 }
@@ -125,7 +125,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 
 impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     fn get_plugin_desc(
-        host: HostHandle<'a>,
+        host: HostSharedHandle<'a>,
         desc: &'a clap_plugin_descriptor,
         initializer: Box<dyn PluginInitializer<'a, P>>,
     ) -> clap_plugin {
@@ -151,7 +151,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     }
 
     #[inline]
-    pub fn host(&self) -> &HostHandle<'a> {
+    pub fn host(&self) -> &HostSharedHandle<'a> {
         &self.host
     }
 
@@ -348,7 +348,7 @@ impl<'a> PluginInstance<'a> {
     pub fn new<P: Plugin>(
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptor,
-        shared_initializer: impl FnOnce(HostHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
+        shared_initializer: impl FnOnce(HostSharedHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
         main_thread_initializer: impl FnOnce(
                 HostMainThreadHandle<'a>,
                 &'a P::Shared<'a>,
@@ -395,7 +395,7 @@ impl<'a> PluginInstance<'a> {
     ///     type MainThread<'a> = MyPluginMainThread<'a>;
     /// }
     ///
-    /// struct MyPluginShared<'a>(HostHandle<'a>, Sender<u32>);
+    /// struct MyPluginShared<'a>(HostSharedHandle<'a>, Sender<u32>);
     /// struct MyPluginMainThread<'a>(HostMainThreadHandle<'a>, &'a MyPluginShared<'a>, Receiver<u32>);
     ///
     /// impl<'a> PluginShared<'a> for MyPluginShared<'a> {}

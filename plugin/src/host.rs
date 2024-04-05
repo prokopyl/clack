@@ -76,7 +76,8 @@ impl<'a> HostInfo<'a> {
 
         let ext = NonNull::new(ext)?;
         // SAFETY: TODO
-        let raw = unsafe { RawExtension::<HostExtensionSide>::from_raw(ext, self.raw) };
+        let raw =
+            unsafe { RawExtension::<HostExtensionSide>::from_raw_host_extension(ext, self.raw) };
 
         // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
         // E::IDENTIFIER.
@@ -86,8 +87,8 @@ impl<'a> HostInfo<'a> {
     /// # Safety
     /// Some functions exposed by HostHandle cannot be called until plugin is initialized
     #[inline]
-    pub(crate) unsafe fn to_handle(self) -> HostHandle<'a> {
-        HostHandle {
+    pub(crate) unsafe fn to_handle(self) -> HostSharedHandle<'a> {
+        HostSharedHandle {
             raw: self.raw,
             _lifetime: PhantomData,
         }
@@ -105,17 +106,17 @@ impl<'a> HostInfo<'a> {
 /// This can be used to fetch information about the host, scan available extensions, or perform
 /// requests to the host.
 #[derive(Copy, Clone)]
-pub struct HostHandle<'a> {
+pub struct HostSharedHandle<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
 // SAFETY: this type only safely exposes the thread-safe operations of clap_host
-unsafe impl<'a> Send for HostHandle<'a> {}
+unsafe impl<'a> Send for HostSharedHandle<'a> {}
 // SAFETY: this type only safely exposes the thread-safe operations of clap_host
-unsafe impl<'a> Sync for HostHandle<'a> {}
+unsafe impl<'a> Sync for HostSharedHandle<'a> {}
 
-impl<'a> HostHandle<'a> {
+impl<'a> HostSharedHandle<'a> {
     /// Returns host information.
     #[inline]
     pub fn info(&self) -> HostInfo<'a> {
@@ -203,9 +204,9 @@ impl<'a> HostHandle<'a> {
     }
 }
 
-impl<'a> From<HostHandle<'a>> for HostInfo<'a> {
+impl<'a> From<HostSharedHandle<'a>> for HostInfo<'a> {
     #[inline]
-    fn from(h: HostHandle<'a>) -> Self {
+    fn from(h: HostSharedHandle<'a>) -> Self {
         h.info()
     }
 }
@@ -218,8 +219,8 @@ pub struct HostMainThreadHandle<'a> {
 
 impl<'a> HostMainThreadHandle<'a> {
     #[inline]
-    pub fn shared(&self) -> HostHandle<'a> {
-        HostHandle {
+    pub fn shared(&self) -> HostSharedHandle<'a> {
+        HostSharedHandle {
             raw: self.raw,
             _lifetime: PhantomData,
         }
@@ -237,7 +238,7 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 }
 
-impl<'a> From<HostMainThreadHandle<'a>> for HostHandle<'a> {
+impl<'a> From<HostMainThreadHandle<'a>> for HostSharedHandle<'a> {
     #[inline]
     fn from(h: HostMainThreadHandle<'a>) -> Self {
         h.shared()
@@ -255,8 +256,8 @@ unsafe impl<'a> Send for HostAudioThreadHandle<'a> {}
 
 impl<'a> HostAudioThreadHandle<'a> {
     #[inline]
-    pub fn shared(&self) -> HostHandle<'a> {
-        HostHandle {
+    pub fn shared(&self) -> HostSharedHandle<'a> {
+        HostSharedHandle {
             raw: self.raw,
             _lifetime: PhantomData,
         }
@@ -274,7 +275,7 @@ impl<'a> HostAudioThreadHandle<'a> {
     }
 }
 
-impl<'a> From<HostAudioThreadHandle<'a>> for HostHandle<'a> {
+impl<'a> From<HostAudioThreadHandle<'a>> for HostSharedHandle<'a> {
     #[inline]
     fn from(h: HostAudioThreadHandle<'a>) -> Self {
         h.shared()

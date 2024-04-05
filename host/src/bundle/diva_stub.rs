@@ -7,7 +7,7 @@ pub struct DivaPluginStubAudioProcessor<'a> {
     shared: &'a DivaPluginStubShared<'a>,
 }
 pub struct DivaPluginStubShared<'a> {
-    host: HostHandle<'a>,
+    host: HostSharedHandle<'a>,
 }
 
 impl<'a> PluginShared<'a> for DivaPluginStubShared<'a> {}
@@ -25,7 +25,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 
-    fn new_shared(host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
         Ok(DivaPluginStubShared { host })
     }
 

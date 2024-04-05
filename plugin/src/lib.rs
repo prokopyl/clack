@@ -27,7 +27,7 @@ pub mod prelude {
         UnknownEvent,
     };
     pub use crate::extensions::PluginExtensions;
-    pub use crate::host::{HostAudioThreadHandle, HostHandle, HostMainThreadHandle};
+    pub use crate::host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle};
     pub use crate::plugin::{
         AudioConfiguration, Plugin, PluginAudioProcessor, PluginDescriptor, PluginError,
         PluginMainThread, PluginShared,

@@ -8,6 +8,7 @@ use std::ffi::CStr;
 
 /// The Plugin-side of the Tail extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginTail(RawExtension<PluginExtensionSide, clap_plugin_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
@@ -23,6 +24,7 @@ unsafe impl Extension for PluginTail {
 
 /// The Host-side of the Tail extension.
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct HostTail(RawExtension<HostExtensionSide, clap_host_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.

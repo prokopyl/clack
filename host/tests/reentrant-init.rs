@@ -34,7 +34,7 @@ impl DefaultPluginFactory for MyPlugin {
         PluginDescriptor::new("my.plugin", "My plugin")
     }
 
-    fn new_shared(_host: HostHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
