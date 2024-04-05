@@ -2,11 +2,13 @@ use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 #[derive(Eq, PartialEq)]
+#[repr(transparent)]
 pub struct PluginMainThreadHandle<'a> {
     raw: NonNull<clap_plugin>,
     lifetime: PhantomData<&'a clap_plugin>,
@@ -35,11 +37,9 @@ impl<'a> PluginMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn use_extension<E: Sized>(
-        &self,
-        extension: &RawExtension<PluginExtensionSide, E>,
-    ) -> &'a E {
-        self.shared().use_extension(extension)
+    pub fn as_shared(&self) -> &PluginSharedHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
     }
 }
 
@@ -50,8 +50,17 @@ impl Debug for PluginMainThreadHandle<'_> {
     }
 }
 
-#[repr(transparent)]
+impl<'a> Deref for PluginMainThreadHandle<'a> {
+    type Target = PluginSharedHandle<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_shared()
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct PluginSharedHandle<'a> {
     raw: NonNull<clap_plugin>,
     lifetime: PhantomData<&'a clap_plugin>,
@@ -114,6 +123,7 @@ impl Debug for PluginSharedHandle<'_> {
 }
 
 #[derive(Eq, PartialEq)]
+#[repr(transparent)]
 pub struct PluginAudioProcessorHandle<'a> {
     raw: NonNull<clap_plugin>,
     lifetime: PhantomData<&'a clap_plugin>,
@@ -144,13 +154,21 @@ impl<'a> PluginAudioProcessorHandle<'a> {
     }
 
     #[inline]
-    pub fn use_extension<E: Sized>(
-        &self,
-        extension: &RawExtension<PluginExtensionSide, E>,
-    ) -> &'a E {
-        self.shared().use_extension(extension)
+    pub fn as_shared(&self) -> &PluginSharedHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
     }
 }
+
+impl<'a> Deref for PluginAudioProcessorHandle<'a> {
+    type Target = PluginSharedHandle<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_shared()
+    }
+}
+
 impl Debug for PluginAudioProcessorHandle<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

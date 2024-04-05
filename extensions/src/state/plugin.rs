@@ -8,7 +8,7 @@ impl HostState {
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
         if let Some(mark_dirty) = host.use_extension(&self.0).mark_dirty {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { mark_dirty(host.shared().as_raw()) }
+            unsafe { mark_dirty(host.as_raw()) }
         }
     }
 }

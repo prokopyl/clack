@@ -42,7 +42,7 @@ impl DefaultPluginFactory for MyPlugin {
         mut host: HostMainThreadHandle,
         _shared: &(),
     ) -> Result<MyPluginMainThread, PluginError> {
-        let timer: HostTimer = host.shared().get_extension().unwrap();
+        let timer: HostTimer = host.get_extension().unwrap();
         let timer_id = timer.register_timer(&mut host, 1_000).unwrap();
         assert_eq!(timer_id, TimerId(5));
         Ok(MyPluginMainThread)

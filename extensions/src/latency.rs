@@ -86,7 +86,7 @@ mod plugin {
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
             if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
-                unsafe { changed(host.shared().as_raw()) }
+                unsafe { changed(host.as_raw()) }
             }
         }
     }

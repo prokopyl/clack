@@ -38,7 +38,6 @@ pub fn it_works() {
 
     let mut plugin_main_thread = plugin.plugin_handle();
     let ports_ext = plugin_main_thread
-        .shared()
         .get_extension::<PluginAudioPorts>()
         .unwrap();
     assert_eq!(1, ports_ext.count(&mut plugin_main_thread, true));

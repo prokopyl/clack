@@ -30,7 +30,7 @@ const _: () = {
             let mut out = u16::MAX;
             let success =
                 // SAFETY: This type ensures the function pointer is valid.
-                unsafe { host.use_extension(&self.0).query?(host.shared().as_raw(), S::NAME.as_ptr(), &mut out) };
+                unsafe { host.use_extension(&self.0).query?(host.as_raw(), S::NAME.as_ptr(), &mut out) };
 
             if !success {
                 return None;

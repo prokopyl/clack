@@ -280,7 +280,7 @@ pub fn get_config_from_ports(
     plugin: &mut PluginMainThreadHandle,
     is_input: bool,
 ) -> PluginAudioPortsConfig {
-    let Some(ports) = plugin.shared().get_extension::<PluginAudioPorts>() else {
+    let Some(ports) = plugin.get_extension::<PluginAudioPorts>() else {
         return PluginAudioPortsConfig::default();
     };
 

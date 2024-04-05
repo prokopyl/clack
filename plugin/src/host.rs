@@ -5,10 +5,12 @@ use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::ptr::NonNull;
 
 /// Various information about the host, provided at plugin instantiation time.
 #[derive(Copy, Clone)]
+#[repr(transparent)]
 pub struct HostInfo<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
@@ -104,6 +106,7 @@ impl<'a> HostInfo<'a> {
 /// This can be used to fetch information about the host, scan available extensions, or perform
 /// requests to the host.
 #[derive(Copy, Clone)]
+#[repr(transparent)]
 pub struct HostSharedHandle<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
@@ -129,6 +132,12 @@ impl<'a> HostSharedHandle<'a> {
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { self.raw.as_ref() }
+    }
+
+    #[inline]
+    pub fn as_info(&self) -> &HostInfo<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const HostInfo<'a>) }
     }
 
     /// Requests the host to [deactivate](crate::plugin::PluginAudioProcessor::deactivate) and then
@@ -161,11 +170,6 @@ impl<'a> HostSharedHandle<'a> {
             // SAFETY: field is guaranteed to be correct by host. Lifetime is enforced by 'a
             unsafe { request_callback(self.raw.as_ptr()) }
         }
-    }
-
-    #[inline]
-    pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
-        self.info().get_extension()
     }
 
     /// # Safety
@@ -209,7 +213,17 @@ impl<'a> From<HostSharedHandle<'a>> for HostInfo<'a> {
     }
 }
 
+impl<'a> Deref for HostSharedHandle<'a> {
+    type Target = HostInfo<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_info()
+    }
+}
+
 #[derive(Copy, Clone)]
+#[repr(transparent)]
 pub struct HostMainThreadHandle<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
@@ -225,14 +239,15 @@ impl<'a> HostMainThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_host {
-        // SAFETY: this type enforces the pointer is valid for 'a
-        unsafe { self.raw.as_ref() }
+    pub fn as_shared(&self) -> &HostSharedHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const HostSharedHandle<'a>) }
     }
 
     #[inline]
-    pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
-        self.shared().use_extension(extension)
+    pub fn as_raw(&self) -> &'a clap_host {
+        // SAFETY: this type enforces the pointer is valid for 'a
+        unsafe { self.raw.as_ref() }
     }
 }
 
@@ -243,7 +258,17 @@ impl<'a> From<HostMainThreadHandle<'a>> for HostSharedHandle<'a> {
     }
 }
 
+impl<'a> Deref for HostMainThreadHandle<'a> {
+    type Target = HostSharedHandle<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_shared()
+    }
+}
+
 #[derive(Copy, Clone)]
+#[repr(transparent)]
 pub struct HostAudioThreadHandle<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
@@ -268,8 +293,9 @@ impl<'a> HostAudioThreadHandle<'a> {
     }
 
     #[inline]
-    pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
-        self.shared().use_extension(extension)
+    pub fn as_shared(&self) -> &HostSharedHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const HostSharedHandle<'a>) }
     }
 }
 
@@ -277,6 +303,15 @@ impl<'a> From<HostAudioThreadHandle<'a>> for HostSharedHandle<'a> {
     #[inline]
     fn from(h: HostAudioThreadHandle<'a>) -> Self {
         h.shared()
+    }
+}
+
+impl<'a> Deref for HostAudioThreadHandle<'a> {
+    type Target = HostSharedHandle<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_shared()
     }
 }
 
