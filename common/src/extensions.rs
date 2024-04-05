@@ -61,8 +61,8 @@ pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
     /// Returns an instance of the extension from a given extension pointer.
     ///
     /// # Safety
-    /// Callers must ensure the extension pointer points to the correct type, and also be valid for
-    /// the duration of `'a`.
+    /// Callers must ensure the extension pointer points to the extension type that matches
+    /// [`Self::IDENTIFIER`].
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self;
 }
 

@@ -70,17 +70,15 @@ impl<'a> HostInfo<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
+        // SAFETY: this type ensures the function pointers are valid
         let ext =
-            // SAFETY: this type ensure the function pointers are valid
-            unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) } as *mut _;
+            unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
 
-        let ext = NonNull::new(ext)?;
-        // SAFETY: TODO
-        let raw =
-            unsafe { RawExtension::<HostExtensionSide>::from_raw_host_extension(ext, self.raw) };
+        let ext = NonNull::new(ext as *mut _)?;
+        // SAFETY: The CLAP spec guarantees that the extension lives as long as the instance.
+        let raw = unsafe { RawExtension::from_raw_host_extension(ext, self.raw) };
 
-        // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
-        // E::IDENTIFIER.
+        // SAFETY: pointer comes from the associated E::IDENTIFIER.
         unsafe { Some(E::from_raw(raw)) }
     }
 
@@ -166,7 +164,7 @@ impl<'a> HostSharedHandle<'a> {
     }
 
     #[inline]
-    pub fn extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
+    pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
         self.info().get_extension()
     }
 

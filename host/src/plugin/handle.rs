@@ -79,18 +79,15 @@ impl<'a> PluginSharedHandle<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
-        // SAFETY: This type ensures the function pointer is valid
+        // SAFETY: This type ensures the function pointers are valid
         let ext =
             unsafe { self.raw.as_ref().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
 
         let ext = NonNull::new(ext as *mut _)?;
-        // SAFETY: TODO
-        let raw = unsafe {
-            RawExtension::<PluginExtensionSide>::from_raw_plugin_extension(ext, self.raw)
-        };
+        // SAFETY: The CLAP spec guarantees that the extension lives as long as the instance.
+        let raw = unsafe { RawExtension::from_raw_plugin_extension(ext, self.raw) };
 
-        // SAFETY: pointer is valid for the plugin's lifetime `'a`, and comes from the associated
-        // E::IDENTIFIER.
+        // SAFETY: pointer comes from the associated E::IDENTIFIER.
         unsafe { Some(E::from_raw(raw)) }
     }
 
@@ -223,7 +220,6 @@ impl<'a> InitializedPluginHandle<'a> {
         self.inner.handle(handler)
     }
 
-    // FIXME: bogus extension lifetime
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.inner.get_extension()
     }
@@ -256,7 +252,6 @@ impl RemoteHandleInner {
         })
     }
 
-    // FIXME: extension pointers may become invalid after plugin destruction, so the lifetime here is bogus
     fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.handle(|handle| handle.get_extension())?
     }

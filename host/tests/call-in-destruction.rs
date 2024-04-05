@@ -106,7 +106,6 @@ impl<'a> Drop for MyHostMainThread<'a> {
 }
 
 #[test]
-//#[ignore] // FIXME: actually fix this test
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 

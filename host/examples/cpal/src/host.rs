@@ -174,9 +174,9 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     let _stream = activate_to_stream(&mut instance)?;
 
     let gui = instance
-        .main_thread_host_data()
+        .handler()
         .gui
-        .map(|gui| Gui::new(gui, &mut instance.main_thread_plugin_data()));
+        .map(|gui| Gui::new(gui, &mut instance.plugin_handle()));
 
     let gui = gui.and_then(|gui| Some((gui.needs_floating()?, gui)));
 
@@ -201,7 +201,7 @@ fn run_gui_floating(
     mut gui: Gui,
 ) -> Result<(), Box<dyn Error>> {
     println!("Opening GUI in floating mode");
-    gui.open_floating(&mut instance.main_thread_plugin_data())?;
+    gui.open_floating(&mut instance.plugin_handle())?;
 
     for message in receiver {
         match message {
@@ -214,7 +214,7 @@ fn run_gui_floating(
         }
     }
 
-    gui.destroy(&mut instance.main_thread_plugin_data());
+    gui.destroy(&mut instance.plugin_handle());
 
     Ok(())
 }
@@ -231,11 +231,11 @@ fn run_gui_embedded(
 
     let event_loop = EventLoop::new()?;
 
-    let mut window = Some(gui.open_embedded(&mut instance.main_thread_plugin_data(), &event_loop)?);
+    let mut window = Some(gui.open_embedded(&mut instance.plugin_handle(), &event_loop)?);
 
     let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
 
-    let main_thread = instance.main_thread_host_data();
+    let main_thread = instance.handler();
 
     let timers = main_thread
         .timer_support
@@ -270,7 +270,7 @@ fn run_gui_embedded(
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => {
                     println!("Plugin window closed, stopping.");
-                    gui.destroy(&mut instance.main_thread_plugin_data());
+                    gui.destroy(&mut instance.plugin_handle());
                     window.take(); // Drop the window
                     return;
                 }
@@ -282,8 +282,7 @@ fn run_gui_embedded(
                     let window = window.as_ref().unwrap();
                     let scale_factor = window.scale_factor();
 
-                    let actual_size =
-                        gui.resize(&mut instance.main_thread_plugin_data(), size, scale_factor);
+                    let actual_size = gui.resize(&mut instance.plugin_handle(), size, scale_factor);
 
                     if actual_size != size.into() {
                         let _ = window.request_inner_size(actual_size);
@@ -292,13 +291,13 @@ fn run_gui_embedded(
                 _ => {}
             },
             Event::LoopExiting => {
-                gui.destroy(&mut instance.main_thread_plugin_data());
+                gui.destroy(&mut instance.plugin_handle());
             }
             _ => {}
         }
 
         let wait_duration = if let Some((timers, timer_ext)) = &timers {
-            timers.tick_timers(timer_ext, &mut instance.main_thread_plugin_data());
+            timers.tick_timers(timer_ext, &mut instance.plugin_handle());
 
             timers
                 .smallest_duration()

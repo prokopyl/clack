@@ -36,7 +36,7 @@ pub fn it_works() {
 
     let plugin = host.plugin_mut();
 
-    let mut plugin_main_thread = plugin.main_thread_plugin_data();
+    let mut plugin_main_thread = plugin.plugin_handle();
     let ports_ext = plugin_main_thread
         .shared()
         .get_extension::<PluginAudioPorts>()

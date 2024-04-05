@@ -124,31 +124,31 @@ impl<H: Host> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_handler(&self) -> &<H as Host>::Shared<'_> {
         self.inner.get().wrapper().shared()
     }
 
     #[inline]
-    pub fn main_thread_host_data(&self) -> &<H as Host>::MainThread<'_> {
+    pub fn handler(&self) -> &<H as Host>::MainThread<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.get().wrapper().main_thread().as_ref() }
     }
 
     #[inline]
-    pub fn main_thread_host_data_mut(&mut self) -> &mut <H as Host>::MainThread<'_> {
+    pub fn handler_mut(&mut self) -> &mut <H as Host>::MainThread<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.get().wrapper().main_thread().as_mut() }
     }
 
     #[inline]
-    pub fn shared_plugin_data(&self) -> PluginSharedHandle {
+    pub fn plugin_shared_handle(&self) -> PluginSharedHandle {
         self.inner.get().plugin_shared()
     }
 
     #[inline]
-    pub fn main_thread_plugin_data(&mut self) -> PluginMainThreadHandle {
+    pub fn plugin_handle(&mut self) -> PluginMainThreadHandle {
         // SAFETY: this type can only exist on the main thread.
         unsafe { PluginMainThreadHandle::new(self.inner.get().raw_instance().into()) }
     }

@@ -43,8 +43,8 @@ impl FullAudioConfig {
     ) -> Result<Self, Box<dyn Error>> {
         let best_cpal_configs = list_device_configs_ordered(device)?;
 
-        let input_ports = get_config_from_ports(&mut instance.main_thread_plugin_data(), true);
-        let output_ports = get_config_from_ports(&mut instance.main_thread_plugin_data(), false);
+        let input_ports = get_config_from_ports(&mut instance.plugin_handle(), true);
+        let output_ports = get_config_from_ports(&mut instance.plugin_handle(), false);
 
         Ok(find_matching_output_config(
             &best_cpal_configs,

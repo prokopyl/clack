@@ -90,6 +90,7 @@ impl<T> RawExtension<PluginExtensionSide, T> {
     ///
     /// The user *must* ensure the `extension_ptr` is and remains valid for the lifetime of the
     /// plugin instance.
+    /// This is the case for pointers received from the raw `clap_plugin.get_extension` method.
     ///
     /// The given `plugin_ptr` however doesn't have to be valid, and may be dangling.
     pub unsafe fn from_raw_plugin_extension(
@@ -121,6 +122,7 @@ impl<T> RawExtension<HostExtensionSide, T> {
     ///
     /// The user *must* ensure the `extension_ptr` is and remains valid for the lifetime of the
     /// plugin instance.
+    /// This is the case for pointers received from the raw `clap_host.get_extension` method.
     ///
     /// The given `host_ptr` however doesn't have to be valid, and may be dangling.
     pub unsafe fn from_raw_host_extension(

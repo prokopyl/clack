@@ -42,7 +42,7 @@ impl DefaultPluginFactory for MyPlugin {
         mut host: HostMainThreadHandle,
         _shared: &(),
     ) -> Result<MyPluginMainThread, PluginError> {
-        let timer: HostTimer = host.shared().extension().unwrap();
+        let timer: HostTimer = host.shared().get_extension().unwrap();
         let timer_id = timer.register_timer(&mut host, 1_000).unwrap();
         assert_eq!(timer_id, TimerId(5));
         Ok(MyPluginMainThread)
@@ -135,5 +135,5 @@ fn can_call_host_methods_during_init() {
     .unwrap();
 
     // Timer should have already been registered by the plugin during init().
-    assert!(instance.main_thread_host_data().timer_registered);
+    assert!(instance.handler().timer_registered);
 }

@@ -177,7 +177,7 @@
 //! /* ... */
 //!
 //! // Let's check if the plugin requested a callback, by accessing our shared host data.
-//! let shared: &MyHostShared = plugin_instance.shared_host_data();
+//! let shared: &MyHostShared = plugin_instance.shared_handler();
 //!
 //! // This fetches the previous value and sets it to false in a single atomic operation.
 //! if shared.callback_requested.fetch_and(false, Ordering::SeqCst) {

@@ -67,7 +67,7 @@
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
 //! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared })?;
 //!
-//! let state_ext = plugin_instance.shared_host_data().state_ext
+//! let state_ext = plugin_instance.shared_handler().state_ext
 //!     .get()
 //!     .expect("Plugin is not yet instantiated")
 //!     .expect("Plugin does not implement State extension");
@@ -75,12 +75,12 @@
 //! // We just loaded our plugin, but we have a preset to initialize it to.
 //! let preset_data = b"I'm a totally legit preset.";
 //! let mut reader = Cursor::new(preset_data);
-//! state_ext.load(&mut plugin_instance.main_thread_plugin_data(), &mut reader)?;
+//! state_ext.load(&mut plugin_instance.plugin_handle(), &mut reader)?;
 //!
 //! // Some time passes, user interacts with the plugin, etc.
 //! // Now the user wants to save the state.
 //! let mut buffer = Vec::new();
-//! state_ext.save(&mut plugin_instance.main_thread_plugin_data(), &mut buffer)?;
+//! state_ext.save(&mut plugin_instance.plugin_handle(), &mut buffer)?;
 //! # Ok(()) }
 //! ```
 

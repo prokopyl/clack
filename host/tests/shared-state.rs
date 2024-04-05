@@ -113,9 +113,5 @@ pub fn handles_drop_order() {
     )
     .unwrap();
 
-    let _ext = plugin_instance
-        .main_thread_host_data()
-        .shared
-        .state_ext
-        .get();
+    let _ext = plugin_instance.handler().shared.state_ext.get();
 }

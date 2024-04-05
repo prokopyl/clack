@@ -68,29 +68,29 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_handler(&self) -> &<H as Host>::Shared<'_> {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.shared_host_data(),
-            Stopped(s) => s.shared_host_data(),
+            Started(s) => s.shared(),
+            Stopped(s) => s.shared(),
         }
     }
 
     #[inline]
-    pub fn audio_processor_host_data(&self) -> &<H as Host>::AudioProcessor<'_> {
+    pub fn handler(&self) -> &<H as Host>::AudioProcessor<'_> {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.audio_processor_host_data(),
-            Stopped(s) => s.audio_processor_host_data(),
+            Started(s) => s.handler(),
+            Stopped(s) => s.handler(),
         }
     }
 
     #[inline]
-    pub fn audio_processor_host_data_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
+    pub fn handler_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.audio_processor_host_data_mut(),
-            Stopped(s) => s.audio_processor_host_data_mut(),
+            Started(s) => s.handler_mut(),
+            Stopped(s) => s.handler_mut(),
         }
     }
 
@@ -98,6 +98,24 @@ impl<'a, H: 'a + Host> PluginAudioProcessor<H> {
         match self {
             Stopped(_) | Poisoned => false,
             Started(_) => true,
+        }
+    }
+
+    #[inline]
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+        match self {
+            Poisoned => panic!("Plugin audio processor was poisoned"),
+            Started(s) => s.plugin_handle(),
+            Stopped(s) => s.plugin_handle(),
+        }
+    }
+
+    #[inline]
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+        match self {
+            Poisoned => panic!("Plugin audio processor was poisoned"),
+            Started(s) => s.shared_plugin_handle(),
+            Stopped(s) => s.shared_plugin_handle(),
         }
     }
 
@@ -293,12 +311,12 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
         self.inner.as_ref().unwrap().wrapper().shared()
     }
 
     #[inline]
-    pub fn audio_processor_host_data(&self) -> &<H as Host>::AudioProcessor<'_> {
+    pub fn handler(&self) -> &<H as Host>::AudioProcessor<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
@@ -314,7 +332,7 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn audio_processor_host_data_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
+    pub fn handler_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
@@ -330,12 +348,12 @@ impl<H: Host> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_plugin_handle(&mut self) -> PluginSharedHandle {
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
         self.inner.as_ref().unwrap().plugin_shared()
     }
 
     #[inline]
-    pub fn audio_processor_plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.as_ref().unwrap().raw_instance().into())
     }
 
@@ -394,12 +412,12 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_host_data(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
         self.inner.wrapper().shared()
     }
 
     #[inline]
-    pub fn audio_processor_host_data(&self) -> &<H as Host>::AudioProcessor<'_> {
+    pub fn handler(&self) -> &<H as Host>::AudioProcessor<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
@@ -407,7 +425,7 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn audio_processor_host_data_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
+    pub fn handler_mut(&mut self) -> &mut <H as Host>::AudioProcessor<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
@@ -415,12 +433,12 @@ impl<'a, H: 'a + Host> StoppedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_plugin_data(&mut self) -> PluginSharedHandle {
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
         self.inner.plugin_shared()
     }
 
     #[inline]
-    pub fn audio_processor_plugin_data(&mut self) -> PluginAudioProcessorHandle {
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 }
