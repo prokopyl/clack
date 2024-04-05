@@ -88,7 +88,7 @@ impl<'a> PluginShared<'a> for () {}
 /// See the [module documentation](crate::plugin) for more information on the thread model.
 pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
     /// This is called by the host on the main thread, in response to a previous call to
-    /// [`HostHandle::request_callback`](crate::host::HostSharedHandle::request_callback).
+    /// [`HostSharedHandle::request_callback`](crate::host::HostSharedHandle::request_callback).
     ///
     /// The default implementation of this method does nothing.
     #[inline]

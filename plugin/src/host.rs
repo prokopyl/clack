@@ -85,7 +85,7 @@ impl<'a> HostInfo<'a> {
     }
 
     /// # Safety
-    /// Some functions exposed by HostHandle cannot be called until plugin is initialized
+    /// Some functions exposed by [`HostSharedHandle`] cannot be called until plugin is initializing
     #[inline]
     pub(crate) unsafe fn to_handle(self) -> HostSharedHandle<'a> {
         HostSharedHandle {
