@@ -309,6 +309,8 @@ pub enum PluginWrapperError {
     UninitializedPlugin,
     /// The host tried to call a plugin method while `init` is running.
     PluginCalledDuringInitialization,
+    /// The host tried to call a plugin method while `destroy` is running.
+    Destroying,
     /// The plugin's initialization (`init`) has failed.
     InitializationAlreadyFailed,
     /// The plugin is already initialized (i.e. a second call to `init` was attempted).
@@ -402,6 +404,7 @@ impl Display for PluginWrapperError {
                 f.write_str("Plugin initialization has already failed")
             }
             PluginWrapperError::AlreadyInitialized => f.write_str("Plugin is already initialized"),
+            PluginWrapperError::Destroying => f.write_str("Plugin is being destroyed"),
             PluginWrapperError::NulPtr(ptr_name) => {
                 write!(f, "Plugin method was called with null {ptr_name} pointer")
             }

@@ -84,6 +84,7 @@ const UNINITIALIZED: u8 = 0;
 const INITIALIZED: u8 = 1;
 const INITIALIZING: u8 = 2;
 const INITIALIZATION_FAILED: u8 = 3;
+const DESTROYING: u8 = 4;
 
 impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[inline]
@@ -94,6 +95,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             INITIALIZING => Ok(None),
             UNINITIALIZED => Err(PluginWrapperError::UninitializedPlugin),
             INITIALIZATION_FAILED => Err(PluginWrapperError::InitializationAlreadyFailed),
+            DESTROYING => Err(PluginWrapperError::Destroying),
 
             // SAFETY: when in the initialized state, it is guarantee that plugin_data is never written to again.
             INITIALIZED => match unsafe { &*self.plugin_data.get() } {
@@ -111,6 +113,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             INITIALIZING => Err(PluginWrapperError::InitializationAlreadyFailed),
             UNINITIALIZED => Err(PluginWrapperError::UninitializedPlugin),
             INITIALIZATION_FAILED => Err(PluginWrapperError::InitializationAlreadyFailed),
+            DESTROYING => Err(PluginWrapperError::Destroying),
 
             // SAFETY: when in the initialized state, it is guarantee that plugin_data is never written to again.
             INITIALIZED => match unsafe { &*self.plugin_data.get() } {
@@ -172,6 +175,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
                 Ok(UNINITIALIZED) => data.plugin_data.get().replace(Initializing),
                 Ok(s) | Err(s) => match s {
                     INITIALIZED => return Err(PluginWrapperError::AlreadyInitialized),
+                    DESTROYING => return Err(PluginWrapperError::Destroying),
                     INITIALIZATION_FAILED | INITIALIZING => {
                         return Err(PluginWrapperError::InitializationAlreadyFailed)
                     }
@@ -214,6 +218,8 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         });
 
         PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
+            data.as_ref().state.store(DESTROYING, Ordering::SeqCst);
+
             let _ = Box::from_raw(data.as_ptr());
             Ok(())
         });
