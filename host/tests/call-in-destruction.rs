@@ -61,7 +61,7 @@ static MY_PLUGIN_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<MyPlugi
 
 struct MyHost;
 
-impl Host for MyHost {
+impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared<'a>;
     type MainThread<'a> = MyHostMainThread<'a>;
     type AudioProcessor<'a> = ();
@@ -71,7 +71,7 @@ struct MyHostShared<'a> {
     init: OnceLock<InitializingPluginHandle<'a>>,
 }
 
-impl<'a> HostShared<'a> for MyHostShared<'a> {
+impl<'a> SharedHandler<'a> for MyHostShared<'a> {
     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
         let _ = self.init.set(instance);
     }
@@ -91,7 +91,7 @@ struct MyHostMainThread<'a> {
     instance: Option<InitializedPluginHandle<'a>>,
 }
 
-impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
+impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
         assert!(instance.get_extension::<PluginState>().is_some());
         self.instance = Some(instance)

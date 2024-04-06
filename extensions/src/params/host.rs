@@ -180,10 +180,10 @@ pub trait HostParamsImplMainThread {
     fn clear(&mut self, param_id: u32, flags: ParamClearFlags);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostParams
+impl<H: HostHandlers> ExtensionImplementation<H> for HostParams
 where
-    for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,
-    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> <H as HostHandlers>::Shared<'a>: HostParamsImplShared,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_host_params {
@@ -194,9 +194,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flags: clap_param_rescan_flags)
+unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host, flags: clap_param_rescan_flags)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -208,12 +208,12 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn clear<H: Host>(
+unsafe extern "C" fn clear<H: HostHandlers>(
     host: *const clap_host,
     param_id: u32,
     flags: clap_param_clear_flags,
 ) where
-    for<'a> <H as Host>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -225,9 +225,9 @@ unsafe extern "C" fn clear<H: Host>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_flush<H: Host>(host: *const clap_host)
+unsafe extern "C" fn request_flush<H: HostHandlers>(host: *const clap_host)
 where
-    for<'a> <H as Host>::Shared<'a>: HostParamsImplShared,
+    for<'a> <H as HostHandlers>::Shared<'a>: HostParamsImplShared,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().request_flush();

@@ -105,7 +105,7 @@ impl Drop for DivaPluginStubMainThread {
 pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared;
-impl<'a> HostShared<'a> for MyHostShared {
+impl<'a> SharedHandler<'a> for MyHostShared {
     fn request_restart(&self) {
         unreachable!()
     }
@@ -118,7 +118,7 @@ impl<'a> HostShared<'a> for MyHostShared {
 }
 
 struct MyHost;
-impl Host for MyHost {
+impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared;
 
     type MainThread<'a> = ();

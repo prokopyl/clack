@@ -65,9 +65,9 @@ pub trait HostNoteNameImpl {
     fn changed(&mut self);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostNoteName
+impl<H: HostHandlers> ExtensionImplementation<H> for HostNoteName
 where
-    for<'h> <H as Host>::MainThread<'h>: HostNoteNameImpl,
+    for<'h> <H as HostHandlers>::MainThread<'h>: HostNoteNameImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -77,9 +77,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
+unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostNoteNameImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostNoteNameImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().changed();

@@ -15,9 +15,9 @@
 //!
 //! Before starting to deal with the plugins themselves, CLAP hosts need implementations for all the
 //! different callbacks a plugin may use to interact with the host. This is done by implementing the
-//! [`Host`](host::Host) trait, and its associated sub-types (one for each thread specification).
+//! [`Host`](host::HostHandlers) trait, and its associated sub-types (one for each thread specification).
 //! See the [`host`] module documentation for more information about how to implement the
-//! [`Host`](host::Host) trait, and on CLAP's thread specifications model.
+//! [`Host`](host::HostHandlers) trait, and on CLAP's thread specifications model.
 //!
 //! 1. CLAP plugins are distributed in binary files called bundles. These are prebuilt
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
@@ -36,7 +36,7 @@
 //!    unique IDs. These can be displayed in a list for the user to chose from.
 //! 4. The selected plugin's ID can now be used to create a new
 //!    [`PluginInstance`](plugin::PluginInstance) using its
-//!    [`new`](plugin::PluginInstance::new) method. This is also where the [`Host`](host::Host)
+//!    [`new`](plugin::PluginInstance::new) method. This is also where the [`Host`](host::HostHandlers)
 //!    types come into play, as they need to be ready to handle the plugin instance's callbacks.
 //!
 //!    See the [`PluginInstance::new`](plugin::PluginInstance::new) method's documentation for
@@ -48,7 +48,7 @@
 //!    where the host should allocate its own audio and event buffers (see
 //!    [`EventBuffers`](events::io::EventBuffer) and
 //!    [`AudioPorts`](process::audio_buffers::AudioPorts)), and also where the
-//!    [`AudioProcessor`](host::Host::AudioProcessor) type is created to handle audio processing
+//!    [`AudioProcessor`](host::HostHandlers::AudioProcessor) type is created to handle audio processing
 //!    callbacks.
 //!
 //!    If the plugin activation is successful, the plugin's
@@ -122,7 +122,7 @@
 //!
 //! struct MyHostShared;
 //!
-//! impl<'a> HostShared<'a> for MyHostShared {
+//! impl<'a> SharedHandler<'a> for MyHostShared {
 //!   /* ... */
 //!     # fn request_restart(&self) { unimplemented!() }
 //!     # fn request_process(&self) { unimplemented!() }
@@ -130,7 +130,7 @@
 //! }
 //!
 //! struct MyHost;
-//! impl Host for MyHost {
+//! impl HostHandlers for MyHost {
 //!     type Shared<'a> = MyHostShared;
 //!
 //!     type MainThread<'a> = ();
@@ -281,8 +281,8 @@ pub mod prelude {
             EventHeader, UnknownEvent,
         },
         host::{
-            Host, HostAudioProcessor, HostError, HostExtensions, HostInfo, HostMainThread,
-            HostShared,
+            AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,
+            MainThreadHandler, SharedHandler,
         },
         plugin::PluginInstance,
         plugin::{

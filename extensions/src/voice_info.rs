@@ -120,9 +120,9 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> Host> ExtensionImplementation<H> for HostVoiceInfo
+    impl<H: for<'a> HostHandlers> ExtensionImplementation<H> for HostVoiceInfo
     where
-        for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostVoiceInfoImpl,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_voice_info {
@@ -131,9 +131,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
     where
-        for<'a> <H as Host>::MainThread<'a>: HostVoiceInfoImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostVoiceInfoImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();

@@ -7,14 +7,14 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::Arc;
 
-pub(crate) struct PluginInstanceInner<H: Host> {
+pub(crate) struct PluginInstanceInner<H: HostHandlers> {
     host_wrapper: Pin<Arc<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     plugin_ptr: Option<NonNull<clap_plugin>>,
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
-impl<H: Host> PluginInstanceInner<H> {
+impl<H: HostHandlers> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
@@ -23,8 +23,10 @@ impl<H: Host> PluginInstanceInner<H> {
         host_info: HostInfo,
     ) -> Result<Arc<Self>, HostError>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
-        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
+        FS: for<'s> FnOnce(&'s ()) -> <H as HostHandlers>::Shared<'s>,
+        FH: for<'s> FnOnce(
+            &'s <H as HostHandlers>::Shared<'s>,
+        ) -> <H as HostHandlers>::MainThread<'s>,
     {
         let plugin_factory = plugin_bundle
             .get_plugin_factory()
@@ -103,9 +105,9 @@ impl<H: Host> PluginInstanceInner<H> {
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
-            &'a <H as Host>::Shared<'a>,
-            &mut <H as Host>::MainThread<'a>,
-        ) -> <H as Host>::AudioProcessor<'a>,
+            &'a <H as HostHandlers>::Shared<'a>,
+            &mut <H as HostHandlers>::MainThread<'a>,
+        ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         let activate = self
             .raw_instance()
@@ -147,8 +149,8 @@ impl<H: Host> PluginInstanceInner<H> {
     pub fn deactivate_with<T>(
         &mut self,
         drop: impl for<'s> FnOnce(
-            <H as Host>::AudioProcessor<'s>,
-            &mut <H as Host>::MainThread<'s>,
+            <H as HostHandlers>::AudioProcessor<'s>,
+            &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
         if !self.is_active() {
@@ -210,7 +212,7 @@ impl<H: Host> PluginInstanceInner<H> {
     }
 }
 
-impl<H: Host> Drop for PluginInstanceInner<H> {
+impl<H: HostHandlers> Drop for PluginInstanceInner<H> {
     #[inline]
     fn drop(&mut self) {
         // Happens only if instantiate didn't complete
@@ -236,6 +238,6 @@ impl<H: Host> Drop for PluginInstanceInner<H> {
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Send for PluginInstanceInner<H> {}
+unsafe impl<H: HostHandlers> Send for PluginInstanceInner<H> {}
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Sync for PluginInstanceInner<H> {}
+unsafe impl<H: HostHandlers> Sync for PluginInstanceInner<H> {}

@@ -52,9 +52,9 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: Host> ExtensionImplementation<H> for HostLatency
+    impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
     where
-        for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_latency {
@@ -63,9 +63,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
+    unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
     where
-        for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();

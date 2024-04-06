@@ -99,9 +99,9 @@ pub trait HostAudioPortsConfigImpl {
     fn rescan(&mut self);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostAudioPortsConfig
+impl<H: HostHandlers> ExtensionImplementation<H> for HostAudioPortsConfig
 where
-    for<'h> <H as Host>::MainThread<'h>: HostAudioPortsConfigImpl,
+    for<'h> <H as HostHandlers>::MainThread<'h>: HostAudioPortsConfigImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -111,9 +111,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: Host>(host: *const clap_host)
+unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsConfigImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostAudioPortsConfigImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().rescan();

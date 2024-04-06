@@ -116,9 +116,9 @@ mod host {
         fn unregister_fd(&mut self, fd: RawFd) -> Result<(), FdError>;
     }
 
-    impl<H: Host> ExtensionImplementation<H> for HostPosixFd
+    impl<H: HostHandlers> ExtensionImplementation<H> for HostPosixFd
     where
-        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -130,13 +130,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn register_fd<H: Host>(
+    unsafe extern "C" fn register_fd<H: HostHandlers>(
         host: *const clap_host,
         fd: i32,
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -149,13 +149,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn modify_fd<H: Host>(
+    unsafe extern "C" fn modify_fd<H: HostHandlers>(
         host: *const clap_host,
         fd: i32,
         flags: clap_posix_fd_flags,
     ) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
@@ -167,9 +167,9 @@ mod host {
         .unwrap_or(false)
     }
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn unregister_fd<H: Host>(host: *const clap_host, fd: i32) -> bool
+    unsafe extern "C" fn unregister_fd<H: HostHandlers>(host: *const clap_host, fd: i32) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostPosixFdImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host.main_thread().as_mut().unregister_fd(fd).is_ok())

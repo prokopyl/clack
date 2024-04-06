@@ -1,4 +1,4 @@
-use crate::host::Host;
+use crate::host::HostHandlers;
 use crate::process::ProcessingStartError;
 use core::fmt;
 
@@ -80,7 +80,7 @@ impl fmt::Display for HostError {
 
 impl std::error::Error for HostError {}
 
-impl<H: Host> From<ProcessingStartError<H>> for HostError {
+impl<H: HostHandlers> From<ProcessingStartError<H>> for HostError {
     #[inline]
     fn from(_: ProcessingStartError<H>) -> Self {
         Self::StartProcessingFailed
@@ -95,7 +95,7 @@ impl From<HostError> for clack_plugin::plugin::PluginError {
 }
 
 #[cfg(feature = "clack-plugin")]
-impl<H: Host> From<ProcessingStartError<H>> for clack_plugin::plugin::PluginError {
+impl<H: HostHandlers> From<ProcessingStartError<H>> for clack_plugin::plugin::PluginError {
     #[inline]
     fn from(_: ProcessingStartError<H>) -> Self {
         HostError::StartProcessingFailed.into()

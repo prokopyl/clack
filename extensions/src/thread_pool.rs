@@ -146,9 +146,9 @@ mod host {
         fn request_exec(&mut self, task_count: u32) -> Result<(), ThreadPoolRequestError>;
     }
 
-    impl<H: Host> ExtensionImplementation<H> for HostThreadPool
+    impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadPool
     where
-        for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_thread_pool {
@@ -157,9 +157,12 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn request_exec<H: Host>(host: *const clap_host, num_tasks: u32) -> bool
+    unsafe extern "C" fn request_exec<H: HostHandlers>(
+        host: *const clap_host,
+        num_tasks: u32,
+    ) -> bool
     where
-        for<'a> <H as Host>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

@@ -20,7 +20,7 @@
 //!
 //! struct MyHost;
 //!
-//! impl Host for MyHost {
+//! impl HostHandlers for MyHost {
 //!     type Shared<'a> = MyHostShared;
 //!     type MainThread<'a> = MyHostMainThread<'a>;
 //!     type AudioProcessor<'a> = ();
@@ -34,7 +34,7 @@
 //!     state_ext: OnceLock<Option<PluginState>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared {
+//! impl<'a> SharedHandler<'a> for MyHostShared {
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.state_ext.set(instance.get_extension());
 //!     }
@@ -48,7 +48,7 @@
 //!     is_state_dirty: bool
 //! }
 //!
-//! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
+//! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 //!     /* ... */
 //! #    fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
 //! }

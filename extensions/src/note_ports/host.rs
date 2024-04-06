@@ -57,9 +57,9 @@ pub trait HostNotePortsImpl {
     fn rescan(&mut self, flags: NotePortRescanFlags);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostNotePorts
+impl<H: HostHandlers> ExtensionImplementation<H> for HostNotePorts
 where
-    for<'h> <H as Host>::MainThread<'h>: HostNotePortsImpl,
+    for<'h> <H as HostHandlers>::MainThread<'h>: HostNotePortsImpl,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&&clap_host_note_ports {
@@ -69,9 +69,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn supported_dialects<H: Host>(host: *const clap_host) -> u32
+unsafe extern "C" fn supported_dialects<H: HostHandlers>(host: *const clap_host) -> u32
 where
-    for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostNotePortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host.main_thread().as_ref().supported_dialects().bits())
@@ -80,9 +80,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostNotePortsImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostNotePortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

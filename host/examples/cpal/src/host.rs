@@ -46,7 +46,7 @@ enum MainThreadMessage {
 /// Our host implementation.
 pub struct CpalHost;
 
-impl Host for CpalHost {
+impl HostHandlers for CpalHost {
     type Shared<'a> = CpalHostShared;
     type MainThread<'a> = CpalHostMainThread<'a>;
     type AudioProcessor<'a> = ();
@@ -88,7 +88,7 @@ impl CpalHostShared {
     }
 }
 
-impl<'a> HostShared<'a> for CpalHostShared {
+impl<'a> SharedHandler<'a> for CpalHostShared {
     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
         let _ = self.callbacks.set(PluginCallbacks {
             audio_ports: instance.get_extension(),
@@ -140,7 +140,7 @@ impl<'a> CpalHostMainThread<'a> {
     }
 }
 
-impl<'a> HostMainThread<'a> for CpalHostMainThread<'a> {
+impl<'a> MainThreadHandler<'a> for CpalHostMainThread<'a> {
     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
         self.gui = instance.get_extension();
         self.timer_support = instance.get_extension();

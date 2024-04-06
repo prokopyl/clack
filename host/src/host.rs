@@ -2,9 +2,9 @@
 
 //! Core types and traits to implement a Clack host.
 //!
-//! The [`Host`] trait is the main one required to be implemented for a Clack plugin. It provides
-//! the host's supported extensions and is associated to a main type implementing [`HostShared`] ,
-//! as well as two more optional types implementing [`HostMainThread`] and [`HostAudioProcessor`] (the
+//! The [`HostHandlers`] trait is the main one required to be implemented for a Clack host. It provides
+//! the host's supported extensions and is associated to a main type implementing [`SharedHandler`] ,
+//! as well as two more optional types implementing [`MainThreadHandler`] and [`AudioProcessorHandler`] (the
 //! unit type `()` can be used as default implementations that do nothing).
 //!
 //! These three types must implement host interfaces to allow them to respond to various requests
@@ -17,7 +17,7 @@
 //! and thread-safe operations:
 //!
 //! * The *main thread* (`[main-thread]` in the CLAP specification): this is represented by a type
-//!   implementing the [`HostMainThread`] trait, which is neither [`Send`] nor [`Sync`], and lives
+//!   implementing the [`MainThreadHandler`] trait, which is neither [`Send`] nor [`Sync`], and lives
 //!   encapsulated in the [`PluginInstance`](crate::plugin::PluginInstance) struct.
 //!
 //!   This type can handle all non-realtime-safe operations, such as those related to buffer
@@ -27,7 +27,7 @@
 //!   implementations cannot [`Send`] this type to any other threads.
 //!
 //! * The *audio thread* (`[audio-thread]` in the CLAP specification): this is represented by a type
-//!   implementing the [`HostAudioProcessor`] trait, which is [`Send`] but
+//!   implementing the [`AudioProcessorHandler`] trait, which is [`Send`] but
 //!   [`!Sync`](Sync), and lives encapsulated in the
 //!   [`PluginAudioProcessor`](crate::process::PluginAudioProcessor) struct. It is only
 //!   instantiated when the [`activate`](crate::plugin::PluginInstance::activate) method is called,
@@ -38,21 +38,21 @@
 //!   the host's audio threads, of which there may be multiple, if the host uses a thread pool for
 //!   example.
 //!
-//!   The host is free to [`Send`] the [`HostAudioProcessor`] type between any of its audio threads,
+//!   The host is free to [`Send`] the [`AudioProcessorHandler`] type between any of its audio threads,
 //!   but any operation of this class is guaranteed to be called by only a single thread
 //!   simultaneously ([`!Sync`](Sync)).
 //!
 //!   One exception is for CLAP plugins' activation and deactivation (represented in Clack by the
 //!   plugin type's construction and destruction), which is guaranteed to happen in the Main Thread
-//!   instead. This allows an [`HostAudioProcessor`] implementation to receive temporary exclusive
-//!   references to the [`HostMainThread`] type during its construction and destruction, to take
+//!   instead. This allows an [`AudioProcessorHandler`] implementation to receive temporary exclusive
+//!   references to the [`MainThreadHandler`] type during its construction and destruction, to take
 //!   and release ownership of extra buffers for instance.
 //!
 //! * *Thread-safe operations* (`[thread-safe]` in the CLAP specification) are represented by a type
-//!   implementing the [`HostShared`] trait, which is both [`Send`] and [`Sync`], and will be
+//!   implementing the [`SharedHandler`] trait, which is both [`Send`] and [`Sync`], and will be
 //!   shared between the main thread and the audio thread.
 //!
-//!   It can be used to hold read-only data (such as all of the detected plugin extensions), or to
+//!   It can be used to hold read-only data (such as all the detected plugin extensions), or to
 //!   hold any other kind of state that is to be synchronized between multiple threads.
 //!
 //!   However, it should be noted that this type *can* be used by the plugin simultaneously from
@@ -63,12 +63,12 @@
 //! This example implements a basic host which is able to process callback requests from the plugin,
 //! along with two extensions: `latency` and `log`.
 //!
-//! This is done by implementing the [`Host`] trait and specifying its associated traits:
-//! [`HostShared`], [`HostMainThread`], and [`HostAudioProcessor`].
+//! This is done by implementing the [`HostHandlers`] trait and specifying its associated traits:
+//! [`SharedHandler`], [`MainThreadHandler`], and [`AudioProcessorHandler`].
 //!
-//! Because our host supports some extensions, we also implement the [`Host::declare_extensions`]
+//! Because our host supports some extensions, we also implement the [`HostHandlers::declare_extensions`]
 //! method to declare them to the plugin, which requires us to implement the associated traits on
-//! the appropriate [`Host`] associated types to handle the host-side.
+//! the appropriate [`HostHandlers`] associated types to handle the host-side.
 //!
 //! For more information about which extension traits needs to be implemented on which time, refer
 //! to that extension's documentation.
@@ -96,13 +96,12 @@
 //!     callback_requested: AtomicBool,
 //!
 //!     // Queried extensions
-//!     // Note this may be None even after instantiation,
-//!     // in case the extension isn't supported by the plugin.
+//!     // This may be none if the extension isn't supported by the plugin.
 //!     latency_extension: OnceLock<Option<PluginLatency>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared {
-//!     // Once the plugin is fully instantiated, we can query its extensions
+//! impl<'a> SharedHandler<'a> for MyHostShared {
+//!     // Once the plugin is initializing, we can query its extensions
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
 //!     }
@@ -127,7 +126,7 @@
 //!     latency_changed: bool
 //! }
 //!
-//! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
+//! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 //!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
 //!         self.instance = Some(instance);
 //!     }
@@ -142,7 +141,7 @@
 //! }
 //!
 //! struct MyHost;
-//! impl Host for MyHost {
+//! impl HostHandlers for MyHost {
 //!     type Shared<'a> = MyHostShared;
 //!
 //!     type MainThread<'a> = MyHostMainThread<'a>;
@@ -209,7 +208,7 @@ use crate::plugin::{InitializedPluginHandle, InitializingPluginHandle};
 /// This trait is bound to the plugin instance's lifetime (`'a`).
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
-pub trait HostMainThread<'a>: 'a {
+pub trait MainThreadHandler<'a>: 'a {
     // TODO: update those docs.
     /// Called when the plugin has been successfully instantiated.
     ///
@@ -229,11 +228,11 @@ pub trait HostMainThread<'a>: 'a {
 /// This trait is bound to the plugin audio processor's lifetime (`'a`).
 ///
 /// This trait doesn't have any inherent methods, and serves only to restrict the lifetime and
-/// [`Send`] bounds. However, extensions can add more callbacks to the [`Host::AudioProcessor`]
+/// [`Send`] bounds. However, extensions can add more callbacks to the [`HostHandlers::AudioProcessor`]
 /// type.
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
-pub trait HostAudioProcessor<'a>: Send + 'a {}
+pub trait AudioProcessorHandler<'a>: Send + 'a {}
 
 /// Host data and callbacks that are tied to `[thread-safe]` operations.
 ///
@@ -243,7 +242,7 @@ pub trait HostAudioProcessor<'a>: Send + 'a {}
 /// This trait is bound to the plugin instance's lifetime (`'a`).
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
-pub trait HostShared<'a>: Send + Sync {
+pub trait SharedHandler<'a>: Send + Sync {
     /// Called either during the plugin's initialization, or right after it has completed.
     ///
     /// More specifically, this is called if the plugin calls any of the host's provided callbacks
@@ -255,7 +254,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// The given [`InitializingPluginHandle`] therefore only allows that operation.
     ///
     /// The full capability of the [`PluginSharedHandle`](crate::plugin::PluginSharedHandle) is only
-    /// given once [`HostMainThread::initialized`] is called, and can be obtained through its given
+    /// given once [`MainThreadHandler::initialized`] is called, and can be obtained through its given
     /// [`InitializedPluginHandle`].
     ///
     /// This function may be called multiple times concurrently while the plugin is initializing, if
@@ -264,7 +263,7 @@ pub trait HostShared<'a>: Send + Sync {
     /// It is also possible for other host callbacks to be called *before* this, if the plugin's
     /// `get_extension()` method calls host callbacks re-entrantly for some reason.
     ///
-    /// This [`HostShared`] implementation should handle both of these cases as gracefully as
+    /// This [`SharedHandler`] implementation should handle both of these cases as gracefully as
     /// possible.
     #[inline]
     #[allow(unused)]
@@ -284,31 +283,32 @@ pub trait HostShared<'a>: Send + Sync {
     fn request_callback(&self);
 }
 
-/// A Clack Host implementation.
+/// A set of host callback handlers.
 ///
 /// This type does not hold any data nor is used at runtime. It exists only to tie
-/// the [`Shared`](Host::Shared), [`Shared`](Host::Shared), and [`Shared`](Host::Shared)
+/// the [`Shared`](HostHandlers::Shared), [`MainThread`](HostHandlers::MainThread),
+/// and [`AudioProcessor`](HostHandlers::AudioProcessor)
 /// associated types together with the declared extensions.
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
-pub trait Host: 'static {
-    /// The type that handles host data and callbacks tied to `[thread-safe]` operations.
-    /// See the [`HostShared`] docs and the [module docs](self) for more information.
-    type Shared<'a>: HostShared<'a> + 'a;
+pub trait HostHandlers: 'static {
+    /// The type that handles host callbacks tied to `[thread-safe]` operations.
+    /// See the [`SharedHandler`] docs and the [module docs](self) for more information.
+    type Shared<'a>: SharedHandler<'a> + 'a;
 
-    /// The type that handles host data and callbacks tied to `[main-thread]` operations.
-    /// See the [`HostMainThread`] docs and the [module docs](self) for more information.
-    type MainThread<'a>: HostMainThread<'a> + 'a;
+    /// The type that handles host callbacks tied to `[main-thread]` operations.
+    /// See the [`MainThreadHandler`] docs and the [module docs](self) for more information.
+    type MainThread<'a>: MainThreadHandler<'a> + 'a;
 
-    /// The type that handles host data and callbacks tied to `[audio-thread]` operations.
-    /// See the [`HostAudioProcessor`] docs and the [module docs](self) for more information.
-    type AudioProcessor<'a>: HostAudioProcessor<'a> + 'a;
+    /// The type that handles host callbacks tied to `[audio-thread]` operations.
+    /// See the [`AudioProcessorHandler`] docs and the [module docs](self) for more information.
+    type AudioProcessor<'a>: AudioProcessorHandler<'a> + 'a;
 
     /// Declares all the extensions supported by this host.
     ///
     /// Extension declaration is done using the [`HostExtensions::register`] method.
     ///
-    /// A temporary reference to this host's [`Shared`](Host::Shared) type is also given, in case
+    /// A temporary reference to this host's [`Shared`](HostHandlers::Shared) type is also given, in case
     /// extensions need to be dynamically declared.
     #[inline]
     #[allow(unused)]
@@ -317,14 +317,14 @@ pub trait Host: 'static {
 
 // QoL implementations
 
-impl<'a> HostAudioProcessor<'a> for () {}
-impl<'a> HostMainThread<'a> for () {}
-impl<'a> HostShared<'a> for () {
+impl<'a> AudioProcessorHandler<'a> for () {}
+impl<'a> MainThreadHandler<'a> for () {}
+impl<'a> SharedHandler<'a> for () {
     fn request_restart(&self) {}
     fn request_process(&self) {}
     fn request_callback(&self) {}
 }
-impl Host for () {
+impl HostHandlers for () {
     type Shared<'a> = ();
     type MainThread<'a> = ();
     type AudioProcessor<'a> = ();

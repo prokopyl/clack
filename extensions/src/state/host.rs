@@ -53,9 +53,9 @@ pub trait HostStateImpl {
     fn mark_dirty(&mut self);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostState
+impl<H: HostHandlers> ExtensionImplementation<H> for HostState
 where
-    for<'a> <H as Host>::MainThread<'a>: HostStateImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostStateImpl,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -65,9 +65,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn mark_dirty<H: Host>(host: *const clap_host)
+unsafe extern "C" fn mark_dirty<H: HostHandlers>(host: *const clap_host)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostStateImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostStateImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().mark_dirty();

@@ -65,9 +65,9 @@ mod host {
         }
     }
 
-    impl<H: Host> ExtensionImplementation<H> for HostEventRegistry
+    impl<H: HostHandlers> ExtensionImplementation<H> for HostEventRegistry
     where
-        for<'a> <H as Host>::MainThread<'a>: HostEventRegistryImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_event_registry {
@@ -76,13 +76,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn query<H: Host>(
+    unsafe extern "C" fn query<H: HostHandlers>(
         host: *const clap_host,
         space_name: *const c_char,
         space_id: *mut u16,
     ) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostEventRegistryImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);

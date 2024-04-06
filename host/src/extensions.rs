@@ -36,17 +36,17 @@
 //!
 //!   References to an Extension ABI can be shared, copied and used in any thread as long as they
 //!   don't outlive the plugin instance. They are therefore most commonly stored in the host's
-//!   [`HostShared`](crate::host::HostShared) associated type, as shown in the example below.
+//!   [`HostShared`](crate::host::SharedHandler) associated type, as shown in the example below.
 //!
 //!
 //! * Implementing the host side of the ABI, and exposing it to the plugin to be queried.
 //!
 //!   All extensions in Clack have at least one trait to be implemented onto a specific
-//!   [`Host`](crate::host::Host) subtype ([`HostMainThread`](crate::host::HostMainThread),
-//!   [`HostAudioProcessor`](crate::host::HostAudioProcessor),
-//!   or [`HostShared`](crate::host::HostShared)), depending on the thread specification of the
+//!   [`Host`](crate::host::HostHandlers) subtype ([`HostMainThread`](crate::host::MainThreadHandler),
+//!   [`HostAudioProcessor`](crate::host::AudioProcessorHandler),
+//!   or [`HostShared`](crate::host::SharedHandler)), depending on the thread specification of the
 //!   ABI's method. For example, the `Log` extension's ABI has to be fully thread-safe, therefore
-//!   the `HostLogImpl` trait has to be implemented on the [`HostShared`](crate::host::HostShared)
+//!   the `HostLogImpl` trait has to be implemented on the [`HostShared`](crate::host::SharedHandler)
 //!   type.
 //!
 //!   See the [`host`](crate::host) module documentation to know more about CLAP's
@@ -56,14 +56,14 @@
 //!   to that many traits to be implemented on different types. For instance, the `Params` ABI
 //!   exposes one thread-safe method and two that are main-thread only. Therefore, the
 //!   `HostParamsImplShared` and `HostParamsImplMainThread` traits have to be implemented on the
-//!   [`HostShared`](crate::host::HostShared) and [`HostMainThread`](crate::host::HostMainThread)
+//!   [`HostShared`](crate::host::SharedHandler) and [`HostMainThread`](crate::host::MainThreadHandler)
 //!   types, respectively.
 //!
 //!   Once this is all done, the host implementation can declare this extension by using the
 //!   [`HostExtensions::register`](crate::host::HostExtensions::register) method in the
-//!   [`Host::declare_extensions`](crate::host::Host::declare_extensions) method implementation.
+//!   [`Host::declare_extensions`](crate::host::HostHandlers::declare_extensions) method implementation.
 //!
-//!   The fact that the right traits are implemented on the right [`Host`](crate::host::Host)
+//!   The fact that the right traits are implemented on the right [`Host`](crate::host::HostHandlers)
 //!   associated types is automatically checked at compile time, upon calling the
 //!   [`HostExtensions::register`](crate::host::HostExtensions::register) method.
 //!
@@ -84,7 +84,7 @@
 //!     latency_extension: OnceLock<Option<PluginLatency>>
 //! }
 //!
-//! impl<'a> HostShared<'a> for MyHostShared {
+//! impl<'a> SharedHandler<'a> for MyHostShared {
 //!     // We can query the plugin's extensions as soon as the plugin starts initializing
 //!     fn initializing(&self, instance: InitializingPluginHandle<'a>) {
 //!         let _ = self.latency_extension.set(instance.get_extension());
@@ -104,7 +104,7 @@
 //!     latency_changed: bool
 //! }
 //!
-//! impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {
+//! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 //!     // The plugin's instance handle is required to call extension methods.
 //!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
 //!         self.instance = Some(instance);
@@ -122,7 +122,7 @@
 //! }
 //!
 //! struct MyHost;
-//! impl Host for MyHost {
+//! impl HostHandlers for MyHost {
 //!     type Shared<'a> = MyHostShared;
 //!
 //!     type MainThread<'a> = MyHostMainThread<'a>;
@@ -193,8 +193,8 @@
 //!     fn changed(&mut self);
 //! }
 //!
-//! impl<H: Host> ExtensionImplementation<H> for HostLatency
-//!     where for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
+//! impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
+//!     where for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
 //! {
 //!     const IMPLEMENTATION: RawExtensionImplementation =
 //!         RawExtensionImplementation::new(&clap_host_latency {
@@ -202,8 +202,8 @@
 //!         });
 //! }
 //!
-//! unsafe extern "C" fn changed<H: Host>(host: *const clap_host)
-//!     where for<'a> <H as Host>::MainThread<'a>: HostLatencyImpl,
+//! unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
+//!     where for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
 //! {
 //!     HostWrapper::<H>::handle(host, |host| {
 //!         host.main_thread().as_mut().changed();
@@ -224,7 +224,7 @@ pub mod prelude {
         Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
         RawExtensionImplementation,
     };
-    pub use crate::host::Host;
+    pub use crate::host::HostHandlers;
     pub use crate::plugin::{
         PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
     };

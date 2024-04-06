@@ -61,7 +61,7 @@ struct MyHostShared {
     state_ext: OnceLock<bool>,
 }
 
-impl<'a> HostShared<'a> for MyHostShared {
+impl<'a> SharedHandler<'a> for MyHostShared {
     fn initializing(&self, _instance: InitializingPluginHandle<'a>) {
         match self.state_ext.set(true) {
             Ok(_) => {}
@@ -84,10 +84,10 @@ struct MyHostMainThread<'a> {
     shared: &'a MyHostShared,
 }
 
-impl<'a> HostMainThread<'a> for MyHostMainThread<'a> {}
+impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {}
 
 struct MyHost;
-impl Host for MyHost {
+impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared;
 
     type MainThread<'a> = MyHostMainThread<'a>;

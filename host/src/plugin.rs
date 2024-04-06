@@ -14,12 +14,12 @@ use crate::util::{WeakReader, WriterLock};
 pub use clack_common::plugin::*;
 
 /// A plugin instance.
-pub struct PluginInstance<H: Host> {
+pub struct PluginInstance<H: HostHandlers> {
     pub(crate) inner: WriterLock<PluginInstanceInner<H>>,
     _no_send: PhantomData<*const ()>,
 }
 
-impl<H: Host> PluginInstance<H> {
+impl<H: HostHandlers> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
@@ -28,8 +28,10 @@ impl<H: Host> PluginInstance<H> {
         host: &HostInfo,
     ) -> Result<Self, HostError>
     where
-        FS: for<'b> FnOnce(&'b ()) -> <H as Host>::Shared<'b>,
-        FH: for<'b> FnOnce(&'b <H as Host>::Shared<'b>) -> <H as Host>::MainThread<'b>,
+        FS: for<'b> FnOnce(&'b ()) -> <H as HostHandlers>::Shared<'b>,
+        FH: for<'b> FnOnce(
+            &'b <H as HostHandlers>::Shared<'b>,
+        ) -> <H as HostHandlers>::MainThread<'b>,
     {
         let inner = PluginInstanceInner::<H>::instantiate(
             shared,
@@ -52,9 +54,9 @@ impl<H: Host> PluginInstance<H> {
     ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
     where
         FA: for<'a> FnOnce(
-            &'a <H as Host>::Shared<'a>,
-            &mut <H as Host>::MainThread<'a>,
-        ) -> <H as Host>::AudioProcessor<'a>,
+            &'a <H as HostHandlers>::Shared<'a>,
+            &mut <H as HostHandlers>::MainThread<'a>,
+        ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         self.inner.use_mut(|inner| {
             let wrapper = Arc::get_mut(inner).ok_or(HostError::AlreadyActivatedPlugin)?;
@@ -83,7 +85,10 @@ impl<H: Host> PluginInstance<H> {
         drop_with: D,
     ) -> T
     where
-        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'_>, &mut <H as Host>::MainThread<'s>) -> T,
+        D: for<'s> FnOnce(
+            <H as HostHandlers>::AudioProcessor<'_>,
+            &mut <H as HostHandlers>::MainThread<'s>,
+        ) -> T,
     {
         if !Arc::ptr_eq(self.inner.get(), &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
@@ -97,7 +102,10 @@ impl<H: Host> PluginInstance<H> {
 
     pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, HostError>
     where
-        D: for<'s> FnOnce(<H as Host>::AudioProcessor<'_>, &mut <H as Host>::MainThread<'s>) -> T,
+        D: for<'s> FnOnce(
+            <H as HostHandlers>::AudioProcessor<'_>,
+            &mut <H as HostHandlers>::MainThread<'s>,
+        ) -> T,
     {
         self.inner.use_mut(|inner| {
             let wrapper = Arc::get_mut(inner).ok_or(HostError::StillActivatedPlugin)?;
@@ -124,19 +132,19 @@ impl<H: Host> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_handler(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared_handler(&self) -> &<H as HostHandlers>::Shared<'_> {
         self.inner.get().wrapper().shared()
     }
 
     #[inline]
-    pub fn handler(&self) -> &<H as Host>::MainThread<'_> {
+    pub fn handler(&self) -> &<H as HostHandlers>::MainThread<'_> {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.get().wrapper().main_thread().as_ref() }
     }
 
     #[inline]
-    pub fn handler_mut(&mut self) -> &mut <H as Host>::MainThread<'_> {
+    pub fn handler_mut(&mut self) -> &mut <H as HostHandlers>::MainThread<'_> {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
         unsafe { self.inner.get().wrapper().main_thread().as_mut() }
@@ -162,23 +170,20 @@ impl<H: Host> PluginInstance<H> {
 }
 
 // TODO: bikeshed
-pub struct PluginInstanceHandle<H: Host> {
+pub struct PluginInstanceHandle<H: HostHandlers> {
     inner: WeakReader<PluginInstanceInner<H>>,
 }
 
-impl<H: Host> PluginInstanceHandle<H> {
+impl<H: HostHandlers> PluginInstanceHandle<H> {
     #[inline]
-    pub fn use_shared_host_data<T>(
-        &self,
-        lambda: impl FnOnce(&H::Shared<'_>) -> T,
-    ) -> Result<T, HostError> {
+    pub fn use_handler<T>(&self, lambda: impl FnOnce(&H::Shared<'_>) -> T) -> Result<T, HostError> {
         self.inner
             .use_with(|inner| lambda(inner.wrapper().shared()))
             .ok_or(HostError::PluginDestroyed)
     }
 
     #[inline]
-    pub fn use_shared_plugin_data<T>(
+    pub fn use_plugin_handle<T>(
         &self,
         lambda: impl FnOnce(PluginSharedHandle) -> T,
     ) -> Result<T, HostError> {

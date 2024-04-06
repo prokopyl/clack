@@ -1,5 +1,5 @@
 use crate::extensions::wrapper::HostWrapper;
-use crate::host::{Host, HostExtensions, HostInfo, HostShared};
+use crate::host::{HostExtensions, HostHandlers, HostInfo, SharedHandler};
 use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
 use std::ffi::{c_void, CStr};
@@ -10,7 +10,7 @@ pub(crate) struct RawHostDescriptor {
 }
 
 impl RawHostDescriptor {
-    pub(crate) fn new<H: Host>(host_info: HostInfo) -> Self {
+    pub(crate) fn new<H: HostHandlers>(host_info: HostInfo) -> Self {
         let mut raw = clap_host {
             clap_version: ClapVersion::CURRENT.to_raw(),
             host_data: core::ptr::null_mut(),
@@ -38,13 +38,13 @@ impl RawHostDescriptor {
     }
 
     #[inline]
-    pub(crate) fn set_wrapper<H: Host>(&mut self, wrapper: &HostWrapper<H>) {
+    pub(crate) fn set_wrapper<H: HostHandlers>(&mut self, wrapper: &HostWrapper<H>) {
         self.raw.host_data = wrapper as *const _ as *mut _
     }
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_extension<H: Host>(
+unsafe extern "C" fn get_extension<H: HostHandlers>(
     host: *const clap_host,
     identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
@@ -59,7 +59,7 @@ unsafe extern "C" fn get_extension<H: Host>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_restart<H: Host>(host: *const clap_host) {
+unsafe extern "C" fn request_restart<H: HostHandlers>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_restart();
         Ok(())
@@ -67,7 +67,7 @@ unsafe extern "C" fn request_restart<H: Host>(host: *const clap_host) {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_process<H: Host>(host: *const clap_host) {
+unsafe extern "C" fn request_process<H: HostHandlers>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_process();
         Ok(())
@@ -75,7 +75,7 @@ unsafe extern "C" fn request_process<H: Host>(host: *const clap_host) {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_callback<H: Host>(host: *const clap_host) {
+unsafe extern "C" fn request_callback<H: HostHandlers>(host: *const clap_host) {
     HostWrapper::<H>::handle(host, |h| {
         h.shared().request_callback();
         Ok(())

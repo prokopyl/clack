@@ -205,9 +205,9 @@ mod host {
         fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError>;
     }
 
-    impl<H: Host> ExtensionImplementation<H> for HostTimer
+    impl<H: HostHandlers> ExtensionImplementation<H> for HostTimer
     where
-        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -218,13 +218,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn register_timer<H: Host>(
+    unsafe extern "C" fn register_timer<H: HostHandlers>(
         host: *const clap_host,
         period_ms: u32,
         timer_id: *mut u32,
     ) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             match host.main_thread().as_mut().register_timer(period_ms) {
@@ -242,9 +242,12 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn unregister_timer<H: Host>(host: *const clap_host, timer_id: u32) -> bool
+    unsafe extern "C" fn unregister_timer<H: HostHandlers>(
+        host: *const clap_host,
+        timer_id: u32,
+    ) -> bool
     where
-        for<'a> <H as Host>::MainThread<'a>: HostTimerImpl,
+        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

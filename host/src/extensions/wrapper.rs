@@ -30,10 +30,10 @@ pub(crate) mod descriptor;
 
 // Safety note: once this type is constructed, a pointer to it will be given to the plugin instance,
 // which means we can never
-pub struct HostWrapper<H: Host> {
-    audio_processor: UnsafeOptionCell<<H as Host>::AudioProcessor<'static>>,
-    main_thread: UnsafeOptionCell<<H as Host>::MainThread<'static>>,
-    shared: Pin<Box<<H as Host>::Shared<'static>>>,
+pub struct HostWrapper<H: HostHandlers> {
+    audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
+    main_thread: UnsafeOptionCell<<H as HostHandlers>::MainThread<'static>>,
+    shared: Pin<Box<<H as HostHandlers>::Shared<'static>>>,
 
     // Init stuff
     init_guard: Once,
@@ -45,11 +45,11 @@ pub struct HostWrapper<H: Host> {
 }
 
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Send for HostWrapper<H> {}
+unsafe impl<H: HostHandlers> Send for HostWrapper<H> {}
 // SAFETY: The only non-thread-safe methods on this type are unsafe
-unsafe impl<H: Host> Sync for HostWrapper<H> {}
+unsafe impl<H: HostHandlers> Sync for HostWrapper<H> {}
 
-impl<H: Host> HostWrapper<H> {
+impl<H: HostHandlers> HostWrapper<H> {
     /// TODO: docs
     ///
     /// # Safety
@@ -82,7 +82,7 @@ impl<H: Host> HostWrapper<H> {
         }
     }
 
-    /// Returns a raw, non-null pointer to the host's ([`MainThread`](Host::MainThread)) struct.
+    /// Returns a raw, non-null pointer to the host's ([`MainThread`](HostHandlers::MainThread)) struct.
     ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
@@ -90,11 +90,11 @@ impl<H: Host> HostWrapper<H> {
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
     /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as Host>::MainThread<'_>> {
+    pub unsafe fn main_thread(&self) -> NonNull<<H as HostHandlers>::MainThread<'_>> {
         self.main_thread.as_ptr_unchecked().cast()
     }
 
-    /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](Host::AudioProcessor)
+    /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
     /// struct.
     ///
     /// # Safety
@@ -105,7 +105,7 @@ impl<H: Host> HostWrapper<H> {
     #[inline]
     pub unsafe fn audio_processor(
         &self,
-    ) -> Result<NonNull<<H as Host>::AudioProcessor<'_>>, HostError> {
+    ) -> Result<NonNull<<H as HostHandlers>::AudioProcessor<'_>>, HostError> {
         let ptr = self
             .audio_processor
             .as_ptr()
@@ -114,17 +114,19 @@ impl<H: Host> HostWrapper<H> {
         Ok(ptr.cast())
     }
 
-    /// Returns a shared reference to the host's [`Shared`](Host::Shared) struct.
+    /// Returns a shared reference to the host's [`Shared`](HostHandlers::Shared) struct.
     #[inline]
-    pub fn shared(&self) -> &<H as Host>::Shared<'_> {
+    pub fn shared(&self) -> &<H as HostHandlers>::Shared<'_> {
         // SAFETY: This type guarantees shared is never used mutably
         unsafe { shrink_shared_ref::<H>(&self.shared) }
     }
 
     pub(crate) fn new<FS, FH>(shared: FS, main_thread: FH) -> Pin<Arc<Self>>
     where
-        FS: for<'s> FnOnce(&'s ()) -> <H as Host>::Shared<'s>,
-        FH: for<'s> FnOnce(&'s <H as Host>::Shared<'s>) -> <H as Host>::MainThread<'s>,
+        FS: for<'s> FnOnce(&'s ()) -> <H as HostHandlers>::Shared<'s>,
+        FH: for<'s> FnOnce(
+            &'s <H as HostHandlers>::Shared<'s>,
+        ) -> <H as HostHandlers>::MainThread<'s>,
     {
         // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
         // will effectively hold a shared pointer to this.
@@ -191,9 +193,9 @@ impl<H: Host> HostWrapper<H> {
     ) -> Result<(), HostError>
     where
         FA: for<'a> FnOnce(
-            &'a <H as Host>::Shared<'a>,
-            &mut <H as Host>::MainThread<'a>,
-        ) -> <H as Host>::AudioProcessor<'a>,
+            &'a <H as HostHandlers>::Shared<'a>,
+            &mut <H as HostHandlers>::MainThread<'a>,
+        ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         if self.audio_processor.is_some() {
             return Err(HostError::AlreadyActivatedPlugin);
@@ -216,8 +218,8 @@ impl<H: Host> HostWrapper<H> {
     pub(crate) unsafe fn teardown_audio_processor<T>(
         &self,
         drop: impl for<'s> FnOnce(
-            <H as Host>::AudioProcessor<'s>,
-            &mut <H as Host>::MainThread<'s>,
+            <H as HostHandlers>::AudioProcessor<'s>,
+            &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, HostError> {
         // SAFETY: The user enforces that this is called and non-concurrently to any other audio-thread method.
@@ -298,13 +300,13 @@ impl From<HostError> for HostWrapperError {
 
 /// # Safety
 /// The user MUST ensure the Shared ref lives long enough
-unsafe fn extend_shared_ref<'a, H: HostShared<'a>>(shared: &H) -> &'a H {
+unsafe fn extend_shared_ref<'a, H: SharedHandler<'a>>(shared: &H) -> &'a H {
     &*(shared as *const _)
 }
 
 /// # Safety
 /// The user MUST prevent this reference to be written anywhere
-unsafe fn shrink_shared_ref<'a, 'instance, H: Host>(
+unsafe fn shrink_shared_ref<'a, 'instance, H: HostHandlers>(
     shared: &'a H::Shared<'instance>,
 ) -> &'a H::Shared<'a> {
     let original_ptr = shared as *const H::Shared<'instance>;

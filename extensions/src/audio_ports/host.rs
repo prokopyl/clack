@@ -63,9 +63,9 @@ pub trait HostAudioPortsImpl {
     fn rescan(&mut self, flag: RescanType);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostAudioPorts
+impl<H: HostHandlers> ExtensionImplementation<H> for HostAudioPorts
 where
-    for<'h> <H as Host>::MainThread<'h>: HostAudioPortsImpl,
+    for<'h> <H as HostHandlers>::MainThread<'h>: HostAudioPortsImpl,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_host_audio_ports {
@@ -75,9 +75,12 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn is_rescan_flag_supported<H: Host>(host: *const clap_host, flag: u32) -> bool
+unsafe extern "C" fn is_rescan_flag_supported<H: HostHandlers>(
+    host: *const clap_host,
+    flag: u32,
+) -> bool
 where
-    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -89,9 +92,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: Host>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host, flag: u32)
 where
-    for<'a> <H as Host>::MainThread<'a>: HostAudioPortsImpl,
+    for<'a> <H as HostHandlers>::MainThread<'a>: HostAudioPortsImpl,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()

@@ -1,21 +1,21 @@
-use crate::host::Host;
+use crate::host::HostHandlers;
 use clack_common::extensions::*;
 use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
-/// A collection of all extensions supported for a given [`Host`] type.
+/// A collection of all extensions supported for a given [`HostHandlers`] type.
 ///
 /// Host can declare the different extensions they support by using the
 /// [`register`](HostExtensions::register) method on this struct, during a call to
-/// [`declare_extensions`](Host::declare_extensions).
+/// [`declare_extensions`](HostHandlers::declare_extensions).
 pub struct HostExtensions<'a, H: ?Sized> {
     found: Option<NonNull<c_void>>,
     requested: &'a CStr,
     plugin_type: PhantomData<H>,
 }
 
-impl<'a, H: Host> HostExtensions<'a, H> {
+impl<'a, H: HostHandlers> HostExtensions<'a, H> {
     #[inline]
     pub(crate) fn new(requested: &'a CStr) -> Self {
         Self {

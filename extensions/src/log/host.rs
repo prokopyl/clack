@@ -9,9 +9,9 @@ pub trait HostLogImpl {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<H: Host> ExtensionImplementation<H> for HostLog
+impl<H: HostHandlers> ExtensionImplementation<H> for HostLog
 where
-    for<'a> <H as Host>::Shared<'a>: HostLogImpl,
+    for<'a> <H as HostHandlers>::Shared<'a>: HostLogImpl,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_host_log {
@@ -20,12 +20,12 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn log<H: Host>(
+unsafe extern "C" fn log<H: HostHandlers>(
     host: *const clap_host,
     severity: clap_log_severity,
     msg: *const c_char,
 ) where
-    for<'a> <H as Host>::Shared<'a>: HostLogImpl,
+    for<'a> <H as HostHandlers>::Shared<'a>: HostLogImpl,
 {
     let msg = CStr::from_ptr(msg).to_string_lossy();
     let res = HostWrapper::<H>::handle(host, |host| {
