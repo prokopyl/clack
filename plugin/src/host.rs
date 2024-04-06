@@ -222,7 +222,6 @@ impl<'a> Deref for HostSharedHandle<'a> {
     }
 }
 
-#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct HostMainThreadHandle<'a> {
     raw: NonNull<clap_host>,
@@ -267,7 +266,6 @@ impl<'a> Deref for HostMainThreadHandle<'a> {
     }
 }
 
-#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct HostAudioThreadHandle<'a> {
     raw: NonNull<clap_host>,

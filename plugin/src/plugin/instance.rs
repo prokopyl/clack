@@ -36,14 +36,15 @@ where
         host: HostMainThreadHandle<'a>,
     ) -> Result<PluginWrapper<P>, PluginError> {
         let (shared_initializer, main_thread_initializer) = *self;
-        let shared = Box::pin(shared_initializer(host.shared())?);
+        let shared_handle = host.shared();
+        let shared = Box::pin(shared_initializer(shared_handle)?);
 
         // SAFETY: this lives long enough
         let shared_ref = unsafe { &*(shared.as_ref().get_ref() as *const _) };
         let main_thread = main_thread_initializer(host, shared_ref)?;
 
         // SAFETY: we just created the shared and main_thread together
-        Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
+        Ok(unsafe { PluginWrapper::new(shared_handle, shared, main_thread) })
     }
 }
 
@@ -56,6 +57,7 @@ where
         self: Box<Self>,
         host: HostMainThreadHandle<'a>,
     ) -> Result<PluginWrapper<P>, PluginError> {
+        let shared_handle = host.shared();
         let (shared, main_thread_initializer) = self(host)?;
         let shared = Box::pin(shared);
 
@@ -64,7 +66,7 @@ where
         let main_thread = main_thread_initializer(shared_ref)?;
 
         // SAFETY: we just created the shared and main_thread together
-        Ok(unsafe { PluginWrapper::new(host.shared(), shared, main_thread) })
+        Ok(unsafe { PluginWrapper::new(shared_handle, shared, main_thread) })
     }
 }
 

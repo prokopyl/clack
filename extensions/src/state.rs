@@ -125,6 +125,22 @@ pub struct StateError {
     saving: bool,
 }
 
+impl StateError {
+    /// Returns a [`StateError`] that was triggered while loading state.
+    ///
+    /// This information is used in the error's message.
+    pub const fn loading() -> Self {
+        Self { saving: false }
+    }
+
+    /// Returns a [`StateError`] that was triggered while saving state.
+    ///
+    /// This information is used in the error's message.
+    pub const fn saving() -> Self {
+        Self { saving: true }
+    }
+}
+
 impl Display for StateError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.saving {

@@ -134,16 +134,16 @@ impl PluginParams {
     pub fn flush(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        input_event_list: &InputEvents,
-        output_event_list: &mut OutputEvents,
+        input_parameter_changes: &InputEvents,
+        output_parameter_changes: &mut OutputEvents,
     ) {
         if let Some(flush) = plugin.use_extension(&self.0).flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
                     plugin.as_raw(),
-                    input_event_list.as_raw(),
-                    output_event_list.as_raw_mut(),
+                    input_parameter_changes.as_raw(),
+                    output_parameter_changes.as_raw_mut(),
                 )
             }
         }
@@ -153,16 +153,16 @@ impl PluginParams {
     pub fn flush_active(
         &self,
         plugin: &mut PluginAudioProcessorHandle,
-        input_event_list: &InputEvents,
-        output_event_list: &mut OutputEvents,
+        input_parameter_changes: &InputEvents,
+        output_parameter_changes: &mut OutputEvents,
     ) {
         if let Some(flush) = plugin.use_extension(&self.0).flush {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe {
                 flush(
                     plugin.as_raw(),
-                    input_event_list.as_raw(),
-                    output_event_list.as_raw_mut(),
+                    input_parameter_changes.as_raw(),
+                    output_parameter_changes.as_raw_mut(),
                 )
             }
         }
