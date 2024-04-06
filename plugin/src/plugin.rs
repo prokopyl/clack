@@ -143,7 +143,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     ///
     /// This method serves as a constructor for the audio processor, in which it can perform
     /// non-realtime-safe initialization operations, such as allocating audio buffers using the
-    /// provided [`AudioConfiguration`].
+    /// provided [`PluginAudioConfiguration`].
     ///
     /// This method is always executed on the main thread, allowing it to temporarily access main
     /// thread data.
@@ -153,7 +153,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     /// * `host`: an exclusive host handle that can be stored for the lifetime of the plugin.
     /// * `main_thread`: a temporary exclusive reference to the plugin's main thread data.
     /// * `shared`: a reference to the plugin's shared data, that can be stored for the lifetime of the plugin.
-    /// * `audio_config`: the [`AudioConfiguration`], valid throughout the audio processor's lifetime.
+    /// * `audio_config`: the [`PluginAudioConfiguration`], valid throughout the audio processor's lifetime.
     ///
     /// # Errors
     ///
