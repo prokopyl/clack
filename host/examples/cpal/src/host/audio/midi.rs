@@ -31,7 +31,7 @@ pub struct MidiReceiver {
     _connection: MidiInputConnection<()>,
     /// The consumer side of the ring buffer the MIDI thread sends event through.
     consumer: Consumer<MidiEventMessage>,
-    /// Whether or not the ringbuffer has already been abandoned by the MIDI thread, i.e. the
+    /// Whether the ringbuffer has already been abandoned by the MIDI thread, i.e. the
     /// connection unexpectedly closed.
     ///
     /// This is used to shut down all notes when a device is disconnected.

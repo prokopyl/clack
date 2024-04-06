@@ -5,9 +5,8 @@
 
 use crate::host::HostSharedHandle;
 use crate::internal_utils::UnsafeOptionCell;
-use crate::plugin::{
-    logging, AudioConfiguration, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError,
-};
+use crate::plugin::{logging, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError};
+use crate::process::PluginAudioConfiguration;
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
 use std::cell::UnsafeCell;
@@ -68,7 +67,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     /// Caller must ensure this method is only called on main thread and has exclusivity
     pub(crate) unsafe fn activate(
         &self,
-        audio_config: AudioConfiguration,
+        audio_config: PluginAudioConfiguration,
     ) -> Result<(), PluginWrapperError> {
         if self.is_active() {
             return Err(PluginWrapperError::ActivatedPlugin);

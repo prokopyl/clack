@@ -2,11 +2,9 @@ use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
 use crate::host::{HostInfo, HostMainThreadHandle, HostSharedHandle};
 use crate::plugin::instance::WrapperData::*;
-use crate::plugin::{
-    AudioConfiguration, Plugin, PluginAudioProcessor, PluginError, PluginMainThread,
-};
+use crate::plugin::{Plugin, PluginAudioProcessor, PluginError, PluginMainThread};
 use crate::prelude::PluginDescriptor;
-use crate::process::{Audio, Events, Process};
+use crate::process::{Audio, Events, PluginAudioConfiguration, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
 use core::ffi::c_void;
@@ -248,10 +246,10 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         max_sample_count: u32,
     ) -> bool {
         PluginWrapper::<P>::handle(plugin, |p| {
-            let config = AudioConfiguration {
+            let config = PluginAudioConfiguration {
                 sample_rate,
-                min_sample_count,
-                max_sample_count,
+                min_frames_count: min_sample_count,
+                max_frames_count: max_sample_count,
             };
 
             p.activate(config)

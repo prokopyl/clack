@@ -317,7 +317,7 @@ impl GuiSize {
 pub struct GuiConfiguration<'a> {
     /// The type of GUI to use.
     pub api_type: GuiApiType<'a>,
-    /// Whether or not the GUI window should be floating.
+    /// Whether the GUI window should be floating.
     ///
     /// If this is `true`, the plugin's will create its own window floating above the host's.
     /// That window will be managed entirely by the plugin, with little to no control from the host.

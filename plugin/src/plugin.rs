@@ -48,10 +48,7 @@
 
 use crate::extensions::PluginExtensions;
 use crate::host::HostAudioThreadHandle;
-use crate::process::Audio;
-use crate::process::Events;
-use crate::process::Process;
-use clack_common::process::ProcessStatus;
+use crate::process::{Audio, Events, PluginAudioConfiguration, Process, ProcessStatus};
 
 mod descriptor;
 mod error;
@@ -96,21 +93,6 @@ pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
 }
 
 impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {}
-
-/// The audio configuration passed to a plugin's audio processor upon activation.
-///
-/// This is guaranteed to remain constant and valid throughout the audio processor's lifetime,
-/// until deactivation.
-#[non_exhaustive]
-#[derive(Copy, Clone, Debug)]
-pub struct AudioConfiguration {
-    /// The audio's sample rate.
-    pub sample_rate: f64,
-    /// The minimum amount of samples that will be [processed](PluginAudioProcessor::process) at once.
-    pub min_sample_count: u32,
-    /// The maximum amount of samples that will be [processed](PluginAudioProcessor::process) at once.
-    pub max_sample_count: u32,
-}
 
 pub trait Plugin: 'static {
     /// The type holding the plugin's data and operations that belong to the audio thread.
@@ -191,7 +173,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
         host: HostAudioThreadHandle<'a>,
         main_thread: &mut M,
         shared: &'a S,
-        audio_config: AudioConfiguration,
+        audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError>;
 
     fn process(
@@ -238,7 +220,7 @@ impl<'a, M: PluginMainThread<'a, S>, S: PluginShared<'a>> PluginAudioProcessor<'
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut M,
         _shared: &'a S,
-        _audio_config: AudioConfiguration,
+        _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         Ok(())
     }

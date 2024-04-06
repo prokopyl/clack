@@ -175,7 +175,8 @@
 //! // In this example, we will only process 4 samples at a time
 //! let audio_configuration = PluginAudioConfiguration {
 //!     sample_rate: 48_000.0,
-//!     frames_count_range: 4..=4
+//!     min_frames_count: 4,
+//!     max_frames_count: 4,
 //! };
 //! let audio_processor = plugin_instance.activate(|_, _| (), audio_configuration)?;
 //!

@@ -126,8 +126,8 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             activate(
                 self.raw_instance(),
                 configuration.sample_rate,
-                *configuration.frames_count_range.start(),
-                *configuration.frames_count_range.end(),
+                configuration.min_frames_count,
+                configuration.max_frames_count,
             )
         };
 

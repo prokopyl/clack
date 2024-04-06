@@ -68,7 +68,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
         shared: &'a GainPluginShared,
-        _audio_config: AudioConfiguration,
+        _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         // This is where we would allocate intermediate buffers and such if we needed them.
         Ok(Self { shared })

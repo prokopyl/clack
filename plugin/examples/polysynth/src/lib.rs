@@ -78,7 +78,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut PolySynthPluginMainThread,
         shared: &'a PolySynthPluginShared,
-        audio_config: AudioConfiguration,
+        audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         Ok(Self {
             poly_osc: PolyOscillator::new(16, audio_config.sample_rate as f32),

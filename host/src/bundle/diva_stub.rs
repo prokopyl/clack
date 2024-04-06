@@ -44,7 +44,7 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut (),
         shared: &'a DivaPluginStubShared<'a>,
-        _audio_config: AudioConfiguration,
+        _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         Ok(Self { shared })
     }

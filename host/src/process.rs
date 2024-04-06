@@ -11,18 +11,12 @@ use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
-use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use crate::plugin::instance::PluginInstanceInner;
 pub use clack_common::process::*;
 
 pub mod audio_buffers;
-
-pub struct PluginAudioConfiguration {
-    pub sample_rate: f64,
-    pub frames_count_range: RangeInclusive<u32>,
-}
 
 pub enum PluginAudioProcessor<H: HostHandlers> {
     Started(StartedPluginAudioProcessor<H>),

@@ -105,7 +105,7 @@ impl DefaultPluginFactory for MyGainPlugin {
 pub struct MyGainPluginAudioProcessor;
 
 impl<'a> PluginAudioProcessor<'a, (), ()> for MyGainPluginAudioProcessor {
-    fn activate(_host: HostAudioThreadHandle<'a>, _main_thread: &mut (), _shared: &'a (), _audio_config: AudioConfiguration) -> Result<Self, PluginError> {
+    fn activate(_host: HostAudioThreadHandle<'a>, _main_thread: &mut (), _shared: &'a (), _audio_config: PluginAudioConfiguration) -> Result<Self, PluginError> {
         Ok(Self)
     }
 
@@ -194,7 +194,8 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
 
     let audio_configuration = PluginAudioConfiguration {
         sample_rate: 48_000.0,
-        frames_count_range: 4..=4
+        min_frames_count: 4,
+        max_frames_count: 4,
     };
     let audio_processor = plugin_instance.activate(|_, _| (), audio_configuration)?;
 

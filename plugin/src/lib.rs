@@ -29,12 +29,11 @@ pub mod prelude {
     pub use crate::extensions::PluginExtensions;
     pub use crate::host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle};
     pub use crate::plugin::{
-        AudioConfiguration, Plugin, PluginAudioProcessor, PluginDescriptor, PluginError,
-        PluginMainThread, PluginShared,
+        Plugin, PluginAudioProcessor, PluginDescriptor, PluginError, PluginMainThread, PluginShared,
     };
     pub use crate::process::{
         audio::{ChannelPair, SampleType},
-        Audio, Events, Process, ProcessStatus,
+        Audio, Events, PluginAudioConfiguration, Process, ProcessStatus,
     };
 }
 

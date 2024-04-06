@@ -41,7 +41,7 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
         _host: HostAudioThreadHandle<'a>,
         _main_thread: &mut DivaPluginStubMainThread,
         _shared: &'a (),
-        _audio_config: AudioConfiguration,
+        _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         unreachable!()
     }

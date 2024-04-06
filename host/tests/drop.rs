@@ -52,7 +52,7 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
         _host: HostAudioThreadHandle<'a>,
         main_thread: &mut DivaPluginStubMainThread,
         _shared: &'a (),
-        _audio_config: AudioConfiguration,
+        _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         assert!(!main_thread.active);
         main_thread.active = true;
@@ -148,7 +148,8 @@ pub fn handles_normal_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
-        frames_count_range: 5..=5,
+        min_frames_count: 5,
+        max_frames_count: 5,
     };
 
     let processor = instance.activate(|_, _| (), config).unwrap();
@@ -160,7 +161,8 @@ pub fn handles_try_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
-        frames_count_range: 5..=5,
+        min_frames_count: 5,
+        max_frames_count: 5,
     };
 
     let processor = instance.activate(|_, _| (), config).unwrap();
@@ -176,7 +178,8 @@ pub fn stops_when_dropping() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
-        frames_count_range: 5..=5,
+        min_frames_count: 5,
+        max_frames_count: 5,
     };
 
     let processor = instance.activate(|_, _| (), config).unwrap();
@@ -191,7 +194,8 @@ pub fn works_with_reverse_drop() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
-        frames_count_range: 5..=5,
+        min_frames_count: 5,
+        max_frames_count: 5,
     };
 
     let processor = instance.activate(|_, _| (), config).unwrap();
@@ -206,7 +210,8 @@ pub fn works_with_forgotten_audio_processor() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
-        frames_count_range: 5..=5,
+        min_frames_count: 5,
+        max_frames_count: 5,
     };
 
     let processor = instance.activate(|_, _| (), config).unwrap();

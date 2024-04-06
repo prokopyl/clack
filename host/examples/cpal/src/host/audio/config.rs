@@ -14,7 +14,7 @@ use std::fmt::{Display, Formatter};
 
 /// A full audio configuration.
 ///
-/// This contains everything needed to setup a CPAL stream and CLAP plugin audio buffers.
+/// This contains everything needed to set up a CPAL stream and CLAP plugin audio buffers.
 pub struct FullAudioConfig {
     /// Configuration for the plugin's input ports.
     pub plugin_input_port_config: PluginAudioPortsConfig,
@@ -35,7 +35,7 @@ pub struct FullAudioConfig {
 }
 
 impl FullAudioConfig {
-    /// Attempts to finds the best audio configuration for the given CPAL device and CLAP plugin to
+    /// Attempts to find the best audio configuration for the given CPAL device and CLAP plugin to
     /// work together.
     pub fn find_best_from(
         device: &Device,
@@ -66,7 +66,8 @@ impl FullAudioConfig {
     pub fn as_clack_plugin_config(&self) -> PluginAudioConfiguration {
         PluginAudioConfiguration {
             sample_rate: self.sample_rate as f64,
-            frames_count_range: self.min_buffer_size..=self.max_likely_buffer_size,
+            min_frames_count: self.min_buffer_size,
+            max_frames_count: self.max_likely_buffer_size,
         }
     }
 }

@@ -109,7 +109,8 @@ impl TestHost {
         // Setting up some buffers
         let configuration = PluginAudioConfiguration {
             sample_rate: 44_100.0,
-            frames_count_range: 32..=32,
+            min_frames_count: 32,
+            max_frames_count: 32,
         };
 
         let processor = self
