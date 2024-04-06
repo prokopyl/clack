@@ -77,10 +77,14 @@ impl PluginParams {
         param_id: u32,
         value: f64,
         buffer: &'b mut [MaybeUninit<u8>],
-    ) -> Option<&'b mut [u8]> {
+    ) -> Result<&'b mut [u8], core::fmt::Error> {
+        let Some(value_to_text) = plugin.use_extension(&self.0).value_to_text else {
+            return Err(core::fmt::Error);
+        };
+
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            plugin.use_extension(&self.0).value_to_text?(
+            value_to_text(
                 plugin.as_raw(),
                 param_id,
                 value,
@@ -89,15 +93,15 @@ impl PluginParams {
             )
         };
 
-        if valid {
-            // SAFETY: technically the whole buffer may not be fully initialized, but uninit u8 is fine
-            let buffer = unsafe { assume_init_slice(buffer) };
-            // If no nul byte found, we take the entire buffer
-            let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(buffer.len());
-            Some(&mut buffer[..buffer_total_len])
-        } else {
-            None
+        if !valid {
+            return Err(core::fmt::Error);
         }
+
+        // SAFETY: technically the whole buffer may not be fully initialized, but uninit u8 is fine
+        let buffer = unsafe { assume_init_slice(buffer) };
+        // If no nul byte found, we take the entire buffer
+        let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(buffer.len());
+        Ok(&mut buffer[..buffer_total_len])
     }
 
     pub fn text_to_value(

@@ -157,7 +157,7 @@ use clack_host::prelude::*;
 
 struct MyHostShared;
 
-impl<'a> HostShared<'a> for MyHostShared {
+impl<'a> SharedHandler<'a> for MyHostShared {
     /* ... */
     fn request_restart(&self) { /* ... */ }
     fn request_process(&self) { /* ... */ }
@@ -166,7 +166,7 @@ impl<'a> HostShared<'a> for MyHostShared {
 
 struct MyHost;
 
-impl Host for MyHost {
+impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared;
 
     type MainThread<'a> = ();

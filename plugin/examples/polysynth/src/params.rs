@@ -6,6 +6,7 @@ use clack_extensions::state::PluginStateImpl;
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
+use std::ffi::CStr;
 use std::fmt::Write as _;
 use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -157,7 +158,8 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         }
     }
 
-    fn text_to_value(&mut self, param_id: u32, text: &str) -> Option<f64> {
+    fn text_to_value(&mut self, param_id: u32, text: &CStr) -> Option<f64> {
+        let text = text.to_str().ok()?;
         if param_id == 1 {
             let text = text.strip_suffix('%').unwrap_or(text).trim();
             let percentage: f64 = text.parse().ok()?;

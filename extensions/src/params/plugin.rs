@@ -103,7 +103,7 @@ pub trait PluginMainThreadParams {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result;
-    fn text_to_value(&mut self, param_id: u32, text: &str) -> Option<f64>;
+    fn text_to_value(&mut self, param_id: u32, text: &CStr) -> Option<f64>;
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,
@@ -200,21 +200,17 @@ unsafe extern "C" fn text_to_value<P: Plugin>(
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    let display = CStr::from_ptr(display).to_bytes();
-
-    let val = PluginWrapper::<P>::handle(plugin, |p| {
-        let display = core::str::from_utf8(display)
-            .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))?;
+    let result = PluginWrapper::<P>::handle(plugin, |p| {
+        let display = CStr::from_ptr(display);
         Ok(p.main_thread().as_mut().text_to_value(param_id, display))
-    })
-    .flatten();
+    });
 
-    match val {
-        None => false,
-        Some(val) => {
+    match result {
+        Some(Some(val)) => {
             *value = val;
             true
         }
+        _ => false,
     }
 }
 
