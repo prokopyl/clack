@@ -59,7 +59,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             }
 
             // Now instantiate the plugin
-            // SAFETY: TODO
+            // SAFETY: The CLAP spec requires those function pointers to be valid to call
             unsafe {
                 if let Some(init) = plugin_instance_ptr.as_ref().init {
                     if !init(plugin_instance_ptr.as_ptr()) {
@@ -113,8 +113,6 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             .raw_instance()
             .activate
             .ok_or(HostError::NullActivateFunction)?;
-
-        // FIXME: reentrancy if activate() calls audio_processor methods
 
         // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
         unsafe {

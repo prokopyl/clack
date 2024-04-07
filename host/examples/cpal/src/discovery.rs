@@ -1,3 +1,6 @@
+// Discovering plugins means loading them, which is unsafe
+#![allow(unsafe_code)]
+
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
@@ -126,7 +129,7 @@ fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugi
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
 fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
-    let Ok(bundle) = PluginBundle::load(path) else {
+    let Ok(bundle) = (unsafe { PluginBundle::load(path) }) else {
         return None;
     };
     for plugin in bundle.get_plugin_factory()?.plugin_descriptors() {
@@ -195,7 +198,7 @@ impl Display for PluginDescriptor {
 pub fn list_plugins_in_bundle(
     bundle_path: &Path,
 ) -> Result<Vec<FoundBundlePlugin>, DiscoveryError> {
-    let bundle = PluginBundle::load(bundle_path)?;
+    let bundle = unsafe { PluginBundle::load(bundle_path)? };
     let Some(plugin_factory) = bundle.get_plugin_factory() else {
         return Err(DiscoveryError::MissingPluginFactory);
     };
@@ -242,7 +245,7 @@ pub fn load_plugin_id_from_path(
     bundle_path: &Path,
     id: &str,
 ) -> Result<Option<FoundBundlePlugin>, DiscoveryError> {
-    let bundle = PluginBundle::load(bundle_path)?;
+    let bundle = unsafe { PluginBundle::load(bundle_path)? };
     let Some(plugin_factory) = bundle.get_plugin_factory() else {
         return Err(DiscoveryError::MissingPluginFactory);
     };

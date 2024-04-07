@@ -10,7 +10,7 @@ pub fn it_works() {
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX
     );
-    let bundle = PluginBundle::load(bundle_path).unwrap();
+    let bundle = unsafe { PluginBundle::load(bundle_path).unwrap() };
 
     let desc = bundle
         .get_factory::<PluginFactory>()
@@ -33,7 +33,7 @@ pub fn it_works_concurrently() {
     std::thread::scope(|s| {
         for _ in 0..300 {
             s.spawn(|| {
-                let bundle = PluginBundle::load(&bundle_path).unwrap();
+                let bundle = unsafe { PluginBundle::load(&bundle_path).unwrap() };
 
                 let desc = bundle
                     .get_factory::<PluginFactory>()

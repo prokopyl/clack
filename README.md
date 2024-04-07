@@ -177,7 +177,7 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
     // Information about our totally legit host.
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
-    let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
     let plugin_factory = bundle.get_plugin_factory().unwrap();
 
     let plugin_descriptor = plugin_factory.plugin_descriptors()

@@ -33,6 +33,22 @@
 //!
 //! See the [`PluginBundle`]'s type documentation for examples.
 //!
+//! # Safety
+//!
+//! All functions that produce [`PluginBundle`]s from a CLAP bundle file or pointer are inherently
+//! unsafe.
+//!
+//! Most APIs in this crate operate under the assumption that bundles and plugins are compliant
+//! to the CLAP specification, and using a number of those APIs can easily result in
+//! Undefined Behavior if operating on non-compliant plugins.
+//!
+//! Therefore, the safe APIs in this crate are safeguarding the host implementation, not on the
+//! plugins it loads. As soon as a plugin is loaded, Undefined Behavior is possible to be triggered,
+//! regardless of the host's implementation.
+//!
+//! Users needing to safeguard against crashes or other kinds of UB from plugins from affecting the
+//! rest of their application should consider using additional process isolation techniques.
+//!
 //! # Plugin bundle discovery
 //!
 //! As of now, Clack does not implement any utilities to aid host implementations with discovering
@@ -84,7 +100,7 @@ use clack_common::utils::ClapVersion;
 /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use clack_host::prelude::PluginBundle;
 ///
-/// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+/// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
 /// let plugin_factory = bundle.get_plugin_factory().unwrap();
 ///
 /// println!("Loaded bundle CLAP version: {}", bundle.version());
@@ -98,6 +114,15 @@ pub struct PluginBundle {
 impl PluginBundle {
     /// Loads a CLAP bundle from a file located at the given path.
     ///
+    /// # Safety
+    ///
+    /// This function loads an external library object file, which is inherently unsafe, as even
+    /// just loading it can trigger any behavior in your application, including Undefined Behavior.
+    ///
+    /// Additionally, loading a non-compliant CLAP bundle may invalidate safety assumptions other
+    /// APIs in this library rely on. See the [module docs](self)'s Safety section for more
+    /// information.
+    ///
     /// # Errors
     ///
     /// This method returns an error if loading the bundle fails.
@@ -109,13 +134,13 @@ impl PluginBundle {
     /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use clack_host::prelude::PluginBundle;
     ///
-    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    /// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
     ///
     /// println!("Loaded bundle CLAP version: {}", bundle.version());
     /// # Ok(()) }
     /// ```
     #[cfg(feature = "libloading")]
-    pub fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
+    pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
 
         let path = path.as_ref();
@@ -130,6 +155,19 @@ impl PluginBundle {
     }
 
     /// Loads a CLAP bundle from a given symbol in a given [`libloading::Library`].
+    ///
+    /// This function takes ownership of the [`libloading::Library`] object, ensuring it stays
+    /// properly loaded as long as the resulting [`PluginBundle`] or any plugin instance is kept
+    /// alive.
+    ///
+    /// # Safety
+    ///
+    /// The given path must match the file location the library was loaded from. Moreover, the
+    /// symbol named `symbol_name` must be a valid CLAP entry.
+    ///
+    /// Additionally, loading a non-compliant CLAP bundle may invalidate safety assumptions other
+    /// APIs in this library rely on. See the [module docs](self)'s Safety section for more
+    /// information.
     ///
     /// # Errors
     ///
@@ -153,11 +191,6 @@ impl PluginBundle {
     /// println!("Loaded bundle CLAP version: {}", bundle.version());
     /// # Ok(()) }
     /// ```
-    ///
-    /// # Safety
-    ///
-    /// The given path must match the file location the library was loaded from. Moreover, the
-    /// symbol named `symbol_name` must be a valid CLAP entry.
     #[cfg(feature = "libloading")]
     pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
         path: P,
@@ -181,17 +214,16 @@ impl PluginBundle {
     /// Note that CLAP plugins loaded this way still need a valid path, as they may perform various
     /// filesystem operations relative to their bundle files.
     ///
+    /// # Safety
+    ///
+    /// Loading a non-compliant CLAP bundle may invalidate safety assumptions other
+    /// APIs in this library rely on. See the [module docs](self)'s Safety section for more
+    /// information.
+    ///
     /// # Errors
     ///
     /// This method returns an error if initializing the entry fails.
     /// See [`PluginBundleError`] for all the possible errors that may occur.
-    ///
-    /// # Safety
-    ///
-    /// Users of this function *must* also ensure the [`EntryDescriptor`]'s fields are all
-    /// valid as per the
-    /// [CLAP specification](https://github.com/free-audio/clap/blob/main/include/clap/entry.h), as
-    /// any undefined behavior may otherwise occur.
     ///
     /// # Example
     ///
@@ -239,7 +271,7 @@ impl PluginBundle {
     /// use clack_host::factory::PluginFactory;
     /// use clack_host::prelude::PluginBundle;
     ///
-    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    /// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
     /// let plugin_factory = bundle.get_factory::<PluginFactory>().unwrap();
     ///
     /// println!("Found {} plugins.", plugin_factory.plugin_count());
@@ -265,7 +297,7 @@ impl PluginBundle {
     /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use clack_host::prelude::PluginBundle;
     ///
-    /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+    /// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
     /// let plugin_factory = bundle.get_plugin_factory().unwrap();
     ///
     /// println!("Found {} plugins.", plugin_factory.plugin_count());
