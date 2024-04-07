@@ -83,7 +83,7 @@ impl ConstantMask {
 
     /// Sets whether the channel at the given index is constant.
     ///
-    /// This function do nothing when given any index over `63`.
+    /// This function does nothing when given any index over `63`.
     #[inline]
     pub fn set_channel_constant(&mut self, channel_index: u64, value: bool) {
         if channel_index > 63 {

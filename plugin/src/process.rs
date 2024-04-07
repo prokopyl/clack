@@ -293,6 +293,20 @@ impl<'a> Audio<'a> {
             .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
     }
 
+    /// Retrieves the [`AudioPortProcessingInfo`] of the [`InputPort`] at a given index.
+    ///
+    /// This returns [`None`] if there is no input port at the given index.
+    ///
+    /// See also the [`input_port_count`](Audio::input_port_count) method to know how many output
+    /// ports are available, and the [`input_ports_infos`](Audio::input_ports_infos) method to get the info of
+    /// all input ports at once.
+    #[inline]
+    pub fn input_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
+        self.inputs
+            .get(index)
+            .map(AudioPortProcessingInfo::from_raw)
+    }
+
     /// Retrieves the number of available [`InputPort`]s.
     #[inline]
     pub fn input_port_count(&self) -> usize {
@@ -308,12 +322,21 @@ impl<'a> Audio<'a> {
         InputPortsIter::new(self)
     }
 
+    /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
+    ///
+    /// See also the [`output_port_info`](Audio::output_port_info) method to retrieve a single
+    /// output port by its index.
+    #[inline]
+    pub fn input_ports_infos(&self) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
+        self.inputs.iter().map(AudioPortProcessingInfo::from_raw)
+    }
+
     /// Retrieves the [`OutputPort`] at a given index.
     ///
-    /// This returns [`None`] if there is no input port at the given index.
+    /// This returns [`None`] if there is no output port at the given index.
     ///
-    /// See also the [`output_port_count`](Audio::output_port_count) method to know how many input
-    /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all input ports at once.
+    /// See also the [`output_port_count`](Audio::output_port_count) method to know how many output
+    /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all output ports at once.
     #[inline]
     pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
         self.outputs
@@ -321,6 +344,20 @@ impl<'a> Audio<'a> {
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
             // Also, &mut ensures there is no input being read concurrently
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
+    }
+
+    /// Retrieves the [`AudioPortProcessingInfo`] of the [`OutputPort`] at a given index.
+    ///
+    /// This returns [`None`] if there is no output port at the given index.
+    ///
+    /// See also the [`output_port_count`](Audio::output_port_count) method to know how many output
+    /// ports are available, and the [`output_ports_infos`](Audio::output_ports_infos) method to get the info of
+    /// all output ports at once.
+    #[inline]
+    pub fn output_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
+        self.outputs
+            .get(index)
+            .map(AudioPortProcessingInfo::from_raw)
     }
 
     /// Retrieves the number of available [`OutputPort`]s.
@@ -331,11 +368,22 @@ impl<'a> Audio<'a> {
 
     /// Returns an iterator of all the available [`OutputPort`]s at once.
     ///
-    /// See also the [`output_port`](Audio::output_port) method to retrieve a single input port by
+    /// See also the [`output_port`](Audio::output_port) method to retrieve a single output port by
     /// its index.
     #[inline]
     pub fn output_ports(&mut self) -> OutputPortsIter {
         OutputPortsIter::new(self)
+    }
+
+    /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
+    ///
+    /// See also the [`output_port_info`](Audio::output_port_info) method to retrieve a single
+    /// output port by its index.
+    #[inline]
+    pub fn output_ports_infos(
+        &self,
+    ) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
+        self.outputs.iter().map(AudioPortProcessingInfo::from_raw)
     }
 
     /// Retrieves the [`PortPair`] at a given index.

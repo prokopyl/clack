@@ -71,3 +71,37 @@ pub struct PluginAudioConfiguration {
     /// The maximum amount of frames that will be processed at once.
     pub max_frames_count: u32,
 }
+
+use clap_sys::audio_buffer::clap_audio_buffer;
+
+pub struct AudioPortProcessingInfo {
+    channel_count: u32,
+    latency: u32,
+    constant_mask: ConstantMask,
+}
+
+impl AudioPortProcessingInfo {
+    #[inline]
+    pub fn from_raw(raw: &clap_audio_buffer) -> Self {
+        Self {
+            channel_count: raw.channel_count,
+            latency: raw.latency,
+            constant_mask: ConstantMask::from_bits(raw.constant_mask),
+        }
+    }
+
+    #[inline]
+    pub fn channel_count(&self) -> u32 {
+        self.channel_count
+    }
+
+    #[inline]
+    pub fn latency(&self) -> u32 {
+        self.latency
+    }
+
+    #[inline]
+    pub fn constant_mask(&self) -> ConstantMask {
+        self.constant_mask
+    }
+}

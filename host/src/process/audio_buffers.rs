@@ -1,8 +1,6 @@
+use clack_common::process::AudioPortProcessingInfo;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
-
-mod ports_info;
-pub use ports_info::*;
 
 pub struct InputChannel<'a, T> {
     pub buffer: &'a mut [T],
@@ -347,22 +345,8 @@ impl AudioPorts {
     }
 
     #[inline]
-    pub fn port_info(&self, port_index: u32) -> Option<OutputAudioPortInfo> {
-        self.buffer_configs
-            .get(port_index as usize)
-            .map(|buffer| OutputAudioPortInfo { buffer })
-    }
-
-    #[inline]
     pub fn port_count(&self) -> usize {
         self.buffer_configs.len()
-    }
-
-    #[inline]
-    pub fn port_infos(&self) -> impl Iterator<Item = OutputAudioPortInfo> {
-        self.buffer_configs
-            .iter()
-            .map(|buffer| OutputAudioPortInfo { buffer })
     }
 }
 
@@ -430,6 +414,18 @@ impl<'a> InputAudioBuffers<'a> {
     #[inline]
     pub fn frames_count(&self) -> Option<u32> {
         self.frames_count
+    }
+
+    #[inline]
+    pub fn port_info(&self, port_index: u32) -> Option<AudioPortProcessingInfo> {
+        self.buffers
+            .get(port_index as usize)
+            .map(AudioPortProcessingInfo::from_raw)
+    }
+
+    #[inline]
+    pub fn port_infos(&self) -> impl Iterator<Item = AudioPortProcessingInfo> + '_ {
+        self.buffers.iter().map(AudioPortProcessingInfo::from_raw)
     }
 }
 
@@ -570,6 +566,18 @@ impl<'a> OutputAudioBuffers<'a> {
     #[inline]
     pub fn frames_count(&self) -> Option<u32> {
         self.frames_count
+    }
+
+    #[inline]
+    pub fn port_info(&self, port_index: u32) -> Option<AudioPortProcessingInfo> {
+        self.buffers
+            .get(port_index as usize)
+            .map(AudioPortProcessingInfo::from_raw)
+    }
+
+    #[inline]
+    pub fn port_infos(&self) -> impl Iterator<Item = AudioPortProcessingInfo> + '_ {
+        self.buffers.iter().map(AudioPortProcessingInfo::from_raw)
     }
 }
 

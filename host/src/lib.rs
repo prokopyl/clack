@@ -293,9 +293,10 @@ pub mod prelude {
         process::{
             audio_buffers::{
                 AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
-                OutputAudioBuffers, OutputAudioPortInfo,
+                OutputAudioBuffers,
             },
-            PluginAudioConfiguration, ProcessStatus, StoppedPluginAudioProcessor,
+            AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
+            StoppedPluginAudioProcessor,
         },
     };
 }

@@ -2,7 +2,7 @@ use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts
 use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{BufferError, InputPort, OutputPort, SampleType};
 use crate::process::Audio;
-use clack_common::process::ConstantMask;
+use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::{Iter, IterMut};
 
@@ -60,6 +60,26 @@ impl<'a> PortPair<'a> {
             .as_mut()
             // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { OutputPort::from_raw(i, self.frames_count) })
+    }
+
+    /// Retrieves the port info for the input of this pair.
+    ///
+    /// If the port layout is asymmetric and there is no input port, this returns [`None`].
+    #[inline]
+    pub fn input_info(&self) -> Option<AudioPortProcessingInfo> {
+        self.input
+            .as_ref()
+            .map(|buf| AudioPortProcessingInfo::from_raw(buf))
+    }
+
+    /// Retrieves the port info for the output of this pair.
+    ///
+    /// If the port layout is asymmetric and there is no output port, this returns [`None`].
+    #[inline]
+    pub fn output_info(&self) -> Option<AudioPortProcessingInfo> {
+        self.output
+            .as_ref()
+            .map(|buf| AudioPortProcessingInfo::from_raw(buf))
     }
 
     /// Retrieves the port pair's channels.
