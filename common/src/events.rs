@@ -12,7 +12,6 @@
 use crate::events::spaces::*;
 use clap_sys::events::clap_event_header;
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
 pub mod event_types;
 pub mod io;
@@ -36,9 +35,9 @@ pub use pckn::*;
 /// * [`TYPE_ID`](Event::TYPE_ID) *must* match the event ID from its type.
 /// * The type *must* be ABI-compatible with the matching raw, C-FFI compatible event type.
 /// * All instances of this type *must* be initialized and valid.
-pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
+pub unsafe trait Event: AsRef<UnknownEvent> + Sized + 'static {
     const TYPE_ID: u16;
-    type EventSpace: EventSpace<'a>;
+    type EventSpace<'a>: EventSpace<'a>;
 
     #[inline]
     fn flags(&self) -> EventFlags {
@@ -87,7 +86,7 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     }
 
     #[inline]
-    fn as_unknown(&self) -> &UnknownEvent<'a> {
+    fn as_unknown(&self) -> &UnknownEvent {
         // SAFETY: this trait guarantees the raw_header points to an initialized and valid event.
         unsafe { UnknownEvent::from_raw(self.raw_header()) }
     }
@@ -106,12 +105,11 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
 }
 
 #[repr(transparent)]
-pub struct UnknownEvent<'a> {
-    _sysex_lifetime: PhantomData<&'a u8>,
+pub struct UnknownEvent {
     data: [u8],
 }
 
-impl<'a> UnknownEvent<'a> {
+impl UnknownEvent {
     /// Gets an unknown event from a raw event header.
     ///
     /// # Safety
@@ -138,9 +136,9 @@ impl<'a> UnknownEvent<'a> {
     }
 
     #[inline]
-    pub fn as_event_for_space<E: Event<'a>>(
+    pub fn as_event_for_space<E: Event>(
         &self,
-        space_id: EventSpaceId<E::EventSpace>,
+        space_id: EventSpaceId<E::EventSpace<'_>>,
     ) -> Option<&E> {
         let raw = self.header().as_raw();
         if raw.space_id != space_id.id()
@@ -155,7 +153,7 @@ impl<'a> UnknownEvent<'a> {
     }
 
     #[inline]
-    pub fn as_event<E: Event<'a, EventSpace = CoreEventSpace<'a>>>(&self) -> Option<&E> {
+    pub fn as_event<'s, E: Event<EventSpace<'s> = CoreEventSpace<'s>>>(&self) -> Option<&E> {
         self.as_event_for_space(EventSpaceId::core())
     }
 
@@ -165,7 +163,7 @@ impl<'a> UnknownEvent<'a> {
     /// The caller *must* ensure the event is of the given type, otherwise this will perform an
     /// incorrect cast, leading to Undefined Behavior.
     #[inline]
-    pub unsafe fn as_event_unchecked<E: Event<'a>>(&self) -> &E {
+    pub unsafe fn as_event_unchecked<E: Event>(&self) -> &E {
         &*(self as *const _ as *const E)
     }
 
@@ -175,10 +173,7 @@ impl<'a> UnknownEvent<'a> {
     }
 
     #[inline]
-    pub fn as_event_space<'s, S: EventSpace<'s>>(&'s self, space_id: EventSpaceId<S>) -> Option<S>
-    where
-        'a: 's,
-    {
+    pub fn as_event_space<'s, S: EventSpace<'s>>(&'s self, space_id: EventSpaceId<S>) -> Option<S> {
         if space_id.id() != self.header().space_id()?.id() {
             return None;
         }
@@ -204,7 +199,7 @@ impl<'a> UnknownEvent<'a> {
     }
 }
 
-impl<'a, E: Event<'a>> PartialEq<E> for UnknownEvent<'a>
+impl<E: Event> PartialEq<E> for UnknownEvent
 where
     E: PartialEq,
 {
@@ -216,7 +211,7 @@ where
     }
 }
 
-impl<'a> Debug for UnknownEvent<'a> {
+impl<'a> Debug for UnknownEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.as_core_event() {
             Some(e) => Debug::fmt(&e, f),
@@ -228,9 +223,9 @@ impl<'a> Debug for UnknownEvent<'a> {
     }
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for UnknownEvent<'a> {
+impl AsRef<UnknownEvent> for UnknownEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self
     }
 }

@@ -127,18 +127,18 @@ impl EventHeader<()> {
     }
 }
 
-impl<'a, E: Event<'a>> EventHeader<E> {
+impl<E: Event> EventHeader<E> {
     #[inline]
     pub const fn new_core(time: u32, flags: EventFlags) -> Self
     where
-        E: Event<'a, EventSpace = CoreEventSpace<'a>>,
+        E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>,
     {
         Self::new_for_space(EventSpaceId::core(), time, flags)
     }
 
     #[inline]
     pub const fn new_for_space(
-        space_id: EventSpaceId<E::EventSpace>,
+        space_id: EventSpaceId<E::EventSpace<'_>>,
         time: u32,
         flags: EventFlags,
     ) -> Self {
@@ -155,13 +155,13 @@ impl<'a, E: Event<'a>> EventHeader<E> {
     }
 
     #[inline]
-    pub fn space_id(&self) -> EventSpaceId<E::EventSpace> {
+    pub fn space_id(&self) -> EventSpaceId<E::EventSpace<'static>> {
         // SAFETY: the EventHeader type guarantees the space_id correctness
         unsafe { EventSpaceId::new_unchecked(self.inner.space_id) }
     }
 }
 
-impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
+impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> EventHeader<E> {
     #[inline]
     pub const fn new_with_flags(time: u32, flags: EventFlags) -> Self {
         Self::new_for_space(EventSpaceId::core(), time, flags)
@@ -173,7 +173,7 @@ impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
     }
 }
 
-impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> Default for EventHeader<E> {
+impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> Default for EventHeader<E> {
     #[inline]
     fn default() -> Self {
         Self::new(0)

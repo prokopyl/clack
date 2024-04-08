@@ -22,6 +22,6 @@ pub unsafe trait EventSpace<'a>: Sized + 'a {
     ///
     /// This method does not take the event space ID into consideration. It is up to the caller
     /// to ensure that the given event does in fact belong to this event space.
-    unsafe fn from_unknown(event: &'a UnknownEvent<'a>) -> Option<Self>;
-    fn as_unknown(&self) -> &'a UnknownEvent<'a>;
+    unsafe fn from_unknown(event: &'a UnknownEvent) -> Option<Self>;
+    fn as_unknown(&self) -> &'a UnknownEvent;
 }

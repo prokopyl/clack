@@ -110,7 +110,7 @@ impl EventBuffer {
     /// Returns the event located at the given `index`.
     ///
     /// If `index` is out of bounds, this returns [`None`].
-    pub fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
+    pub fn get(&self, index: u32) -> Option<&UnknownEvent> {
         let header_index = (*self.indexes.get(index as usize)?) as usize;
         // SAFETY: Registered indexes always have actual event headers written by append_header_data
         // PANIC: We used registered indexes, this should never panic
@@ -155,13 +155,13 @@ impl EventBuffer {
     /// # Panics
     ///
     /// Panics if `position > len`.
-    pub fn insert<E: AsRef<UnknownEvent<'static>> + ?Sized>(&mut self, event: &E, position: usize) {
+    pub fn insert<E: AsRef<UnknownEvent> + ?Sized>(&mut self, event: &E, position: usize) {
         let index = self.append_header_data(event.as_ref());
         self.indexes.insert(position, index as u32);
     }
 
     /// Pushes all events produced by the given `events` iterator at the end of the buffer.
-    pub fn push_all<'a, E: AsRef<UnknownEvent<'static>> + ?Sized + 'a>(
+    pub fn push_all<'a, E: AsRef<UnknownEvent> + ?Sized + 'a>(
         &mut self,
         events: impl IntoIterator<Item = &'a E>,
     ) {
@@ -173,7 +173,7 @@ impl EventBuffer {
     /// Pushes the given event into the buffer.
     ///
     /// The event is always added at the end of the buffer.
-    pub fn push<E: AsRef<UnknownEvent<'static>> + ?Sized>(&mut self, event: &E) {
+    pub fn push<E: AsRef<UnknownEvent> + ?Sized>(&mut self, event: &E) {
         let index = self.append_header_data(event.as_ref());
         self.indexes.push(index as u32);
     }
@@ -194,7 +194,7 @@ impl EventBuffer {
         OutputEvents::from_buffer(self)
     }
 
-    fn append_header_data(&mut self, event: &UnknownEvent<'static>) -> usize {
+    fn append_header_data(&mut self, event: &UnknownEvent) -> usize {
         let index = self.headers.len();
         let event_bytes = event.as_bytes();
         let bytes = self.allocate_mut(event_bytes.len());
@@ -227,7 +227,7 @@ impl EventBuffer {
 }
 
 impl<'a> IntoIterator for &'a EventBuffer {
-    type Item = &'a UnknownEvent<'a>;
+    type Item = &'a UnknownEvent;
     type IntoIter = EventBufferIter<'a>;
 
     #[inline]
@@ -236,20 +236,20 @@ impl<'a> IntoIterator for &'a EventBuffer {
     }
 }
 
-impl InputEventBuffer<'static> for EventBuffer {
+impl InputEventBuffer for EventBuffer {
     #[inline]
     fn len(&self) -> u32 {
         EventBuffer::len(self) as u32
     }
 
     #[inline]
-    fn get(&self, index: u32) -> Option<&UnknownEvent<'static>> {
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
         EventBuffer::get(self, index)
     }
 }
 
-impl OutputEventBuffer<'static> for EventBuffer {
-    fn try_push(&mut self, event: &UnknownEvent<'static>) -> Result<(), TryPushError> {
+impl OutputEventBuffer for EventBuffer {
+    fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
         self.push(event);
 
         Ok(())
@@ -281,7 +281,7 @@ impl Debug for EventBuffer {
 const INDEX_ERROR: &str = "Indexed EventBuffer out of bounds";
 
 impl Index<usize> for EventBuffer {
-    type Output = UnknownEvent<'static>;
+    type Output = UnknownEvent;
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -296,7 +296,7 @@ pub struct EventBufferIter<'a> {
 }
 
 impl<'a> Iterator for EventBufferIter<'a> {
-    type Item = &'a UnknownEvent<'a>;
+    type Item = &'a UnknownEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.range.next()?;

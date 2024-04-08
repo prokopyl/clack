@@ -64,7 +64,7 @@ impl<'a> InputEvents<'a> {
     /// See the [`InputEventBuffer`] implementation docs for a list of all types that can be used
     /// by default.
     #[inline]
-    pub const fn from_buffer<'b: 'a, I: InputEventBuffer<'b>>(buffer: &'a I) -> Self {
+    pub const fn from_buffer<I: InputEventBuffer>(buffer: &'a I) -> Self {
         Self {
             inner: raw_input_events(buffer),
             _lifetime: PhantomData,
@@ -84,7 +84,7 @@ impl<'a> InputEvents<'a> {
     /// ```
     #[inline]
     pub const fn empty() -> InputEvents<'static> {
-        InputEvents::from_buffer::<[&UnknownEvent<'static>; 0]>(&[])
+        InputEvents::from_buffer::<[&UnknownEvent; 0]>(&[])
     }
 
     /// Returns the number of events in the list.
@@ -133,7 +133,7 @@ impl<'a> InputEvents<'a> {
     /// Use the [`iter`](InputEvents::iter) method to iterate on all input events, which handles
     /// all of the above edge-cases.
     #[inline]
-    pub fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+    pub fn get(&self, index: u32) -> Option<&UnknownEvent> {
         // SAFETY: this function pointer is safely initialized by from_raw or from_buffer
         let event = unsafe { self.inner.get?(&self.inner, index) };
         if event.is_null() {
@@ -235,7 +235,7 @@ impl<'a> InputEvents<'a> {
     ///    // (Process the audio samples...)
     /// }
     /// # }
-    /// # let events: [&UnknownEvent<'static>; 0] = []; batch_process(InputEvents::from_buffer(&events), &[]);
+    /// # let events: [&UnknownEvent; 0] = []; batch_process(InputEvents::from_buffer(&events), &[]);
     /// ```
     ///
     ///
@@ -246,7 +246,7 @@ impl<'a> InputEvents<'a> {
 }
 
 impl<'a> IntoIterator for &'a InputEvents<'a> {
-    type Item = &'a UnknownEvent<'a>;
+    type Item = &'a UnknownEvent;
     type IntoIter = InputEventsIter<'a>;
 
     #[inline]
@@ -255,21 +255,21 @@ impl<'a> IntoIterator for &'a InputEvents<'a> {
     }
 }
 
-impl<'a, I: InputEventBuffer<'a>> From<&'a I> for InputEvents<'a> {
+impl<'a, I: InputEventBuffer> From<&'a I> for InputEvents<'a> {
     #[inline]
     fn from(implementation: &'a I) -> Self {
         Self::from_buffer(implementation)
     }
 }
 
-impl<'a> InputEventBuffer<'a> for InputEvents<'a> {
+impl<'a> InputEventBuffer for InputEvents<'a> {
     #[inline]
     fn len(&self) -> u32 {
         InputEvents::len(self)
     }
 
     #[inline]
-    fn get(&self, index: u32) -> Option<&UnknownEvent<'a>> {
+    fn get(&self, index: u32) -> Option<&UnknownEvent> {
         InputEvents::get(self, index)
     }
 }
@@ -277,7 +277,7 @@ impl<'a> InputEventBuffer<'a> for InputEvents<'a> {
 const INDEX_ERROR: &str = "Indexed InputEvents list out of bounds";
 
 impl<'a> Index<usize> for InputEvents<'a> {
-    type Output = UnknownEvent<'a>;
+    type Output = UnknownEvent;
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -325,7 +325,7 @@ impl<'a> Clone for InputEventsIter<'a> {
 }
 
 impl<'a> Iterator for InputEventsIter<'a> {
-    type Item = &'a UnknownEvent<'a>;
+    type Item = &'a UnknownEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range.next().and_then(|i| self.list.get(i))

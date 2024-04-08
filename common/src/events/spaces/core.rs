@@ -17,7 +17,7 @@ pub enum CoreEventSpace<'a> {
     Transport(&'a TransportEvent),
     Midi(&'a MidiEvent),
     Midi2(&'a Midi2Event),
-    MidiSysEx(&'a MidiSysExEvent<'a>),
+    MidiSysEx(&'a MidiSysExEvent),
 }
 // SAFETY: there is a null byte in this string.
 const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
@@ -26,7 +26,7 @@ const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
 unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
     const NAME: &'static CStr = EMPTY;
 
-    unsafe fn from_unknown(event: &'a UnknownEvent<'a>) -> Option<Self> {
+    unsafe fn from_unknown(event: &'a UnknownEvent) -> Option<Self> {
         use CoreEventSpace::*;
 
         match event.header().type_id() {
@@ -46,7 +46,7 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
     }
 
     #[inline]
-    fn as_unknown(&self) -> &'a UnknownEvent<'a> {
+    fn as_unknown(&self) -> &'a UnknownEvent {
         match self {
             CoreEventSpace::NoteOn(e) => e.as_unknown(),
             CoreEventSpace::NoteOff(e) => e.as_unknown(),

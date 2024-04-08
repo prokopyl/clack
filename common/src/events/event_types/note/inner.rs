@@ -10,7 +10,7 @@ pub struct NoteEvent<E> {
     _event: PhantomData<E>,
 }
 
-impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> NoteEvent<E> {
+impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
     #[inline]
     pub const fn new(time: u32, pckn: Pckn, velocity: f64) -> Self {
         Self {
@@ -133,9 +133,9 @@ macro_rules! impl_note {
                 }
             }
 
-            impl<'a> AsRef<UnknownEvent<'a>> for $type {
+            impl AsRef<UnknownEvent> for $type {
                 #[inline]
-                fn as_ref(&self) -> &UnknownEvent<'a> {
+                fn as_ref(&self) -> &UnknownEvent {
                     self.as_unknown()
                 }
             }

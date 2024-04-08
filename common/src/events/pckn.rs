@@ -155,6 +155,42 @@ pub enum Match<T> {
     All,
 }
 
+impl<T> Match<T> {
+    /// Returns a reference to the specific value of this matcher, or [`None`] if this is [`Match::All`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::Match;
+    ///
+    /// assert_eq!(Match::Specific(42).as_specific(), Some(&42));
+    /// assert_eq!(Match::All.as_specific(), None);
+    /// ```
+    pub const fn as_specific(&self) -> Option<&T> {
+        match self {
+            Specific(v) => Some(v),
+            All => None,
+        }
+    }
+
+    /// Returns a reference to the specific value of this matcher, or [`None`] if this is [`Match::All`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::Match;
+    ///
+    /// assert_eq!(Match::Specific(42).into_specific(), Some(42));
+    /// assert_eq!(Match::All.into_specific(), None);
+    /// ```
+    pub fn into_specific(self) -> Option<T> {
+        match self {
+            Specific(v) => Some(v),
+            All => None,
+        }
+    }
+}
+
 impl<T> From<T> for Match<T> {
     #[inline]
     fn from(value: T) -> Self {

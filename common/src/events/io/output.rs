@@ -84,7 +84,7 @@ impl<'a> OutputEvents<'a> {
     /// let output_events = OutputEvents::from_buffer(&mut buf);
     /// ```
     #[inline]
-    pub fn from_buffer<'b: 'a, O: OutputEventBuffer<'b>>(buffer: &'a mut O) -> Self {
+    pub fn from_buffer<O: OutputEventBuffer>(buffer: &'a mut O) -> Self {
         Self {
             inner: raw_output_events(buffer),
             _lifetime: PhantomData,
@@ -125,7 +125,7 @@ impl<'a> OutputEvents<'a> {
     /// reasonable amount of space before forwarding the list to the plugin, in order to make
     /// allocations as unlikely as possible.
     #[inline]
-    pub fn try_push<E: AsRef<UnknownEvent<'a>>>(&mut self, event: E) -> Result<(), TryPushError> {
+    pub fn try_push<E: AsRef<UnknownEvent>>(&mut self, event: E) -> Result<(), TryPushError> {
         let try_push = self.inner.try_push.ok_or(TryPushError)?;
 
         // SAFETY: this function pointer is safely initialized by from_raw or from_buffer
@@ -160,23 +160,23 @@ impl Display for TryPushError {
 
 impl Error for TryPushError {}
 
-impl<'a, I: OutputEventBuffer<'a>> From<&'a mut I> for OutputEvents<'a> {
+impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     #[inline]
     fn from(implementation: &'a mut I) -> Self {
         Self::from_buffer(implementation)
     }
 }
 
-impl<'a> OutputEventBuffer<'a> for OutputEvents<'a> {
+impl<'a> OutputEventBuffer for OutputEvents<'a> {
     #[inline]
-    fn try_push(&mut self, event: &UnknownEvent<'a>) -> Result<(), TryPushError> {
+    fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
         OutputEvents::try_push(self, event)
     }
 }
 
-impl<'a: 'b, 'b> Extend<&'b UnknownEvent<'a>> for OutputEvents<'a> {
+impl<'a: 'b, 'b> Extend<&'b UnknownEvent> for OutputEvents<'a> {
     #[inline]
-    fn extend<T: IntoIterator<Item = &'b UnknownEvent<'a>>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = &'b UnknownEvent>>(&mut self, iter: T) {
         #[allow(unused_must_use)]
         for event in iter {
             self.try_push(event);

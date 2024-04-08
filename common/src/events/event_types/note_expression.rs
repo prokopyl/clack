@@ -43,14 +43,14 @@ pub struct NoteExpressionEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for NoteExpressionEvent {
+unsafe impl Event for NoteExpressionEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_EXPRESSION;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for NoteExpressionEvent {
+impl AsRef<UnknownEvent> for NoteExpressionEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }

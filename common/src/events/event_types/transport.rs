@@ -50,14 +50,14 @@ pub struct TransportEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for TransportEvent {
+unsafe impl Event for TransportEvent {
     const TYPE_ID: u16 = CLAP_EVENT_TRANSPORT;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for TransportEvent {
+impl AsRef<UnknownEvent> for TransportEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }

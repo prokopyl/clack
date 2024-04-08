@@ -6,7 +6,6 @@ use clap_sys::events::{
     CLAP_EVENT_MIDI_SYSEX,
 };
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 pub struct MidiEvent {
@@ -14,14 +13,14 @@ pub struct MidiEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for MidiEvent {
+unsafe impl Event for MidiEvent {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for MidiEvent {
+impl AsRef<UnknownEvent> for MidiEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
@@ -90,40 +89,35 @@ impl Debug for MidiEvent {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct MidiSysExEvent<'buf> {
+pub struct MidiSysExEvent {
     inner: clap_event_midi_sysex,
-    _buffer_lifetime: PhantomData<&'buf [u8]>,
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'buf> Event<'buf> for MidiSysExEvent<'buf> {
+unsafe impl Event for MidiSysExEvent {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI_SYSEX;
-    type EventSpace = CoreEventSpace<'buf>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'buf> AsRef<UnknownEvent<'buf>> for MidiSysExEvent<'buf> {
+impl AsRef<UnknownEvent> for MidiSysExEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'buf> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
 
-impl<'buf> MidiSysExEvent<'buf> {
+impl MidiSysExEvent {
     /// # Safety
     /// This function allows creating an event from an arbitrary lifetime.
     /// Users of this method must ensure that the sysex buffer is valid for requested lifetime
     #[inline]
     pub unsafe fn from_raw(raw: clap_event_midi_sysex) -> Self {
-        Self {
-            _buffer_lifetime: PhantomData,
-            inner: raw,
-        }
+        Self { inner: raw }
     }
 
     #[inline]
-    pub fn new(header: EventHeader<Self>, port_index: u16, buffer: &'buf [u8]) -> Self {
+    pub fn new(header: EventHeader<Self>, port_index: u16, buffer: &[u8]) -> Self {
         Self {
-            _buffer_lifetime: PhantomData,
             inner: clap_event_midi_sysex {
                 header: header.into_raw(),
                 port_index,
@@ -144,8 +138,26 @@ impl<'buf> MidiSysExEvent<'buf> {
     }
 
     #[inline]
-    pub fn data(&self) -> &'buf [u8] {
-        // SAFETY: this struct ensures the buffer is valid and for the required lifetime
+    pub fn buffer_ptr(&self) -> *const u8 {
+        self.inner.buffer
+    }
+
+    #[inline]
+    pub fn buffer_size(&self) -> u32 {
+        self.inner.size
+    }
+
+    /// # Safety
+    ///
+    /// Users *must* ensure that the buffer lives long enough.
+    /// As a plugin, host-provided buffers are guaranteed to live at least as long as the current
+    /// method call (e.g. `process` or `flush`).
+    ///
+    /// As a host, plugin-provided buffers usually live at least until the next plugin call from the
+    /// same thread.
+    #[inline]
+    pub unsafe fn data<'a>(&self) -> &'a [u8] {
+        // SAFETY: this struct ensures the buffer is valid, and the user enforces the lifetime
         unsafe { slice_from_external_parts(self.inner.buffer, self.inner.size as usize) }
     }
 
@@ -155,21 +167,23 @@ impl<'buf> MidiSysExEvent<'buf> {
     }
 }
 
-impl<'a> PartialEq for MidiSysExEvent<'a> {
+impl PartialEq for MidiSysExEvent {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.inner.port_index == other.inner.port_index && self.data() == other.data()
+        self.inner.port_index == other.inner.port_index
+            && self.buffer_size() == other.buffer_size()
+            && self.buffer_ptr() == other.buffer_ptr()
     }
 }
 
-impl<'a> Eq for MidiSysExEvent<'a> {}
+impl Eq for MidiSysExEvent {}
 
-impl<'a> Debug for MidiSysExEvent<'a> {
+impl Debug for MidiSysExEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MidiSysexEvent")
             .field("header", &self.header())
             .field("port_index", &self.inner.port_index)
-            .field("data", &self.data())
+            .field("buffer_size", &self.buffer_size())
             .finish()
     }
 }
@@ -180,14 +194,14 @@ pub struct Midi2Event {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for Midi2Event {
+unsafe impl Event for Midi2Event {
     const TYPE_ID: u16 = CLAP_EVENT_MIDI2;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for Midi2Event {
+impl AsRef<UnknownEvent> for Midi2Event {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }

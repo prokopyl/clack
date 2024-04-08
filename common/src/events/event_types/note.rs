@@ -78,27 +78,27 @@ impl NoteEndEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for NoteOnEvent {
+unsafe impl Event for NoteOnEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_ON;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for NoteOffEvent {
+unsafe impl Event for NoteOffEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_OFF;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for NoteChokeEvent {
+unsafe impl Event for NoteChokeEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_CHOKE;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for NoteEndEvent {
+unsafe impl Event for NoteEndEvent {
     const TYPE_ID: u16 = CLAP_EVENT_NOTE_END;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
 self::impl_note!(NoteOnEvent);

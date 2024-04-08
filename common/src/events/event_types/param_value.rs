@@ -15,14 +15,14 @@ pub struct ParamValueEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for ParamValueEvent {
+unsafe impl Event for ParamValueEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_VALUE;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for ParamValueEvent {
+impl AsRef<UnknownEvent> for ParamValueEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
@@ -139,14 +139,14 @@ pub struct ParamModEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for ParamModEvent {
+unsafe impl Event for ParamModEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_MOD;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for ParamModEvent {
+impl AsRef<UnknownEvent> for ParamModEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
@@ -263,14 +263,14 @@ pub struct ParamGestureBeginEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for ParamGestureBeginEvent {
+unsafe impl Event for ParamGestureBeginEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_BEGIN;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for ParamGestureBeginEvent {
+impl AsRef<UnknownEvent> for ParamGestureBeginEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
@@ -317,14 +317,14 @@ pub struct ParamGestureEndEvent {
 }
 
 // SAFETY: this matches the type ID and event space
-unsafe impl<'a> Event<'a> for ParamGestureEndEvent {
+unsafe impl Event for ParamGestureEndEvent {
     const TYPE_ID: u16 = CLAP_EVENT_PARAM_GESTURE_END;
-    type EventSpace = CoreEventSpace<'a>;
+    type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-impl<'a> AsRef<UnknownEvent<'a>> for ParamGestureEndEvent {
+impl AsRef<UnknownEvent> for ParamGestureEndEvent {
     #[inline]
-    fn as_ref(&self) -> &UnknownEvent<'a> {
+    fn as_ref(&self) -> &UnknownEvent {
         self.as_unknown()
     }
 }
