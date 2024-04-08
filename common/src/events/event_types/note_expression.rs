@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader, UnknownEvent};
+use crate::events::{Event, EventHeader, Pckn, UnknownEvent};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -56,22 +56,14 @@ impl<'a> AsRef<UnknownEvent<'a>> for NoteExpressionEvent {
 }
 
 impl NoteExpressionEvent {
-    pub fn new(
-        header: EventHeader<Self>,
-        note_id: i32,
-        port_index: i16,
-        key: i16,
-        channel: i16,
-        value: f64,
-        expression_type: NoteExpressionType,
-    ) -> Self {
+    pub fn new(time: u32, pckn: Pckn, expression_type: NoteExpressionType, value: f64) -> Self {
         Self {
             inner: clap_event_note_expression {
-                header: header.into_raw(),
-                note_id,
-                port_index,
-                key,
-                channel,
+                header: EventHeader::<Self>::new(time).into_raw(),
+                note_id: pckn.raw_note_id(),
+                port_index: pckn.raw_port(),
+                key: pckn.raw_key(),
+                channel: pckn.raw_channel(),
                 expression_id: expression_type.into_raw(),
                 value,
             },

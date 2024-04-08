@@ -118,7 +118,7 @@ fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
         .collect()
 }
 
-/// Loads all of the given bundles, and returns a list of all the plugins that match the given ID.
+/// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
 fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()

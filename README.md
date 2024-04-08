@@ -199,7 +199,7 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
     };
     let audio_processor = plugin_instance.activate(|_, _| (), audio_configuration)?;
 
-    let note_on_event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
+    let note_on_event = NoteOnEvent::new(0, Pckn::new(0u16, 0u16, 12u16, 60u32), 4.2);
     let input_events_buffer = [note_on_event];
     let mut output_events_buffer = EventBuffer::new();
 

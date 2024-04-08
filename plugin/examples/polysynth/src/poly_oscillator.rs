@@ -1,8 +1,8 @@
 //! Implementations and helpers for our polyphonic oscillator.
 
 use crate::oscillator::SquareOscillator;
-use clack_plugin::events::event_types::*;
 use clack_plugin::events::spaces::CoreEventSpace;
+use clack_plugin::events::Match;
 use clack_plugin::prelude::*;
 
 /// A voice in the polyphonic oscillator.
@@ -100,28 +100,15 @@ impl PolyOscillator {
     /// If the vent is a global note off event, then it will stop all currently playing voices.
     pub fn handle_event(&mut self, event: &UnknownEvent) {
         match event.as_core_event() {
-            Some(CoreEventSpace::NoteOn(NoteOnEvent(note_event))) => {
-                // Ignore invalid or negative note keys.
-                let Ok(note_key) = u8::try_from(note_event.key()) else {
-                    return;
-                };
-
-                self.start_new_voice(note_key);
-            }
-            Some(CoreEventSpace::NoteOff(NoteOffEvent(note_event))) => {
-                // A -1 key means shutting off all notes.
-                if note_event.key() == -1 {
-                    self.stop_all();
-                    return;
+            Some(CoreEventSpace::NoteOn(note_event)) => {
+                if let Match::Specific(key) = note_event.key() {
+                    self.start_new_voice(key as u8);
                 }
-
-                // Ignore invalid note keys.
-                let Ok(note_key) = u8::try_from(note_event.key()) else {
-                    return;
-                };
-
-                self.stop_voice(note_key)
             }
+            Some(CoreEventSpace::NoteOff(note_event)) => match note_event.key() {
+                Match::All => self.stop_all(),
+                Match::Specific(note_key) => self.stop_voice(note_key as u8),
+            },
             _ => {}
         }
     }

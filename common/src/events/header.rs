@@ -1,5 +1,8 @@
+use crate::events::spaces::{CoreEventSpace, EventSpaceId};
+use crate::events::Event;
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
+use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
 use std::cmp::Ordering;
 use std::fmt;
 use std::marker::PhantomData;
@@ -12,35 +15,24 @@ pub struct EventHeader<E = ()> {
 }
 
 impl<E> EventHeader<E> {
-    /// Gets a typed event header from a raw, untyped header, without performing any checks.
+    /// Returns the size of this event, in bytes.
     ///
-    /// # Safety
-    ///
-    /// The caller *must* ensure the given header matches the given event type `E`.
-    #[inline]
-    pub const unsafe fn from_raw_unchecked(header: &clap_event_header) -> &Self {
-        // SAFETY: EventHeader is repr(C) and ABI compatible
-        &*(header as *const _ as *const _)
-    }
-
-    #[inline]
-    pub const fn as_raw(&self) -> &clap_event_header {
-        &self.inner
-    }
-
-    #[inline]
-    pub const fn into_raw(self) -> clap_event_header {
-        self.inner
-    }
-
+    /// This size includes the size of the event header itself.
+    /// If you need only the size of the payload, see [`payload_size`](Self::payload_size).
     #[inline]
     pub const fn size(&self) -> u32 {
         self.inner.size
     }
 
+    /// Returns the size of this event's payload, in bytes.
+    ///
+    /// This size does not include the size of the event header itself.
+    /// If you need to also account for the size of the payload, see [`size`](Self::size).
     #[inline]
     pub const fn payload_size(&self) -> u32 {
-        self.inner.size - (core::mem::size_of::<EventHeader>() as u32)
+        self.inner
+            .size
+            .saturating_sub(core::mem::size_of::<EventHeader>() as u32)
     }
 
     #[inline]
@@ -54,8 +46,70 @@ impl<E> EventHeader<E> {
     }
 
     #[inline]
+    pub fn set_time(&mut self, time: u32) {
+        self.inner.time = time
+    }
+
+    #[inline]
+    pub const fn with_time(mut self, time: u32) -> Self {
+        self.inner.time = time;
+        self
+    }
+
+    #[inline]
     pub const fn flags(&self) -> EventFlags {
         EventFlags::from_bits_truncate(self.inner.flags)
+    }
+
+    #[inline]
+    pub fn set_flags(&mut self, flags: EventFlags) {
+        self.inner.flags = flags.bits();
+    }
+
+    #[inline]
+    pub const fn with_flags(mut self, flags: EventFlags) -> Self {
+        self.inner.flags = flags.bits();
+        self
+    }
+
+    // Raw stuff
+
+    /// Gets a typed event header from a raw, untyped header, without performing any checks.
+    ///
+    /// # Safety
+    ///
+    /// The caller *must* ensure the given header matches the given event type `E`.
+    #[inline]
+    pub const unsafe fn from_raw_unchecked(header: &clap_event_header) -> &Self {
+        // SAFETY: EventHeader is repr(C) and ABI compatible
+        &*(header as *const clap_event_header as *const Self)
+    }
+
+    /// Gets a typed event header from a mutable reference to a raw, untyped header,
+    /// without performing any checks.
+    ///
+    /// # Safety
+    ///
+    /// The caller *must* ensure the given header matches the given event type `E`.
+    #[inline]
+    pub unsafe fn from_raw_unchecked_mut(header: &mut clap_event_header) -> &mut Self {
+        // SAFETY: EventHeader is repr(C) and ABI compatible
+        &mut *(header as *mut clap_event_header as *mut Self)
+    }
+
+    #[inline]
+    pub const fn as_raw(&self) -> &clap_event_header {
+        &self.inner
+    }
+
+    #[inline]
+    pub fn as_raw_mut(&mut self) -> &mut clap_event_header {
+        &mut self.inner
+    }
+
+    #[inline]
+    pub const fn into_raw(self) -> clap_event_header {
+        self.inner
     }
 }
 
@@ -109,20 +163,22 @@ impl<'a, E: Event<'a>> EventHeader<E> {
 
 impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> EventHeader<E> {
     #[inline]
-    pub fn new_with_flags(time: u32, flags: EventFlags) -> Self {
+    pub const fn new_with_flags(time: u32, flags: EventFlags) -> Self {
         Self::new_for_space(EventSpaceId::core(), time, flags)
     }
 
     #[inline]
-    pub fn new(time: u32) -> Self {
+    pub const fn new(time: u32) -> Self {
         Self::new_with_flags(time, EventFlags::empty())
     }
 }
 
-use crate::events::spaces::CoreEventSpace;
-use crate::events::spaces::EventSpaceId;
-use crate::events::Event;
-use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
+impl<'a, E: Event<'a, EventSpace = CoreEventSpace<'a>>> Default for EventHeader<E> {
+    #[inline]
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
 
 bitflags! {
     #[repr(C)]

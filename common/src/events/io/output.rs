@@ -22,14 +22,14 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///```
-/// use clack_common::events::{Event, EventHeader};
-/// use clack_common::events::event_types::{NoteEvent, NoteOnEvent};
+/// use clack_common::events::{Event, EventHeader, Pckn};
+/// use clack_common::events::event_types::NoteOnEvent;
 /// use clack_common::events::io::{EventBuffer, OutputEvents};
 ///
 /// let mut buf = EventBuffer::new();
 /// let mut output_events = OutputEvents::from_buffer(&mut buf);
 ///
-/// let event = NoteOnEvent(NoteEvent::new(EventHeader::new(0), 60, 0, 12, 0, 4.2));
+/// let event = NoteOnEvent::new(0, Pckn::new(0u16, 0u16, 12u16, 60u32), 4.2);
 /// output_events.try_push(event.as_unknown()).unwrap();
 ///
 /// assert_eq!(1, buf.len());

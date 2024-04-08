@@ -1,9 +1,7 @@
 use crate::host::CpalHost;
 use clack_extensions::note_ports::{NoteDialects, NotePortInfoBuffer, PluginNotePorts};
-use clack_host::events::event_types::{
-    MidiEvent, NoteChokeEvent, NoteEvent, NoteOffEvent, NoteOnEvent,
-};
-use clack_host::events::EventFlags;
+use clack_host::events::event_types::{MidiEvent, NoteChokeEvent, NoteOffEvent, NoteOnEvent};
+use clack_host::events::{EventFlags, Match};
 use clack_host::prelude::*;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rtrb::{Consumer, RingBuffer};
@@ -129,14 +127,8 @@ impl MidiReceiver {
         self.clap_events_buffer.clear();
 
         if !self.abandoned && self.consumer.is_abandoned() {
-            self.clap_events_buffer.push(&NoteChokeEvent(NoteEvent::new(
-                EventHeader::new_core(0, EventFlags::IS_LIVE),
-                -1,
-                -1,
-                -1,
-                -1,
-                0.0,
-            )));
+            self.clap_events_buffer
+                .push(&NoteChokeEvent::new(0, Pckn::match_all()).with_flags(EventFlags::IS_LIVE));
             self.abandoned = true;
         } else {
             let mut first_event_timestamp = None;
@@ -192,26 +184,22 @@ fn push_midi_to_buffer(
     prefers_midi: bool,
 ) {
     match message {
-        MidiMessage::NoteOff(channel, note, velocity) if !prefers_midi => {
-            buffer.push(&NoteOffEvent(NoteEvent::new(
-                EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                -1,
-                port_index as i16,
-                note as i16,
-                channel.index() as i16,
+        MidiMessage::NoteOff(channel, note, velocity) if !prefers_midi => buffer.push(
+            &NoteOffEvent::new(
+                sample_time,
+                Pckn::new(port_index as u16, channel.index(), note as u16, Match::All),
                 u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
-            )))
-        }
-        MidiMessage::NoteOn(channel, note, velocity) if !prefers_midi => {
-            buffer.push(&NoteOnEvent(NoteEvent::new(
-                EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                -1,
-                port_index as i16,
-                note as i16,
-                channel.index() as i16,
+            )
+            .with_flags(EventFlags::IS_LIVE),
+        ),
+        MidiMessage::NoteOn(channel, note, velocity) if !prefers_midi => buffer.push(
+            &NoteOnEvent::new(
+                sample_time,
+                Pckn::new(port_index as u16, channel.index(), note as u16, Match::All),
                 u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
-            )));
-        }
+            )
+            .with_flags(EventFlags::IS_LIVE),
+        ),
         m => {
             let mut buf = [0; 3];
             if m.copy_to_slice(&mut buf).is_ok() {

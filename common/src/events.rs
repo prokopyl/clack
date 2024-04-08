@@ -19,7 +19,10 @@ pub mod io;
 pub mod spaces;
 
 mod header;
+mod pckn;
+
 pub use header::*;
+pub use pckn::*;
 
 /// A specific event type.
 ///
@@ -38,21 +41,67 @@ pub unsafe trait Event<'a>: AsRef<UnknownEvent<'a>> + Sized + 'a {
     type EventSpace: EventSpace<'a>;
 
     #[inline]
-    fn raw_header(&self) -> *const clap_event_header {
-        self as *const Self as *const _
+    fn flags(&self) -> EventFlags {
+        self.header().flags()
+    }
+
+    #[inline]
+    fn set_flags(&mut self, flags: EventFlags) {
+        self.header_mut().set_flags(flags)
+    }
+
+    #[inline]
+    fn with_flags(mut self, flags: EventFlags) -> Self {
+        self.header_mut().set_flags(flags);
+        self
+    }
+
+    #[inline]
+    fn time(&self) -> u32 {
+        self.header().time()
+    }
+
+    #[inline]
+    fn set_time(&mut self, time: u32) {
+        self.header_mut().set_time(time)
+    }
+
+    #[inline]
+    fn with_time(mut self, time: u32) -> Self {
+        self.header_mut().set_time(time);
+        self
     }
 
     #[inline]
     fn header(&self) -> &EventHeader<Self> {
-        // SAFETY: this trait guarantees the raw_header points to an initialized and valid event
+        // SAFETY: this trait guarantees the raw_header points to an event
         // header that matches the current type.
-        unsafe { EventHeader::from_raw_unchecked(&*self.raw_header()) }
+        unsafe { EventHeader::from_raw_unchecked(self.raw_header()) }
+    }
+
+    #[inline]
+    fn header_mut(&mut self) -> &mut EventHeader<Self> {
+        // SAFETY: this trait guarantees the raw_header points to an event
+        // header that matches the current type.
+        unsafe { EventHeader::from_raw_unchecked_mut(self.raw_header_mut()) }
     }
 
     #[inline]
     fn as_unknown(&self) -> &UnknownEvent<'a> {
         // SAFETY: this trait guarantees the raw_header points to an initialized and valid event.
         unsafe { UnknownEvent::from_raw(self.raw_header()) }
+    }
+
+    #[inline]
+    fn raw_header(&self) -> &clap_event_header {
+        // SAFETY: This trait guarantees self points to an initialized and valid event.
+        unsafe { &*(self as *const Self as *const clap_event_header) }
+    }
+
+    #[inline]
+    fn raw_header_mut(&mut self) -> &mut clap_event_header {
+        // SAFETY: This trait guarantees self points to an initialized and valid event.
+        unsafe { &mut *(self as *mut Self as *mut clap_event_header) }
     }
 }
 
