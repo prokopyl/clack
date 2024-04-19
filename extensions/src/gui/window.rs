@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 #[derive(Copy, Clone)]
 pub struct Window<'a> {
     raw: clap_window,
-    _lifetime: PhantomData<&'a c_void>,
+    _lifetime: PhantomData<GuiApiType<'a>>,
 }
 
 impl<'a> Window<'a> {
@@ -25,7 +25,7 @@ impl<'a> Window<'a> {
 
     /// Returns the windowing API that is used to handle this window.
     #[inline]
-    pub fn api_type(&self) -> GuiApiType {
+    pub fn api_type(&self) -> GuiApiType<'a> {
         // SAFETY: This type ensures the function pointer is valid.
         unsafe { GuiApiType(CStr::from_ptr(self.raw.api)) }
     }
@@ -187,7 +187,7 @@ const _: () = {
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_raw_window<W: HasRawWindowHandle>(window: &'a W) -> Option<Self> {
+        pub fn from_raw_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
             Self::from_raw_window_handle(window.raw_window_handle())
         }
 
@@ -196,7 +196,6 @@ const _: () = {
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
         pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
-            // SAFETY: handle guarantees the inner pointers are valid for 'a.
             unsafe {
                 match handle {
                     RawWindowHandle::Win32(handle) => Some(Self::from_win32_hwnd(handle.hwnd)),
@@ -212,16 +211,17 @@ const _: () = {
 };
 
 #[cfg(feature = "raw-window-handle_06")]
+#[allow(deprecated)]
 const _: () = {
     use raw_window_handle_06::{
-        AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, Win32WindowHandle,
+        AppKitWindowHandle, HandleError, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
         WindowHandle, XlibWindowHandle,
     };
     use std::num::NonZeroIsize;
     use std::ptr::NonNull;
 
-    impl<'a> HasWindowHandle for Window<'a> {
-        fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
+    unsafe impl<'a> HasRawWindowHandle for Window<'a> {
+        fn raw_window_handle(&self) -> Result<RawWindowHandle, HandleError> {
             let api_type = self.api_type();
 
             let raw = if api_type == GuiApiType::WIN32 {
@@ -241,8 +241,7 @@ const _: () = {
                 return Err(HandleError::NotSupported);
             };
 
-            // SAFETY: this type ensures the handle is valid for 'a
-            Ok(unsafe { WindowHandle::borrow_raw(raw) })
+            Ok(raw)
         }
     }
 
@@ -251,18 +250,18 @@ const _: () = {
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window<W: HasWindowHandle>(window: &'a W) -> Option<Self> {
-            Self::from_window_handle(window.window_handle().ok()?)
+        pub fn from_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
+            Self::from_window_handle(window.raw_window_handle().ok()?)
         }
 
         /// Creates a [`Window`] from a [`WindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window_handle(handle: WindowHandle<'a>) -> Option<Self> {
+        pub fn from_window_handle(handle: RawWindowHandle) -> Option<Self> {
             // SAFETY: handle guarantees the inner pointers are valid for 'a.
             unsafe {
-                match handle.as_raw() {
+                match handle {
                     RawWindowHandle::Win32(handle) => {
                         Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
                     }
