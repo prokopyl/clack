@@ -24,7 +24,7 @@ pub mod prelude {
     pub use crate::entry::{DefaultPluginFactory, Entry, EntryDescriptor, SinglePluginEntry};
     pub use crate::events::{
         io::{InputEvents, OutputEvents},
-        UnknownEvent,
+        Event, EventHeader, Pckn, UnknownEvent,
     };
     pub use crate::extensions::PluginExtensions;
     pub use crate::host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle};

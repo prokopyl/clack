@@ -211,7 +211,7 @@ where
     }
 }
 
-impl<'a> Debug for UnknownEvent {
+impl Debug for UnknownEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.as_core_event() {
             Some(e) => Debug::fmt(&e, f),

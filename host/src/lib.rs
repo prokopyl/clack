@@ -279,7 +279,7 @@ pub mod prelude {
         bundle::PluginBundle,
         events::{
             io::{EventBuffer, InputEvents, OutputEvents},
-            EventHeader, Pckn, UnknownEvent,
+            Event, EventHeader, Pckn, UnknownEvent,
         },
         host::{
             AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,

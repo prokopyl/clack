@@ -164,7 +164,7 @@ impl<T> Match<T> {
     /// use clack_common::events::Match;
     ///
     /// assert_eq!(Match::Specific(42).as_specific(), Some(&42));
-    /// assert_eq!(Match::All.as_specific(), None);
+    /// assert_eq!(Match::<u16>::All.as_specific(), None);
     /// ```
     pub const fn as_specific(&self) -> Option<&T> {
         match self {
@@ -181,7 +181,7 @@ impl<T> Match<T> {
     /// use clack_common::events::Match;
     ///
     /// assert_eq!(Match::Specific(42).into_specific(), Some(42));
-    /// assert_eq!(Match::All.into_specific(), None);
+    /// assert_eq!(Match::<u16>::All.into_specific(), None);
     /// ```
     pub fn into_specific(self) -> Option<T> {
         match self {
@@ -256,6 +256,18 @@ impl Match<u16> {
             Specific(raw as u16)
         }
     }
+
+    /// Returns the raw C-FFI compatible `i16` type that corresponds to this [`Match`].
+    ///
+    /// If this matches a specific value, it is returned. Otherwise, if this matches all values, it
+    /// returns `-1`.
+    #[inline]
+    pub const fn to_raw(&self) -> i16 {
+        match self {
+            Specific(raw) => *raw as i16,
+            All => -1,
+        }
+    }
 }
 
 impl Match<u32> {
@@ -266,6 +278,18 @@ impl Match<u32> {
             All
         } else {
             Specific(raw as u32)
+        }
+    }
+
+    /// Returns the raw C-FFI compatible `i32` type that corresponds to this [`Match`].
+    ///
+    /// If this matches a specific value, it is returned. Otherwise, if this matches all values, it
+    /// returns `-1`.
+    #[inline]
+    pub const fn to_raw(&self) -> i32 {
+        match self {
+            Specific(raw) => *raw as i32,
+            All => -1,
         }
     }
 }

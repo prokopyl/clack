@@ -215,7 +215,7 @@ const _: () = {
 const _: () = {
     use raw_window_handle_06::{
         AppKitWindowHandle, HandleError, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
-        WindowHandle, XlibWindowHandle,
+        XlibWindowHandle,
     };
     use std::num::NonZeroIsize;
     use std::ptr::NonNull;
@@ -246,7 +246,7 @@ const _: () = {
     }
 
     impl<'a> Window<'a> {
-        /// Creates a [`Window`] from any window object implementing [`HasWindowHandle`].
+        /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
@@ -254,7 +254,7 @@ const _: () = {
             Self::from_window_handle(window.raw_window_handle().ok()?)
         }
 
-        /// Creates a [`Window`] from a [`WindowHandle`].
+        /// Creates a [`Window`] from a [`RawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]

@@ -1,5 +1,5 @@
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, Pckn, UnknownEvent};
+use crate::events::{Event, Match, Pckn, UnknownEvent};
 use clap_sys::events::*;
 
 mod inner;
@@ -48,6 +48,8 @@ impl NoteOnEvent {
         self.inner.inner.velocity = velocity;
         self
     }
+
+    self::impl_note_helpers!();
 }
 
 impl NoteOffEvent {
@@ -57,6 +59,8 @@ impl NoteOffEvent {
             inner: NoteEvent::new(time, pckn, velocity),
         }
     }
+
+    self::impl_note_helpers!();
 }
 
 impl NoteChokeEvent {
@@ -66,6 +70,8 @@ impl NoteChokeEvent {
             inner: NoteEvent::new(time, pckn, 0.0),
         }
     }
+
+    self::impl_note_helpers!();
 }
 
 impl NoteEndEvent {
@@ -75,6 +81,8 @@ impl NoteEndEvent {
             inner: NoteEvent::new(time, pckn, 0.0),
         }
     }
+
+    self::impl_note_helpers!();
 }
 
 // SAFETY: this matches the type ID and event space
@@ -101,7 +109,7 @@ unsafe impl Event for NoteEndEvent {
     type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-self::impl_note!(NoteOnEvent);
-self::impl_note!(NoteOffEvent);
-self::impl_note!(NoteChokeEvent);
-self::impl_note!(NoteEndEvent);
+self::impl_note_traits!(NoteOnEvent);
+self::impl_note_traits!(NoteOffEvent);
+self::impl_note_traits!(NoteChokeEvent);
+self::impl_note_traits!(NoteEndEvent);
