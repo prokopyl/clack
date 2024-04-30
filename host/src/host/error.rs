@@ -86,18 +86,3 @@ impl<H: HostHandlers> From<ProcessingStartError<H>> for HostError {
         Self::StartProcessingFailed
     }
 }
-
-#[cfg(feature = "clack-plugin")]
-impl From<HostError> for clack_plugin::plugin::PluginError {
-    fn from(value: HostError) -> Self {
-        clack_plugin::plugin::PluginError::Message(value.msg())
-    }
-}
-
-#[cfg(feature = "clack-plugin")]
-impl<H: HostHandlers> From<ProcessingStartError<H>> for clack_plugin::plugin::PluginError {
-    #[inline]
-    fn from(_: ProcessingStartError<H>) -> Self {
-        HostError::StartProcessingFailed.into()
-    }
-}

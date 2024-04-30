@@ -32,7 +32,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         _host: HostMainThreadHandle<'a>,
         _shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
-        Err(PluginError::AlreadyActivated)
+        Err(PluginError::Message("Some error"))
     }
 }
 
