@@ -13,6 +13,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::extensions::wrapper::HostWrapper;
 use crate::plugin::instance::PluginInstanceInner;
 pub use clack_common::process::*;
 
@@ -24,7 +25,7 @@ pub enum PluginAudioProcessor<H: HostHandlers> {
     Poisoned,
 }
 
-impl<'a, H: 'a + HostHandlers> PluginAudioProcessor<H> {
+impl<H: HostHandlers> PluginAudioProcessor<H> {
     #[inline]
     pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<H>, HostError> {
         match self {
@@ -62,29 +63,36 @@ impl<'a, H: 'a + HostHandlers> PluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared_handler(&self) -> &<H as HostHandlers>::Shared<'_> {
+    pub fn use_shared_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
+    ) -> R {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.shared(),
-            Stopped(s) => s.shared(),
+            Started(s) => s.use_shared_handler(access),
+            Stopped(s) => s.use_shared_handler(access),
         }
     }
 
-    #[inline]
-    pub fn handler(&self) -> &<H as HostHandlers>::AudioProcessor<'_> {
+    pub fn use_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.handler(),
-            Stopped(s) => s.handler(),
+            Started(s) => s.use_handler(access),
+            Stopped(s) => s.use_handler(access),
         }
     }
 
-    #[inline]
-    pub fn handler_mut(&mut self) -> &mut <H as HostHandlers>::AudioProcessor<'_> {
+    pub fn use_handler_mut<'s, R>(
+        &'s mut self,
+        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
         match self {
             Poisoned => panic!("Plugin audio processor was poisoned"),
-            Started(s) => s.handler_mut(),
-            Stopped(s) => s.handler_mut(),
+            Started(s) => s.use_handler_mut(access),
+            Stopped(s) => s.use_handler_mut(access),
         }
     }
 
@@ -220,14 +228,14 @@ impl<'a, H: 'a + HostHandlers> PluginAudioProcessor<H> {
     }
 }
 
-impl<'a, H: 'a + HostHandlers> From<StartedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
+impl<H: HostHandlers> From<StartedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
     #[inline]
     fn from(p: StartedPluginAudioProcessor<H>) -> Self {
         Started(p)
     }
 }
 
-impl<'a, H: 'a + HostHandlers> From<StoppedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
+impl<H: HostHandlers> From<StoppedPluginAudioProcessor<H>> for PluginAudioProcessor<H> {
     #[inline]
     fn from(p: StoppedPluginAudioProcessor<H>) -> Self {
         Stopped(p)
@@ -305,40 +313,38 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared(&self) -> &<H as HostHandlers>::Shared<'_> {
-        self.inner.as_ref().unwrap().wrapper().shared()
+    fn wrapper(&self) -> &HostWrapper<H> {
+        self.inner.as_ref().unwrap().wrapper()
     }
 
     #[inline]
-    pub fn handler(&self) -> &<H as HostHandlers>::AudioProcessor<'_> {
-        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
-        // we can guarantee there are no mutable references anywhere
-        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe {
-            self.inner
-                .as_ref()
-                .unwrap()
-                .wrapper()
-                .audio_processor()
-                .unwrap()
-                .as_ref()
-        }
+    pub fn use_shared_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
+    ) -> R {
+        access(self.wrapper().shared())
     }
 
     #[inline]
-    pub fn handler_mut(&mut self) -> &mut <H as HostHandlers>::AudioProcessor<'_> {
+    pub fn use_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe {
-            self.inner
-                .as_ref()
-                .unwrap()
-                .wrapper()
-                .audio_processor()
-                .unwrap()
-                .as_mut()
-        }
+        unsafe { access(self.wrapper().audio_processor().unwrap().as_ref()) }
+    }
+
+    #[inline]
+    pub fn use_handler_mut<'s, R>(
+        &'s mut self,
+        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
+        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
+        // we can guarantee there are no mutable references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { access(self.wrapper().audio_processor().unwrap().as_mut()) }
     }
 
     #[inline]
@@ -371,7 +377,7 @@ pub struct StoppedPluginAudioProcessor<H: HostHandlers> {
     _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
-impl<'a, H: 'a + HostHandlers> StoppedPluginAudioProcessor<H> {
+impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
     #[inline]
     pub(crate) fn new(inner: Arc<PluginInstanceInner<H>>) -> Self {
         Self {
@@ -406,24 +412,33 @@ impl<'a, H: 'a + HostHandlers> StoppedPluginAudioProcessor<H> {
     }
 
     #[inline]
-    pub fn shared(&self) -> &<H as HostHandlers>::Shared<'_> {
-        self.inner.wrapper().shared()
+    pub fn use_shared_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
+    ) -> R {
+        access(self.inner.wrapper().shared())
     }
 
     #[inline]
-    pub fn handler(&self) -> &<H as HostHandlers>::AudioProcessor<'_> {
-        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
-        // we can guarantee there are no mutable references anywhere
-        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { self.inner.wrapper().audio_processor().unwrap().as_ref() }
-    }
-
-    #[inline]
-    pub fn handler_mut(&mut self) -> &mut <H as HostHandlers>::AudioProcessor<'_> {
+    pub fn use_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { self.inner.wrapper().audio_processor().unwrap().as_mut() }
+        unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_ref()) }
+    }
+
+    #[inline]
+    pub fn use_handler_mut<'s, R>(
+        &'s mut self,
+        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
+        // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
+        // we can guarantee there are no mutable references anywhere
+        // PANIC: This struct exists, therefore we are guaranteed the plugin is active
+        unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_mut()) }
     }
 
     #[inline]

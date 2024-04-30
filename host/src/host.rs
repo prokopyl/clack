@@ -176,10 +176,10 @@
 //! /* ... */
 //!
 //! // Let's check if the plugin requested a callback, by accessing our shared host data.
-//! let shared: &MyHostShared = plugin_instance.shared_handler();
+//! let callback_requested: &AtomicBool = plugin_instance.use_shared_handler(|h| &h.callback_requested);
 //!
 //! // This fetches the previous value and sets it to false in a single atomic operation.
-//! if shared.callback_requested.fetch_and(false, Ordering::SeqCst) {
+//! if callback_requested.fetch_and(false, Ordering::SeqCst) {
 //!     plugin_instance.call_on_main_thread_callback();
 //! }
 //!

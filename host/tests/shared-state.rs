@@ -80,17 +80,11 @@ impl<'a> SharedHandler<'a> for MyHostShared {
     }
 }
 
-struct MyHostMainThread<'a> {
-    shared: &'a MyHostShared,
-}
-
-impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {}
-
 struct MyHost;
 impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared;
 
-    type MainThread<'a> = MyHostMainThread<'a>;
+    type MainThread<'a> = ();
     type AudioProcessor<'a> = ();
 }
 
@@ -106,12 +100,12 @@ pub fn handles_drop_order() {
         |_| MyHostShared {
             state_ext: OnceLock::new(),
         },
-        |shared| MyHostMainThread { shared },
+        |_| (),
         &bundle,
         CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
         &host_info,
     )
     .unwrap();
 
-    let _ext = plugin_instance.handler().shared.state_ext.get();
+    let _ext = plugin_instance.use_shared_handler(|s| s.state_ext.get());
 }

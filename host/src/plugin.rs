@@ -132,22 +132,31 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn shared_handler(&self) -> &<H as HostHandlers>::Shared<'_> {
-        self.inner.get().wrapper().shared()
+    pub fn use_shared_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
+    ) -> R {
+        access(self.inner.get().wrapper().shared())
     }
 
     #[inline]
-    pub fn handler(&self) -> &<H as HostHandlers>::MainThread<'_> {
+    pub fn use_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
+    ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.inner.get().wrapper().main_thread().as_ref() }
+        unsafe { access(self.inner.get().wrapper().main_thread().as_ref()) }
     }
 
     #[inline]
-    pub fn handler_mut(&mut self) -> &mut <H as HostHandlers>::MainThread<'_> {
+    pub fn use_handler_mut<'s, R>(
+        &'s mut self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
+    ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { self.inner.get().wrapper().main_thread().as_mut() }
+        unsafe { access(self.inner.get().wrapper().main_thread().as_mut()) }
     }
 
     #[inline]

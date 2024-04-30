@@ -174,8 +174,7 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     let _stream = activate_to_stream(&mut instance)?;
 
     let gui = instance
-        .handler()
-        .gui
+        .use_handler(|h| h.gui)
         .map(|gui| Gui::new(gui, &mut instance.plugin_handle()));
 
     let gui = gui.and_then(|gui| Some((gui.needs_floating()?, gui)));
@@ -235,11 +234,7 @@ fn run_gui_embedded(
 
     let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
 
-    let main_thread = instance.handler();
-
-    let timers = main_thread
-        .timer_support
-        .map(|ext| (main_thread.timers.clone(), ext));
+    let timers = instance.use_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
 
     event_loop.run(move |event, target| {
         while let Ok(message) = receiver.try_recv() {

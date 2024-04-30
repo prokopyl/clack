@@ -67,8 +67,7 @@
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
 //! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared })?;
 //!
-//! let state_ext = plugin_instance.shared_handler().state_ext
-//!     .get()
+//! let state_ext = plugin_instance.use_shared_handler(|h| h.state_ext.get())
 //!     .expect("Plugin is not yet instantiated")
 //!     .expect("Plugin does not implement State extension");
 //!
