@@ -49,13 +49,25 @@ impl MidiEvent {
     }
 
     #[inline]
+    pub fn with_data(mut self, data: [u8; 3]) -> Self {
+        self.inner.data = data;
+        self
+    }
+
+    #[inline]
     pub fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
     #[inline]
     pub fn set_port_index(&mut self, port_index: u16) {
+        self.inner.port_index = port_index
+    }
+
+    #[inline]
+    pub fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
+        self
     }
 
     impl_event_helpers!(clap_event_midi);
@@ -101,13 +113,13 @@ impl AsRef<UnknownEvent> for MidiSysExEvent {
 
 impl MidiSysExEvent {
     #[inline]
-    pub fn new(header: EventHeader<Self>, port_index: u16, buffer: &[u8]) -> Self {
+    pub fn new(header: EventHeader<Self>, port_index: u16, data: &[u8]) -> Self {
         Self {
             inner: clap_event_midi_sysex {
                 header: header.into_raw(),
                 port_index,
-                buffer: buffer.as_ptr(),
-                size: buffer.len() as u32,
+                buffer: data.as_ptr(),
+                size: data.len() as u32,
             },
         }
     }
@@ -120,6 +132,12 @@ impl MidiSysExEvent {
     #[inline]
     pub fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
+    }
+
+    #[inline]
+    pub fn with_port_index(mut self, port_index: u16) -> Self {
+        self.inner.port_index = port_index;
+        self
     }
 
     #[inline]
@@ -190,6 +208,17 @@ impl AsRef<UnknownEvent> for Midi2Event {
 
 impl Midi2Event {
     #[inline]
+    pub fn new(header: EventHeader<Self>, port_index: u16, data: [u32; 4]) -> Self {
+        Self {
+            inner: clap_event_midi2 {
+                header: header.into_raw(),
+                port_index,
+                data,
+            },
+        }
+    }
+
+    #[inline]
     pub fn data(&self) -> [u32; 4] {
         self.inner.data
     }
@@ -200,6 +229,12 @@ impl Midi2Event {
     }
 
     #[inline]
+    pub fn with_data(mut self, data: [u32; 4]) -> Self {
+        self.inner.data = data;
+        self
+    }
+
+    #[inline]
     pub fn port_index(&self) -> u16 {
         self.inner.port_index
     }
@@ -207,6 +242,12 @@ impl Midi2Event {
     #[inline]
     pub fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
+    }
+
+    #[inline]
+    pub fn with_port_index(mut self, port_index: u16) -> Self {
+        self.inner.port_index = port_index;
+        self
     }
 
     impl_event_helpers!(clap_event_midi2);
