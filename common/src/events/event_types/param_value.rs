@@ -1,3 +1,4 @@
+use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::Cookie;
@@ -94,15 +95,7 @@ impl ParamValueEvent {
         self.inner.value
     }
 
-    #[inline]
-    pub fn from_raw(raw: clap_event_param_value) -> Self {
-        Self { inner: raw }
-    }
-
-    #[inline]
-    pub fn into_raw(self) -> clap_event_param_value {
-        self.inner
-    }
+    impl_event_helpers!(clap_event_param_value);
 }
 
 impl PartialEq for ParamValueEvent {
@@ -218,15 +211,7 @@ impl ParamModEvent {
         self.inner.amount
     }
 
-    #[inline]
-    pub fn from_raw(raw: clap_event_param_mod) -> Self {
-        Self { inner: raw }
-    }
-
-    #[inline]
-    pub fn into_raw(self) -> clap_event_param_mod {
-        self.inner
-    }
+    impl_event_helpers!(clap_event_param_mod);
 }
 
 impl PartialEq for ParamModEvent {

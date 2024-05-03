@@ -1,3 +1,4 @@
+use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader, Pckn, UnknownEvent};
 use clap_sys::events::*;
@@ -103,6 +104,8 @@ impl NoteExpressionEvent {
     pub fn value(&self) -> f64 {
         self.inner.value
     }
+
+    impl_event_helpers!(clap_event_note_expression);
 }
 
 impl PartialEq for NoteExpressionEvent {

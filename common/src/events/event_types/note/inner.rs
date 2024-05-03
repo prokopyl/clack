@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct NoteEvent<E> {
+pub(crate) struct NoteEvent<E> {
     pub inner: clap_event_note,
     _event: PhantomData<E>,
 }
@@ -26,7 +26,6 @@ impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
         }
     }
 
-    // TODO: move this to macro that makes const-compatible versions of trait methods.
     #[inline]
     pub const fn header(&self) -> &EventHeader<E> {
         // SAFETY: this type guarantees the event header is valid
@@ -178,9 +177,27 @@ macro_rules! impl_note_helpers {
 
         #[inline]
         pub const fn from_raw(raw: &clap_event_note) -> Self {
+            crate::events::ensure_event_matches_const::<Self>(&raw.header);
+
             Self {
                 inner: NoteEvent::from_raw(raw),
             }
+        }
+
+        #[inline]
+        pub const fn from_raw_ref(raw: &clap_event_note) -> &Self {
+            crate::events::ensure_event_matches_const::<Self>(&raw.header);
+
+            // SAFETY: This type is #[repr(C)]-compatible with clap_event_note
+            unsafe { &*(raw as *const clap_event_note as *const Self) }
+        }
+
+        #[inline]
+        pub fn from_raw_mut(raw: &mut clap_event_note) -> &mut Self {
+            crate::events::ensure_event_matches::<Self>(&raw.header);
+
+            // SAFETY: This type is #[repr(C)]-compatible with clap_event_note
+            unsafe { &mut *(raw as *mut clap_event_note as *mut Self) }
         }
     };
 }

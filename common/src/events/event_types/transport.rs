@@ -64,26 +64,39 @@ impl AsRef<UnknownEvent> for TransportEvent {
 
 impl TransportEvent {
     #[inline]
-    pub fn from_raw(raw: clap_event_transport) -> Self {
-        // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { core::mem::transmute(raw) }
+    pub const fn as_raw(&self) -> &clap_event_transport {
+        // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
+        unsafe { &*(self as *const Self as *const clap_event_transport) }
     }
 
     #[inline]
-    pub fn from_raw_ref(raw: &clap_event_transport) -> &Self {
-        // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { core::mem::transmute(raw) }
+    pub fn as_raw_mut(&mut self) -> &mut clap_event_transport {
+        // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
+        unsafe { &mut *(self as *mut Self as *mut clap_event_transport) }
     }
 
     #[inline]
-    pub fn into_raw(self) -> clap_event_transport {
-        // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { core::mem::transmute(self) }
+    pub const fn from_raw(raw: &clap_event_transport) -> Self {
+        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+
+        // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
+        let this = unsafe { &*(raw as *const clap_event_transport as *const Self) };
+        *this
     }
 
     #[inline]
-    pub fn as_raw_ref(&self) -> &clap_event_transport {
-        // SAFETY: TransportEvent is repr(C) and has the same memory representation
-        unsafe { core::mem::transmute(self) }
+    pub const fn from_raw_ref(raw: &clap_event_transport) -> &Self {
+        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+
+        // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
+        unsafe { &*(raw as *const clap_event_transport as *const Self) }
+    }
+
+    #[inline]
+    pub fn from_raw_mut(raw: &mut clap_event_transport) -> &mut Self {
+        crate::events::ensure_event_matches::<Self>(&raw.header);
+
+        // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
+        unsafe { &mut *(raw as *mut clap_event_transport as *mut Self) }
     }
 }

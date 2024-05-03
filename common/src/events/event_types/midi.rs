@@ -1,3 +1,4 @@
+use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::slice_from_external_parts;
@@ -48,16 +49,6 @@ impl MidiEvent {
     }
 
     #[inline]
-    pub fn from_raw(raw: clap_event_midi) -> Self {
-        Self { inner: raw }
-    }
-
-    #[inline]
-    pub fn into_raw(self) -> clap_event_midi {
-        self.inner
-    }
-
-    #[inline]
     pub fn port_index(&self) -> u16 {
         self.inner.port_index
     }
@@ -66,6 +57,8 @@ impl MidiEvent {
     pub fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
     }
+
+    impl_event_helpers!(clap_event_midi);
 }
 
 impl PartialEq for MidiEvent {
@@ -107,14 +100,6 @@ impl AsRef<UnknownEvent> for MidiSysExEvent {
 }
 
 impl MidiSysExEvent {
-    /// # Safety
-    /// This function allows creating an event from an arbitrary lifetime.
-    /// Users of this method must ensure that the sysex buffer is valid for requested lifetime
-    #[inline]
-    pub unsafe fn from_raw(raw: clap_event_midi_sysex) -> Self {
-        Self { inner: raw }
-    }
-
     #[inline]
     pub fn new(header: EventHeader<Self>, port_index: u16, buffer: &[u8]) -> Self {
         Self {
@@ -161,10 +146,7 @@ impl MidiSysExEvent {
         unsafe { slice_from_external_parts(self.inner.buffer, self.inner.size as usize) }
     }
 
-    #[inline]
-    pub fn into_raw(self) -> clap_event_midi_sysex {
-        self.inner
-    }
+    impl_event_helpers!(clap_event_midi_sysex);
 }
 
 impl PartialEq for MidiSysExEvent {
@@ -218,11 +200,6 @@ impl Midi2Event {
     }
 
     #[inline]
-    pub fn from_raw(raw: clap_event_midi2) -> Self {
-        Self { inner: raw }
-    }
-
-    #[inline]
     pub fn port_index(&self) -> u16 {
         self.inner.port_index
     }
@@ -232,10 +209,7 @@ impl Midi2Event {
         self.inner.port_index = port_index;
     }
 
-    #[inline]
-    pub fn into_raw(self) -> clap_event_midi2 {
-        self.inner
-    }
+    impl_event_helpers!(clap_event_midi2);
 }
 
 impl PartialEq for Midi2Event {

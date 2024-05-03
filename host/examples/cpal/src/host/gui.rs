@@ -138,6 +138,7 @@ impl Gui {
     }
 
     /// Opens the plugin's GUI in embedded mode, and embeds it in a newly created window.
+    #[allow(unsafe_code)]
     pub fn open_embedded(
         &mut self,
         plugin: &mut PluginMainThreadHandle,
@@ -169,7 +170,8 @@ impl Gui {
             .with_resizable(self.is_resizeable)
             .build(event_loop)?;
 
-        gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
+        // SAFETY: We ensure the window is valid for the lifetime of the plugin window.
+        unsafe { gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())? };
         // Some plugins don't show anything until this is called, others return an error.
         let _ = gui.show(plugin);
         self.is_open = true;

@@ -271,7 +271,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
             },
             frames_count,
             transport: transport
-                .map(|e| e.as_raw_ref() as *const _)
+                .map(|e| e.as_raw() as *const _)
                 .unwrap_or(core::ptr::null()),
             audio_inputs_count: audio_inputs.as_raw_buffers().len() as u32,
             audio_outputs_count: audio_outputs.as_raw_buffers().len() as u32,
