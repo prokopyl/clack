@@ -1,6 +1,7 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::events::{EventFlags, EventHeader};
+use clack_plugin::prelude::Pckn;
 use clack_plugin::utils::Cookie;
 use clack_test_host::TestHost;
 
@@ -57,13 +58,10 @@ pub fn it_works() {
 
     host.input_events_mut().push(&ParamValueEvent::new(
         EventHeader::new_core(0, EventFlags::empty()),
-        Cookie::empty(),
-        -1,
         1,
-        -1,
-        -1,
-        -1,
+        Pckn::match_all(),
         0.5,
+        Cookie::empty(),
     ));
 
     host.inputs_mut()[0].fill(69f32);

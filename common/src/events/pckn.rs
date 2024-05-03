@@ -4,7 +4,7 @@ use Match::*;
 
 /// A Port, Channel, Key, NoteId (PCKN) tuple.
 ///
-/// CLAP addresses notes and voices using this 4-value tuple: `port`, `channel`, `key` and `note_id`.
+/// CLAP addresses notes and voices use this 4-value tuple: `port`, `channel`, `key` and `note_id`.
 /// Each of the components in this PCKN can either be a specific value, or a wildcard that matches
 /// any value in that part of the tuple. This is representing using the [`Match`] enum.
 ///
@@ -67,16 +67,10 @@ impl Pckn {
     /// assert!(Pckn::new(0u16, 0u16, 60u16, 42u32).matches(&Pckn::new(0u16, 0u16, 60u16, Match::All)));
     /// ```
     pub fn matches(&self, other: &Pckn) -> bool {
-        if !self.port.matches(&other.port) {
-            return false;
-        }
-        if !self.channel.matches(&other.channel) {
-            return false;
-        }
-        if !self.key.matches(&other.key) {
-            return false;
-        }
-        self.note_id.matches(&other.note_id)
+        self.port.matches(&other.port)
+            && self.channel.matches(&other.channel)
+            && self.key.matches(&other.key)
+            && self.note_id.matches(&other.note_id)
     }
 
     // Raw accessors
@@ -293,3 +287,97 @@ impl Match<u32> {
         }
     }
 }
+
+macro_rules! impl_event_pckn {
+    () => {
+        #[inline]
+        pub const fn pckn(&self) -> Pckn {
+            Pckn::from_raw(
+                self.inner.port_index,
+                self.inner.channel,
+                self.inner.key,
+                self.inner.note_id,
+            )
+        }
+
+        #[inline]
+        pub fn set_pckn(&mut self, pckn: Pckn) {
+            self.inner.port_index = pckn.raw_port();
+            self.inner.channel = pckn.raw_channel();
+            self.inner.key = pckn.raw_key();
+            self.inner.note_id = pckn.raw_note_id();
+        }
+
+        #[inline]
+        pub fn with_pckn(mut self, pckn: Pckn) -> Self {
+            self.set_pckn(pckn);
+            self
+        }
+
+        #[inline]
+        pub const fn port(&self) -> Match<u16> {
+            Match::<u16>::from_raw(self.inner.port_index)
+        }
+
+        #[inline]
+        pub fn set_port(&mut self, port: Match<u16>) {
+            self.inner.port_index = port.to_raw()
+        }
+
+        #[inline]
+        pub const fn with_port(mut self, port: Match<u16>) -> Self {
+            self.inner.port_index = port.to_raw();
+            self
+        }
+
+        #[inline]
+        pub const fn channel(&self) -> Match<u16> {
+            Match::<u16>::from_raw(self.inner.channel)
+        }
+
+        #[inline]
+        pub fn set_channel(&mut self, channel: Match<u16>) {
+            self.inner.channel = channel.to_raw();
+        }
+
+        #[inline]
+        pub const fn with_channel(mut self, channel: Match<u16>) -> Self {
+            self.inner.channel = channel.to_raw();
+            self
+        }
+
+        #[inline]
+        pub const fn key(&self) -> Match<u16> {
+            Match::<u16>::from_raw(self.inner.key)
+        }
+
+        #[inline]
+        pub fn set_key(&mut self, key: Match<u16>) {
+            self.inner.key = key.to_raw();
+        }
+
+        #[inline]
+        pub const fn with_key(mut self, key: Match<u16>) -> Self {
+            self.inner.key = key.to_raw();
+            self
+        }
+
+        #[inline]
+        pub const fn note_id(&self) -> Match<u32> {
+            Match::<u32>::from_raw(self.inner.note_id)
+        }
+
+        #[inline]
+        pub fn set_note_id(&mut self, note_id: Match<u32>) {
+            self.inner.note_id = note_id.to_raw();
+        }
+
+        #[inline]
+        pub const fn with_note_id(mut self, note_id: Match<u32>) -> Self {
+            self.inner.note_id = note_id.to_raw();
+            self
+        }
+    };
+}
+
+pub(crate) use impl_event_pckn;

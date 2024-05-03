@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader, Pckn, UnknownEvent};
+use crate::events::{impl_event_pckn, Event, EventHeader, Match, Pckn, UnknownEvent};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -19,7 +19,7 @@ pub enum NoteExpressionType {
 
 impl NoteExpressionType {
     #[inline]
-    pub fn from_raw(raw: clap_note_expression) -> Option<Self> {
+    pub const fn from_raw(raw: clap_note_expression) -> Option<Self> {
         use NoteExpressionType::*;
         match raw {
             CLAP_NOTE_EXPRESSION_VOLUME => Some(Volume),
@@ -33,7 +33,7 @@ impl NoteExpressionType {
     }
 
     #[inline]
-    pub fn into_raw(self) -> clap_note_expression {
+    pub const fn into_raw(self) -> clap_note_expression {
         self as clap_note_expression
     }
 }
@@ -57,7 +57,13 @@ impl AsRef<UnknownEvent> for NoteExpressionEvent {
 }
 
 impl NoteExpressionEvent {
-    pub fn new(time: u32, pckn: Pckn, expression_type: NoteExpressionType, value: f64) -> Self {
+    #[inline]
+    pub const fn new(
+        time: u32,
+        pckn: Pckn,
+        expression_type: NoteExpressionType,
+        value: f64,
+    ) -> Self {
         Self {
             inner: clap_event_note_expression {
                 header: EventHeader::<Self>::new(time).into_raw(),
@@ -70,42 +76,41 @@ impl NoteExpressionEvent {
             },
         }
     }
+
     #[inline]
-    pub fn expression_type(&self) -> Option<NoteExpressionType> {
+    pub const fn expression_type(&self) -> Option<NoteExpressionType> {
         NoteExpressionType::from_raw(self.inner.expression_id)
     }
 
     #[inline]
-    pub fn note_id(&self) -> i32 {
-        self.inner.note_id
+    pub fn set_expression_type(&mut self, expression_type: NoteExpressionType) {
+        self.inner.expression_id = expression_type.into_raw()
     }
 
     #[inline]
-    pub fn port_index(&self) -> i16 {
-        self.inner.port_index
+    pub const fn with_expression_type(mut self, expression_type: NoteExpressionType) -> Self {
+        self.inner.expression_id = expression_type.into_raw();
+        self
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: i16) {
-        self.inner.port_index = port_index;
-    }
-
-    #[inline]
-    pub fn key(&self) -> i16 {
-        self.inner.key
-    }
-
-    #[inline]
-    pub fn channel(&self) -> i16 {
-        self.inner.channel
-    }
-
-    #[inline]
-    pub fn value(&self) -> f64 {
+    pub const fn value(&self) -> f64 {
         self.inner.value
     }
 
+    #[inline]
+    pub fn set_value(&mut self, value: f64) {
+        self.inner.value = value
+    }
+
+    #[inline]
+    pub const fn with_value(mut self, value: f64) -> Self {
+        self.inner.value = value;
+        self
+    }
+
     impl_event_helpers!(clap_event_note_expression);
+    impl_event_pckn!();
 }
 
 impl PartialEq for NoteExpressionEvent {

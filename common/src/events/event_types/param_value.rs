@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader, UnknownEvent};
+use crate::events::{impl_event_pckn, Event, EventHeader, Match, Pckn, UnknownEvent};
 use crate::utils::Cookie;
 use clap_sys::events::{
     clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
@@ -29,73 +29,78 @@ impl AsRef<UnknownEvent> for ParamValueEvent {
 }
 
 impl ParamValueEvent {
-    #[allow(clippy::too_many_arguments)]
     #[inline]
-    pub fn new(
+    pub const fn new(
         header: EventHeader<Self>,
-        cookie: Cookie,
-        note_id: i32,
         param_id: u32,
-        port_index: i16,
-        channel: i16,
-        key: i16,
+        pckn: Pckn,
         value: f64,
+        cookie: Cookie,
     ) -> Self {
         Self {
             inner: clap_event_param_value {
                 header: header.into_raw(),
-                cookie: cookie.as_raw(),
-                note_id,
                 param_id,
-                port_index,
-                key,
-                channel,
+                note_id: pckn.raw_note_id(),
+                port_index: pckn.raw_port(),
+                key: pckn.raw_key(),
+                channel: pckn.raw_channel(),
                 value,
+                cookie: cookie.as_raw(),
             },
         }
     }
 
     #[inline]
-    pub fn cookie(&self) -> Cookie {
-        Cookie::from_raw(self.inner.cookie)
-    }
-
-    #[inline]
-    pub fn param_id(&self) -> u32 {
+    pub const fn param_id(&self) -> u32 {
         self.inner.param_id
     }
 
     #[inline]
-    pub fn note_id(&self) -> i32 {
-        self.inner.note_id
+    pub fn set_param_id(&mut self, param_id: u32) {
+        self.inner.param_id = param_id
     }
 
     #[inline]
-    pub fn port_index(&self) -> i16 {
-        self.inner.port_index
+    pub const fn with_param_id(mut self, param_id: u32) -> Self {
+        self.inner.param_id = param_id;
+        self
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: i16) {
-        self.inner.port_index = port_index;
-    }
-
-    #[inline]
-    pub fn key(&self) -> i16 {
-        self.inner.key
-    }
-
-    #[inline]
-    pub fn channel(&self) -> i16 {
-        self.inner.channel
-    }
-
-    #[inline]
-    pub fn value(&self) -> f64 {
+    pub const fn value(&self) -> f64 {
         self.inner.value
     }
 
+    #[inline]
+    pub fn set_value(&mut self, value: f64) {
+        self.inner.value = value
+    }
+
+    #[inline]
+    pub const fn with_value(mut self, value: f64) -> Self {
+        self.inner.value = value;
+        self
+    }
+
     impl_event_helpers!(clap_event_param_value);
+    impl_event_pckn!();
+
+    #[inline]
+    pub const fn cookie(&self) -> Cookie {
+        Cookie::from_raw(self.inner.cookie)
+    }
+
+    #[inline]
+    pub fn set_cookie(&mut self, cookie: Cookie) {
+        self.inner.cookie = cookie.as_raw()
+    }
+
+    #[inline]
+    pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
+        self.inner.cookie = cookie.as_raw();
+        self
+    }
 }
 
 impl PartialEq for ParamValueEvent {
@@ -146,72 +151,77 @@ impl AsRef<UnknownEvent> for ParamModEvent {
 
 impl ParamModEvent {
     #[inline]
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub const fn new(
         header: EventHeader<Self>,
-        cookie: Cookie,
-        note_id: i32,
         param_id: u32,
-        port_index: i16,
-        channel: i16,
-        key: i16,
+        pckn: Pckn,
         amount: f64,
+        cookie: Cookie,
     ) -> Self {
         Self {
             inner: clap_event_param_mod {
                 header: header.into_raw(),
-                cookie: cookie.as_raw(),
-                note_id,
                 param_id,
-                port_index,
-                key,
-                channel,
+                note_id: pckn.raw_note_id(),
+                port_index: pckn.raw_port(),
+                key: pckn.raw_key(),
+                channel: pckn.raw_channel(),
                 amount,
+                cookie: cookie.as_raw(),
             },
         }
     }
 
     #[inline]
-    pub fn cookie(&self) -> Cookie {
-        Cookie::from_raw(self.inner.cookie)
-    }
-
-    #[inline]
-    pub fn param_id(&self) -> u32 {
+    pub const fn param_id(&self) -> u32 {
         self.inner.param_id
     }
 
     #[inline]
-    pub fn port_index(&self) -> i16 {
-        self.inner.port_index
+    pub fn set_param_id(&mut self, param_id: u32) {
+        self.inner.param_id = param_id
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: i16) {
-        self.inner.port_index = port_index;
+    pub const fn with_param_id(mut self, param_id: u32) -> Self {
+        self.inner.param_id = param_id;
+        self
     }
 
     #[inline]
-    pub fn note_id(&self) -> i32 {
-        self.inner.note_id
-    }
-
-    #[inline]
-    pub fn key(&self) -> i16 {
-        self.inner.key
-    }
-
-    #[inline]
-    pub fn channel(&self) -> i16 {
-        self.inner.channel
-    }
-
-    #[inline]
-    pub fn amount(&self) -> f64 {
+    pub const fn amount(&self) -> f64 {
         self.inner.amount
     }
 
+    #[inline]
+    pub fn set_amount(&mut self, amount: f64) {
+        self.inner.amount = amount
+    }
+
+    #[inline]
+    pub const fn with_amount(mut self, amount: f64) -> Self {
+        self.inner.amount = amount;
+        self
+    }
+
     impl_event_helpers!(clap_event_param_mod);
+    impl_event_pckn!();
+
+    #[inline]
+    pub const fn cookie(&self) -> Cookie {
+        Cookie::from_raw(self.inner.cookie)
+    }
+
+    #[inline]
+    pub fn set_cookie(&mut self, cookie: Cookie) {
+        self.inner.cookie = cookie.as_raw()
+    }
+
+    #[inline]
+    pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
+        self.inner.cookie = cookie.as_raw();
+        self
+    }
 }
 
 impl PartialEq for ParamModEvent {
@@ -275,6 +285,17 @@ impl ParamGestureBeginEvent {
     pub const fn param_id(&self) -> u32 {
         self.inner.param_id
     }
+
+    #[inline]
+    pub fn set_param_id(&mut self, param_id: u32) {
+        self.inner.param_id = param_id
+    }
+
+    #[inline]
+    pub const fn with_param_id(mut self, param_id: u32) -> Self {
+        self.inner.param_id = param_id;
+        self
+    }
 }
 
 impl Debug for ParamGestureBeginEvent {
@@ -328,6 +349,17 @@ impl ParamGestureEndEvent {
     #[inline]
     pub const fn param_id(&self) -> u32 {
         self.inner.param_id
+    }
+
+    #[inline]
+    pub fn set_param_id(&mut self, param_id: u32) {
+        self.inner.param_id = param_id
+    }
+
+    #[inline]
+    pub const fn with_param_id(mut self, param_id: u32) -> Self {
+        self.inner.param_id = param_id;
+        self
     }
 }
 

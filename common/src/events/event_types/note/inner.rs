@@ -34,8 +34,6 @@ impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
 
     #[inline]
     pub const fn from_raw(inner: &clap_event_note) -> Self {
-        // TODO: panic if not matching
-
         Self {
             inner: *inner,
             _event: PhantomData,
