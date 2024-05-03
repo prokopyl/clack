@@ -306,7 +306,6 @@ impl DestroyLock {
         // Notify threads that may use the lock in the future that we are about to start destroying.
         self.is_destroying.store(true, Ordering::SeqCst);
 
-        self.lock.clear_poison();
         let mut guard = self.lock.write().unwrap_or_else(|err| err.into_inner());
         // This additional check may not be very useful, it's there just in case.
         *guard = true;

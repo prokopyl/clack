@@ -69,6 +69,14 @@ impl PluginDescriptor {
     /// This function will also panic if either the given ID or name contain invalid NULL-byte
     /// characters, which are invalid.
     pub fn new(id: &str, name: &str) -> Self {
+        if id.is_empty() {
+            panic!("Plugin ID must not be blank!");
+        }
+
+        if name.is_empty() {
+            panic!("Plugin Name must not be blank!");
+        }
+
         let id = Pin::new(
             CString::new(id)
                 .expect("Invalid Plugin ID")
@@ -80,14 +88,6 @@ impl PluginDescriptor {
                 .expect("Invalid Plugin Name")
                 .into_boxed_c_str(),
         );
-
-        if id.is_empty() {
-            panic!("Plugin ID must not be blank!");
-        }
-
-        if name.is_empty() {
-            panic!("Plugin Name must not be blank!");
-        }
 
         Self {
             raw_descriptor: clap_plugin_descriptor {

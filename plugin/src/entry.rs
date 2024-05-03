@@ -375,6 +375,7 @@ use crate::entry::EntryHolderInner::*;
 
 #[doc(hidden)]
 impl<E: Entry> EntryHolder<E> {
+    #[allow(clippy::new_without_default)] // This is actually a private type
     pub const fn new() -> Self {
         Self {
             inner: Mutex::new(Uninitialized),

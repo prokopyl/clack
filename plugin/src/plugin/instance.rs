@@ -423,14 +423,14 @@ impl<'a> PluginInstance<'a> {
     /// ```
     /// [`PluginShared`]: crate::plugin::PluginShared
     /// [`channel`]: std::sync::mpsc::channel
-    pub fn new_with_initializer<P: Plugin, FM: 'a>(
+    pub fn new_with_initializer<P: Plugin, FM>(
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptor,
         initializer: impl FnOnce(HostMainThreadHandle<'a>) -> Result<(P::Shared<'a>, FM), PluginError>
             + 'a,
     ) -> PluginInstance<'a>
     where
-        FM: FnOnce(&'a P::Shared<'a>) -> Result<P::MainThread<'a>, PluginError>,
+        FM: 'a + FnOnce(&'a P::Shared<'a>) -> Result<P::MainThread<'a>, PluginError>,
     {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };

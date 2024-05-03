@@ -32,7 +32,7 @@ unsafe fn cstr_to_str<'a>(ptr: *const std::os::raw::c_char) -> Option<&'a CStr> 
 
     let string = CStr::from_ptr(ptr);
 
-    if string.is_empty() {
+    if string.to_bytes().is_empty() {
         None
     } else {
         Some(string)
