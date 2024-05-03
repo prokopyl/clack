@@ -38,7 +38,7 @@ pub trait OutputEventBuffer: Sized {
     fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError>;
 }
 
-pub(crate) const fn raw_input_events<'a, I: InputEventBuffer>(buffer: &I) -> clap_input_events {
+pub(crate) const fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_input_events {
     clap_input_events {
         ctx: buffer as *const I as *mut I as *mut _,
         size: Some(size::<I>),
@@ -46,7 +46,7 @@ pub(crate) const fn raw_input_events<'a, I: InputEventBuffer>(buffer: &I) -> cla
     }
 }
 
-pub(crate) fn raw_output_events<'a, I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
+pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
     clap_output_events {
         ctx: buffer as *mut _ as *mut _,
         try_push: Some(try_push::<I>),
@@ -61,12 +61,12 @@ pub(crate) const fn void_output_events() -> clap_output_events {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn size<'a, I: InputEventBuffer>(list: *const clap_input_events) -> u32 {
+unsafe extern "C" fn size<I: InputEventBuffer>(list: *const clap_input_events) -> u32 {
     handle_panic(|| I::len(&*((*list).ctx as *const _))).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get<'a, I: InputEventBuffer>(
+unsafe extern "C" fn get<I: InputEventBuffer>(
     list: *const clap_input_events,
     index: u32,
 ) -> *const clap_event_header {
@@ -79,7 +79,7 @@ unsafe extern "C" fn get<'a, I: InputEventBuffer>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn try_push<'a, O: OutputEventBuffer>(
+unsafe extern "C" fn try_push<O: OutputEventBuffer>(
     list: *const clap_output_events,
     event: *const clap_event_header,
 ) -> bool {
@@ -172,7 +172,7 @@ impl<T: Event> InputEventBuffer for Vec<T> {
     }
 }
 
-impl<'a> InputEventBuffer for &UnknownEvent {
+impl InputEventBuffer for &UnknownEvent {
     #[inline]
     fn len(&self) -> u32 {
         1
@@ -187,7 +187,7 @@ impl<'a> InputEventBuffer for &UnknownEvent {
     }
 }
 
-impl<'a, const N: usize> InputEventBuffer for [&UnknownEvent; N] {
+impl<const N: usize> InputEventBuffer for [&UnknownEvent; N] {
     #[inline]
     fn len(&self) -> u32 {
         N.min((u32::MAX - 1) as usize) as u32
@@ -199,7 +199,7 @@ impl<'a, const N: usize> InputEventBuffer for [&UnknownEvent; N] {
     }
 }
 
-impl<'a> InputEventBuffer for &[&UnknownEvent] {
+impl InputEventBuffer for &[&UnknownEvent] {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent]>::len(self);
@@ -212,7 +212,7 @@ impl<'a> InputEventBuffer for &[&UnknownEvent] {
     }
 }
 
-impl<'a> InputEventBuffer for Vec<&UnknownEvent> {
+impl InputEventBuffer for Vec<&UnknownEvent> {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent]>::len(self);
@@ -225,7 +225,7 @@ impl<'a> InputEventBuffer for Vec<&UnknownEvent> {
     }
 }
 
-impl<'a, T: InputEventBuffer> InputEventBuffer for Option<T> {
+impl<T: InputEventBuffer> InputEventBuffer for Option<T> {
     #[inline]
     fn len(&self) -> u32 {
         match self {

@@ -60,7 +60,7 @@ impl ProcessStatus {
 
 /// The audio configuration passed to a plugin's audio processor upon activation.
 ///
-/// Those settings are guaranteed to remain constant throughout the audio processor's lifetime,
+/// Those settings are constant throughout the audio processor's lifetime,
 /// i.e. from a plugin's activation until its deactivation.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PluginAudioConfiguration {

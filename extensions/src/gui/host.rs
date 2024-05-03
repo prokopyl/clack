@@ -202,8 +202,17 @@ impl PluginGui {
         success.then_some(()).ok_or(GuiError::SetScaleError)
     }
 
-    /// Embed UI into the given parent window
-    pub fn set_parent(
+    /// Embeds the plugin's GUI into the given parent window.
+    ///
+    /// # Safety
+    ///
+    /// This method does not check that the provided [`Window`] handle points to a still-valid
+    /// window object.
+    ///
+    /// It is up to the caller of this function to ensure that the underlying window object remains
+    /// valid for the lifetime of this plugin instance's GUI, i.e. up until [`destroy`](PluginGui::destroy)
+    /// is called.
+    pub unsafe fn set_parent(
         &self,
         plugin: &mut PluginMainThreadHandle,
         window: Window,
@@ -222,7 +231,16 @@ impl PluginGui {
     /// Receive instruction to stay above the given window
     ///
     /// Only applies to floating windows.
-    pub fn set_transient(
+    ///
+    /// # Safety
+    ///
+    /// This method does not check that the provided [`Window`] handle points to a still-valid
+    /// window object.
+    ///
+    /// It is up to the caller of this function to ensure that the underlying window object remains
+    /// valid for the lifetime of this plugin instance's GUI, i.e. up until [`destroy`](PluginGui::destroy)
+    /// is called.
+    pub unsafe fn set_transient(
         &self,
         plugin: &mut PluginMainThreadHandle,
         window: Window,

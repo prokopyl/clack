@@ -63,7 +63,7 @@
 //! This example implements a basic host which is able to process callback requests from the plugin,
 //! along with two extensions: `latency` and `log`.
 //!
-//! This is done by implementing the [`HostHandlers`] trait and specifying its associated traits:
+//! This is done by implementing the [`HostHandlers`] trait and specifying its associated types:
 //! [`SharedHandler`], [`MainThreadHandler`], and [`AudioProcessorHandler`].
 //!
 //! Because our host supports some extensions, we also implement the [`HostHandlers::declare_extensions`]

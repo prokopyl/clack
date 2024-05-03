@@ -68,6 +68,7 @@ pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
 
 /// Provides an implementation of this extension for a given type `I` (typically either a host or
 /// plugin structure).
+// TODO: make unsafe
 pub trait ExtensionImplementation<I>: Extension {
     /// The implementation of the extension.
     const IMPLEMENTATION: RawExtensionImplementation;

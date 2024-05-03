@@ -161,7 +161,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn init(plugin: *const clap_plugin) -> bool {
         PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
-            // We can only keep a &mut reference in here, until init() is called.
+            // We can only keep a shared reference in here, now that init() is called.
             let data = data.as_ref();
 
             let current_state = data.state.compare_exchange(

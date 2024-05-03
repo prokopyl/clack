@@ -28,7 +28,7 @@ impl<'a, I1, I2> EventMerger<'a, I1, I2> {
     }
 }
 
-impl<'a, 'e, I1, I2> Iterator for EventMerger<'a, I1, I2>
+impl<'a, I1, I2> Iterator for EventMerger<'a, I1, I2>
 where
     I1: Iterator<Item = &'a UnknownEvent>,
     I2: Iterator<Item = &'a UnknownEvent>,

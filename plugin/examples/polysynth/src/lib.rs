@@ -38,11 +38,8 @@ impl DefaultPluginFactory for PolySynthPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 
-        PluginDescriptor::new(
-            "org.rust-audio.clack-hotreload.polysynth",
-            "Clack PolySynth Example (Hot reload version)",
-        )
-        .with_features([SYNTHESIZER, MONO, INSTRUMENT])
+        PluginDescriptor::new("org.rust-audio.clack.polysynth", "Clack PolySynth Example")
+            .with_features([SYNTHESIZER, MONO, INSTRUMENT])
     }
 
     fn new_shared(_host: HostSharedHandle) -> Result<PolySynthPluginShared, PluginError> {

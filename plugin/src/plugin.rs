@@ -157,13 +157,8 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     ///
     /// # Errors
     ///
-    /// If the plugin's audio processor was already activated, this method should return a
-    /// [`PluginError::AlreadyActivated`] error. This is a fatal error which only possible due to a
-    /// faulty host, and should be considered to be a bug. In this case, the plugin's activation is
-    /// aborted.
-    ///
-    /// In addition, this operation may fail for any other reason, in which case `Err` is returned
-    /// and the plugin is not instantiated.
+    /// This operation may fail for any reason, in which case `Err` is returned
+    /// and the plugin is not activated.
     ///
     /// # Realtime Safety
     ///
