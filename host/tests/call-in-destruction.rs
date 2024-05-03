@@ -3,6 +3,7 @@ use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
+use std::ffi::CStr;
 use std::io::Write;
 use std::sync::OnceLock;
 
@@ -116,7 +117,7 @@ fn can_call_host_methods_during_init() {
         },
         |_| MyHostMainThread { instance: None },
         &bundle,
-        c"my.plugin",
+        CStr::from_bytes_with_nul(b"my.plugin\0").unwrap(),
         &host,
     )
     .unwrap();

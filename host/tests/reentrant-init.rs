@@ -4,6 +4,7 @@ use clack_extensions::timer::{
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
+use std::ffi::CStr;
 use std::sync::OnceLock;
 
 struct MyPlugin;
@@ -129,7 +130,7 @@ fn can_call_host_methods_during_init() {
             timer_registered: false,
         },
         &bundle,
-        c"my.plugin",
+        CStr::from_bytes_with_nul(b"my.plugin\0").unwrap(),
         &host,
     )
     .unwrap();
