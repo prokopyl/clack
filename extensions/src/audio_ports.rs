@@ -100,7 +100,7 @@ impl<'a> AudioPortInfo<'a> {
             flags: AudioPortFlags::from_bits_truncate(raw.flags),
             port_type: NonNull::new(raw.port_type as *mut _)
                 .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr())))
-                .filter(|t| !t.0.to_bytes().is_empty()),
+                .filter(|t| !t.0.is_empty()),
 
             in_place_pair: if raw.in_place_pair == CLAP_INVALID_ID {
                 None
