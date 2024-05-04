@@ -56,6 +56,13 @@ impl Pckn {
         }
     }
 
+    /// Returns whether this [`Pckn`] tuple matches all possible notes.
+    ///
+    /// This is true if all four matchers are set to [`Match::All`].
+    pub const fn matches_all(&self) -> bool {
+        self.port.is_all() && self.channel.is_all() && self.key.is_all() && self.note_id.is_all()
+    }
+
     /// Returns `true` if this PCKN tuple matches the given one, considering both specific values
     /// and wildcard [`Match::All`] values.
     ///
@@ -67,10 +74,10 @@ impl Pckn {
     /// assert!(Pckn::new(0u16, 0u16, 60u16, 42u32).matches(&Pckn::new(0u16, 0u16, 60u16, Match::All)));
     /// ```
     pub fn matches(&self, other: &Pckn) -> bool {
-        self.port.matches(&other.port)
-            && self.channel.matches(&other.channel)
-            && self.key.matches(&other.key)
-            && self.note_id.matches(&other.note_id)
+        self.port.matches(other.port)
+            && self.channel.matches(other.channel)
+            && self.key.matches(other.key)
+            && self.note_id.matches(other.note_id)
     }
 
     // Raw accessors
@@ -183,6 +190,34 @@ impl<T> Match<T> {
             All => None,
         }
     }
+
+    /// Returns whether this matcher is [`Match::All`].
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::Match;
+    ///
+    /// assert!(Match::<u16>::All.is_all());
+    /// assert!(!Match::Specific(42).is_all());
+    /// ```
+    #[inline]
+    pub const fn is_all(&self) -> bool {
+        matches!(self, All)
+    }
+
+    /// Returns whether this matcher is [`Match::Specific`].
+    /// # Example
+    ///
+    /// ```
+    /// use clack_common::events::Match;
+    ///
+    /// assert!(Match::Specific(42).is_specific());
+    /// assert!(!Match::<u16>::All.is_specific());
+    /// ```
+    #[inline]
+    pub const fn is_specific(&self) -> bool {
+        matches!(self, Specific(_))
+    }
 }
 
 impl<T> From<T> for Match<T> {
@@ -224,17 +259,17 @@ impl<T: PartialEq> Match<T> {
     /// ```
     /// use clack_common::events::Match;
     ///
-    /// assert!(Match::Specific(42).matches(&Match::Specific(42)));
-    /// assert!(!Match::Specific(42).matches(&Match::Specific(21)));
+    /// assert!(Match::Specific(42).matches(42));
+    /// assert!(!Match::Specific(42).matches(21));
     ///
-    /// assert!(Match::Specific(42).matches(&Match::All));
-    /// assert!(Match::All.matches(&Match::Specific(42)));
-    /// assert!(Match::<u16>::All.matches(&Match::All));
+    /// assert!(Match::Specific(42).matches(Match::All));
+    /// assert!(Match::All.matches(42));
+    /// assert!(Match::<u16>::All.matches(Match::All));
     /// ```
     #[inline]
-    pub fn matches(&self, other: &Match<T>) -> bool {
-        match (self, other) {
-            (Specific(x), Specific(y)) => x == y,
+    pub fn matches(&self, other: impl Into<Match<T>>) -> bool {
+        match (self, other.into()) {
+            (Specific(x), Specific(y)) => *x == y,
             _ => true,
         }
     }

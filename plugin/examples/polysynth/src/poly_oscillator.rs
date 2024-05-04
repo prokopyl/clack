@@ -1,18 +1,57 @@
 //! Implementations and helpers for our polyphonic oscillator.
 
 use crate::oscillator::SquareOscillator;
-use clack_plugin::events::spaces::CoreEventSpace;
+use crate::params::PARAM_VOLUME_ID;
+use clack_plugin::events::event_types::{
+    NoteOffEvent, NoteOnEvent, ParamModEvent, ParamValueEvent,
+};
 use clack_plugin::events::Match;
-use clack_plugin::prelude::*;
 
 /// A voice in the polyphonic oscillator.
+///
+/// It contains Channel, Key and NoteID information, so that this voice can be found and targeted
+/// by polyphonic modulation.
+///
+/// It also stores dedicated value and modulation for the polyphonic volume parameter, if the host
+/// set it.
 #[derive(Copy, Clone)]
 struct Voice {
     /// The oscillator itself.
     oscillator: SquareOscillator,
+    /// The MIDI channel of the note this voice is playing.
+    channel: u8,
     /// The MIDI number of the note this voice is playing.
-    /// This will be used to find this voice when a note end event is received.
-    note_number: u8,
+    key_number: u8,
+    /// The unique ID of the note this voice is playing.
+    /// This is None if no ID was assigned to this note by the host.
+    note_id: Option<u32>,
+
+    /// The voice-specific value of the volume parameter.
+    /// This is None if the host didn't apply polyphonic modulation to this voice.
+    volume: Option<f32>,
+
+    /// The voice-specific modulation amount of the volume parameter.
+    /// This is None if the host didn't apply polyphonic modulation to this voice.
+    volume_mod: Option<f32>,
+}
+
+impl Voice {
+    /// Returns whether this voice matches the given matchers.
+    #[inline]
+    fn matches(&self, channel: Match<u16>, note_key: Match<u16>, note_id: Match<u32>) -> bool {
+        if !channel.matches(self.channel) {
+            return false;
+        }
+
+        if !note_key.matches(self.key_number) {
+            return false;
+        }
+
+        note_id.matches(match self.note_id {
+            None => Match::All,
+            Some(id) => Match::Specific(id),
+        })
+    }
 }
 
 /// A simple polyphonic oscillator.
@@ -37,7 +76,11 @@ impl PolyOscillator {
             voice_buffer: vec![
                 Voice {
                     oscillator: SquareOscillator::new(sample_rate),
-                    note_number: 0
+                    channel: 0,
+                    key_number: 0,
+                    note_id: None,
+                    volume: None,
+                    volume_mod: None,
                 };
                 voice_count
             ]
@@ -49,7 +92,7 @@ impl PolyOscillator {
     /// Starts a new voice, playing the given MIDI note key.
     ///
     /// If there are no more voices available, this does nothing.
-    fn start_new_voice(&mut self, new_note_key: u8) {
+    fn start_new_voice(&mut self, channel: u8, new_note_key: u8, note_id: Option<u32>) {
         // Skip the event if we are out of voices
         let Some(available_voice) = self.voice_buffer.get_mut(self.active_voice_count) else {
             return;
@@ -57,27 +100,22 @@ impl PolyOscillator {
 
         available_voice.oscillator.reset();
         available_voice.oscillator.set_note_number(new_note_key);
-        available_voice.note_number = new_note_key;
+        available_voice.channel = channel;
+        available_voice.key_number = new_note_key;
+        available_voice.note_id = note_id;
 
         self.active_voice_count += 1;
     }
 
-    /// Stops the first voice that is currently playing the given MIDI note key.
+    /// Stops all voices that match the given MIDI note key and note ID matcher.
     ///
     /// If no matching voice is found, this does nothing.
-    fn stop_voice(&mut self, note_key: u8) {
-        let voice_index = self
-            .voice_buffer
+    fn stop_voices(&mut self, channel: Match<u16>, note_key: Match<u16>, note_id: Match<u32>) {
+        while let Some(voice_index) = self
+            .active_voice_buffer()
             .iter()
-            .position(|v| v.note_number == note_key);
-
-        // Find the voice that is playing that note.
-        if let Some(voice_index) = voice_index {
-            if voice_index >= self.active_voice_count {
-                // the voice is not playing
-                return;
-            }
-
+            .position(|v| v.matches(channel, note_key, note_id))
+        {
             // Swap the targeted voice with the last one.
             self.voice_buffer
                 .swap(voice_index, self.active_voice_count - 1);
@@ -92,24 +130,62 @@ impl PolyOscillator {
         self.active_voice_count = 0;
     }
 
-    /// Handles the given input event.
-    ///
-    /// If the event is a note on event, then it will start a new voice for that note.
-    /// If the event is a note off event, then it will stop the voice playing that note.
-    ///
-    /// If the vent is a global note off event, then it will stop all currently playing voices.
-    pub fn handle_event(&mut self, event: &UnknownEvent) {
-        match event.as_core_event() {
-            Some(CoreEventSpace::NoteOn(note_event)) => {
-                if let Match::Specific(key) = note_event.key() {
-                    self.start_new_voice(key as u8);
-                }
-            }
-            Some(CoreEventSpace::NoteOff(note_event)) => match note_event.key() {
-                Match::All => self.stop_all(),
-                Match::Specific(note_key) => self.stop_voice(note_key as u8),
-            },
-            _ => {}
+    /// Handles the given Note On input event.
+    pub fn handle_note_on(&mut self, event: &NoteOnEvent) {
+        dbg!(event);
+        if !event.port().matches(0u16) {
+            return;
+        }
+
+        if let (Match::Specific(channel), Match::Specific(key)) = (event.channel(), event.key()) {
+            self.start_new_voice(channel as u8, key as u8, event.note_id().into_specific())
+        }
+    }
+
+    /// Handles the given Note Off input event.
+    pub fn handle_note_off(&mut self, event: &NoteOffEvent) {
+        if !event.port().matches(0u16) {
+            return;
+        }
+
+        self.stop_voices(event.channel(), event.key(), event.note_id())
+    }
+
+    /// Handles the given polyphonic Parameter Value event.
+    pub fn handle_param_value(&mut self, event: &ParamValueEvent) {
+        if !event.port().matches(0u16) {
+            return;
+        }
+
+        if event.param_id() != PARAM_VOLUME_ID {
+            return;
+        }
+
+        for voice in self
+            .active_voice_buffer_mut()
+            .iter_mut()
+            .filter(|v| v.matches(event.channel(), event.key(), event.note_id()))
+        {
+            voice.volume = Some(event.value() as f32);
+        }
+    }
+
+    /// Handles the given polyphonic Parameter Modulation event.
+    pub fn handle_param_mod(&mut self, event: &ParamModEvent) {
+        if !event.port().matches(0u16) {
+            return;
+        }
+
+        if event.param_id() != PARAM_VOLUME_ID {
+            return;
+        }
+
+        for voice in self
+            .active_voice_buffer_mut()
+            .iter_mut()
+            .filter(|v| v.matches(event.channel(), event.key(), event.note_id()))
+        {
+            voice.volume_mod = Some(event.amount() as f32);
         }
     }
 
@@ -117,11 +193,19 @@ impl PolyOscillator {
     /// Each voice will play at the given volume.
     ///
     /// This method assumes the buffer is initialized with `0`s.
-    pub fn generate_next_samples(&mut self, output_buffer: &mut [f32], volume: f32) {
-        for voice in &mut self.voice_buffer[..self.active_voice_count] {
+    pub fn generate_next_samples(
+        &mut self,
+        output_buffer: &mut [f32],
+        global_volume: f32,
+        global_volume_mod: f32,
+    ) {
+        for voice in self.active_voice_buffer_mut() {
+            let volume = voice.volume.unwrap_or(global_volume);
+            let volume_mod = voice.volume_mod.unwrap_or(global_volume_mod);
+
             voice
                 .oscillator
-                .add_next_samples_to_buffer(output_buffer, volume);
+                .add_next_samples_to_buffer(output_buffer, volume + volume_mod);
         }
     }
 
@@ -129,5 +213,17 @@ impl PolyOscillator {
     #[inline]
     pub fn has_active_voices(&self) -> bool {
         self.active_voice_count > 0
+    }
+
+    /// Returns a shared reference to the part of the buffer that only contains the active voices.
+    #[inline]
+    fn active_voice_buffer(&self) -> &[Voice] {
+        &self.voice_buffer[..self.active_voice_count]
+    }
+
+    /// Returns a mutable reference to the part of the buffer that only contains the active voices.
+    #[inline]
+    fn active_voice_buffer_mut(&mut self) -> &mut [Voice] {
+        &mut self.voice_buffer[..self.active_voice_count]
     }
 }

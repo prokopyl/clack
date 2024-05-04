@@ -6,6 +6,7 @@ use crate::params::{PolySynthParamModulations, PolySynthParams};
 use crate::poly_oscillator::PolyOscillator;
 use clack_extensions::state::PluginState;
 use clack_extensions::{audio_ports::*, note_ports::*, params::*};
+use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 
 mod oscillator;
@@ -113,18 +114,17 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
         for event_batch in events.input.batch() {
             // Handle all the events (note or param) for this batch.
             for event in event_batch.events() {
-                self.poly_osc.handle_event(event);
-                self.shared.params.handle_event(event);
-                self.modulation_values.handle_event(event);
+                self.handle_event(event);
             }
-
-            // Received the updated volume parameter
-            let volume = self.shared.params.get_volume() + self.modulation_values.volume();
 
             // With all the events out of the way, we can now handle a whole batch of sample
             // all at once.
             let output_buffer = &mut output_buffer[event_batch.sample_bounds()];
-            self.poly_osc.generate_next_samples(output_buffer, volume);
+            self.poly_osc.generate_next_samples(
+                output_buffer,
+                self.shared.params.get_volume(),
+                self.modulation_values.volume(),
+            );
         }
 
         // If somehow the host didn't give us a mono output, we copy the output to all channels
@@ -151,6 +151,33 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     fn stop_processing(&mut self) {
         // When audio processing stops, we stop all the oscillator voices just in case.
         self.poly_osc.stop_all();
+    }
+}
+
+impl<'a> PolySynthAudioProcessor<'a> {
+    /// Handles an incoming event.
+    fn handle_event(&mut self, event: &UnknownEvent) {
+        match event.as_core_event() {
+            Some(CoreEventSpace::NoteOn(event)) => self.poly_osc.handle_note_on(event),
+            Some(CoreEventSpace::NoteOff(event)) => self.poly_osc.handle_note_off(event),
+            Some(CoreEventSpace::ParamValue(event)) => {
+                // This is a global modulation event
+                if event.pckn().matches_all() {
+                    self.shared.params.handle_event(event)
+                } else {
+                    self.poly_osc.handle_param_value(event)
+                }
+            }
+            Some(CoreEventSpace::ParamMod(event)) => {
+                // This is a global modulation event
+                if event.pckn().matches_all() {
+                    self.modulation_values.handle_event(event)
+                } else {
+                    self.poly_osc.handle_param_mod(event)
+                }
+            }
+            _ => {}
+        }
     }
 }
 

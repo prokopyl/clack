@@ -3,6 +3,7 @@
 use crate::{PolySynthAudioProcessor, PolySynthPluginMainThread};
 use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
+use clack_plugin::events::event_types::{ParamModEvent, ParamValueEvent};
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
@@ -11,7 +12,10 @@ use std::fmt::Write as _;
 use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-/// The default value of the volume parameter.
+/// The unique identifier for the Volume parameter.
+pub const PARAM_VOLUME_ID: u32 = 1;
+
+/// The default value of the Volume parameter.
 const DEFAULT_VOLUME: f32 = 0.2;
 
 /// A struct that manages the parameters for our plugin.
@@ -48,15 +52,12 @@ impl PolySynthParams {
         self.volume.store(new_volume, Ordering::SeqCst)
     }
 
-    /// Handles incoming events.
+    /// Handles an incoming parameter value event.
     ///
-    /// If the given event is a matching parameter change event, the volume parameter will be
-    /// updated accordingly.
-    pub fn handle_event(&self, event: &UnknownEvent) {
-        if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
-            if event.param_id() == 1 {
-                self.set_volume(event.value() as f32)
-            }
+    /// If the given event affects the volume parameter, it will be updated accordingly.
+    pub fn handle_event(&self, event: &ParamValueEvent) {
+        if event.param_id() == PARAM_VOLUME_ID {
+            self.set_volume(event.value() as f32)
         }
     }
 }
@@ -89,11 +90,9 @@ impl PolySynthParamModulations {
 
     /// Handles an incoming event.
     /// This will update the modulation value of the parameter if the event is a matching `ParamMod`.
-    pub fn handle_event(&mut self, event: &UnknownEvent) {
-        if let Some(CoreEventSpace::ParamMod(event)) = event.as_core_event() {
-            if event.param_id() == 1 {
-                self.volume_mod = event.amount() as f32
-            }
+    pub fn handle_event(&mut self, event: &ParamModEvent) {
+        if event.param_id() == PARAM_VOLUME_ID {
+            self.volume_mod = event.amount() as f32
         }
     }
 }
@@ -128,7 +127,14 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         if param_index == 0 {
             info.set(&ParamInfo {
                 id: 1.into(),
-                flags: ParamInfoFlags::IS_AUTOMATABLE | ParamInfoFlags::IS_MODULATABLE,
+                flags: ParamInfoFlags::IS_AUTOMATABLE
+                    | ParamInfoFlags::IS_MODULATABLE
+                    | ParamInfoFlags::IS_AUTOMATABLE_PER_CHANNEL
+                    | ParamInfoFlags::IS_AUTOMATABLE_PER_KEY
+                    | ParamInfoFlags::IS_AUTOMATABLE_PER_NOTE_ID
+                    | ParamInfoFlags::IS_MODULATABLE_PER_CHANNEL
+                    | ParamInfoFlags::IS_MODULATABLE_PER_KEY
+                    | ParamInfoFlags::IS_MODULATABLE_PER_NOTE_ID,
                 cookie: Default::default(),
                 name: b"Volume",
                 module: b"",
@@ -176,7 +182,9 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         _output_parameter_changes: &mut OutputEvents,
     ) {
         for event in input_parameter_changes {
-            self.shared.params.handle_event(event)
+            if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
+                self.shared.params.handle_event(event)
+            }
         }
     }
 }
@@ -188,7 +196,7 @@ impl<'a> PluginAudioProcessorParams for PolySynthAudioProcessor<'a> {
         _output_parameter_changes: &mut OutputEvents,
     ) {
         for event in input_parameter_changes {
-            self.shared.params.handle_event(event)
+            self.handle_event(event)
         }
     }
 }
