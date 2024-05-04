@@ -43,6 +43,25 @@ bitflags! {
     }
 }
 
+impl RescanType {
+    /// Returns `true` if any of the set flag values requires the plugin to be deactivated
+    /// before re-scanning.
+    /// Otherwise, this returns false.
+    ///
+    /// As of now, this is true if any flag is set except for [`NAMES`](Self::NAMES).
+    #[inline]
+    pub const fn requires_deactivate(&self) -> bool {
+        const RESTART_REQUIRED: RescanType = RescanType::FLAGS
+            .union(RescanType::CHANNEL_COUNT)
+            .union(RescanType::PORT_TYPE)
+            .union(RescanType::PORT_TYPE)
+            .union(RescanType::IN_PLACE_PAIR)
+            .union(RescanType::LIST);
+
+        self.intersects(RESTART_REQUIRED)
+    }
+}
+
 bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
