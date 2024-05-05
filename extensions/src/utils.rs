@@ -1,6 +1,6 @@
 use core::ffi::c_char;
 
-pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
+pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe
     let data = unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
 
@@ -13,9 +13,9 @@ pub fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
 /// # Safety
 ///
 /// The pointer must be non-null and well-aligned. However, the array doesn't need to be initialized.
-#[cfg(feature = "clack-plugin")]
+/// `dst` and `value` must not overlap.
 #[inline]
-pub unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
+pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
     let max_len = core::cmp::min(N - 1, value.len()); // Space for null byte
     let value = &value[..max_len];
     // SAFETY: casting between i8 to u8 is safe

@@ -130,7 +130,6 @@ impl PluginParams {
         }
     }
 
-    // TODO: find a way to enforce !active | !processing ?
     pub fn flush(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -149,7 +148,6 @@ impl PluginParams {
         }
     }
 
-    // TODO: find a way to enforce !active | !processing ?
     pub fn flush_active(
         &self,
         plugin: &mut PluginAudioProcessorHandle,

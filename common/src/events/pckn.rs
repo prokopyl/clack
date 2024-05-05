@@ -14,7 +14,7 @@ use Match::*;
 ///
 /// See the [`matches`](Pckn::matches) for an implementation of the PCKN matching logic that you
 /// can use to match incoming events against active voices.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Pckn {
     /// The Note Port the plugin received this event on. See the Note Ports extension.
     pub port: Match<u16>,
@@ -148,7 +148,7 @@ impl Pckn {
 /// Represents matching either a specific value or all values of a given type.
 ///
 /// This is used in the [`Pckn`] type to support matching multiple kinds of notes at once.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Match<T> {
     /// Matches a specific value.
     Specific(T),

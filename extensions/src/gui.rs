@@ -93,9 +93,8 @@ pub struct GuiResizeHints {
 }
 
 impl GuiResizeHints {
-    #[cfg(feature = "clack-host")]
-    // TODO: make pub?
-    fn from_raw(raw: &clap_gui_resize_hints) -> Self {
+    /// Creates a [`GuiResizeHints`] from a reference to the raw C-FFI compatible struct.
+    pub const fn from_raw(raw: &clap_gui_resize_hints) -> Self {
         Self {
             can_resize_horizontally: raw.can_resize_horizontally,
             can_resize_vertically: raw.can_resize_vertically,
@@ -114,8 +113,8 @@ impl GuiResizeHints {
         }
     }
 
-    #[cfg(feature = "clack-plugin")]
-    fn to_raw(self) -> clap_gui_resize_hints {
+    /// Creates an instance of the raw C-FFI compatible struct form this [`GuiResizeHints`].
+    pub const fn to_raw(self) -> clap_gui_resize_hints {
         let mut hints = clap_gui_resize_hints {
             can_resize_horizontally: self.can_resize_horizontally,
             can_resize_vertically: self.can_resize_vertically,

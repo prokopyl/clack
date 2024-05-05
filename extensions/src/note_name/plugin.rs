@@ -88,9 +88,9 @@ impl<'a> NoteNameWriter<'a> {
         unsafe {
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
-            write(addr_of_mut!((*buf).port), data.port);
-            write(addr_of_mut!((*buf).channel), data.channel);
-            write(addr_of_mut!((*buf).key), data.key);
+            write(addr_of_mut!((*buf).port), data.port.to_raw());
+            write(addr_of_mut!((*buf).channel), data.channel.to_raw());
+            write(addr_of_mut!((*buf).key), data.key.to_raw());
         }
 
         self.is_set = true;

@@ -2,8 +2,10 @@
 
 //! A way for plugins to list custom note names for hosts to display in e.g. a piano roll.
 
+use clack_common::events::Match;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::note_name::*;
+use clap_sys::string_sizes::CLAP_NAME_SIZE;
 use std::ffi::CStr;
 
 /// The Plugin-side of the Note Name extension.
@@ -45,28 +47,38 @@ pub struct NoteName<'a> {
     pub name: &'a [u8],
 
     /// The Port this note name applies to, or `-1` if it applies to every key.
-    pub port: i16,
+    pub port: Match<u16>,
 
     /// The MIDI Channel this note name applies to, or `-1` if it applies to every key.
-    pub channel: i16,
+    pub channel: Match<u16>,
 
     /// The Key this note name applies to, or `-1` if it applies to every key.
-    pub key: i16,
+    pub key: Match<u16>,
 }
 
 impl<'a> NoteName<'a> {
-    /// # Safety
-    ///
-    /// Users must ensure the given port info is valid.
-    #[cfg(feature = "clack-host")]
-    // TODO: make pub?
-    unsafe fn from_raw(raw: &'a clap_note_name) -> Self {
+    /// Creates a new [`NoteName`] from a reference to the given raw C ABI-compatible buffer.
+    pub fn from_raw(raw: &'a clap_note_name) -> Self {
         Self {
             name: crate::utils::data_from_array_buf(&raw.name),
 
-            port: raw.port,
-            key: raw.key,
-            channel: raw.channel,
+            port: Match::<u16>::from_raw(raw.port),
+            channel: Match::<u16>::from_raw(raw.channel),
+            key: Match::<u16>::from_raw(raw.key),
+        }
+    }
+
+    /// Creates a new raw C ABI-compatible note name buffer from this [`NoteName`].
+    pub fn to_raw(&self) -> clap_note_name {
+        let mut name = [0; CLAP_NAME_SIZE];
+        // SAFETY: name is a valid pointer, as it comes from a &mut reference.
+        unsafe { crate::utils::write_to_array_buf(&mut name, self.name) }
+
+        clap_note_name {
+            name,
+            port: self.port.to_raw(),
+            channel: self.channel.to_raw(),
+            key: self.key.to_raw(),
         }
     }
 }
