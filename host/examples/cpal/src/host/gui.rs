@@ -6,8 +6,8 @@ use clack_host::prelude::*;
 use std::error::Error;
 use std::ffi::CStr;
 use winit::dpi::{LogicalSize, PhysicalSize, Size};
-use winit::event_loop::EventLoopWindowTarget;
-use winit::window::{Window, WindowBuilder};
+use winit::event_loop::EventLoop;
+use winit::window::Window;
 
 impl HostGuiImpl for CpalHostShared {
     fn resize_hints_changed(&self) {
@@ -142,7 +142,7 @@ impl Gui {
     pub fn open_embedded(
         &mut self,
         plugin: &mut PluginMainThreadHandle,
-        event_loop: &EventLoopWindowTarget<()>,
+        event_loop: &EventLoop<()>,
     ) -> Result<Window, Box<dyn Error>> {
         let gui = self.plugin_gui;
         let Some(configuration) = self.configuration else {
@@ -161,14 +161,16 @@ impl Gui {
 
         self.is_resizeable = gui.can_resize(plugin);
 
-        let window = WindowBuilder::new()
-            .with_title("Clack CPAL plugin!")
-            .with_inner_size(PhysicalSize {
-                height: initial_size.height,
-                width: initial_size.width,
-            })
-            .with_resizable(self.is_resizeable)
-            .build(event_loop)?;
+        #[allow(deprecated)]
+        let window = event_loop.create_window(
+            Window::default_attributes()
+                .with_title("Clack CPAL plugin!")
+                .with_inner_size(PhysicalSize {
+                    height: initial_size.height,
+                    width: initial_size.width,
+                })
+                .with_resizable(self.is_resizeable),
+        )?;
 
         // SAFETY: We ensure the window is valid for the lifetime of the plugin window.
         unsafe { gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())? };

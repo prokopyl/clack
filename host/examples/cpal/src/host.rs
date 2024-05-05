@@ -236,6 +236,7 @@ fn run_gui_embedded(
 
     let timers = instance.use_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
 
+    #[allow(deprecated)]
     event_loop.run(move |event, target| {
         while let Ok(message) = receiver.try_recv() {
             match message {
