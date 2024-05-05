@@ -3,12 +3,12 @@ resolver = "2"
 members = [
     "common",
     "host",
-    "host/examples/cpal",
     "plugin",
+    "extensions",
+    # Examples
+    "host/examples/cpal",
     "plugin/examples/gain",
     "plugin/examples/polysynth",
-    "extensions",
-    "test-host"
 ]
 
 [workspace.dependencies]
@@ -16,7 +16,6 @@ clack-common = { path = "./common", version = "0.1.0" }
 clack-plugin = { path = "./plugin", version = "0.1.0" }
 clack-host = { path = "./host", version = "0.1.0", default-features = false }
 clack-extensions = { path = "./extensions", version = "0.1.0" }
-clack-test-host = { path = "./test-host", version = "0.1.0" }
 
 clap-sys = "0.4.0"
 

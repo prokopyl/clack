@@ -13,5 +13,5 @@ clack-plugin = { workspace = true }
 clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin"] }
 
 [dev-dependencies]
-clack-test-host = { workspace = true }
+clack-host = { workspace = true }
 clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin", "clack-host"] }

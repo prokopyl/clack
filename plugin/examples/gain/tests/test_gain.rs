@@ -1,41 +1,59 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
-use clack_plugin::events::event_types::ParamValueEvent;
-use clack_plugin::events::{EventFlags, EventHeader};
-use clack_plugin::prelude::Pckn;
-use clack_plugin::utils::Cookie;
-use clack_test_host::TestHost;
+use clack_host::events::event_types::ParamValueEvent;
+use clack_host::events::EventFlags;
+use clack_host::factory::PluginFactory;
+use clack_host::prelude::*;
+use clack_host::utils::Cookie;
 
 use clack_plugin_gain::clap_entry;
 
 #[test]
 pub fn it_works() {
     // Initialize host
-    let mut host = TestHost::instantiate(&clap_entry);
+    //let mut host = TestHost::instantiate(&clap_entry);
+    // Initialize host with basic info
+    let info = HostInfo::new("test", "", "", "").unwrap();
+
+    // Get plugin entry from the exported static
+    // SAFETY: only called this once here
+    let bundle = unsafe { PluginBundle::load_from_raw(&clap_entry, "") }.unwrap();
+
+    let descriptor = bundle
+        .get_factory::<PluginFactory>()
+        .unwrap()
+        .plugin_descriptor(0)
+        .unwrap();
+
     assert_eq!(
-        host.descriptor().id().unwrap().to_bytes(),
+        descriptor.id().unwrap().to_bytes(),
         b"org.rust-audio.clack.gain"
     );
-    assert_eq!(
-        host.descriptor().name().unwrap().to_bytes(),
-        b"Clack Gain Example"
-    );
+    assert_eq!(descriptor.name().unwrap().to_bytes(), b"Clack Gain Example");
 
-    assert!(host.descriptor().vendor().is_none());
-    assert!(host.descriptor().url().is_none());
-    assert!(host.descriptor().manual_url().is_none());
-    assert!(host.descriptor().support_url().is_none());
-    assert!(host.descriptor().description().is_none());
-    assert!(host.descriptor().version().is_none());
+    assert!(descriptor.vendor().is_none());
+    assert!(descriptor.url().is_none());
+    assert!(descriptor.manual_url().is_none());
+    assert!(descriptor.support_url().is_none());
+    assert!(descriptor.description().is_none());
+    assert!(descriptor.version().is_none());
 
     assert_eq!(
-        host.descriptor()
+        descriptor
             .features()
             .map(|s| s.to_bytes())
             .collect::<Vec<_>>(),
         &[&b"audio-effect"[..], &b"stereo"[..]]
     );
 
-    let plugin = host.plugin_mut();
+    // Instantiate the desired plugin
+    let mut plugin = PluginInstance::<TestHostHandlers>::new(
+        |_| TestHostShared,
+        |_| TestHostMainThread,
+        &bundle,
+        descriptor.id().unwrap(),
+        &info,
+    )
+    .unwrap();
 
     let mut plugin_main_thread = plugin.plugin_handle();
     let ports_ext = plugin_main_thread
@@ -52,11 +70,23 @@ pub fn it_works() {
     assert_eq!(info.id, 0);
     assert_eq!(info.name, b"main");
 
-    host.activate();
+    // Setting up some buffers
+    let configuration = PluginAudioConfiguration {
+        sample_rate: 44_100.0,
+        min_frames_count: 32,
+        max_frames_count: 32,
+    };
 
-    assert!(host.plugin().is_active());
+    let processor = plugin
+        .activate(|_, _| TestHostAudioProcessor, configuration)
+        .unwrap();
 
-    host.input_events_mut().push(&ParamValueEvent::new(
+    assert!(plugin.is_active());
+
+    let mut input_events = EventBuffer::with_capacity(10);
+    let mut output_events = EventBuffer::with_capacity(10);
+
+    input_events.push(&ParamValueEvent::new(
         EventHeader::new_core(0, EventFlags::empty()),
         1,
         Pckn::match_all(),
@@ -64,19 +94,76 @@ pub fn it_works() {
         Cookie::empty(),
     ));
 
-    host.inputs_mut()[0].fill(69f32);
-    host.inputs_mut()[1].fill(69f32);
+    let mut input_buffers = [vec![69f32; 32], vec![69f32; 32]];
+    let mut output_buffers = [vec![0f32; 32], vec![0f32; 32]];
 
-    host.process().unwrap();
+    let mut processor = processor.start_processing().unwrap();
+
+    let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
+    let mut outputs_descriptors = AudioPorts::with_capacity(2, 1);
+
+    let input_channels = inputs_descriptors.with_input_buffers([AudioPortBuffer {
+        channels: AudioPortBufferType::f32_input_only(
+            input_buffers.iter_mut().map(InputChannel::variable),
+        ),
+        latency: 0,
+    }]);
+
+    let mut output_channels = outputs_descriptors.with_output_buffers([AudioPortBuffer {
+        channels: AudioPortBufferType::f32_output_only(
+            output_buffers.iter_mut().map(|b| b.as_mut_slice()),
+        ),
+        latency: 0,
+    }]);
+
+    processor
+        .process(
+            &input_channels,
+            &mut output_channels,
+            &input_events.as_input(),
+            &mut output_events.as_output(),
+            None,
+            None,
+        )
+        .unwrap();
 
     // Check the gain was applied properly
     for channel_index in 0..1 {
-        let inbuf = &host.inputs()[channel_index];
-        let outbuf = &host.outputs()[channel_index];
+        let inbuf = &input_buffers[channel_index];
+        let outbuf = &output_buffers[channel_index];
         for (input, output) in inbuf.iter().zip(outbuf.iter()) {
             assert_eq!(*output, *input * 0.5)
         }
     }
 
-    host.deactivate();
+    plugin.deactivate(processor.stop_processing());
+}
+
+struct TestHostMainThread;
+struct TestHostShared;
+struct TestHostAudioProcessor;
+struct TestHostHandlers;
+
+impl<'a> SharedHandler<'a> for TestHostShared {
+    fn request_restart(&self) {
+        unimplemented!()
+    }
+
+    fn request_process(&self) {
+        unimplemented!()
+    }
+
+    fn request_callback(&self) {
+        unimplemented!()
+    }
+}
+
+impl<'a> AudioProcessorHandler<'a> for TestHostAudioProcessor {}
+
+impl<'a> MainThreadHandler<'a> for TestHostMainThread {}
+
+impl HostHandlers for TestHostHandlers {
+    type Shared<'a> = TestHostShared;
+    type MainThread<'a> = TestHostMainThread;
+    type AudioProcessor<'a> = TestHostAudioProcessor;
 }
