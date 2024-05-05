@@ -3,6 +3,9 @@
 use crate::plugin::DestroyLock;
 use crate::prelude::*;
 use crate::util::UnsafeOptionCell;
+use clap_sys::ext::log::{
+    clap_log_severity, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING,
+};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::panic::AssertUnwindSafe;
@@ -27,6 +30,7 @@ mod panic {
 }
 
 pub(crate) mod descriptor;
+mod logging;
 
 // Safety note: once this type is constructed, a pointer to it will be given to the plugin instance,
 // which means we can never
@@ -74,8 +78,8 @@ impl<H: HostHandlers> HostWrapper<H> {
 
         match result {
             Ok(value) => Some(value),
-            Err(_e) => {
-                // logging::plugin_log::<P>(host, &e); TODO
+            Err(e) => {
+                logging::host_log(host, &e);
 
                 None
             }
@@ -289,6 +293,26 @@ pub enum HostWrapperError {
     NullHostData,
     Panic,
     HostError(HostError),
+}
+
+impl HostWrapperError {
+    fn msg(&self) -> &'static str {
+        match self {
+            HostWrapperError::NullHostInstance => "Host instance pointer is NULL",
+            HostWrapperError::NullHostData => "Host data pointer is NULL",
+            HostWrapperError::Panic => "Host callback panicked",
+            HostWrapperError::HostError(e) => e.msg(),
+        }
+    }
+
+    fn severity(&self) -> clap_log_severity {
+        match self {
+            HostWrapperError::NullHostInstance => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostWrapperError::NullHostData => CLAP_LOG_HOST_MISBEHAVING,
+            HostWrapperError::Panic => CLAP_LOG_HOST_MISBEHAVING,
+            HostWrapperError::HostError(e) => e.severity(),
+        }
+    }
 }
 
 impl From<HostError> for HostWrapperError {

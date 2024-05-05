@@ -57,7 +57,6 @@ impl Display for TimerId {
 }
 
 /// Errors that can occur while setting up Timers.
-// TODO: make global Clack error type all of these can be turned into
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum TimerError {
     /// The host failed or declined to register a timer.

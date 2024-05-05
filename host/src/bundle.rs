@@ -146,8 +146,7 @@ impl PluginBundle {
         let path = path.as_ref();
         let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
 
-        // SAFETY: TODO: make this function actually unsafe
-        let library = unsafe { PluginEntryLibrary::load(path)? };
+        let library = PluginEntryLibrary::load(path)?;
 
         let inner = cache::load_from_library(library, path_str)?;
 

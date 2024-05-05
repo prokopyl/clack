@@ -1,5 +1,6 @@
 use crate::host::HostHandlers;
 use crate::process::ProcessingStartError;
+use clap_sys::ext::log::{clap_log_severity, CLAP_LOG_ERROR, CLAP_LOG_PLUGIN_MISBEHAVING};
 use core::fmt;
 
 /// All errors that can arise using plugin instances.
@@ -32,22 +33,22 @@ pub enum HostError {
     ProcessingStopped,
     /// Tried to start processing when the processing was already started.
     ProcessingStarted,
-    /// The underlying plugin's C `create_plugin` C function was a null pointer.
+    /// The underlying plugin's `create_plugin` C function was a null pointer.
     ///
     /// This is a sign of a misbehaving plugin implementation.
     NullFactoryCreatePluginFunction,
-    /// The underlying plugin's C `process` C function was a null pointer.
+    /// The underlying plugin's `process` C function was a null pointer.
     ///
     /// This is a sign of a misbehaving plugin implementation.
     NullProcessFunction,
-    /// The underlying plugin's C `activate` C function was a null pointer.
+    /// The underlying plugin's `activate` C function was a null pointer.
     ///
     /// This is a sign of a misbehaving plugin implementation.
     NullActivateFunction,
 }
 
 impl HostError {
-    fn msg(&self) -> &'static str {
+    pub(crate) fn msg(&self) -> &'static str {
         match self {
             Self::StartProcessingFailed => "Could not start processing",
             Self::AlreadyActivatedPlugin => "Plugin was already activated",
@@ -68,6 +69,16 @@ impl HostError {
             Self::NullFactoryCreatePluginFunction => {
                 "Plugin Factory's create_plugin function is null"
             }
+        }
+    }
+
+    pub(crate) fn severity(&self) -> clap_log_severity {
+        match self {
+            HostError::MissingPluginFactory => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostError::NullFactoryCreatePluginFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostError::NullProcessFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostError::NullActivateFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
+            _ => CLAP_LOG_ERROR,
         }
     }
 }
