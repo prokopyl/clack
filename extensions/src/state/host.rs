@@ -53,7 +53,8 @@ pub trait HostStateImpl {
     fn mark_dirty(&mut self);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostState
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostState
 where
     for<'a> <H as HostHandlers>::MainThread<'a>: HostStateImpl,
 {

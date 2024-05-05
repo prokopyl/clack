@@ -26,7 +26,8 @@ pub trait PluginAudioPortsConfigImpl {
     fn select(&mut self, config_id: u32) -> Result<(), AudioPortConfigSelectError>;
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPortsConfig
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPortsConfig
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
 {

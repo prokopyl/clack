@@ -95,7 +95,8 @@ mod plugin {
         fn set(&mut self, mode: RenderMode) -> Result<(), PluginRenderError>;
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginRender
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginRender
     where
         for<'a> P::MainThread<'a>: PluginRenderImpl,
     {

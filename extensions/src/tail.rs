@@ -124,7 +124,8 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostTail
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostTail
     where
         for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostTailImpl,
     {
@@ -172,7 +173,8 @@ mod plugin {
         fn get(&self) -> TailLength;
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginTail
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginTail
     where
         for<'a> P::AudioProcessor<'a>: PluginTailImpl,
     {

@@ -9,7 +9,8 @@ pub trait HostLogImpl {
     fn log(&self, severity: LogSeverity, message: &str);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostLog
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLog
 where
     for<'a> <H as HostHandlers>::Shared<'a>: HostLogImpl,
 {

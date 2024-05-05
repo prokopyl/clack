@@ -16,7 +16,8 @@ pub trait PluginNoteNameImpl {
     fn get(&mut self, index: usize, writer: &mut NoteNameWriter);
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
 where
     for<'a> P::MainThread<'a>: PluginNoteNameImpl,
 {

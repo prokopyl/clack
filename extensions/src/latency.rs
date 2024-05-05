@@ -52,7 +52,8 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
     {
@@ -95,7 +96,8 @@ mod plugin {
         fn get(&mut self) -> u32;
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginLatency
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginLatency
     where
         for<'a> P::MainThread<'a>: PluginLatencyImpl,
     {

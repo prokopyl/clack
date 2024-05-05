@@ -43,7 +43,8 @@
 //! // Then, implement the ExtensionImplementation trait for the given implementors
 //! // to provide the C FFI-compatible struct.
 //!
-//! impl<P: Plugin> ExtensionImplementation<P> for PluginState
+//! // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+//! unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginState
 //! where
 //!     // In this case, all the CLAP State methods belong to the main thread.
 //!     // Other extensions may have other requirements, possibly split between multiple threads.

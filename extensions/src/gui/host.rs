@@ -339,7 +339,8 @@ pub trait HostGuiImpl {
     fn closed(&self, was_destroyed: bool);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostGui
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostGui
 where
     for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
 {

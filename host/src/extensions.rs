@@ -193,7 +193,8 @@
 //!     fn changed(&mut self);
 //! }
 //!
-//! impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
+//! // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+//! unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
 //!     where for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
 //! {
 //!     const IMPLEMENTATION: RawExtensionImplementation =

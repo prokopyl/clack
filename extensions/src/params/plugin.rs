@@ -241,7 +241,8 @@ unsafe extern "C" fn flush<P: Plugin>(
     });
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginParams
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginParams
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
     for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,

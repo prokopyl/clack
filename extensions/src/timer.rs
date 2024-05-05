@@ -149,7 +149,8 @@ mod plugin {
         fn on_timer(&mut self, timer_id: TimerId);
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginTimer
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginTimer
     where
         for<'a> P::MainThread<'a>: PluginTimerImpl,
     {
@@ -205,7 +206,8 @@ mod host {
         fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError>;
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostTimer
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostTimer
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
     {

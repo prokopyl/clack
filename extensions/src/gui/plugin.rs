@@ -186,7 +186,8 @@ pub trait PluginGuiImpl {
     fn hide(&mut self) -> Result<(), GuiError>;
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginGui
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginGui
 where
     for<'a> P::MainThread<'a>: PluginGuiImpl,
 {

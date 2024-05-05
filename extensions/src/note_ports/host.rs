@@ -57,7 +57,8 @@ pub trait HostNotePortsImpl {
     fn rescan(&mut self, flags: NotePortRescanFlags);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostNotePorts
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostNotePorts
 where
     for<'h> <H as HostHandlers>::MainThread<'h>: HostNotePortsImpl,
 {

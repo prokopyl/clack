@@ -63,7 +63,8 @@ pub trait HostAudioPortsImpl {
     fn rescan(&mut self, flag: RescanType);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostAudioPorts
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostAudioPorts
 where
     for<'h> <H as HostHandlers>::MainThread<'h>: HostAudioPortsImpl,
 {

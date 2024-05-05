@@ -65,7 +65,8 @@ pub trait HostNoteNameImpl {
     fn changed(&mut self);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostNoteName
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostNoteName
 where
     for<'h> <H as HostHandlers>::MainThread<'h>: HostNoteNameImpl,
 {

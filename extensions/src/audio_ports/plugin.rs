@@ -60,7 +60,8 @@ pub trait PluginAudioPortsImpl {
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPorts
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPorts
 where
     for<'a> P::MainThread<'a>: PluginAudioPortsImpl,
 {

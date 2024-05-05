@@ -66,7 +66,8 @@ mod plugin {
         fn exec(&self, task_index: u32);
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginThreadPool
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginThreadPool
     where
         for<'a> P::Shared<'a>: PluginThreadPoolImpl,
     {
@@ -146,7 +147,8 @@ mod host {
         fn request_exec(&mut self, task_count: u32) -> Result<(), ThreadPoolRequestError>;
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadPool
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadPool
     where
         for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
     {

@@ -52,7 +52,8 @@ pub trait PluginNotePortsImpl {
     fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter);
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
 where
     for<'a> P::MainThread<'a>: PluginNotePortsImpl,
 {

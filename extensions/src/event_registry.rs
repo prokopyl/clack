@@ -65,7 +65,8 @@ mod host {
         }
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostEventRegistry
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostEventRegistry
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
     {

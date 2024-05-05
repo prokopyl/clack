@@ -116,7 +116,8 @@ mod host {
         fn unregister_fd(&mut self, fd: RawFd) -> Result<(), FdError>;
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostPosixFd
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostPosixFd
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
@@ -262,7 +263,8 @@ mod plugin {
         fn on_fd(&mut self, fd: RawFd, flags: FdFlags);
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginPosixFd
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginPosixFd
     where
         for<'a> P::MainThread<'a>: PluginPosixFdImpl,
     {

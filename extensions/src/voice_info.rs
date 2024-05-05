@@ -120,7 +120,8 @@ mod host {
         fn changed(&mut self);
     }
 
-    impl<H: for<'a> HostHandlers> ExtensionImplementation<H> for HostVoiceInfo
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: for<'a> HostHandlers> ExtensionImplementation<H> for HostVoiceInfo
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostVoiceInfoImpl,
     {
@@ -169,7 +170,8 @@ mod plugin {
         fn get(&self) -> Option<VoiceInfo>;
     }
 
-    impl<P: Plugin> ExtensionImplementation<P> for PluginVoiceInfo
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginVoiceInfo
     where
         for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
     {

@@ -48,7 +48,8 @@ mod host {
         fn is_audio_thread(&self) -> bool;
     }
 
-    impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadCheck
+    // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadCheck
     where
         for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
     {

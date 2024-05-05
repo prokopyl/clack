@@ -184,7 +184,8 @@ pub trait HostParamsImplMainThread {
     fn clear(&mut self, param_id: u32, flags: ParamClearFlags);
 }
 
-impl<H: HostHandlers> ExtensionImplementation<H> for HostParams
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostParams
 where
     for<'a> <H as HostHandlers>::Shared<'a>: HostParamsImplShared,
     for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,

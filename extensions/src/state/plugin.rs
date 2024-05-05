@@ -18,7 +18,8 @@ pub trait PluginStateImpl {
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
-impl<P: Plugin> ExtensionImplementation<P> for PluginState
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginState
 where
     for<'a> P::MainThread<'a>: PluginStateImpl,
 {

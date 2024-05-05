@@ -45,13 +45,9 @@ mod private {
 /// extension type.
 ///
 /// # Safety
+///
 /// The [`IDENTIFIER`](Extension::IDENTIFIER) **must** match the official identifier for the given
 /// extension, otherwise the extension data could be misinterpreted, leading to Undefined Behavior.
-///
-/// By default, the implementation of the [`Extension::from_raw`] simply casts the received pointer
-/// to a shared reference to the Extension type. This implies the type implementing this trait
-/// must be `#[repr(C)]` and ABI-compatible with the CLAP extension struct, unless the
-/// [`Extension::from_raw`] method is overridden and implemented manually.
 pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
     /// The standard identifier for this extension.
     const IDENTIFIER: &'static CStr;
@@ -68,8 +64,13 @@ pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
 
 /// Provides an implementation of this extension for a given type `I` (typically either a host or
 /// plugin structure).
-// TODO: make unsafe
-pub trait ExtensionImplementation<I>: Extension {
+///
+/// # Safety
+///
+/// Implementors MUST ensure the value of the [`IMPLEMENTATION`](Self::IMPLEMENTATION) pointer
+/// is correct: it must point to a type that is `#[repr(C)]` *and* ABI-compatible with the
+/// CLAP extension struct.
+pub unsafe trait ExtensionImplementation<I>: Extension {
     /// The implementation of the extension.
     const IMPLEMENTATION: RawExtensionImplementation;
 }
