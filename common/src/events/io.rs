@@ -1,4 +1,5 @@
 //! Various utilities and types to help processing Input and Output events.
+// TODO: list contents of module
 
 #![deny(missing_docs)]
 

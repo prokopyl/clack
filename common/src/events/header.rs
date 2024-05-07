@@ -1,3 +1,5 @@
+//#![deny(missing_docs)]
+
 use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use crate::events::Event;
 use bitflags::bitflags;
@@ -7,6 +9,33 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::marker::PhantomData;
 
+/// The common metadata header of all CLAP events.
+///
+/// All CLAP events have a common header that contains various metadata about them.
+///
+/// Most of that metadata is information used to discover the event's type: [`type_id`],
+/// [`space_id`] and [`size`]. This is used internally by the [`UnknownEvent`] type to perform
+/// downcasting to concrete types.
+///
+/// All events also carry a sample-accurate timestamp (accessible through [`time`]), as well as
+/// some additional [event flags] (through [`flags`]).
+///
+/// Because event headers internally contain type information for the event, the [`EventHeader`]
+/// is generic over a specific event type parameter `E` in order to guarantee that [`type_id`],
+/// [`space_id`] and [`size`] are coherent with the event's type.
+///
+/// The generic parameter `E` can either be a concrete [`Event`] type (as returned by the
+/// [`Event::header`] method), or `()` for headers of an undetermined event type (as returned by the
+/// [`UnknownEvent::header`] method).
+///
+/// [`type_id`]: EventHeader::type_id
+/// [`space_id`]: EventHeader::space_id
+/// [`size`]: EventHeader::size
+/// [`time`]: EventHeader::time
+/// [`flags`]: EventHeader::flags
+/// [`UnknownEvent`]: super::UnknownEvent
+/// [`UnknownEvent::header`]: super::UnknownEvent::header
+/// [event flags]: EventFlags
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct EventHeader<E = ()> {
@@ -35,37 +64,56 @@ impl<E> EventHeader<E> {
             .saturating_sub(core::mem::size_of::<EventHeader>() as u32)
     }
 
+    /// The raw event type ID.
     #[inline]
     pub const fn type_id(&self) -> u16 {
         self.inner.type_
     }
 
+    /// The timestamp at which this event occurs, in samples.
+    ///
+    /// This timestamp is relative to the frame count of the current `process` invocation.
     #[inline]
     pub const fn time(&self) -> u32 {
         self.inner.time
     }
 
+    /// Sets the timestamp at which this event occurs, in samples.
+    ///
+    /// This timestamp is relative to the frame count of the current `process` invocation.
     #[inline]
     pub fn set_time(&mut self, time: u32) {
         self.inner.time = time
     }
 
+    /// Sets the timestamp at which this event occurs, in samples.
+    ///
+    /// This timestamp is relative to the frame count of the current `process` invocation.
+    ///
+    /// This method takes and returns ownership of the event header, allowing it to be used in a
+    /// builder-style pattern.
     #[inline]
     pub const fn with_time(mut self, time: u32) -> Self {
         self.inner.time = time;
         self
     }
 
+    /// The event's [flags](EventFlags).
     #[inline]
     pub const fn flags(&self) -> EventFlags {
         EventFlags::from_bits_truncate(self.inner.flags)
     }
 
+    /// Sets the event's [flags](EventFlags).
     #[inline]
     pub fn set_flags(&mut self, flags: EventFlags) {
         self.inner.flags = flags.bits();
     }
 
+    /// Sets the event's [flags](EventFlags).
+    ///
+    /// This method takes and returns ownership of the event header, allowing it to be used in a
+    /// builder-style pattern.
     #[inline]
     pub const fn with_flags(mut self, flags: EventFlags) -> Self {
         self.inner.flags = flags.bits();
@@ -74,7 +122,8 @@ impl<E> EventHeader<E> {
 
     // Raw stuff
 
-    /// Gets a typed event header from a raw, untyped header, without performing any checks.
+    /// Gets a shared reference typed event header from a mutable shared to a raw,
+    /// C-FFI compatible header struct, without performing any checks.
     ///
     /// # Safety
     ///
@@ -85,8 +134,8 @@ impl<E> EventHeader<E> {
         &*(header as *const clap_event_header as *const Self)
     }
 
-    /// Gets a typed event header from a mutable reference to a raw, untyped header,
-    /// without performing any checks.
+    /// Gets a mutable reference typed event header from a mutable reference to a raw,
+    /// C-FFI compatible header struct, without performing any checks.
     ///
     /// # Safety
     ///
@@ -97,16 +146,19 @@ impl<E> EventHeader<E> {
         &mut *(header as *mut clap_event_header as *mut Self)
     }
 
+    /// Returns this header as a shared reference to a raw, C-FFI compatible header struct.
     #[inline]
     pub const fn as_raw(&self) -> &clap_event_header {
         &self.inner
     }
 
+    /// Returns this header as a mutable reference to a raw, C-FFI compatible header struct.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_event_header {
         &mut self.inner
     }
 
+    /// Returns this header as a raw, C-FFI compatible header struct.
     #[inline]
     pub const fn into_raw(self) -> clap_event_header {
         self.inner
@@ -121,6 +173,7 @@ impl EventHeader<()> {
         unsafe { Self::from_raw_unchecked(header) }
     }
 
+    /// The untyped event space ID, from this untyped event header.
     #[inline]
     pub const fn space_id(&self) -> Option<EventSpaceId> {
         EventSpaceId::new(self.inner.space_id)
@@ -128,6 +181,13 @@ impl EventHeader<()> {
 }
 
 impl<E: Event> EventHeader<E> {
+    /// Creates a new header for a specific core event type, containing the given `time` and `flags`.
+    ///
+    /// The [`type_id`](Self::type_id), [`space_id`](Self::space_id) and [`size`](Self::size)
+    /// members are derived from the `E` type parameter.
+    ///
+    /// See the [`event_types`](super::event_types) module for a list of all the supported core
+    /// event types.
     #[inline]
     pub const fn new_core(time: u32, flags: EventFlags) -> Self
     where
@@ -136,6 +196,11 @@ impl<E: Event> EventHeader<E> {
         Self::new_for_space(EventSpaceId::core(), time, flags)
     }
 
+    /// Creates a new header for a specific event type, of a given custom event space,
+    /// containing the given `time` and `flags`.
+    ///
+    /// The [`type_id`](Self::type_id) and [`size`](Self::size) members are derived from the `E`
+    /// type parameter.
     #[inline]
     pub const fn new_for_space(
         space_id: EventSpaceId<E::EventSpace<'_>>,
@@ -154,6 +219,7 @@ impl<E: Event> EventHeader<E> {
         }
     }
 
+    /// The typed event space ID from this event header.
     #[inline]
     pub fn space_id(&self) -> EventSpaceId<E::EventSpace<'static>> {
         // SAFETY: the EventHeader type guarantees the space_id correctness
@@ -161,22 +227,10 @@ impl<E: Event> EventHeader<E> {
     }
 }
 
-impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> EventHeader<E> {
-    #[inline]
-    pub const fn new_with_flags(time: u32, flags: EventFlags) -> Self {
-        Self::new_for_space(EventSpaceId::core(), time, flags)
-    }
-
-    #[inline]
-    pub const fn new(time: u32) -> Self {
-        Self::new_with_flags(time, EventFlags::empty())
-    }
-}
-
-impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> Default for EventHeader<E> {
+impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> Default for EventHeader<E> {
     #[inline]
     fn default() -> Self {
-        Self::new(0)
+        Self::new_core(0, EventFlags::empty())
     }
 }
 

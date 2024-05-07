@@ -1,4 +1,6 @@
-use crate::events::{Event, EventHeader, Pckn};
+#![deny(missing_docs)]
+
+use crate::events::{Event, EventFlags, EventHeader, Pckn};
 use clap_sys::events::clap_event_note;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
@@ -10,12 +12,12 @@ pub(crate) struct NoteEvent<E> {
     _event: PhantomData<E>,
 }
 
-impl<'a, E: Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
+impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
     #[inline]
     pub const fn new(time: u32, pckn: Pckn, velocity: f64) -> Self {
         Self {
             inner: clap_event_note {
-                header: EventHeader::<E>::new(time).into_raw(),
+                header: EventHeader::<E>::new_core(time, EventFlags::empty()).into_raw(),
                 port_index: pckn.raw_port(),
                 channel: pckn.raw_channel(),
                 key: pckn.raw_key(),
@@ -83,96 +85,160 @@ impl<E> PartialEq for NoteEvent<E> {
 
 macro_rules! impl_note_helpers {
     () => {
+        /// The [`Pckn`](crate::events::Pckn) tuple indicating which note(s) this note event targets.
         #[inline]
         pub const fn pckn(&self) -> crate::events::Pckn {
             self.inner.pckn()
         }
 
+        /// Sets the [`Pckn`](crate::events::Pckn) tuple for this event.
         #[inline]
         pub fn set_pckn(&mut self, pckn: Pckn) {
             self.inner.set_pckn(pckn)
         }
 
+        /// Sets the [`Pckn`](crate::events::Pckn) tuple for this event.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub fn with_pckn(mut self, pckn: Pckn) -> Self {
             self.inner.set_pckn(pckn);
             self
         }
 
+        /// The index of the note port this event targets.
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note ports.
         #[inline]
-        pub const fn port(&self) -> Match<u16> {
+        pub const fn port_index(&self) -> Match<u16> {
             Match::<u16>::from_raw(self.inner.inner.port_index)
         }
 
+        /// Sets the index of the note port this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note ports.
         #[inline]
-        pub fn set_port(&mut self, port: Match<u16>) {
-            self.inner.inner.port_index = port.to_raw()
+        pub fn set_port_index(&mut self, port_index: Match<u16>) {
+            self.inner.inner.port_index = port_index.to_raw()
         }
 
+        /// Sets the index of the note port this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note ports.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
-        pub const fn with_port(mut self, port: Match<u16>) -> Self {
-            self.inner.inner.port_index = port.to_raw();
+        pub const fn with_port_index(mut self, port_index: Match<u16>) -> Self {
+            self.inner.inner.port_index = port_index.to_raw();
             self
         }
 
+        /// The note channel this event targets.
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note channels.
         #[inline]
         pub const fn channel(&self) -> Match<u16> {
             Match::<u16>::from_raw(self.inner.inner.channel)
         }
 
+        /// Sets the note channel this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible channels.
         #[inline]
         pub fn set_channel(&mut self, channel: Match<u16>) {
             self.inner.inner.channel = channel.to_raw();
         }
 
+        /// Sets the note channel this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible channels.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_channel(mut self, channel: Match<u16>) -> Self {
             self.inner.inner.channel = channel.to_raw();
             self
         }
 
+        /// The key of the note(s) this event targets.
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note keys.
         #[inline]
         pub const fn key(&self) -> Match<u16> {
             Match::<u16>::from_raw(self.inner.inner.key)
         }
 
+        /// Sets the key of the note(s) this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note keys.
         #[inline]
         pub fn set_key(&mut self, key: Match<u16>) {
             self.inner.inner.key = key.to_raw();
         }
 
+        /// Sets the key of the note(s) this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note keys.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_key(mut self, key: Match<u16>) -> Self {
             self.inner.inner.key = key.to_raw();
             self
         }
 
+        /// The specific ID of the Note this event targets.
+        ///
+        /// This returns [`Match::All`] if this event doesn't target a specific note, or doesn't
+        /// provide a Note ID.
         #[inline]
         pub const fn note_id(&self) -> Match<u32> {
             Match::<u32>::from_raw(self.inner.inner.note_id)
         }
 
+        /// Sets the specific ID of the Note this event targets.
+        ///
+        /// Use [`Match::All`] to not target a single specific note in particular.
         #[inline]
         pub fn set_note_id(&mut self, note_id: Match<u32>) {
             self.inner.inner.note_id = note_id.to_raw();
         }
 
+        /// Sets the specific ID of the Note this event targets.
+        ///
+        /// Use [`Match::All`] to not target a single specific note in particular.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub fn with_note_id(mut self, note_id: Match<u32>) -> Self {
             self.inner.inner.note_id = note_id.to_raw();
             self
         }
 
+        /// Returns a shared reference to the underlying raw, C-FFI compatible event struct.
         #[inline]
         pub const fn as_raw(&self) -> &clap_event_note {
             &self.inner.inner
         }
 
+        /// Returns a mutable reference to the underlying raw, C-FFI compatible event struct.
         #[inline]
         pub fn as_raw_mut(&mut self) -> &mut clap_event_note {
             &mut self.inner.inner
         }
 
+        /// Creates a new note event of this type from a reference to a raw, C-FFI compatible event
+        /// struct.
+        ///
+        /// # Panics
+        ///
+        /// This method will panic if the given event struct's header doesn't actually match
+        /// the expected note event type.
         #[inline]
         pub const fn from_raw(raw: &clap_event_note) -> Self {
             crate::events::ensure_event_matches_const::<Self>(&raw.header);
@@ -182,6 +248,13 @@ macro_rules! impl_note_helpers {
             }
         }
 
+        /// Creates a reference to a note event of this type from a reference to a raw,
+        /// C-FFI compatible event struct.
+        ///
+        /// # Panics
+        ///
+        /// This method will panic if the given event struct's header doesn't actually match
+        /// the expected note event type.
         #[inline]
         pub const fn from_raw_ref(raw: &clap_event_note) -> &Self {
             crate::events::ensure_event_matches_const::<Self>(&raw.header);
@@ -190,6 +263,13 @@ macro_rules! impl_note_helpers {
             unsafe { &*(raw as *const clap_event_note as *const Self) }
         }
 
+        /// Creates a mutable reference to a note event of this type from a reference to a raw,
+        /// C-FFI compatible event struct.
+        ///
+        /// # Panics
+        ///
+        /// This method will panic if the given event struct's header doesn't actually match
+        /// the expected note event type.
         #[inline]
         pub fn from_raw_mut(raw: &mut clap_event_note) -> &mut Self {
             crate::events::ensure_event_matches::<Self>(&raw.header);

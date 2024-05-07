@@ -5,11 +5,14 @@ use clap_sys::events::*;
 mod inner;
 use inner::*;
 
+/// A note key pressed event.
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOnEvent {
     inner: NoteEvent<NoteOnEvent>,
 }
+
+/// A note key released event.
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOffEvent {
@@ -58,6 +61,22 @@ impl NoteOffEvent {
         Self {
             inner: NoteEvent::new(time, pckn, velocity),
         }
+    }
+
+    #[inline]
+    pub const fn velocity(&self) -> f64 {
+        self.inner.inner.velocity
+    }
+
+    #[inline]
+    pub fn set_velocity(&mut self, velocity: f64) {
+        self.inner.inner.velocity = velocity
+    }
+
+    #[inline]
+    pub const fn with_velocity(mut self, velocity: f64) -> Self {
+        self.inner.inner.velocity = velocity;
+        self
     }
 
     self::impl_note_helpers!();

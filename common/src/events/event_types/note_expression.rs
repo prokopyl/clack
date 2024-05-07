@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{impl_event_pckn, Event, EventHeader, Match, Pckn, UnknownEvent};
+use crate::events::{impl_event_pckn, Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -66,7 +66,7 @@ impl NoteExpressionEvent {
     ) -> Self {
         Self {
             inner: clap_event_note_expression {
-                header: EventHeader::<Self>::new(time).into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 note_id: pckn.raw_note_id(),
                 port_index: pckn.raw_port(),
                 key: pckn.raw_key(),

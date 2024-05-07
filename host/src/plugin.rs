@@ -178,7 +178,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 }
 
-// TODO: bikeshed
+// TODO: remove, this actually isn't very useful
 pub struct PluginInstanceHandle<H: HostHandlers> {
     inner: WeakReader<PluginInstanceInner<H>>,
 }
