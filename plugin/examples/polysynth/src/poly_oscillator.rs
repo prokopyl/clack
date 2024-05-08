@@ -133,7 +133,7 @@ impl PolyOscillator {
     /// Handles the given Note On input event.
     pub fn handle_note_on(&mut self, event: &NoteOnEvent) {
         dbg!(event);
-        if !event.port().matches(0u16) {
+        if !event.port_index().matches(0u16) {
             return;
         }
 
@@ -144,7 +144,7 @@ impl PolyOscillator {
 
     /// Handles the given Note Off input event.
     pub fn handle_note_off(&mut self, event: &NoteOffEvent) {
-        if !event.port().matches(0u16) {
+        if !event.port_index().matches(0u16) {
             return;
         }
 

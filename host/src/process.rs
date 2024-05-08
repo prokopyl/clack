@@ -359,7 +359,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 
     #[inline]
     pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
-        Arc::ptr_eq(self.inner.as_ref().unwrap(), instance.inner.get())
+        Arc::ptr_eq(self.inner.as_ref().unwrap(), &instance.inner)
     }
 }
 
@@ -408,7 +408,7 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
 
     #[inline]
     pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
-        Arc::ptr_eq(&self.inner, instance.inner.get())
+        Arc::ptr_eq(&self.inner, &instance.inner)
     }
 
     #[inline]

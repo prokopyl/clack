@@ -10,12 +10,11 @@ pub(crate) mod instance;
 pub use handle::*;
 use instance::*;
 
-use crate::util::{WeakReader, WriterLock};
 pub use clack_common::plugin::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: HostHandlers> {
-    pub(crate) inner: WriterLock<PluginInstanceInner<H>>,
+    pub(crate) inner: Arc<PluginInstanceInner<H>>,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -42,7 +41,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         )?;
 
         Ok(Self {
-            inner: WriterLock::new(inner),
+            inner,
             _no_send: PhantomData,
         })
     }
@@ -58,15 +57,10 @@ impl<H: HostHandlers> PluginInstance<H> {
             &mut <H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
-        self.inner.use_mut(|inner| {
-            let wrapper = Arc::get_mut(inner).ok_or(HostError::AlreadyActivatedPlugin)?;
+        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
+        wrapper.activate(audio_processor, configuration)?;
 
-            wrapper.activate(audio_processor, configuration)
-        })?;
-
-        Ok(StoppedPluginAudioProcessor::new(Arc::clone(
-            self.inner.get(),
-        )))
+        Ok(StoppedPluginAudioProcessor::new(Arc::clone(&self.inner)))
     }
 
     #[inline]
@@ -90,7 +84,7 @@ impl<H: HostHandlers> PluginInstance<H> {
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
-        if !Arc::ptr_eq(self.inner.get(), &processor.inner) {
+        if !Arc::ptr_eq(&self.inner, &processor.inner) {
             panic!("Given plugin audio processor does not match the instance being deactivated")
         }
 
@@ -107,28 +101,26 @@ impl<H: HostHandlers> PluginInstance<H> {
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
-        self.inner.use_mut(|inner| {
-            let wrapper = Arc::get_mut(inner).ok_or(HostError::StillActivatedPlugin)?;
+        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::StillActivatedPlugin)?;
 
-            wrapper.deactivate_with(drop_with)
-        })
+        wrapper.deactivate_with(drop_with)
     }
 
     // FIXME: this should be on the handle?
     #[inline]
     pub fn call_on_main_thread_callback(&mut self) {
         // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing
-        unsafe { self.inner.get().on_main_thread() }
+        unsafe { self.inner.on_main_thread() }
     }
 
     #[inline]
     pub fn raw_instance(&self) -> &clap_plugin {
-        self.inner.get().raw_instance()
+        self.inner.raw_instance()
     }
 
     #[inline]
     pub fn is_active(&self) -> bool {
-        self.inner.get().is_active()
+        self.inner.is_active()
     }
 
     #[inline]
@@ -136,7 +128,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
     ) -> R {
-        access(self.inner.get().wrapper().shared())
+        access(self.inner.wrapper().shared())
     }
 
     #[inline]
@@ -146,7 +138,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.get().wrapper().main_thread().as_ref()) }
+        unsafe { access(self.inner.wrapper().main_thread().as_ref()) }
     }
 
     #[inline]
@@ -156,49 +148,18 @@ impl<H: HostHandlers> PluginInstance<H> {
     ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.get().wrapper().main_thread().as_mut()) }
+        unsafe { access(self.inner.wrapper().main_thread().as_mut()) }
     }
 
     #[inline]
     pub fn plugin_shared_handle(&self) -> PluginSharedHandle {
-        self.inner.get().plugin_shared()
+        self.inner.plugin_shared()
     }
 
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginMainThreadHandle {
         // SAFETY: this type can only exist on the main thread.
-        unsafe { PluginMainThreadHandle::new(self.inner.get().raw_instance().into()) }
-    }
-
-    // TODO: bikeshed
-    pub fn handle(&self) -> PluginInstanceHandle<H> {
-        PluginInstanceHandle {
-            inner: self.inner.make_reader(),
-        }
-    }
-}
-
-// TODO: remove, this actually isn't very useful
-pub struct PluginInstanceHandle<H: HostHandlers> {
-    inner: WeakReader<PluginInstanceInner<H>>,
-}
-
-impl<H: HostHandlers> PluginInstanceHandle<H> {
-    #[inline]
-    pub fn use_handler<T>(&self, lambda: impl FnOnce(&H::Shared<'_>) -> T) -> Result<T, HostError> {
-        self.inner
-            .use_with(|inner| lambda(inner.wrapper().shared()))
-            .ok_or(HostError::PluginDestroyed)
-    }
-
-    #[inline]
-    pub fn use_plugin_handle<T>(
-        &self,
-        lambda: impl FnOnce(PluginSharedHandle) -> T,
-    ) -> Result<T, HostError> {
-        self.inner
-            .use_with(|inner| lambda(inner.plugin_shared()))
-            .ok_or(HostError::PluginDestroyed)
+        unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
     }
 }
 
