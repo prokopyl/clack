@@ -19,7 +19,7 @@ impl ParamInfoBuffer {
     #[inline]
     pub const fn new() -> Self {
         Self {
-            inner: MaybeUninit::uninit(),
+            inner: MaybeUninit::zeroed(),
         }
     }
 }
@@ -57,15 +57,14 @@ impl PluginParams {
     }
 
     pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: u32) -> Option<f64> {
-        let mut value = MaybeUninit::uninit();
+        let mut value = 0.0;
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id, value.as_mut_ptr())
+            plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id, &mut value)
         };
 
         if valid {
-            // SAFETY: we just checked the value was successfully written to.
-            unsafe { Some(value.assume_init()) }
+            Some(value)
         } else {
             None
         }
@@ -110,7 +109,7 @@ impl PluginParams {
         param_id: u32,
         display: &CStr,
     ) -> Option<f64> {
-        let mut value = MaybeUninit::uninit();
+        let mut value = 0.0;
 
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
@@ -118,13 +117,12 @@ impl PluginParams {
                 plugin.as_raw(),
                 param_id,
                 display.as_ptr(),
-                value.as_mut_ptr(),
+                &mut value,
             )
         };
 
         if valid {
-            // SAFETY: We just checked the buffer was successfully written to.
-            unsafe { Some(value.assume_init()) }
+            Some(value.assume_init())
         } else {
             None
         }

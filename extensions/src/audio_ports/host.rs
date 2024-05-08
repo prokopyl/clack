@@ -18,7 +18,7 @@ impl AudioPortInfoBuffer {
     #[inline]
     pub const fn new() -> Self {
         Self {
-            inner: MaybeUninit::uninit(),
+            inner: MaybeUninit::zeroed(),
         }
     }
 }

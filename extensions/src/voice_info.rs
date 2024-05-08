@@ -101,7 +101,7 @@ mod host {
         ///
         /// If the plugin failed to provide any Voice Information, this returns [`None`].
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> Option<VoiceInfo> {
-            let info = MaybeUninit::uninit();
+            let info = MaybeUninit::zeroed();
 
             // SAFETY: This type ensures the function pointer is valid.
             let success = unsafe {
