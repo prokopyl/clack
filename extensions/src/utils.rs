@@ -14,6 +14,7 @@ pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
 ///
 /// The pointer must be non-null and well-aligned. However, the array doesn't need to be initialized.
 /// `dst` and `value` must not overlap.
+#[cfg(feature = "clack-plugin")]
 #[inline]
 pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
     let max_len = core::cmp::min(N - 1, value.len()); // Space for null byte
