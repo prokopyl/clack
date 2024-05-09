@@ -198,15 +198,13 @@ impl<'a> EventBatch<'a> {
 mod tests {
     use super::*;
     use crate::events::event_types::ParamGestureBeginEvent;
-    use crate::events::{EventFlags, EventHeader, UnknownEvent};
     use crate::utils::ClapId;
 
     const PARAM: ClapId = ClapId::new(0);
 
     #[test]
     pub fn works_with_empty_events() {
-        let buf: [&UnknownEvent; 0] = [];
-        let events = InputEvents::from_buffer(&buf);
+        let events = InputEvents::empty();
         let mut events = events.batch();
 
         {
@@ -223,10 +221,7 @@ mod tests {
 
     #[test]
     pub fn works_with_single_zero_event() {
-        let buf = [ParamGestureBeginEvent::new(
-            EventHeader::new_core(0, EventFlags::empty()),
-            PARAM,
-        )];
+        let buf = [ParamGestureBeginEvent::new(0, PARAM)];
 
         let events = InputEvents::from_buffer(&buf);
         let mut events = events.batch();
@@ -246,10 +241,7 @@ mod tests {
 
     #[test]
     pub fn works_with_single_nonzero_event() {
-        let buf = [ParamGestureBeginEvent::new(
-            EventHeader::new_core(5, EventFlags::empty()),
-            PARAM,
-        )];
+        let buf = [ParamGestureBeginEvent::new(5, PARAM)];
 
         let events = InputEvents::from_buffer(&buf);
         let mut events = events.batch();
@@ -278,8 +270,8 @@ mod tests {
     #[test]
     pub fn works_with_two_grouped_nonzero_events() {
         let buf = [
-            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), PARAM),
-            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), PARAM),
+            ParamGestureBeginEvent::new(5, PARAM),
+            ParamGestureBeginEvent::new(5, PARAM),
         ];
 
         let events = InputEvents::from_buffer(&buf);
@@ -310,8 +302,8 @@ mod tests {
     #[test]
     pub fn works_with_two_distinct_nonzero_events() {
         let buf = [
-            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), PARAM),
-            ParamGestureBeginEvent::new(EventHeader::new_core(10, EventFlags::empty()), PARAM),
+            ParamGestureBeginEvent::new(5, PARAM),
+            ParamGestureBeginEvent::new(10, PARAM),
         ];
 
         let events = InputEvents::from_buffer(&buf);
@@ -350,9 +342,9 @@ mod tests {
     #[test]
     pub fn three_distinct_nonzero_events() {
         let buf = [
-            ParamGestureBeginEvent::new(EventHeader::new_core(5, EventFlags::empty()), PARAM),
-            ParamGestureBeginEvent::new(EventHeader::new_core(10, EventFlags::empty()), PARAM),
-            ParamGestureBeginEvent::new(EventHeader::new_core(15, EventFlags::empty()), PARAM),
+            ParamGestureBeginEvent::new(5, PARAM),
+            ParamGestureBeginEvent::new(10, PARAM),
+            ParamGestureBeginEvent::new(15, PARAM),
         ];
 
         let events = InputEvents::from_buffer(&buf);

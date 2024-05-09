@@ -25,11 +25,14 @@ struct AlignedEventHeader(clap_event_header);
 /// use clack_common::events::event_types::ParamGestureBeginEvent;
 /// use clack_common::events::EventHeader;
 /// use clack_common::events::io::EventBuffer;
+/// use clack_common::utils::ClapId;
+///
+/// const MY_PARAM_ID: ClapId = ClapId::new(2);
 ///
 /// let mut buffer = EventBuffer::new();
 /// assert!(buffer.is_empty());
 ///
-/// let some_event = ParamGestureBeginEvent::new(EventHeader::new(6), 2);
+/// let some_event = ParamGestureBeginEvent::new(6, MY_PARAM_ID);
 /// buffer.push(&some_event);
 /// assert_eq!(1, buffer.len());
 /// assert_eq!(&buffer[0], &some_event);
@@ -308,14 +311,14 @@ impl<'a> Iterator for EventBufferIter<'a> {
 mod test {
     use crate::events::event_types::MidiEvent;
     use crate::events::io::EventBuffer;
-    use crate::events::{Event, EventFlags, EventHeader};
+    use crate::events::Event;
 
     #[test]
     fn it_works() {
-        let event_0 = MidiEvent::new(EventHeader::new_core(0, EventFlags::empty()), 0, [0; 3]);
-        let event_1 = MidiEvent::new(EventHeader::new_core(1, EventFlags::empty()), 0, [1; 3]);
-        let event_2 = MidiEvent::new(EventHeader::new_core(2, EventFlags::empty()), 0, [2; 3]);
-        let event_3 = MidiEvent::new(EventHeader::new_core(3, EventFlags::empty()), 0, [3; 3]);
+        let event_0 = MidiEvent::new(0, 0, [0; 3]);
+        let event_1 = MidiEvent::new(1, 0, [1; 3]);
+        let event_2 = MidiEvent::new(2, 0, [2; 3]);
+        let event_3 = MidiEvent::new(3, 0, [3; 3]);
 
         let events_1 = [event_1, event_2];
         let events_2 = [event_0, event_3];

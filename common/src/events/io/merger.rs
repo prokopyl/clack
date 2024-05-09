@@ -59,14 +59,14 @@ where
 mod test {
     use crate::events::event_types::MidiEvent;
     use crate::events::io::merger::EventMerger;
-    use crate::events::{Event, EventFlags, EventHeader};
+    use crate::events::Event;
 
     #[test]
     fn it_works() {
-        let event_0 = MidiEvent::new(EventHeader::new_core(0, EventFlags::empty()), 0, [0; 3]);
-        let event_1 = MidiEvent::new(EventHeader::new_core(1, EventFlags::empty()), 0, [1; 3]);
-        let event_2 = MidiEvent::new(EventHeader::new_core(2, EventFlags::empty()), 0, [2; 3]);
-        let event_3 = MidiEvent::new(EventHeader::new_core(3, EventFlags::empty()), 0, [3; 3]);
+        let event_0 = MidiEvent::new(0, 0, [0; 3]);
+        let event_1 = MidiEvent::new(1, 0, [1; 3]);
+        let event_2 = MidiEvent::new(2, 0, [2; 3]);
+        let event_3 = MidiEvent::new(3, 0, [3; 3]);
 
         let events_1 = [event_1, event_2];
         let events_2 = [event_0, event_3];

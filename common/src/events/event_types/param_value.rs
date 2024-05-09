@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{impl_event_pckn, Event, EventHeader, Match, Pckn, UnknownEvent};
+use crate::events::{impl_event_pckn, Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent};
 use crate::utils::{ClapId, Cookie};
 use clap_sys::events::{
     clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
@@ -30,16 +30,10 @@ impl AsRef<UnknownEvent> for ParamValueEvent {
 
 impl ParamValueEvent {
     #[inline]
-    pub const fn new(
-        header: EventHeader<Self>,
-        param_id: ClapId,
-        pckn: Pckn,
-        value: f64,
-        cookie: Cookie,
-    ) -> Self {
+    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, value: f64, cookie: Cookie) -> Self {
         Self {
             inner: clap_event_param_value {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 param_id: param_id.get(),
                 note_id: pckn.raw_note_id(),
                 port_index: pckn.raw_port_index(),
@@ -151,16 +145,10 @@ impl AsRef<UnknownEvent> for ParamModEvent {
 
 impl ParamModEvent {
     #[inline]
-    pub const fn new(
-        header: EventHeader<Self>,
-        param_id: ClapId,
-        pckn: Pckn,
-        amount: f64,
-        cookie: Cookie,
-    ) -> Self {
+    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, amount: f64, cookie: Cookie) -> Self {
         Self {
             inner: clap_event_param_mod {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 param_id: param_id.get(),
                 note_id: pckn.raw_note_id(),
                 port_index: pckn.raw_port_index(),
@@ -272,10 +260,10 @@ impl AsRef<UnknownEvent> for ParamGestureBeginEvent {
 
 impl ParamGestureBeginEvent {
     #[inline]
-    pub const fn new(header: EventHeader<Self>, param_id: ClapId) -> Self {
+    pub const fn new(time: u32, param_id: ClapId) -> Self {
         Self {
             inner: clap_event_param_gesture {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 param_id: param_id.get(),
             },
         }
@@ -337,10 +325,10 @@ impl AsRef<UnknownEvent> for ParamGestureEndEvent {
 
 impl ParamGestureEndEvent {
     #[inline]
-    pub const fn new(header: EventHeader<Self>, param_id: ClapId) -> Self {
+    pub const fn new(time: u32, param_id: ClapId) -> Self {
         Self {
             inner: clap_event_param_gesture {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 param_id: param_id.get(),
             },
         }

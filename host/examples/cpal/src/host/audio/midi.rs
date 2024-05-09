@@ -203,11 +203,9 @@ fn push_midi_to_buffer(
         m => {
             let mut buf = [0; 3];
             if m.copy_to_slice(&mut buf).is_ok() {
-                buffer.push(&MidiEvent::new(
-                    EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                    port_index,
-                    buf,
-                ))
+                buffer.push(
+                    &MidiEvent::new(sample_time, port_index, buf).with_flags(EventFlags::IS_LIVE),
+                )
             }
         }
     }

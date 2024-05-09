@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{Event, EventHeader, UnknownEvent};
+use crate::events::{Event, EventFlags, EventHeader, UnknownEvent};
 use crate::utils::slice_from_external_parts;
 use clap_sys::events::{
     clap_event_midi, clap_event_midi2, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
@@ -28,10 +28,10 @@ impl AsRef<UnknownEvent> for MidiEvent {
 
 impl MidiEvent {
     #[inline]
-    pub fn new(header: EventHeader<Self>, port_index: u16, data: [u8; 3]) -> Self {
+    pub fn new(time: u32, port_index: u16, data: [u8; 3]) -> Self {
         Self {
             inner: clap_event_midi {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 port_index,
                 data,
             },
@@ -113,10 +113,10 @@ impl AsRef<UnknownEvent> for MidiSysExEvent {
 
 impl MidiSysExEvent {
     #[inline]
-    pub fn new(header: EventHeader<Self>, port_index: u16, data: &[u8]) -> Self {
+    pub fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
         Self {
             inner: clap_event_midi_sysex {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 port_index,
                 buffer: data.as_ptr(),
                 size: data.len() as u32,
@@ -208,10 +208,10 @@ impl AsRef<UnknownEvent> for Midi2Event {
 
 impl Midi2Event {
     #[inline]
-    pub fn new(header: EventHeader<Self>, port_index: u16, data: [u32; 4]) -> Self {
+    pub fn new(time: u32, port_index: u16, data: [u32; 4]) -> Self {
         Self {
             inner: clap_event_midi2 {
-                header: header.into_raw(),
+                header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 port_index,
                 data,
             },
