@@ -17,7 +17,7 @@ impl Default for ParamInfoBuffer {
 
 impl ParamInfoBuffer {
     #[inline]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             inner: MaybeUninit::zeroed(),
         }

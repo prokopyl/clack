@@ -16,7 +16,7 @@ impl Default for AudioPortInfoBuffer {
 
 impl AudioPortInfoBuffer {
     #[inline]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             inner: MaybeUninit::zeroed(),
         }
