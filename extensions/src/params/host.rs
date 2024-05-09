@@ -56,11 +56,11 @@ impl PluginParams {
         }
     }
 
-    pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: u32) -> Option<f64> {
+    pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: ClapId) -> Option<f64> {
         let mut value = 0.0;
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
-            plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id, &mut value)
+            plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id.get(), &mut value)
         };
 
         if valid {
@@ -73,7 +73,7 @@ impl PluginParams {
     pub fn value_to_text<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        param_id: u32,
+        param_id: ClapId,
         value: f64,
         buffer: &'b mut [MaybeUninit<u8>],
     ) -> Result<&'b mut [u8], core::fmt::Error> {
@@ -85,7 +85,7 @@ impl PluginParams {
         let valid = unsafe {
             value_to_text(
                 plugin.as_raw(),
-                param_id,
+                param_id.get(),
                 value,
                 buffer.as_mut_ptr() as *mut _,
                 buffer.len() as u32,
@@ -106,7 +106,7 @@ impl PluginParams {
     pub fn text_to_value(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        param_id: u32,
+        param_id: ClapId,
         display: &CStr,
     ) -> Option<f64> {
         let mut value = 0.0;
@@ -115,14 +115,14 @@ impl PluginParams {
         let valid = unsafe {
             plugin.use_extension(&self.0).text_to_value?(
                 plugin.as_raw(),
-                param_id,
+                param_id.get(),
                 display.as_ptr(),
                 &mut value,
             )
         };
 
         if valid {
-            Some(value.assume_init())
+            Some(value)
         } else {
             None
         }
@@ -177,7 +177,7 @@ pub trait HostParamsImplShared {
 
 pub trait HostParamsImplMainThread {
     fn rescan(&mut self, flags: ParamRescanFlags);
-    fn clear(&mut self, param_id: u32, flags: ParamClearFlags);
+    fn clear(&mut self, param_id: ClapId, flags: ParamClearFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -217,6 +217,8 @@ unsafe extern "C" fn clear<H: HostHandlers>(
     for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
 {
     HostWrapper::<H>::handle(host, |host| {
+        let param_id = ClapId::from_raw(param_id)
+            .ok_or(HostWrapperError::InvalidParameter("Invalid param_id"))?;
         host.main_thread()
             .as_mut()
             .clear(param_id, ParamClearFlags::from_bits_truncate(flags));

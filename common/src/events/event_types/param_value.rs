@@ -1,7 +1,7 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{impl_event_pckn, Event, EventHeader, Match, Pckn, UnknownEvent};
-use crate::utils::Cookie;
+use crate::utils::{ClapId, Cookie};
 use clap_sys::events::{
     clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
     CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
@@ -32,7 +32,7 @@ impl ParamValueEvent {
     #[inline]
     pub const fn new(
         header: EventHeader<Self>,
-        param_id: u32,
+        param_id: ClapId,
         pckn: Pckn,
         value: f64,
         cookie: Cookie,
@@ -40,9 +40,9 @@ impl ParamValueEvent {
         Self {
             inner: clap_event_param_value {
                 header: header.into_raw(),
-                param_id,
+                param_id: param_id.get(),
                 note_id: pckn.raw_note_id(),
-                port_index: pckn.raw_port(),
+                port_index: pckn.raw_port_index(),
                 key: pckn.raw_key(),
                 channel: pckn.raw_channel(),
                 value,
@@ -52,18 +52,18 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub const fn param_id(&self) -> u32 {
-        self.inner.param_id
+    pub const fn param_id(&self) -> Option<ClapId> {
+        ClapId::from_raw(self.inner.param_id)
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: u32) {
-        self.inner.param_id = param_id
+    pub fn set_param_id(&mut self, param_id: ClapId) {
+        self.inner.param_id = param_id.get()
     }
 
     #[inline]
-    pub const fn with_param_id(mut self, param_id: u32) -> Self {
-        self.inner.param_id = param_id;
+    pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
+        self.inner.param_id = param_id.get();
         self
     }
 
@@ -153,7 +153,7 @@ impl ParamModEvent {
     #[inline]
     pub const fn new(
         header: EventHeader<Self>,
-        param_id: u32,
+        param_id: ClapId,
         pckn: Pckn,
         amount: f64,
         cookie: Cookie,
@@ -161,9 +161,9 @@ impl ParamModEvent {
         Self {
             inner: clap_event_param_mod {
                 header: header.into_raw(),
-                param_id,
+                param_id: param_id.get(),
                 note_id: pckn.raw_note_id(),
-                port_index: pckn.raw_port(),
+                port_index: pckn.raw_port_index(),
                 key: pckn.raw_key(),
                 channel: pckn.raw_channel(),
                 amount,
@@ -173,18 +173,18 @@ impl ParamModEvent {
     }
 
     #[inline]
-    pub const fn param_id(&self) -> u32 {
-        self.inner.param_id
+    pub const fn param_id(&self) -> Option<ClapId> {
+        ClapId::from_raw(self.inner.param_id)
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: u32) {
-        self.inner.param_id = param_id
+    pub fn set_param_id(&mut self, param_id: ClapId) {
+        self.inner.param_id = param_id.get()
     }
 
     #[inline]
-    pub const fn with_param_id(mut self, param_id: u32) -> Self {
-        self.inner.param_id = param_id;
+    pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
+        self.inner.param_id = param_id.get();
         self
     }
 
@@ -272,28 +272,28 @@ impl AsRef<UnknownEvent> for ParamGestureBeginEvent {
 
 impl ParamGestureBeginEvent {
     #[inline]
-    pub const fn new(header: EventHeader<Self>, param_id: u32) -> Self {
+    pub const fn new(header: EventHeader<Self>, param_id: ClapId) -> Self {
         Self {
             inner: clap_event_param_gesture {
                 header: header.into_raw(),
-                param_id,
+                param_id: param_id.get(),
             },
         }
     }
 
     #[inline]
-    pub const fn param_id(&self) -> u32 {
-        self.inner.param_id
+    pub const fn param_id(&self) -> Option<ClapId> {
+        ClapId::from_raw(self.inner.param_id)
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: u32) {
-        self.inner.param_id = param_id
+    pub fn set_param_id(&mut self, param_id: ClapId) {
+        self.inner.param_id = param_id.get()
     }
 
     #[inline]
-    pub const fn with_param_id(mut self, param_id: u32) -> Self {
-        self.inner.param_id = param_id;
+    pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
+        self.inner.param_id = param_id.get();
         self
     }
 }
@@ -337,28 +337,28 @@ impl AsRef<UnknownEvent> for ParamGestureEndEvent {
 
 impl ParamGestureEndEvent {
     #[inline]
-    pub const fn new(header: EventHeader<Self>, param_id: u32) -> Self {
+    pub const fn new(header: EventHeader<Self>, param_id: ClapId) -> Self {
         Self {
             inner: clap_event_param_gesture {
                 header: header.into_raw(),
-                param_id,
+                param_id: param_id.get(),
             },
         }
     }
 
     #[inline]
-    pub const fn param_id(&self) -> u32 {
-        self.inner.param_id
+    pub const fn param_id(&self) -> Option<ClapId> {
+        ClapId::from_raw(self.inner.param_id)
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: u32) {
-        self.inner.param_id = param_id
+    pub fn set_param_id(&mut self, param_id: ClapId) {
+        self.inner.param_id = param_id.get()
     }
 
     #[inline]
-    pub const fn with_param_id(mut self, param_id: u32) -> Self {
-        self.inner.param_id = param_id;
+    pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
+        self.inner.param_id = param_id.get();
         self
     }
 }

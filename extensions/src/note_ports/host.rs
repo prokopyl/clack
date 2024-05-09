@@ -45,7 +45,7 @@ impl PluginNotePorts {
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to
-            Some(unsafe { NotePortInfo::from_raw(buffer.inner.assume_init_ref()) })
+            Some(unsafe { NotePortInfo::from_raw(buffer.inner.assume_init_ref())? })
         } else {
             None
         }

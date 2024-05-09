@@ -153,7 +153,7 @@ impl PolyOscillator {
 
     /// Handles the given polyphonic Parameter Value event.
     pub fn handle_param_value(&mut self, event: &ParamValueEvent) {
-        if !event.port().matches(0u16) {
+        if !event.port_index().matches(0u16) {
             return;
         }
 
@@ -172,7 +172,7 @@ impl PolyOscillator {
 
     /// Handles the given polyphonic Parameter Modulation event.
     pub fn handle_param_mod(&mut self, event: &ParamModEvent) {
-        if !event.port().matches(0u16) {
+        if !event.port_index().matches(0u16) {
             return;
         }
 

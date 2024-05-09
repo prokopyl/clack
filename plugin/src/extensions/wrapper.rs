@@ -331,7 +331,7 @@ pub enum PluginWrapperError {
     /// Plugin returned a malformed C string.
     InvalidCString(std::ffi::NulError),
     /// A generic or custom error of a given severity.
-    Any(clap_log_severity, Box<dyn Error>),
+    Error(clap_log_severity, Box<dyn Error>),
 }
 
 impl PluginWrapperError {
@@ -352,12 +352,12 @@ impl PluginWrapperError {
         match self {
             PluginWrapperError::Plugin(_) => CLAP_LOG_ERROR,
             PluginWrapperError::Panic => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginWrapperError::Any(s, _) => *s,
+            PluginWrapperError::Error(s, _) => *s,
             _ => CLAP_LOG_HOST_MISBEHAVING,
         }
     }
 
-    /// Returns a closure that maps an error to a [`PluginWrapperError::Any`] error of a given
+    /// Returns a closure that maps an error to a [`PluginWrapperError::Error`] error of a given
     /// severity.
     ///
     /// This is a useful helper method when paired with [`Result::map_err`].
@@ -376,7 +376,7 @@ impl PluginWrapperError {
     pub fn with_severity<E: 'static + Error>(
         severity: clap_log_severity,
     ) -> impl Fn(E) -> PluginWrapperError {
-        move |e| PluginWrapperError::Any(severity, Box::new(e))
+        move |e| PluginWrapperError::Error(severity, Box::new(e))
     }
 }
 
@@ -436,7 +436,7 @@ impl Display for PluginWrapperError {
                 )
             }
             PluginWrapperError::Plugin(e) => std::fmt::Display::fmt(&e, f),
-            PluginWrapperError::Any(_, e) => std::fmt::Display::fmt(e, f),
+            PluginWrapperError::Error(_, e) => std::fmt::Display::fmt(e, f),
             PluginWrapperError::Panic => f.write_str("Plugin panicked"),
         }
     }

@@ -378,7 +378,7 @@ impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
         // We don't track param values at all
     }
 
-    fn clear(&mut self, _param_id: u32, _flags: ParamClearFlags) {}
+    fn clear(&mut self, _param_id: ClapId, _flags: ParamClearFlags) {}
 }
 
 impl HostParamsImplShared for CpalHostShared {

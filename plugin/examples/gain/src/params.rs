@@ -11,6 +11,9 @@ use std::fmt::Write as _;
 use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
 
+/// The unique identifier for the Volume parameter.
+pub const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
+
 /// The default value of the volume parameter.
 const DEFAULT_VOLUME: f32 = 1.0;
 
@@ -54,7 +57,7 @@ impl GainParams {
     /// updated accordingly.
     pub fn handle_event(&self, event: &UnknownEvent) {
         if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
-            if event.param_id() == 1 {
+            if event.param_id() == PARAM_VOLUME_ID {
                 self.set_volume(event.value() as f32)
             }
         }
@@ -103,7 +106,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
         })
     }
 
-    fn get_value(&mut self, param_id: u32) -> Option<f64> {
+    fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
         if param_id == 1 {
             Some(self.shared.params.get_volume() as f64)
         } else {
@@ -113,7 +116,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
 
     fn value_to_text(
         &mut self,
-        param_id: u32,
+        param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result {
@@ -124,7 +127,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
         }
     }
 
-    fn text_to_value(&mut self, param_id: u32, text: &CStr) -> Option<f64> {
+    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64> {
         let text = text.to_str().ok()?;
         if param_id == 1 {
             let text = text.strip_suffix('%').unwrap_or(text).trim();

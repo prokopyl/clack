@@ -17,6 +17,7 @@
 
 use crate::audio_ports::AudioPortType;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
+use clack_common::utils::ClapId;
 use clap_sys::ext::audio_ports_config::*;
 use std::error::Error;
 use std::ffi::CStr;
@@ -62,7 +63,7 @@ pub struct AudioPortsConfiguration<'a> {
     /// The ID of the configuration.
     ///
     /// It has to be unique for this instance of the plugin.
-    pub id: u32,
+    pub id: ClapId,
     /// A user-facing display name for the configuration.
     pub name: &'a [u8],
 
@@ -84,11 +85,11 @@ impl<'a> AudioPortsConfiguration<'a> {
     /// # Safety
     ///
     /// User must make sure all fields are valid for the lifetime of 'a.
-    unsafe fn from_raw(raw: &'a clap_audio_ports_config) -> Self {
+    unsafe fn from_raw(raw: &'a clap_audio_ports_config) -> Option<Self> {
         use crate::utils::data_from_array_buf;
 
-        Self {
-            id: raw.id,
+        Some(Self {
+            id: ClapId::from_raw(raw.id)?,
             name: data_from_array_buf(&raw.name),
 
             input_port_count: raw.input_port_count,
@@ -104,7 +105,7 @@ impl<'a> AudioPortsConfiguration<'a> {
                 raw.main_output_channel_count,
                 raw.main_output_port_type,
             ),
-        }
+        })
     }
 }
 

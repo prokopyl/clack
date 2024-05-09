@@ -289,6 +289,10 @@ impl<H: HostHandlers> HostWrapper<H> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum HostWrapperError {
+    /// An invalid parameter value was encountered.
+    ///
+    /// The given string may contain more information about which parameter was found to be invalid.
+    InvalidParameter(&'static str),
     NullHostInstance,
     NullHostData,
     Panic,
@@ -300,6 +304,7 @@ impl HostWrapperError {
         match self {
             HostWrapperError::NullHostInstance => "Host instance pointer is NULL",
             HostWrapperError::NullHostData => "Host data pointer is NULL",
+            HostWrapperError::InvalidParameter(s) => s,
             HostWrapperError::Panic => "Host callback panicked",
             HostWrapperError::HostError(e) => e.msg(),
         }
@@ -308,6 +313,7 @@ impl HostWrapperError {
     fn severity(&self) -> clap_log_severity {
         match self {
             HostWrapperError::NullHostInstance => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostWrapperError::InvalidParameter(_) => CLAP_LOG_PLUGIN_MISBEHAVING,
             HostWrapperError::NullHostData => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::Panic => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::HostError(e) => e.severity(),

@@ -88,7 +88,7 @@ pub fn it_works() {
 
     input_events.push(&ParamValueEvent::new(
         EventHeader::new_core(0, EventFlags::empty()),
-        1,
+        ClapId::new(1),
         Pckn::match_all(),
         0.5,
         Cookie::empty(),

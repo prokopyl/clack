@@ -23,7 +23,7 @@ pub trait PluginAudioPortsConfigImpl {
     ///
     /// This method may return an [`AudioPortConfigSelectError`] if the given ID is out of bounds,
     /// or if the plugin declined or failed to change its Audio Ports Configuration.
-    fn select(&mut self, config_id: u32) -> Result<(), AudioPortConfigSelectError>;
+    fn select(&mut self, config_id: ClapId) -> Result<(), AudioPortConfigSelectError>;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -81,6 +81,9 @@ where
             ));
         }
 
+        let config_id = ClapId::from_raw(config_id)
+            .ok_or(PluginWrapperError::InvalidParameter("Invalid config_id"))?;
+
         Ok(p.main_thread().as_mut().select(config_id).is_ok())
     })
     .unwrap_or(false)
@@ -114,7 +117,7 @@ impl<'a> AudioPortConfigWriter<'a> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), data.id);
+            write(addr_of_mut!((*buf).id), data.id.get());
             write_to_array_buf(addr_of_mut!((*buf).name), data.name);
 
             write(addr_of_mut!((*buf).input_port_count), data.input_port_count);

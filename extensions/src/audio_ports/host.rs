@@ -51,7 +51,7 @@ impl PluginAudioPorts {
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
-            Some(unsafe { AudioPortInfo::from_raw(buffer.inner.assume_init_ref()) })
+            Some(unsafe { AudioPortInfo::from_raw(buffer.inner.assume_init_ref())? })
         } else {
             None
         }

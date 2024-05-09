@@ -17,7 +17,7 @@ use Match::*;
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Pckn {
     /// The Note Port the plugin received this event on. See the Note Ports extension.
-    pub port: Match<u16>,
+    pub port_index: Match<u16>,
     /// The Channel the note is on, akin to MIDI1 channels. This is usually in the `0..=15` range.
     pub channel: Match<u16>,
     /// The note's Key. This is the same representation as MIDI1 Key numbers,
@@ -37,7 +37,7 @@ impl Pckn {
         note_id: impl Into<Match<u32>>,
     ) -> Self {
         Self {
-            port: port.into(),
+            port_index: port.into(),
             channel: channel.into(),
             key: key.into(),
             note_id: note_id.into(),
@@ -49,7 +49,7 @@ impl Pckn {
     #[inline]
     pub const fn match_all() -> Self {
         Self {
-            port: All,
+            port_index: All,
             channel: All,
             key: All,
             note_id: All,
@@ -60,7 +60,10 @@ impl Pckn {
     ///
     /// This is true if all four matchers are set to [`Match::All`].
     pub const fn matches_all(&self) -> bool {
-        self.port.is_all() && self.channel.is_all() && self.key.is_all() && self.note_id.is_all()
+        self.port_index.is_all()
+            && self.channel.is_all()
+            && self.key.is_all()
+            && self.note_id.is_all()
     }
 
     /// Returns `true` if this PCKN tuple matches the given one, considering both specific values
@@ -74,7 +77,7 @@ impl Pckn {
     /// assert!(Pckn::new(0u16, 0u16, 60u16, 42u32).matches(&Pckn::new(0u16, 0u16, 60u16, Match::All)));
     /// ```
     pub fn matches(&self, other: &Pckn) -> bool {
-        self.port.matches(other.port)
+        self.port_index.matches(other.port_index)
             && self.channel.matches(other.channel)
             && self.key.matches(other.key)
             && self.note_id.matches(other.note_id)
@@ -89,7 +92,7 @@ impl Pckn {
     #[inline]
     pub const fn from_raw(port: i16, channel: i16, key: i16, note_id: i32) -> Self {
         Self {
-            port: Match::<u16>::from_raw(port),
+            port_index: Match::<u16>::from_raw(port),
             channel: Match::<u16>::from_raw(channel),
             key: Match::<u16>::from_raw(key),
             note_id: Match::<u32>::from_raw(note_id),
@@ -101,8 +104,8 @@ impl Pckn {
     /// This returns `-1` if the port is set to [`Match::All`], otherwise the specific value is
     /// returned.
     #[inline]
-    pub const fn raw_port(&self) -> i16 {
-        match self.port {
+    pub const fn raw_port_index(&self) -> i16 {
+        match self.port_index {
             Specific(p) => p as i16,
             All => -1,
         }
@@ -248,6 +251,13 @@ impl From<u16> for Match<u32> {
     }
 }
 
+impl From<ClapId> for Match<u32> {
+    #[inline]
+    fn from(value: ClapId) -> Self {
+        Specific(value.get())
+    }
+}
+
 impl<T: PartialEq> Match<T> {
     /// Returns `true` if the given [`Match`] matches this one, `false` otherwise.
     ///
@@ -337,7 +347,7 @@ macro_rules! impl_event_pckn {
 
         #[inline]
         pub fn set_pckn(&mut self, pckn: Pckn) {
-            self.inner.port_index = pckn.raw_port();
+            self.inner.port_index = pckn.raw_port_index();
             self.inner.channel = pckn.raw_channel();
             self.inner.key = pckn.raw_key();
             self.inner.note_id = pckn.raw_note_id();
@@ -350,18 +360,18 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub const fn port(&self) -> Match<u16> {
+        pub const fn port_index(&self) -> Match<u16> {
             Match::<u16>::from_raw(self.inner.port_index)
         }
 
         #[inline]
-        pub fn set_port(&mut self, port: Match<u16>) {
-            self.inner.port_index = port.to_raw()
+        pub fn set_port_index(&mut self, port_index: Match<u16>) {
+            self.inner.port_index = port_index.to_raw()
         }
 
         #[inline]
-        pub const fn with_port(mut self, port: Match<u16>) -> Self {
-            self.inner.port_index = port.to_raw();
+        pub const fn with_port_index(mut self, port_index: Match<u16>) -> Self {
+            self.inner.port_index = port_index.to_raw();
             self
         }
 
@@ -415,4 +425,5 @@ macro_rules! impl_event_pckn {
     };
 }
 
+use crate::utils::ClapId;
 pub(crate) use impl_event_pckn;

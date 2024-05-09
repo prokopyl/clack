@@ -298,5 +298,6 @@ pub mod prelude {
             AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
             StoppedPluginAudioProcessor,
         },
+        utils::ClapId,
     };
 }

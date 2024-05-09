@@ -1,5 +1,6 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
+use clack_common::utils::ClapId;
 use clap_sys::ext::note_ports::*;
 use std::ffi::CStr;
 
@@ -89,20 +90,20 @@ unsafe impl Extension for HostNotePorts {
 }
 
 pub struct NotePortInfo<'a> {
-    pub id: u32,
+    pub id: ClapId,
     pub name: &'a [u8],
     pub supported_dialects: NoteDialects,
     pub preferred_dialect: Option<NoteDialect>,
 }
 
 impl<'a> NotePortInfo<'a> {
-    pub fn from_raw(raw: &'a clap_note_port_info) -> Self {
-        Self {
-            id: raw.id,
+    pub fn from_raw(raw: &'a clap_note_port_info) -> Option<Self> {
+        Some(Self {
+            id: ClapId::from_raw(raw.id)?,
             name: crate::utils::data_from_array_buf(&raw.name),
             supported_dialects: NoteDialects::from_bits_truncate(raw.supported_dialects),
             preferred_dialect: NoteDialect::from_raw(raw.preferred_dialect),
-        }
+        })
     }
 }
 

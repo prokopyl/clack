@@ -68,7 +68,7 @@ impl NoteExpressionEvent {
             inner: clap_event_note_expression {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 note_id: pckn.raw_note_id(),
-                port_index: pckn.raw_port(),
+                port_index: pckn.raw_port_index(),
                 key: pckn.raw_key(),
                 channel: pckn.raw_channel(),
                 expression_id: expression_type.into_raw(),

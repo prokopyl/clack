@@ -138,12 +138,15 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
 }
 
 pub mod prelude {
-    pub use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
-    pub use crate::extensions::{
-        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
-        RawExtensionImplementation,
+    pub use crate::{
+        extensions::wrapper::{PluginWrapper, PluginWrapperError},
+        extensions::{
+            Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+            RawExtension, RawExtensionImplementation,
+        },
+        host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle},
+        plugin::{Plugin, PluginError},
+        utils::ClapId,
     };
-    pub use crate::host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle};
-    pub use crate::plugin::{Plugin, PluginError};
     pub use clap_sys::plugin::clap_plugin;
 }

@@ -139,7 +139,7 @@ impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
     fn get(&mut self, index: u32, _is_input: bool, writer: &mut AudioPortInfoWriter) {
         if index == 0 {
             writer.set(&AudioPortInfo {
-                id: 0,
+                id: ClapId::new(0),
                 name: b"main",
                 channel_count: 2,
                 flags: AudioPortFlags::IS_MAIN,

@@ -41,7 +41,7 @@ pub struct MidiReceiver {
     sample_rate: u64,
     /// The index of the note port the plugin uses.
     /// This is determined from the CLAP note ports extension.
-    main_plugin_note_port_index: u32,
+    main_plugin_note_port_index: u16,
     /// If the plugin prefers to receive note events as MIDI events instead of CLAP Note events.
     prefers_midi: bool,
 }
@@ -180,14 +180,14 @@ fn push_midi_to_buffer(
     message: MidiMessage,
     sample_time: u32,
     buffer: &mut EventBuffer,
-    port_index: u32,
+    port_index: u16,
     prefers_midi: bool,
 ) {
     match message {
         MidiMessage::NoteOff(channel, note, velocity) if !prefers_midi => buffer.push(
             &NoteOffEvent::new(
                 sample_time,
-                Pckn::new(port_index as u16, channel.index(), note as u16, Match::All),
+                Pckn::new(port_index, channel.index(), note as u16, Match::All),
                 u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
             )
             .with_flags(EventFlags::IS_LIVE),
@@ -195,7 +195,7 @@ fn push_midi_to_buffer(
         MidiMessage::NoteOn(channel, note, velocity) if !prefers_midi => buffer.push(
             &NoteOnEvent::new(
                 sample_time,
-                Pckn::new(port_index as u16, channel.index(), note as u16, Match::All),
+                Pckn::new(port_index, channel.index(), note as u16, Match::All),
                 u8::from(velocity) as f64 / (u8::from(Velocity::MAX) as f64),
             )
             .with_flags(EventFlags::IS_LIVE),
@@ -205,7 +205,7 @@ fn push_midi_to_buffer(
             if m.copy_to_slice(&mut buf).is_ok() {
                 buffer.push(&MidiEvent::new(
                     EventHeader::new_core(sample_time, EventFlags::IS_LIVE),
-                    port_index as u16,
+                    port_index,
                     buf,
                 ))
             }
@@ -217,12 +217,17 @@ fn push_midi_to_buffer(
 /// or not.
 ///
 /// This returns `None` if it couldn't find one.
-fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<(u32, bool)> {
+fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<(u16, bool)> {
     let mut handle = instance.plugin_handle();
     let plugin_note_ports = handle.get_extension::<PluginNotePorts>()?;
 
     let mut buffer = NotePortInfoBuffer::new();
-    let ports_count = plugin_note_ports.count(&mut handle, true);
+
+    // Only count up to u16::MAX, since port indexes in events only support u16
+    let ports_count = plugin_note_ports
+        .count(&mut handle, true)
+        .min(u16::MAX as u32);
+
     for i in 0..ports_count {
         let Some(port_info) = plugin_note_ports.get(&mut handle, i, true, &mut buffer) else {
             continue;
@@ -242,7 +247,7 @@ fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<
             &port_name, port_info.id, !prefers_midi
         );
 
-        return Some((port_info.id, prefers_midi));
+        return Some((i as u16, prefers_midi));
     }
 
     None

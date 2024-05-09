@@ -96,14 +96,14 @@ impl<'a> core::fmt::Write for ParamDisplayWriter<'a> {
 pub trait PluginMainThreadParams {
     fn count(&mut self) -> u32;
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter);
-    fn get_value(&mut self, param_id: u32) -> Option<f64>;
+    fn get_value(&mut self, param_id: ClapId) -> Option<f64>;
     fn value_to_text(
         &mut self,
-        param_id: u32,
+        param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result;
-    fn text_to_value(&mut self, param_id: u32, text: &CStr) -> Option<f64>;
+    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64>;
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,
@@ -154,9 +154,13 @@ unsafe extern "C" fn get_value<P: Plugin>(
 where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
-    let val =
-        PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().get_value(param_id)))
-            .flatten();
+    let val = PluginWrapper::<P>::handle(plugin, |p| {
+        let param_id = ClapId::from_raw(param_id)
+            .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
+
+        Ok(p.main_thread().as_mut().get_value(param_id))
+    })
+    .flatten();
 
     match val {
         None => false,
@@ -181,6 +185,9 @@ where
     let buf = slice_from_external_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
     PluginWrapper::<P>::handle(plugin, |p| {
+        let param_id = ClapId::from_raw(param_id)
+            .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
+
         p.main_thread()
             .as_mut()
             .value_to_text(param_id, value, &mut writer)
@@ -201,6 +208,9 @@ where
     for<'a> P::MainThread<'a>: PluginMainThreadParams,
 {
     let result = PluginWrapper::<P>::handle(plugin, |p| {
+        let param_id = ClapId::from_raw(param_id)
+            .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
+
         let display = CStr::from_ptr(display);
         Ok(p.main_thread().as_mut().text_to_value(param_id, display))
     });
@@ -268,10 +278,10 @@ impl HostParams {
     }
 
     #[inline]
-    pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: u32, flags: ParamClearFlags) {
+    pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: ClapId, flags: ParamClearFlags) {
         if let Some(clear) = host.use_extension(&self.0).clear {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { clear(host.as_raw(), param_id, flags.bits()) }
+            unsafe { clear(host.as_raw(), param_id.get(), flags.bits()) }
         }
     }
 

@@ -220,15 +220,15 @@ pub mod wrapper;
 ///
 /// See the [module docs](self) for more information on how to implement custom extensions in a host.
 pub mod prelude {
-    pub use crate::extensions::wrapper::{HostWrapper, HostWrapperError};
-    pub use crate::extensions::{
-        Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide, RawExtension,
-        RawExtensionImplementation,
+    pub use crate::{
+        extensions::wrapper::{HostWrapper, HostWrapperError},
+        extensions::{
+            Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
+            RawExtension, RawExtensionImplementation,
+        },
+        host::HostHandlers,
+        plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
+        utils::ClapId,
     };
-    pub use crate::host::HostHandlers;
-    pub use crate::plugin::{
-        PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle,
-    };
-    /// FOO
     pub use clap_sys::host::clap_host;
 }

@@ -18,7 +18,7 @@ impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
         Self {
             inner: clap_event_note {
                 header: EventHeader::<E>::new_core(time, EventFlags::empty()).into_raw(),
-                port_index: pckn.raw_port(),
+                port_index: pckn.raw_port_index(),
                 channel: pckn.raw_channel(),
                 key: pckn.raw_key(),
                 note_id: pckn.raw_note_id(),
@@ -54,7 +54,7 @@ impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
 
     #[inline]
     pub fn set_pckn(&mut self, pckn: Pckn) {
-        self.inner.port_index = pckn.raw_port();
+        self.inner.port_index = pckn.raw_port_index();
         self.inner.channel = pckn.raw_channel();
         self.inner.key = pckn.raw_key();
         self.inner.note_id = pckn.raw_note_id();

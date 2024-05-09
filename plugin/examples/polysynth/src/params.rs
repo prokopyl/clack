@@ -13,7 +13,7 @@ use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 /// The unique identifier for the Volume parameter.
-pub const PARAM_VOLUME_ID: u32 = 1;
+pub const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
 
 /// The default value of the Volume parameter.
 const DEFAULT_VOLUME: f32 = 0.2;
@@ -145,28 +145,28 @@ impl<'a> PluginMainThreadParams for PolySynthPluginMainThread<'a> {
         }
     }
 
-    fn get_value(&mut self, param_id: u32) -> Option<f64> {
+    fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
         match param_id {
-            1 => Some(self.shared.params.get_volume() as f64),
+            PARAM_VOLUME_ID => Some(self.shared.params.get_volume() as f64),
             _ => None,
         }
     }
 
     fn value_to_text(
         &mut self,
-        param_id: u32,
+        param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result {
         match param_id {
-            1 => write!(writer, "{0:.2} %", value * 100.0),
+            PARAM_VOLUME_ID => write!(writer, "{0:.2} %", value * 100.0),
             _ => Err(std::fmt::Error),
         }
     }
 
-    fn text_to_value(&mut self, param_id: u32, text: &CStr) -> Option<f64> {
+    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64> {
         let text = text.to_str().ok()?;
-        if param_id == 1 {
+        if param_id == PARAM_VOLUME_ID {
             let text = text.strip_suffix('%').unwrap_or(text).trim();
             let percentage: f64 = text.parse().ok()?;
 

@@ -57,7 +57,7 @@ impl PluginAudioPortsConfig {
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
-            Some(unsafe { AudioPortsConfiguration::from_raw(buffer.inner.assume_init_ref()) })
+            Some(unsafe { AudioPortsConfiguration::from_raw(buffer.inner.assume_init_ref())? })
         } else {
             None
         }
@@ -75,14 +75,16 @@ impl PluginAudioPortsConfig {
     pub fn select(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        configuration_id: u32,
+        configuration_id: ClapId,
     ) -> Result<(), AudioPortConfigSelectError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             plugin
                 .use_extension(&self.0)
                 .select
-                .ok_or(AudioPortConfigSelectError)?(plugin.as_raw(), configuration_id)
+                .ok_or(AudioPortConfigSelectError)?(
+                plugin.as_raw(), configuration_id.get()
+            )
         };
 
         match success {

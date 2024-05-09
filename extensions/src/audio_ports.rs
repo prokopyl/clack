@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
+use clack_common::utils::ClapId;
 use clap_sys::ext::audio_ports::*;
-use clap_sys::id::CLAP_INVALID_ID;
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 
@@ -97,23 +97,23 @@ unsafe impl Extension for HostAudioPorts {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPortInfo<'a> {
-    pub id: u32, // TODO: ClapId
+    pub id: ClapId,
     pub name: &'a [u8],
     pub channel_count: u32,
     pub flags: AudioPortFlags,
     pub port_type: Option<AudioPortType<'a>>,
-    pub in_place_pair: Option<u32>,
+    pub in_place_pair: Option<ClapId>,
 }
 
 impl<'a> AudioPortInfo<'a> {
     /// # Safety
     /// The raw port_type pointer must be a valid C string for the 'a lifetime.
-    pub unsafe fn from_raw(raw: &'a clap_audio_port_info) -> Self {
+    pub unsafe fn from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
         use crate::utils::*;
         use std::ptr::NonNull;
 
-        Self {
-            id: raw.id,
+        Some(Self {
+            id: ClapId::from_raw(raw.id)?,
             name: data_from_array_buf(&raw.name),
             channel_count: raw.channel_count,
             flags: AudioPortFlags::from_bits_truncate(raw.flags),
@@ -121,12 +121,8 @@ impl<'a> AudioPortInfo<'a> {
                 .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr())))
                 .filter(|t| !t.0.is_empty()),
 
-            in_place_pair: if raw.in_place_pair == CLAP_INVALID_ID {
-                None
-            } else {
-                Some(raw.in_place_pair)
-            },
-        }
+            in_place_pair: ClapId::from_raw(raw.in_place_pair),
+        })
     }
 }
 

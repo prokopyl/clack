@@ -30,7 +30,7 @@ impl<'a> NotePortInfoWriter<'a> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), info.id);
+            write(addr_of_mut!((*buf).id), info.id.get());
             write_to_array_buf(addr_of_mut!((*buf).name), info.name);
 
             write(

@@ -85,7 +85,7 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        let result = HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 
             let result = host.main_thread().as_ref().query(space_name);
@@ -93,7 +93,13 @@ mod host {
 
             Ok(result.is_some())
         })
-        .unwrap_or(false)
+        .unwrap_or(false);
+
+        if !result {
+            *space_id = u16::MAX;
+        }
+
+        result
     }
 }
 

@@ -2,7 +2,9 @@ use crate::host::CpalHost;
 use clack_extensions::audio_ports::{
     AudioPortFlags, AudioPortInfoBuffer, AudioPortType, PluginAudioPorts,
 };
-use clack_host::prelude::{PluginAudioConfiguration, PluginInstance, PluginMainThreadHandle};
+use clack_host::prelude::{
+    ClapId, PluginAudioConfiguration, PluginInstance, PluginMainThreadHandle,
+};
 use cpal::traits::DeviceTrait;
 use cpal::{
     BufferSize, Device, SampleFormat, SampleRate, StreamConfig, SupportedBufferSize,
@@ -139,7 +141,7 @@ impl PluginAudioPortsConfig {
 #[derive(Clone, Debug)]
 pub struct PluginAudioPortInfo {
     /// The plugin-provided ID of the port, if it has one.
-    pub _id: Option<u32>,
+    pub _id: Option<ClapId>,
     /// The layout of the port.
     pub port_layout: AudioPortLayout,
     /// The user-friendly name of the port.
