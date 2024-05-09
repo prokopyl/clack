@@ -1,3 +1,5 @@
+#![allow(dead_code)] // Those utilities are only used in *some* extensions.
+
 use core::ffi::c_char;
 
 pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
@@ -14,7 +16,6 @@ pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
 ///
 /// The pointer must be non-null and well-aligned. However, the array doesn't need to be initialized.
 /// `dst` and `value` must not overlap.
-#[cfg(feature = "clack-plugin")]
 #[inline]
 pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], value: &[u8]) {
     let max_len = core::cmp::min(N - 1, value.len()); // Space for null byte
@@ -37,7 +38,6 @@ pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], v
 ///
 /// Same requirements as [`core::slice::from_raw_parts_mut`], except the pointer *can* be null or
 /// dangling if `len == 0`.
-#[cfg(feature = "clack-plugin")]
 #[inline]
 pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
     if len == 0 {
