@@ -1,4 +1,4 @@
-use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError};
+use crate::extensions::wrapper::{panic, PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
 use crate::host::{HostInfo, HostMainThreadHandle, HostSharedHandle};
 use crate::plugin::instance::WrapperData::*;
@@ -209,15 +209,13 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn destroy(plugin: *const clap_plugin) {
         // Deactivate the plugin, in case the host didn't call deactivate() first.
-        PluginWrapper::<P>::handle(plugin, |p| {
-            if p.is_active() {
-                p.deactivate()
         // This also handles all kinds of logging in case things are already wrong (double free, etc.)
+        PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
             use PluginWrapperError::*;
 
             let wrapper = match data.as_ref().wrapper() {
                 Ok(w) => w,
-                // Ignore those errors: it is normal to call destroy in these states, no need to log warnings.
+                // Silence those errors: it is normal to call destroy in these states, no need to log warnings.
                 Err(
                     PluginCalledDuringInitialization
                     | UninitializedPlugin
@@ -233,21 +231,24 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
             }
         });
 
-        PluginWrapper::<P>::handle_plugin_data(plugin, |data| {
-            data.as_ref().state.store(DESTROYING, Ordering::SeqCst);
-
-            let _ = Box::from_raw(data.as_ptr());
-            Ok(())
-        });
-
         if let Some(plugin) = plugin.cast_mut().as_mut() {
             // Try our best to guard against double-free
-            if plugin.plugin_data.is_null() {
+            let Some(plugin_data) = plugin.plugin_data.cast::<PluginBoxInner<P>>().as_mut() else {
                 return;
+            };
+
+            // We could use direct &mut access for the swap, but let's use atomic operations just in case...
+            if plugin_data.state.swap(DESTROYING, Ordering::SeqCst) != DESTROYING {
+                let _ = panic::catch_unwind(|| {
+                    let _ = Box::<PluginBoxInner<P>>::from_raw(
+                        plugin.plugin_data as *const c_void as *mut _,
+                    );
+                });
             }
 
-            // This allows destroy() to be called twice safely: all PluginWrapper methods immediately
-            // fail if plugin_data is null, and we check it against above before deallocating.
+            // This tries to prevent double-free (but not use-after-free) in case destroy() is called twice:
+            // all PluginWrapper methods immediately fail if plugin_data is null,
+            // and we check it is non-null above before deallocating.
             plugin.plugin_data = core::ptr::null_mut();
 
             let _ = Box::from_raw(plugin as *mut clap_plugin);
