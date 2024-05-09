@@ -18,7 +18,7 @@ impl Default for AudioPortsConfigBuffer {
 impl AudioPortsConfigBuffer {
     /// Creates an uninitialized Audio Port Configuration buffer.
     #[inline]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             inner: MaybeUninit::zeroed(),
         }
