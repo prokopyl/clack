@@ -2,6 +2,7 @@ use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 mod handle;
@@ -14,7 +15,7 @@ pub use clack_common::plugin::*;
 
 /// A plugin instance.
 pub struct PluginInstance<H: HostHandlers> {
-    pub(crate) inner: Arc<PluginInstanceInner<H>>,
+    pub(crate) inner: ManuallyDrop<Arc<PluginInstanceInner<H>>>,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -41,7 +42,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         )?;
 
         Ok(Self {
-            inner,
+            inner: ManuallyDrop::new(inner),
             _no_send: PhantomData,
         })
     }
@@ -160,6 +161,19 @@ impl<H: HostHandlers> PluginInstance<H> {
     pub fn plugin_handle(&mut self) -> PluginMainThreadHandle {
         // SAFETY: this type can only exist on the main thread.
         unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
+    }
+}
+
+impl<H: HostHandlers> Drop for PluginInstance<H> {
+    fn drop(&mut self) {
+        // Only drop our Arc if we are the sole owner.
+        // This leaks the plugin instance, but prevents accidentally transferring ownership to the
+        // audio thread if the audio processor handle is still around somewhere.
+        if Arc::get_mut(&mut self.inner).is_some() {
+            // SAFETY: We can only call this once (as we're in Drop), and we never use the inner
+            // value again afterward.
+            unsafe { ManuallyDrop::drop(&mut self.inner) }
+        };
     }
 }
 
