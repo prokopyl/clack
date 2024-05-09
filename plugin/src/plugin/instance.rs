@@ -110,7 +110,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[inline]
     pub(crate) fn wrapper(&self) -> Result<&PluginWrapper<'a, P>, PluginWrapperError> {
         match self.state.load(Ordering::Acquire) {
-            INITIALIZING => Err(PluginWrapperError::InitializationAlreadyFailed),
+            INITIALIZING => Err(PluginWrapperError::PluginCalledDuringInitialization),
             UNINITIALIZED => Err(PluginWrapperError::UninitializedPlugin),
             INITIALIZATION_FAILED => Err(PluginWrapperError::InitializationAlreadyFailed),
             DESTROYING => Err(PluginWrapperError::Destroying),
@@ -212,6 +212,22 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
         PluginWrapper::<P>::handle(plugin, |p| {
             if p.is_active() {
                 p.deactivate()
+        // This also handles all kinds of logging in case things are already wrong (double free, etc.)
+            use PluginWrapperError::*;
+
+            let wrapper = match data.as_ref().wrapper() {
+                Ok(w) => w,
+                // Ignore those errors: it is normal to call destroy in these states, no need to log warnings.
+                Err(
+                    PluginCalledDuringInitialization
+                    | UninitializedPlugin
+                    | InitializationAlreadyFailed,
+                ) => return Ok(()),
+                Err(e) => return Err(e),
+            };
+
+            if wrapper.is_active() {
+                wrapper.deactivate()
             } else {
                 Ok(())
             }
