@@ -35,9 +35,9 @@ use std::ptr::NonNull;
 /// `use_extension()` method on one of the handle types:
 ///
 /// * For plugin-side extensions (from the `clack-host` crate): `PluginSharedHandle`,
-///   `PluginMainThreadHandle`, or `PluginAudioThreadHandle`;
+///   `PluginMainThreadHandle`, or `PluginAudioProcessorHandle`;
 /// * For host-side extensions (from the `clack-plugin` crate): `HostSharedHandle`,
-///   `HostMainThreadHandle`, or `HostAudioThreadHandle`.
+///   `HostMainThreadHandle`, or `HostAudioProcessorHandle`.
 ///
 /// This pointer type is only useful for *consuming* extension pointers. For producing extension
 /// pointers from an extension implementation, use the [`RawExtensionImplementation`] type instead.  

@@ -47,7 +47,7 @@
 //!   threads that are neither the main thread nor the audio thread.
 
 use crate::extensions::PluginExtensions;
-use crate::host::HostAudioThreadHandle;
+use crate::host::HostAudioProcessorHandle;
 use crate::process::{Audio, Events, PluginAudioConfiguration, Process, ProcessStatus};
 
 mod descriptor;
@@ -165,7 +165,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     /// This method is not realtime-safe: it may perform memory allocations of audio buffers, or any
     /// other initialization the plugin may deem necessary.
     fn activate(
-        host: HostAudioThreadHandle<'a>,
+        host: HostAudioProcessorHandle<'a>,
         main_thread: &mut M,
         shared: &'a S,
         audio_config: PluginAudioConfiguration,
@@ -212,7 +212,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
 impl<'a, M: PluginMainThread<'a, S>, S: PluginShared<'a>> PluginAudioProcessor<'a, S, M> for () {
     #[inline]
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        _host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut M,
         _shared: &'a S,
         _audio_config: PluginAudioConfiguration,

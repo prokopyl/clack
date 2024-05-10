@@ -79,7 +79,7 @@ mod diva_stub {
         for DivaPluginStubAudioProcessor<'a>
     {
         fn activate(
-            _host: HostAudioThreadHandle<'a>,
+            _host: HostAudioProcessorHandle<'a>,
             _main_thread: &mut DivaPluginStubMainThread,
             shared: &'a DivaPluginStubShared<'a>,
             _audio_config: PluginAudioConfiguration,

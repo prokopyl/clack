@@ -187,8 +187,8 @@ impl<'a> HostSharedHandle<'a> {
     ///
     /// Callers *MUST* ensure this is only called on the audio thread, and that they have exclusive (&mut) access.
     #[inline]
-    pub unsafe fn as_audio_thread_unchecked(&self) -> HostAudioThreadHandle<'a> {
-        HostAudioThreadHandle {
+    pub unsafe fn as_audio_thread_unchecked(&self) -> HostAudioProcessorHandle<'a> {
+        HostAudioProcessorHandle {
             raw: self.raw,
             _lifetime: PhantomData,
         }
@@ -267,15 +267,15 @@ impl<'a> Deref for HostMainThreadHandle<'a> {
 }
 
 #[repr(transparent)]
-pub struct HostAudioThreadHandle<'a> {
+pub struct HostAudioProcessorHandle<'a> {
     raw: NonNull<clap_host>,
     _lifetime: PhantomData<&'a clap_host>,
 }
 
 // SAFETY: this type only exposes the audio-thread-safe (Send) operation of clap_host
-unsafe impl<'a> Send for HostAudioThreadHandle<'a> {}
+unsafe impl<'a> Send for HostAudioProcessorHandle<'a> {}
 
-impl<'a> HostAudioThreadHandle<'a> {
+impl<'a> HostAudioProcessorHandle<'a> {
     #[inline]
     pub fn shared(&self) -> HostSharedHandle<'a> {
         HostSharedHandle {
@@ -297,14 +297,14 @@ impl<'a> HostAudioThreadHandle<'a> {
     }
 }
 
-impl<'a> From<HostAudioThreadHandle<'a>> for HostSharedHandle<'a> {
+impl<'a> From<HostAudioProcessorHandle<'a>> for HostSharedHandle<'a> {
     #[inline]
-    fn from(h: HostAudioThreadHandle<'a>) -> Self {
+    fn from(h: HostAudioProcessorHandle<'a>) -> Self {
         h.shared()
     }
 }
 
-impl<'a> Deref for HostAudioThreadHandle<'a> {
+impl<'a> Deref for HostAudioProcessorHandle<'a> {
     type Target = HostSharedHandle<'a>;
 
     #[inline]

@@ -73,7 +73,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     for PolySynthAudioProcessor<'a>
 {
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        _host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut PolySynthPluginMainThread,
         shared: &'a PolySynthPluginShared,
         audio_config: PluginAudioConfiguration,

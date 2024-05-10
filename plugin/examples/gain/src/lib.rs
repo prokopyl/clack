@@ -65,7 +65,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
     for GainPluginAudioProcessor<'a>
 {
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        _host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
         shared: &'a GainPluginShared,
         _audio_config: PluginAudioConfiguration,

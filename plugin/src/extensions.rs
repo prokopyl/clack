@@ -144,7 +144,7 @@ pub mod prelude {
             Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
             RawExtension, RawExtensionImplementation,
         },
-        host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle},
+        host::{HostAudioProcessorHandle, HostMainThreadHandle, HostSharedHandle},
         plugin::{Plugin, PluginError},
         utils::ClapId,
     };

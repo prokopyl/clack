@@ -104,7 +104,7 @@ mod plugin {
         /// This method will return [`ThreadPoolRequestError`] if the host denied the request.
         pub fn request_exec(
             &self,
-            host: &mut HostAudioThreadHandle,
+            host: &mut HostAudioProcessorHandle,
             task_count: u32,
         ) -> Result<(), ThreadPoolRequestError> {
             let request_exec = host

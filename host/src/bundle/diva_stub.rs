@@ -41,7 +41,7 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
     for DivaPluginStubAudioProcessor<'a>
 {
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        _host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut (),
         shared: &'a DivaPluginStubShared<'a>,
         _audio_config: PluginAudioConfiguration,

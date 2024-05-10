@@ -38,7 +38,7 @@ impl DefaultPluginFactory for DivaPluginStub {
 
 impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginStubAudioProcessor {
     fn activate(
-        _host: HostAudioThreadHandle<'a>,
+        _host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut DivaPluginStubMainThread,
         _shared: &'a (),
         _audio_config: PluginAudioConfiguration,

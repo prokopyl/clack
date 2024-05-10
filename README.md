@@ -105,7 +105,7 @@ impl DefaultPluginFactory for MyGainPlugin {
 pub struct MyGainPluginAudioProcessor;
 
 impl<'a> PluginAudioProcessor<'a, (), ()> for MyGainPluginAudioProcessor {
-    fn activate(_host: HostAudioThreadHandle<'a>, _main_thread: &mut (), _shared: &'a (), _audio_config: PluginAudioConfiguration) -> Result<Self, PluginError> {
+    fn activate(_host: HostAudioProcessorHandle<'a>, _main_thread: &mut (), _shared: &'a (), _audio_config: PluginAudioConfiguration) -> Result<Self, PluginError> {
         Ok(Self)
     }
 

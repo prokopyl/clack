@@ -159,7 +159,7 @@ mod plugin {
     impl HostTail {
         /// Informs the host that the plugin's tail length has changed and needs to be updated.
         #[inline]
-        pub fn changed(&self, host: &mut HostAudioThreadHandle) {
+        pub fn changed(&self, host: &mut HostAudioProcessorHandle) {
             if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }

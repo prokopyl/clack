@@ -28,7 +28,7 @@ pub mod prelude {
             Event, EventHeader, Pckn, UnknownEvent,
         },
         extensions::PluginExtensions,
-        host::{HostAudioThreadHandle, HostMainThreadHandle, HostSharedHandle},
+        host::{HostAudioProcessorHandle, HostMainThreadHandle, HostSharedHandle},
         plugin::{
             Plugin, PluginAudioProcessor, PluginDescriptor, PluginError, PluginMainThread,
             PluginShared,
