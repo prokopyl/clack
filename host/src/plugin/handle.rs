@@ -1,3 +1,4 @@
+use crate::factory::PluginDescriptor;
 use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
@@ -25,8 +26,24 @@ impl<'a> PluginMainThreadHandle<'a> {
         }
     }
 
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> *mut clap_plugin {
+    pub fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.raw.as_ref() }
+    }
+
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
@@ -82,15 +99,40 @@ impl<'a> PluginSharedHandle<'a> {
         }
     }
 
+    /// Returns the [`PluginDescriptor`] this instance corresponds to.
+    ///
+    /// This may return `None` if the underlying plugin implementation didn't properly populate
+    /// the descriptor pointer.
+    pub fn descriptor(&self) -> Option<PluginDescriptor<'a>> {
+        // SAFETY: the desc pointer is guaranteed to be valid (if present) by the CLAP spec.
+        Some(unsafe { PluginDescriptor::from_raw(self.as_raw().desc.as_ref()?) })
+    }
+
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> *const clap_plugin {
+    pub fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.raw.as_ref() }
+    }
+
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         // SAFETY: This type ensures the function pointers are valid
         let ext =
-            unsafe { self.raw.as_ref().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
+            unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
 
         let ext = NonNull::new(ext as *mut _)?;
         // SAFETY: The CLAP spec guarantees that the extension lives as long as the instance.
@@ -140,8 +182,24 @@ impl<'a> PluginAudioProcessorHandle<'a> {
         }
     }
 
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> *mut clap_plugin {
+    pub fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.raw.as_ref() }
+    }
+
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
@@ -193,9 +251,25 @@ impl<'a> InitializingPluginHandle<'a> {
         }
     }
 
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> NonNull<clap_plugin> {
-        self.inner.as_ptr()
+    pub fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.inner.instance.as_ref() }
+    }
+
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+        self.inner.instance.as_ptr()
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
@@ -227,15 +301,47 @@ impl<'a> InitializedPluginHandle<'a> {
         }
     }
 
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> NonNull<clap_plugin> {
-        self.inner.as_ptr()
+    pub fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.inner.instance.as_ref() }
     }
 
-    // TODO: bikeshed?
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn access<T>(&self, handler: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
-        self.inner.handle(handler)
+    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+        self.inner.instance.as_ptr()
+    }
+
+    /// Attempts to access and perform the given operation on the plugin's handle, returning its
+    /// result.
+    ///
+    /// This method will return `None` if the plugin instance is being or has been destroyed, and
+    /// `f` will not be called.
+    ///
+    /// However, this method guarantees that the plugin instance will block starting its destruction
+    /// while the given operation `f` is still ongoing.
+    ///
+    /// This ensures the plugin instance is always valid if and when `f` runs.
+    ///
+    /// # Realtime safety
+    ///
+    /// This method *may* block the current thread if it is called concurrently while the plugin's
+    /// instance is being destroyed (i.e. [`PluginInstance::drop`] is running).
+    ///
+    /// [`PluginInstance::drop`]: crate::plugin::PluginInstance::drop
+    #[inline]
+    pub fn access<T>(&self, f: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
+        self.inner.access(f)
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
@@ -257,21 +363,17 @@ struct RemoteHandleInner {
 }
 
 impl RemoteHandleInner {
-    #[inline]
-    fn as_ptr(&self) -> NonNull<clap_plugin> {
-        self.instance
-    }
-
-    fn handle<T>(&self, handler: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
+    fn access<T>(&self, f: impl FnOnce(PluginSharedHandle) -> T) -> Option<T> {
         self.lock.hold_off_destruction(|| {
             // SAFETY: this type ensures the plugin is not being destroyed yet.
             let handle = unsafe { PluginSharedHandle::new(self.instance) };
-            handler(handle)
+            f(handle)
         })
     }
 
+    #[inline]
     fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
-        self.handle(|handle| handle.get_extension())?
+        self.access(|handle| handle.get_extension())?
     }
 }
 

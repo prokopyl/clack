@@ -184,7 +184,7 @@ mod host {
         pub fn exec(&self, plugin: &PluginSharedHandle, task_index: u32) {
             if let Some(exec) = plugin.use_extension(&self.0).exec {
                 // SAFETY: This type ensures the function pointer is valid.
-                unsafe { exec(plugin.as_raw(), task_index) }
+                unsafe { exec(plugin.as_raw_ptr(), task_index) }
             }
         }
     }
