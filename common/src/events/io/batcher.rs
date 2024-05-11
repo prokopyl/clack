@@ -128,7 +128,7 @@ pub struct EventBatch<'a> {
 }
 
 impl<'a> EventBatch<'a> {
-    /// Returns all of the events in this batch.
+    /// Returns all events in this batch.
     #[inline]
     pub fn events(&self) -> InputEventsIter<'a> {
         self.events.clone()
@@ -158,7 +158,7 @@ impl<'a> EventBatch<'a> {
     ///
     /// This is equivalent to indexing with:
     /// * `first_sample..next_batch_first_sample` if there is a next batch;
-    /// * `first_sample..`
+    /// * or `first_sample..` if this is the last batch.
     ///
     /// # Example
     ///

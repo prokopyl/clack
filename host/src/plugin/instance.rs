@@ -5,12 +5,16 @@ use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
 use std::ptr::NonNull;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 pub(crate) struct PluginInstanceInner<H: HostHandlers> {
     host_wrapper: Pin<Arc<HostWrapper<H>>>,
     host_descriptor: Pin<Box<RawHostDescriptor>>,
     plugin_ptr: Option<NonNull<clap_plugin>>,
+
+    is_started: AtomicBool,
+
     _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
@@ -40,6 +44,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             host_descriptor,
             plugin_ptr: None,
             _plugin_bundle: plugin_bundle.clone(),
+            is_started: AtomicBool::new(false),
         });
 
         {
@@ -155,6 +160,11 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             return Err(HostError::DeactivatedPlugin);
         }
 
+        if self.is_started.load(Ordering::Acquire) {
+            // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
+            unsafe { self.stop_processing() }
+        }
+
         if let Some(deactivate) = self.raw_instance().deactivate {
             // SAFETY: this type ensures the function pointer is valid.
             // We just checked the instance is in an active state.
@@ -172,6 +182,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     pub unsafe fn start_processing(&self) -> Result<(), HostError> {
         if let Some(start_processing) = self.raw_instance().start_processing {
             if start_processing(self.raw_instance()) {
+                self.is_started.store(true, Ordering::Release);
                 return Ok(());
             }
 
@@ -196,7 +207,8 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     #[inline]
     pub unsafe fn stop_processing(&self) {
         if let Some(stop_processing) = self.raw_instance().stop_processing {
-            stop_processing(self.raw_instance())
+            stop_processing(self.raw_instance());
+            self.is_started.store(false, Ordering::Release);
         }
     }
 

@@ -243,7 +243,7 @@ impl<H: HostHandlers> From<StoppedPluginAudioProcessor<H>> for PluginAudioProces
 }
 
 pub struct StartedPluginAudioProcessor<H: HostHandlers> {
-    inner: Option<Arc<PluginInstanceInner<H>>>,
+    inner: Arc<PluginInstanceInner<H>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
 }
 
@@ -281,7 +281,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
             out_events: events_output.as_raw_mut() as *mut _,
         };
 
-        let instance = self.inner.as_ref().unwrap().raw_instance();
+        let instance = self.inner.raw_instance();
 
         // SAFETY: this type ensures the function pointer is valid
         let status = ProcessStatus::from_raw(unsafe {
@@ -297,12 +297,12 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     #[inline]
     pub fn reset(&mut self) {
         // SAFETY: This type ensures this can only be called in the main thread.
-        unsafe { self.inner.as_mut().unwrap().reset() }
+        unsafe { self.inner.reset() }
     }
 
     #[inline]
-    pub fn stop_processing(mut self) -> StoppedPluginAudioProcessor<H> {
-        let inner = self.inner.take().unwrap();
+    pub fn stop_processing(self) -> StoppedPluginAudioProcessor<H> {
+        let inner = self.inner;
         // SAFETY: this is called on the audio thread
         unsafe { inner.stop_processing() };
 
@@ -314,7 +314,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 
     #[inline]
     fn wrapper(&self) -> &HostWrapper<H> {
-        self.inner.as_ref().unwrap().wrapper()
+        self.inner.wrapper()
     }
 
     #[inline]
@@ -349,26 +349,17 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 
     #[inline]
     pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
-        self.inner.as_ref().unwrap().plugin_shared()
+        self.inner.plugin_shared()
     }
 
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
-        PluginAudioProcessorHandle::new(self.inner.as_ref().unwrap().raw_instance().into())
+        PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 
     #[inline]
     pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
-        Arc::ptr_eq(self.inner.as_ref().unwrap(), &instance.inner)
-    }
-}
-
-impl<H: HostHandlers> Drop for StartedPluginAudioProcessor<H> {
-    fn drop(&mut self) {
-        if let Some(inner) = self.inner.take() {
-            // SAFETY: this is called on the audio thread
-            unsafe { inner.stop_processing() };
-        }
+        Arc::ptr_eq(&self.inner, &instance.inner)
     }
 }
 
@@ -399,7 +390,7 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         // SAFETY: this is called on the audio thread
         match unsafe { self.inner.start_processing() } {
             Ok(()) => Ok(StartedPluginAudioProcessor {
-                inner: Some(self.inner),
+                inner: self.inner,
                 _no_sync: PhantomData,
             }),
             Err(_) => Err(ProcessingStartError { processor: self }),

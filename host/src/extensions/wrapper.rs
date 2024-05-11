@@ -246,7 +246,7 @@ impl<H: HostHandlers> HostWrapper<H> {
         self.audio_processor.is_some()
     }
 
-    fn handle_panic<T, F, Pa>(param: Pa, handler: F) -> Result<T, HostWrapperError>
+    pub(crate) fn handle_panic<T, F, Pa>(param: Pa, handler: F) -> Result<T, HostWrapperError>
     where
         F: FnOnce(Pa) -> Result<T, HostWrapperError>,
     {
