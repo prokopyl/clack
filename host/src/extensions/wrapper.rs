@@ -109,11 +109,11 @@ impl<H: HostHandlers> HostWrapper<H> {
     #[inline]
     pub unsafe fn audio_processor(
         &self,
-    ) -> Result<NonNull<<H as HostHandlers>::AudioProcessor<'_>>, HostError> {
+    ) -> Result<NonNull<<H as HostHandlers>::AudioProcessor<'_>>, PluginInstanceError> {
         let ptr = self
             .audio_processor
             .as_ptr()
-            .ok_or(HostError::DeactivatedPlugin)?;
+            .ok_or(PluginInstanceError::DeactivatedPlugin)?;
 
         Ok(ptr.cast())
     }
@@ -194,7 +194,7 @@ impl<H: HostHandlers> HostWrapper<H> {
     pub(crate) unsafe fn setup_audio_processor<FA>(
         &self,
         audio_processor: FA,
-    ) -> Result<(), HostError>
+    ) -> Result<(), PluginInstanceError>
     where
         FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
@@ -202,7 +202,7 @@ impl<H: HostHandlers> HostWrapper<H> {
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         if self.audio_processor.is_some() {
-            return Err(HostError::AlreadyActivatedPlugin);
+            return Err(PluginInstanceError::AlreadyActivatedPlugin);
         }
 
         self.audio_processor.put(audio_processor(
@@ -225,10 +225,10 @@ impl<H: HostHandlers> HostWrapper<H> {
             <H as HostHandlers>::AudioProcessor<'s>,
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
-    ) -> Result<T, HostError> {
+    ) -> Result<T, PluginInstanceError> {
         // SAFETY: The user enforces that this is called and non-concurrently to any other audio-thread method.
         match self.audio_processor.take() {
-            None => Err(HostError::DeactivatedPlugin),
+            None => Err(PluginInstanceError::DeactivatedPlugin),
             Some(audio_processor) => Ok(drop(
                 audio_processor,
                 // SAFETY: The user enforces that this is only called on the main thread, and
@@ -296,7 +296,7 @@ pub enum HostWrapperError {
     NullHostInstance,
     NullHostData,
     Panic,
-    HostError(HostError),
+    HostError(PluginInstanceError),
 }
 
 impl HostWrapperError {
@@ -321,9 +321,9 @@ impl HostWrapperError {
     }
 }
 
-impl From<HostError> for HostWrapperError {
+impl From<PluginInstanceError> for HostWrapperError {
     #[inline]
-    fn from(e: HostError) -> Self {
+    fn from(e: PluginInstanceError) -> Self {
         Self::HostError(e)
     }
 }

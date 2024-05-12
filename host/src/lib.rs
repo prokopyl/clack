@@ -283,7 +283,7 @@ pub mod prelude {
         },
         host::{
             AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,
-            MainThreadHandler, SharedHandler,
+            MainThreadHandler, PluginInstanceError, SharedHandler,
         },
         plugin::PluginInstance,
         plugin::{

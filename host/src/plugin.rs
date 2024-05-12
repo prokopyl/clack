@@ -26,7 +26,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         bundle: &PluginBundle,
         plugin_id: &CStr,
         host: &HostInfo,
-    ) -> Result<Self, HostError>
+    ) -> Result<Self, PluginInstanceError>
     where
         FS: for<'b> FnOnce(&'b ()) -> <H as HostHandlers>::Shared<'b>,
         FH: for<'b> FnOnce(
@@ -51,14 +51,15 @@ impl<H: HostHandlers> PluginInstance<H> {
         &mut self,
         audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<StoppedPluginAudioProcessor<H>, HostError>
+    ) -> Result<StoppedPluginAudioProcessor<H>, PluginInstanceError>
     where
         FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
             &mut <H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
-        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::AlreadyActivatedPlugin)?;
+        let wrapper =
+            Arc::get_mut(&mut self.inner).ok_or(PluginInstanceError::AlreadyActivatedPlugin)?;
         wrapper.activate(audio_processor, configuration)?;
 
         Ok(StoppedPluginAudioProcessor::new(Arc::clone(&self.inner)))
@@ -70,7 +71,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn try_deactivate(&mut self) -> Result<(), HostError> {
+    pub fn try_deactivate(&mut self) -> Result<(), PluginInstanceError> {
         self.try_deactivate_with(|_, _| ())
     }
 
@@ -95,14 +96,15 @@ impl<H: HostHandlers> PluginInstance<H> {
         self.try_deactivate_with(drop_with).unwrap()
     }
 
-    pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, HostError>
+    pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, PluginInstanceError>
     where
         D: for<'s> FnOnce(
             <H as HostHandlers>::AudioProcessor<'_>,
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
-        let wrapper = Arc::get_mut(&mut self.inner).ok_or(HostError::StillActivatedPlugin)?;
+        let wrapper =
+            Arc::get_mut(&mut self.inner).ok_or(PluginInstanceError::StillActivatedPlugin)?;
 
         wrapper.deactivate_with(drop_with)
     }

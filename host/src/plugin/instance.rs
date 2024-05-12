@@ -25,7 +25,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
         plugin_bundle: &PluginBundle,
         plugin_id: &CStr,
         host_info: HostInfo,
-    ) -> Result<Arc<Self>, HostError>
+    ) -> Result<Arc<Self>, PluginInstanceError>
     where
         FS: for<'s> FnOnce(&'s ()) -> <H as HostHandlers>::Shared<'s>,
         FH: for<'s> FnOnce(
@@ -34,7 +34,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     {
         let plugin_factory = plugin_bundle
             .get_plugin_factory()
-            .ok_or(HostError::MissingPluginFactory)?;
+            .ok_or(PluginInstanceError::MissingPluginFactory)?;
 
         let host_wrapper = HostWrapper::new(shared, main_thread);
         let host_descriptor = Box::pin(RawHostDescriptor::new::<H>(host_info));
@@ -73,7 +73,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
                             destroy(plugin_instance_ptr.as_ptr());
                         }
 
-                        return Err(HostError::InstantiationFailed);
+                        return Err(PluginInstanceError::InstantiationFailed);
                     }
                 }
             }
@@ -107,7 +107,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
         &mut self,
         audio_processor: FA,
         configuration: PluginAudioConfiguration,
-    ) -> Result<(), HostError>
+    ) -> Result<(), PluginInstanceError>
     where
         FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
@@ -117,7 +117,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
         let activate = self
             .raw_instance()
             .activate
-            .ok_or(HostError::NullActivateFunction)?;
+            .ok_or(PluginInstanceError::NullActivateFunction)?;
 
         // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
         unsafe {
@@ -137,7 +137,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
         if !success {
             // SAFETY: this method being &mut guarantees nothing can call any other main-thread method
             let _ = unsafe { self.host_wrapper.teardown_audio_processor(|_, _| ()) };
-            return Err(HostError::ActivationFailed);
+            return Err(PluginInstanceError::ActivationFailed);
         }
 
         Ok(())
@@ -155,9 +155,9 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             <H as HostHandlers>::AudioProcessor<'s>,
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
-    ) -> Result<T, HostError> {
+    ) -> Result<T, PluginInstanceError> {
         if !self.is_active() {
-            return Err(HostError::DeactivatedPlugin);
+            return Err(PluginInstanceError::DeactivatedPlugin);
         }
 
         if self.is_started.load(Ordering::Acquire) {
@@ -179,14 +179,14 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     /// User must ensure the instance is not in a processing state, and that this is only called
     /// on the audio thread.
     #[inline]
-    pub unsafe fn start_processing(&self) -> Result<(), HostError> {
+    pub unsafe fn start_processing(&self) -> Result<(), PluginInstanceError> {
         if let Some(start_processing) = self.raw_instance().start_processing {
             if start_processing(self.raw_instance()) {
                 self.is_started.store(true, Ordering::Release);
                 return Ok(());
             }
 
-            Err(HostError::StartProcessingFailed)
+            Err(PluginInstanceError::StartProcessingFailed)
         } else {
             Ok(())
         }

@@ -1,6 +1,6 @@
 use self::audio_buffers::InputAudioBuffers;
-use crate::host::HostError;
 use crate::host::HostHandlers;
+use crate::host::PluginInstanceError;
 use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
 use crate::prelude::{OutputAudioBuffers, PluginInstance};
 use crate::process::PluginAudioProcessor::*;
@@ -27,37 +27,41 @@ pub enum PluginAudioProcessor<H: HostHandlers> {
 
 impl<H: HostHandlers> PluginAudioProcessor<H> {
     #[inline]
-    pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<H>, HostError> {
+    pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
             Started(s) => Ok(s),
-            Stopped(_) => Err(HostError::ProcessingStopped),
+            Stopped(_) => Err(PluginInstanceError::ProcessingStopped),
             Poisoned => unreachable!(),
         }
     }
 
     #[inline]
-    pub fn as_started_mut(&mut self) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    pub fn as_started_mut(
+        &mut self,
+    ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
             Started(s) => Ok(s),
-            Stopped(_) => Err(HostError::ProcessingStopped),
+            Stopped(_) => Err(PluginInstanceError::ProcessingStopped),
             Poisoned => unreachable!(),
         }
     }
 
     #[inline]
-    pub fn as_stopped(&self) -> Result<&StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn as_stopped(&self) -> Result<&StoppedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
             Stopped(s) => Ok(s),
-            Started(_) => Err(HostError::ProcessingStarted),
+            Started(_) => Err(PluginInstanceError::ProcessingStarted),
             Poisoned => unreachable!(),
         }
     }
 
     #[inline]
-    pub fn as_stopped_mut(&mut self) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn as_stopped_mut(
+        &mut self,
+    ) -> Result<&mut StoppedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
             Stopped(s) => Ok(s),
-            Started(_) => Err(HostError::ProcessingStarted),
+            Started(_) => Err(PluginInstanceError::ProcessingStarted),
             Poisoned => unreachable!(),
         }
     }
@@ -132,21 +136,23 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
 
     pub fn ensure_processing_started(
         &mut self,
-    ) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
             Started(s) => Ok(s),
             _ => self.start_processing(),
         }
     }
 
-    pub fn start_processing(&mut self) -> Result<&mut StartedPluginAudioProcessor<H>, HostError> {
+    pub fn start_processing(
+        &mut self,
+    ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
             Poisoned => unreachable!("Audio processor handle somehow panicked and got poisoned."),
             Started(s) => {
                 *self = Started(s);
-                Err(HostError::ProcessingStarted)
+                Err(PluginInstanceError::ProcessingStarted)
             }
             Stopped(s) => match s.start_processing() {
                 Ok(s) => {
@@ -158,7 +164,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
                 }
                 Err(e) => {
                     *self = Stopped(e.processor);
-                    Err(HostError::StartProcessingFailed)
+                    Err(PluginInstanceError::StartProcessingFailed)
                 }
             },
         }
@@ -183,14 +189,16 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
-    pub fn stop_processing(&mut self) -> Result<&mut StoppedPluginAudioProcessor<H>, HostError> {
+    pub fn stop_processing(
+        &mut self,
+    ) -> Result<&mut StoppedPluginAudioProcessor<H>, PluginInstanceError> {
         let inner = core::mem::replace(self, Poisoned);
 
         match inner {
             Poisoned => unreachable!(),
             Stopped(s) => {
                 *self = Stopped(s);
-                Err(HostError::ProcessingStopped)
+                Err(PluginInstanceError::ProcessingStopped)
             }
             Started(s) => {
                 *self = Stopped(s.stop_processing());
@@ -256,7 +264,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         events_output: &mut OutputEvents,
         steady_time: Option<u64>,
         transport: Option<&TransportEvent>,
-    ) -> Result<ProcessStatus, HostError> {
+    ) -> Result<ProcessStatus, PluginInstanceError> {
         // TODO: add test for this
         let frames_count = match (audio_inputs.frames_count(), audio_outputs.frames_count()) {
             (Some(a), Some(b)) => a.min(b),
@@ -285,11 +293,13 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 
         // SAFETY: this type ensures the function pointer is valid
         let status = ProcessStatus::from_raw(unsafe {
-            instance.process.ok_or(HostError::NullProcessFunction)?(instance, &process)
+            instance
+                .process
+                .ok_or(PluginInstanceError::NullProcessFunction)?(instance, &process)
         })
         .ok_or(())
         .and_then(|r| r)
-        .map_err(|_| HostError::ProcessingFailed)?;
+        .map_err(|_| PluginInstanceError::ProcessingFailed)?;
 
         Ok(status)
     }

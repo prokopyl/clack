@@ -193,7 +193,7 @@ mod error;
 mod extensions;
 mod info;
 
-pub use error::HostError;
+pub use error::{HostError, PluginInstanceError};
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 

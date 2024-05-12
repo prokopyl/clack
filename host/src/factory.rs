@@ -20,7 +20,7 @@
 //! See the [`PluginFactory`]'s type documentation for more detail and examples on how to
 //! list plugins.
 
-use crate::host::HostError;
+use crate::host::PluginInstanceError;
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
@@ -147,15 +147,15 @@ impl<'a> PluginFactory<'a> {
         &self,
         plugin_id: &CStr,
         host: *const clap_host,
-    ) -> Result<NonNull<clap_plugin>, HostError> {
+    ) -> Result<NonNull<clap_plugin>, PluginInstanceError> {
         NonNull::new((*self.inner)
             .create_plugin
-            .ok_or(HostError::NullFactoryCreatePluginFunction)?(
+            .ok_or(PluginInstanceError::NullFactoryCreatePluginFunction)?(
             self.inner,
             host,
             plugin_id.as_ptr(),
         ) as *mut clap_plugin)
-        .ok_or(HostError::PluginNotFound)
+        .ok_or(PluginInstanceError::PluginNotFound)
     }
 }
 
