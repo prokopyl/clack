@@ -191,8 +191,8 @@ mod host {
         ///
         /// # Errors
         ///
-        /// Returns [`TimerError::RegisterError`] if the host failed or denied to register this timer.
-        fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, TimerError>;
+        /// Returns an error if the host failed or refused to register this timer.
+        fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError>;
 
         /// Unregisters a given Timer, identified by its unique [`TimerId`].
         ///
@@ -201,8 +201,8 @@ mod host {
         ///
         /// # Errors
         ///
-        /// Returns [`TimerError::UnregisterError`] if the host failed to unregister this timer.
-        fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError>;
+        /// Returns an error if the host failed to unregister this timer.
+        fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.

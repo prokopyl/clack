@@ -226,7 +226,7 @@ pub mod prelude {
             Extension, ExtensionImplementation, HostExtensionSide, PluginExtensionSide,
             RawExtension, RawExtensionImplementation,
         },
-        host::HostHandlers,
+        host::{HostError, HostHandlers},
         plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
         utils::ClapId,
     };

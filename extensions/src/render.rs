@@ -80,7 +80,7 @@ mod plugin {
 
     /// Implementation of the Plugin-side of the Render extension.
     pub trait PluginRenderImpl {
-        /// Returns `true` if the plugin has an hard requirement to process in real-time.
+        /// Returns `true` if the plugin has a hard requirement to process in real-time.
         ///
         /// This is especially useful for plugins that are acting as a proxy to hardware devices, or
         /// other real-time events.
@@ -90,9 +90,9 @@ mod plugin {
         ///
         /// # Errors
         ///
-        /// This may return [`PluginRenderError`] if the plugin either declined or failed to switch
+        /// This may return an error if the plugin either declined or failed to switch
         /// to the given render mode.
-        fn set(&mut self, mode: RenderMode) -> Result<(), PluginRenderError>;
+        fn set(&mut self, mode: RenderMode) -> Result<(), PluginError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.

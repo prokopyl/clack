@@ -14,18 +14,18 @@ impl HostGuiImpl for CpalHostShared {
         // We don't support any resize hints
     }
 
-    fn request_resize(&self, new_size: GuiSize) -> Result<(), GuiError> {
-        self.sender
-            .send(MainThreadMessage::GuiRequestResized { new_size })
-            .map_err(|_| GuiError::RequestResizeError)
+    fn request_resize(&self, new_size: GuiSize) -> Result<(), HostError> {
+        Ok(self
+            .sender
+            .send(MainThreadMessage::GuiRequestResized { new_size })?)
     }
 
-    fn request_show(&self) -> Result<(), GuiError> {
+    fn request_show(&self) -> Result<(), HostError> {
         // We never hide the window, so showing it again does nothing.
         Ok(())
     }
 
-    fn request_hide(&self) -> Result<(), GuiError> {
+    fn request_hide(&self) -> Result<(), HostError> {
         Ok(())
     }
 

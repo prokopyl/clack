@@ -21,9 +21,9 @@ pub trait PluginAudioPortsConfigImpl {
     ///
     /// # Error
     ///
-    /// This method may return an [`AudioPortConfigSelectError`] if the given ID is out of bounds,
+    /// This method may return an error if the given ID is out of bounds,
     /// or if the plugin declined or failed to change its Audio Ports Configuration.
-    fn select(&mut self, config_id: ClapId) -> Result<(), AudioPortConfigSelectError>;
+    fn select(&mut self, config_id: ClapId) -> Result<(), PluginError>;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.

@@ -307,35 +307,35 @@ pub trait HostGuiImpl {
     ///
     /// # Errors
     ///
-    /// This may return a [`GuiError::ResizeError`] if the host denied or was unable to fulfill the
+    /// This may return an error if the host denied or was unable to fulfill the
     /// request.
     ///
     /// Note: as this may not be called from the main thread, a successful return value may only
     /// mean the Host acknowledged the request, and will process it asynchronously later. If the
     /// request is later found not to be able to be satisfied, then the host will call the plugin's
     /// `set_size` method to revert the operation.
-    fn request_resize(&self, new_size: GuiSize) -> Result<(), GuiError>;
+    fn request_resize(&self, new_size: GuiSize) -> Result<(), HostError>;
 
     /// Requests the host to show the Plugin's GUI.
     ///
     /// # Errors
     ///
-    /// This may return a [`GuiError::RequestShowError`] if the host denied or was unable to fulfill the
+    /// This may return an error if the host denied or was unable to fulfill the
     /// request.
-    fn request_show(&self) -> Result<(), GuiError>;
+    fn request_show(&self) -> Result<(), HostError>;
 
     /// Requests the host to hide the Plugin's GUI.
     ///
     /// # Errors
     ///
-    /// This may return a [`GuiError::RequestHideError`] if the host denied or was unable to fulfill the
+    /// This may return an error if the host denied or was unable to fulfill the
     /// request.
-    fn request_hide(&self) -> Result<(), GuiError>;
+    fn request_hide(&self) -> Result<(), HostError>;
 
     /// Notifies the host that either the floating window has been closed, or that the connection to
     /// the GUI was lost.
     ///
-    /// If `is_destroyed` is true, than the host must call `destroy` to acknowledge the GUI destruction.
+    /// If `is_destroyed` is true, then the host must call `destroy` to acknowledge the GUI destruction.
     fn closed(&self, was_destroyed: bool);
 }
 

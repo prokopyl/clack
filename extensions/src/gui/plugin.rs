@@ -125,7 +125,7 @@ pub trait PluginGuiImpl {
     /// its window to stay above the parent window via [`Self::set_transient`].
     ///
     /// If `is_floating` is false, the plugin must embed its window in the parent (host).
-    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), GuiError>;
+    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError>;
 
     /// Free all resources associated with the GUI
     fn destroy(&mut self);
@@ -134,9 +134,7 @@ pub trait PluginGuiImpl {
     ///
     /// Overrides OS settings, and should not be used if the windowing API uses logical pixels. Can
     /// be ignored if the plugin will query the OS directly and perform its own calculations.
-    fn set_scale(&mut self, scale: f64) -> Result<(), GuiError> {
-        Err(GuiError::SetScaleError)
-    }
+    fn set_scale(&mut self, scale: f64) -> Result<(), PluginError>;
 
     /// Get current size of GUI
     fn get_size(&mut self) -> Option<GuiSize>;
@@ -162,15 +160,15 @@ pub trait PluginGuiImpl {
     }
 
     /// Set the size of an embedded window
-    fn set_size(&mut self, size: GuiSize) -> Result<(), GuiError>;
+    fn set_size(&mut self, size: GuiSize) -> Result<(), PluginError>;
 
     /// Embed UI into the given parent window
-    fn set_parent(&mut self, window: Window) -> Result<(), GuiError>;
+    fn set_parent(&mut self, window: Window) -> Result<(), PluginError>;
 
     /// Receive instruction to stay above the given window
     ///
     /// Only applies to floating windows.
-    fn set_transient(&mut self, window: Window) -> Result<(), GuiError>;
+    fn set_transient(&mut self, window: Window) -> Result<(), PluginError>;
 
     /// Receive a suggested window title from the host
     ///
@@ -178,12 +176,12 @@ pub trait PluginGuiImpl {
     fn suggest_title(&mut self, title: &str) {}
 
     /// Show the window
-    fn show(&mut self) -> Result<(), GuiError>;
+    fn show(&mut self) -> Result<(), PluginError>;
 
     /// Hide the window
     ///
     /// This should not free the resources associated with the GUI, just hide it.
-    fn hide(&mut self) -> Result<(), GuiError>;
+    fn hide(&mut self) -> Result<(), PluginError>;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.

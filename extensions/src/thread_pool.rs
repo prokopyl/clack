@@ -143,8 +143,8 @@ mod host {
         ///
         /// # Errors
         ///
-        /// This method will return [`ThreadPoolRequestError`] if the host denied the request.
-        fn request_exec(&mut self, task_count: u32) -> Result<(), ThreadPoolRequestError>;
+        /// This method will return an error if the host denied the request.
+        fn request_exec(&mut self, task_count: u32) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.

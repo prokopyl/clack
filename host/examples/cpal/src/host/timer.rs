@@ -1,22 +1,22 @@
 use crate::host::CpalHostMainThread;
-use clack_extensions::timer::{HostTimerImpl, PluginTimer, TimerError, TimerId};
-use clack_host::prelude::PluginMainThreadHandle;
+use clack_extensions::timer::{HostTimerImpl, PluginTimer, TimerId};
+use clack_host::prelude::{HostError, PluginMainThreadHandle};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
-    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, TimerError> {
+    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
         Ok(self
             .timers
             .register_new(Duration::from_millis(period_ms as u64)))
     }
 
-    fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), TimerError> {
+    fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError> {
         if self.timers.unregister(timer_id) {
             Ok(())
         } else {
-            Err(TimerError::UnregisterError)
+            Err(HostError::Message("Unknown timer ID"))
         }
     }
 }
