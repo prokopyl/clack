@@ -427,6 +427,19 @@ impl<'a> InputAudioBuffers<'a> {
     pub fn port_infos(&self) -> impl Iterator<Item = AudioPortProcessingInfo> + '_ {
         self.buffers.iter().map(AudioPortProcessingInfo::from_raw)
     }
+
+    /// Returns the minimum number of frames available both in this [`InputAudioBuffers`] and
+    /// the given [`OutputAudioBuffers`].
+    ///
+    /// This is useful to ensure a safe frame count for a `process` batch that would receive those
+    /// input and output audio buffers.
+    pub fn min_available_frames_with(&self, outputs: &OutputAudioBuffers) -> u32 {
+        match (self.frames_count, outputs.frames_count) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) | (None, Some(a)) => a,
+            (None, None) => 0,
+        }
+    }
 }
 
 pub struct OutputAudioBuffers<'a> {
@@ -516,11 +529,7 @@ impl<'a> OutputAudioBuffers<'a> {
         &'a mut self,
         inputs: &InputAudioBuffers<'a>,
     ) -> clack_plugin::prelude::Audio<'a> {
-        let frames_count = match (self.frames_count, inputs.frames_count) {
-            (Some(a), Some(b)) => a.min(b),
-            (Some(a), None) | (None, Some(a)) => a,
-            (None, None) => 0,
-        };
+        let frames_count = inputs.min_available_frames_with(self);
 
         // SAFETY: the validity of the buffers is guaranteed by this type
         unsafe {
@@ -537,11 +546,7 @@ impl<'a> OutputAudioBuffers<'a> {
         self,
         inputs: &InputAudioBuffers<'a>,
     ) -> clack_plugin::prelude::Audio<'a> {
-        let frames_count = match (self.frames_count, inputs.frames_count) {
-            (Some(a), Some(b)) => a.min(b),
-            (Some(a), None) | (None, Some(a)) => a,
-            (None, None) => 0,
-        };
+        let frames_count = inputs.min_available_frames_with(&self);
 
         // SAFETY: the validity of the buffers is guaranteed by this type
         unsafe {

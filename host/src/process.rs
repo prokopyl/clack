@@ -265,43 +265,45 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         steady_time: Option<u64>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, PluginInstanceError> {
-        // TODO: add test for this
-        let frames_count = match (audio_inputs.frames_count(), audio_outputs.frames_count()) {
-            (Some(a), Some(b)) => a.min(b),
-            (Some(a), None) | (None, Some(a)) => a,
-            (None, None) => 0,
-        };
+        let frames_count = audio_inputs.min_available_frames_with(audio_outputs);
+
+        let audio_inputs = audio_inputs.as_raw_buffers();
+        let audio_outputs = audio_outputs.as_raw_buffers();
 
         let process = clap_process {
+            frames_count,
+
+            in_events: events_input.as_raw(),
+            out_events: events_output.as_raw_mut(),
+
+            audio_inputs: audio_inputs.as_ptr(),
+            audio_outputs: audio_outputs.as_mut_ptr(),
+            audio_inputs_count: audio_inputs.len() as u32,
+            audio_outputs_count: audio_outputs.len() as u32,
+
             steady_time: match steady_time {
                 None => -1,
                 Some(steady_time) => steady_time.min(i64::MAX as u64) as i64,
             },
-            frames_count,
-            transport: transport
-                .map(|e| e.as_raw() as *const _)
-                .unwrap_or(core::ptr::null()),
-            audio_inputs_count: audio_inputs.as_raw_buffers().len() as u32,
-            audio_outputs_count: audio_outputs.as_raw_buffers().len() as u32,
-            audio_inputs: audio_inputs.as_raw_buffers().as_ptr(),
-            audio_outputs: audio_outputs.as_raw_buffers().as_mut_ptr(),
-            in_events: events_input.as_raw(),
-            out_events: events_output.as_raw_mut() as *mut _,
+            transport: match transport {
+                None => core::ptr::null(),
+                Some(e) => e.as_raw(),
+            },
         };
 
         let instance = self.inner.raw_instance();
 
-        // SAFETY: this type ensures the function pointer is valid
-        let status = ProcessStatus::from_raw(unsafe {
-            instance
-                .process
-                .ok_or(PluginInstanceError::NullProcessFunction)?(instance, &process)
-        })
-        .ok_or(())
-        .and_then(|r| r)
-        .map_err(|_| PluginInstanceError::ProcessingFailed)?;
+        let process_fn = instance
+            .process
+            .ok_or(PluginInstanceError::NullProcessFunction)?;
 
-        Ok(status)
+        // SAFETY: this type ensures the function pointer is valid
+        let status = unsafe { process_fn(instance, &process) };
+
+        match ProcessStatus::from_raw(status) {
+            None | Some(Err(())) => Err(PluginInstanceError::ProcessingFailed),
+            Some(Ok(status)) => Ok(status),
+        }
     }
 
     #[inline]

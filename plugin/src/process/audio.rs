@@ -39,11 +39,7 @@ pub mod tests {
             ),
         }]);
 
-        let frames_count = match (input_buffers.frames_count(), output_buffers.frames_count()) {
-            (Some(a), Some(b)) => a.min(b),
-            (Some(a), None) | (None, Some(a)) => a,
-            (None, None) => 0,
-        };
+        let frames_count = input_buffers.min_available_frames_with(&output_buffers);
 
         Audio {
             inputs: input_buffers.as_raw_buffers(),

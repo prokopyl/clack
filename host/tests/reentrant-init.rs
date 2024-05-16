@@ -1,6 +1,4 @@
-use clack_extensions::timer::{
-    HostTimer, HostTimerImpl, PluginTimer, PluginTimerImpl, TimerError, TimerId,
-};
+use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, PluginTimerImpl, TimerId};
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
@@ -94,7 +92,7 @@ impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 }
 
 impl<'a> HostTimerImpl for MyHostMainThread<'a> {
-    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, TimerError> {
+    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
         assert_eq!(period_ms, 1000);
 
         let handle = self
@@ -111,7 +109,7 @@ impl<'a> HostTimerImpl for MyHostMainThread<'a> {
         Ok(TimerId(5))
     }
 
-    fn unregister_timer(&mut self, _timer_id: TimerId) -> Result<(), TimerError> {
+    fn unregister_timer(&mut self, _timer_id: TimerId) -> Result<(), HostError> {
         unimplemented!()
     }
 }

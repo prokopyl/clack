@@ -33,6 +33,7 @@ impl ProcessStatus {
     ///
     /// If the given integer does not match any known CLAP Processing status codes, [`None`] is
     /// returned.
+    #[inline]
     pub fn from_raw(raw: clap_process_status) -> Option<Result<Self, ()>> {
         use ProcessStatus::*;
 
