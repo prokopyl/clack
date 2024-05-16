@@ -138,7 +138,7 @@ enum MainError {
 
 impl Display for MainError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self { MainError::UnspecifiedOptions => f.write_str("Please specify a plugin to load using the -p option or the -f option. Use --help for documentation."),
+        match self { MainError::UnspecifiedOptions => f.write_str("Please specify a plugin to load using the -p option or the -b option. Use --help for documentation."),
             MainError::NoPluginInPath(path) => write!(f,
                                                       "No plugins found in CLAP bundle at {}. Stopping.",
                                                       path.display()

@@ -72,6 +72,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn use_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
@@ -82,6 +83,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn use_handler_mut<'s, R>(
         &'s mut self,
         access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
@@ -92,6 +94,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn is_started(&self) -> bool {
         match self {
             Stopped(_) => false,
@@ -123,6 +126,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn ensure_processing_started(
         &mut self,
     ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
@@ -132,6 +136,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn start_processing(
         &mut self,
     ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
@@ -152,6 +157,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         })
     }
 
+    #[inline]
     pub fn ensure_processing_stopped(&mut self) -> &mut StoppedPluginAudioProcessor<H> {
         let inner = match self {
             Stopped(s) => return s,
@@ -168,6 +174,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn stop_processing(
         &mut self,
     ) -> Result<&mut StoppedPluginAudioProcessor<H>, PluginInstanceError> {
@@ -186,6 +193,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         })
     }
 
+    #[inline]
     pub fn into_started(self) -> Result<StartedPluginAudioProcessor<H>, ProcessingStartError<H>> {
         match self {
             Started(s) => Ok(s),
@@ -193,6 +201,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    #[inline]
     pub fn into_stopped(self) -> StoppedPluginAudioProcessor<H> {
         match self {
             Started(s) => s.stop_processing(),

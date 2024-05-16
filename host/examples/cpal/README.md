@@ -1,4 +1,5 @@
 # clack-host-cpal
+
 An example of a functional CLAP host based on the `clack-host` crate,
 using [CPAL](https://github.com/RustAudio/cpal) for audio output.
 
@@ -13,7 +14,7 @@ output at the same time), this host only connects to one single audio output and
 handle any input.
 
 This means audio effects plugins that process an incoming signal, while technically functional
-in this host, will only receive silence as an input. In practice, synthesizers and other 
+in this host, will only receive silence as an input. In practice, synthesizers and other
 audio-generating plugins are better suited to test this example with.
 
 ## Features
@@ -43,7 +44,7 @@ At least one of the `--plugin-id` (`-p`) or the `--bundle-path` (`-b`) parameter
 Usage: clack-host-cpal [OPTIONS]
 
 Options:
-  -f, --bundle-path <BUNDLE_PATH>
+  -b, --bundle-path <BUNDLE_PATH>
           Loads the plugin found in the CLAP bundle at the given path.
 
           If the bundle contains multiple plugins, this should be used in
