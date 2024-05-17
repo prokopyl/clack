@@ -13,7 +13,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::extensions::wrapper::HostWrapper;
 use crate::plugin::instance::PluginInstanceInner;
 pub use clack_common::process::*;
 
@@ -67,8 +66,8 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
     ) -> R {
         match self {
-            Started(s) => s.use_shared_handler(access),
-            Stopped(s) => s.use_shared_handler(access),
+            Started(s) => s.access_shared_handler(access),
+            Stopped(s) => s.access_shared_handler(access),
         }
     }
 
@@ -78,8 +77,8 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         match self {
-            Started(s) => s.use_handler(access),
-            Stopped(s) => s.use_handler(access),
+            Started(s) => s.access_handler(access),
+            Stopped(s) => s.access_handler(access),
         }
     }
 
@@ -89,8 +88,8 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         match self {
-            Started(s) => s.use_handler_mut(access),
-            Stopped(s) => s.use_handler_mut(access),
+            Started(s) => s.access_handler_mut(access),
+            Stopped(s) => s.access_handler_mut(access),
         }
     }
 
@@ -232,6 +231,21 @@ impl<H: HostHandlers> From<StoppedPluginAudioProcessor<H>> for PluginAudioProces
     }
 }
 
+/// A handle to a plugin's audio processor that is in the `started` state.
+///
+/// A host can call [`process`] or [`stop_processing`] on a plugin which audio processor is in
+/// this state.
+///
+/// This type is generic over the [`HostHandlers`] type that was used to create the plugin instance.
+/// The [shared] and [audio processor] handlers can be accessed with the
+/// [`access_shared_handler`](Self::access_shared_handler),
+/// [`access_handler`](Self::access_handler) and [`access_handler_mut`](Self::access_handler_mut)
+/// methods.
+///
+/// [`process`]: Self::process
+/// [`stop_processing`]: Self::stop_processing
+/// [shared]: crate::prelude::SharedHandler
+/// [audio processor]: crate::prelude::AudioProcessorHandler
 pub struct StartedPluginAudioProcessor<H: HostHandlers> {
     inner: Arc<PluginInstanceInner<H>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
@@ -246,12 +260,59 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         }
     }
 
+    /// Process a chunk of audio frames and events.
+    ///
+    /// This plugin function requires the following arguments:
+    /// * `audio_inputs`: The [`InputAudioBuffers`] the plugin is going to read audio frames from.
+    ///   Can be [`InputAudioBuffers::empty`] if the plugin takes no audio input at all.
+    /// * `audio_output`: The [`OutputAudioBuffers`] the plugin is going to read audio frames from.
+    ///   Can be [`OutputAudioBuffers::empty`] if the plugin produces no audio output at all.
+    /// * `input_events`: The [`InputEvents`] list the plugin is going to receive events from.
+    ///   Can be [`InputEvents::empty`] if the plugin doesn't need to receive any events.
+    /// * `output_events`: The [`OutputEvents`] buffer the plugin is going to write the events it
+    ///   produces.
+    ///   Can be [`OutputEvents::void`] to ignore any events the plugin produces.
+    ///
+    /// Additionally, the following optional arguments can also be given:
+    ///
+    /// * `steady_time`: A steady sample time counter.
+    ///   This can be used to calculate the sleep duration between two process calls.
+    ///   This value may be specific to this plugin instance and have no relation to what
+    ///   other plugin instances may receive.
+    ///
+    ///   The only requirement is that this value must be increased by at least the frame count
+    ///   of the audio buffers (see [`InputAudioBuffers::min_available_frames_with`]) for the next
+    ///   call to `process`.
+    ///
+    ///   This value can never decrease between two calls to `process`, unless [`reset`]
+    ///   is called, or if it was increased beyond [`u64::MAX`] and it wrapped around.
+    ///
+    ///   This can be set to `None` if not available.
+    ///
+    /// * `transport`: Transport information, as of sample `0`. See the [`TransportEvent`]
+    ///   documentation for more details about the available transport information.
+    ///
+    ///   This can be `None` if no transport is available, i.e. if the host is free-running.
+    ///
+    /// Once processing is complete, the function returns a [`ProcessStatus`] to inform the host
+    /// whether the plugin can be put to sleep or not. See the [`ProcessStatus`] documentation
+    /// for more information.
+    ///
+    /// # Errors
+    ///
+    /// This function can return [`PluginInstanceError::NullProcessFunction`] if the plugin
+    /// implementation did not provide a valid underlying `process` function pointer.
+    ///
+    /// This can also return [`PluginInstanceError::ProcessingFailed`] if the `process` function
+    /// failed for any reason.
+    ///
+    /// [`reset`]: Self::reset
     pub fn process(
         &mut self,
         audio_inputs: &InputAudioBuffers,
         audio_outputs: &mut OutputAudioBuffers,
-        events_input: &InputEvents,
-        events_output: &mut OutputEvents,
+        input_events: &InputEvents,
+        output_events: &mut OutputEvents,
         steady_time: Option<u64>,
         transport: Option<&TransportEvent>,
     ) -> Result<ProcessStatus, PluginInstanceError> {
@@ -263,8 +324,8 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         let process = clap_process {
             frames_count,
 
-            in_events: events_input.as_raw(),
-            out_events: events_output.as_raw_mut(),
+            in_events: input_events.as_raw(),
+            out_events: output_events.as_raw_mut(),
 
             audio_inputs: audio_inputs.as_ptr(),
             audio_outputs: audio_outputs.as_mut_ptr(),
@@ -273,7 +334,9 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 
             steady_time: match steady_time {
                 None => -1,
-                Some(steady_time) => steady_time.min(i64::MAX as u64) as i64,
+                // This is a wrapping conversion from u64 to i64.
+                // The wrapping allows smooth operation from the plugin if steady_time does actually overflow an i64.
+                Some(steady_time) => (steady_time & i64::MAX as u64) as i64,
             },
             transport: match transport {
                 None => core::ptr::null(),
@@ -296,12 +359,25 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         }
     }
 
+    /// Resets the plugin's audio processing state.
+    ///
+    /// This clears all the plugin's internal buffers, kills all voices, and resets all processing
+    /// state such as envelopes, LFOs, oscillators, filters, etc.
+    ///
+    /// Calling this method allows the `steady_time` parameter passed to [`process`](Self::process)
+    /// to jump backwards.
     #[inline]
     pub fn reset(&mut self) {
         // SAFETY: This type ensures this can only be called in the main thread.
         unsafe { self.inner.reset() }
     }
 
+    /// Sends the plugin to sleep, implying the next [`process`](Self::process) call will not be
+    /// continuous with the last one.
+    ///
+    /// This method returns an audio processor in the [stopped](StoppedPluginAudioProcessor) state.
+    ///
+    /// This operation is infallible.
     #[inline]
     pub fn stop_processing(self) -> StoppedPluginAudioProcessor<H> {
         let inner = self.inner;
@@ -314,57 +390,107 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         }
     }
 
+    /// Accesses the [`SharedHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`SharedHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// Unlike [`access_handler`](self.access_handler) and
+    /// [`access_handler_mut`](self.access_handler_mut), there is no way to obtain a mutable
+    /// reference to the [`SharedHandler`], as it may be concurrently accessed by other threads.
+    ///
+    /// [`SharedHandler`]: crate::prelude::SharedHandler
     #[inline]
-    fn wrapper(&self) -> &HostWrapper<H> {
-        self.inner.wrapper()
-    }
-
-    #[inline]
-    pub fn use_shared_handler<'s, R>(
+    pub fn access_shared_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
     ) -> R {
-        access(self.wrapper().shared())
+        access(self.inner.wrapper().shared())
     }
 
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler_mut`](self.access_handler_mut) method to receive a mutable
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn use_handler<'s, R>(
+    pub fn access_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the audio thread,
         // therefore we can guarantee there are other references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { access(self.wrapper().audio_processor().unwrap().as_ref()) }
+        unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_ref()) }
     }
 
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler`](self.access_handler) method to receive a shared
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn use_handler_mut<'s, R>(
+    pub fn access_handler_mut<'s, R>(
         &'s mut self,
         access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
-        unsafe { access(self.wrapper().audio_processor().unwrap().as_mut()) }
+        unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_mut()) }
     }
 
+    /// Returns this plugin instance's shared handle.
     #[inline]
     pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
         self.inner.plugin_shared()
     }
 
+    /// Returns this plugin instance's audio processor handle.
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 
+    /// Returns `true` if this audio processor was created from the given plugin instance.
     #[inline]
     pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
         Arc::ptr_eq(&self.inner, &instance.inner)
     }
 }
 
+/// A handle to a plugin's audio processor that is in the `stopped` state.
+///
+/// This is the default state the plugin's audio processor will be in after calling [`activate`].
+///
+/// A host needs to call [`start_processing`] before it can call the [`process`] method to process
+/// audio and events.
+///
+/// This type is generic over the [`HostHandlers`] type that was used to create the plugin instance.
+/// The [shared] and [audio processor] handlers can be accessed with the
+/// [`access_shared_handler`](Self::access_shared_handler),
+/// [`access_handler`](Self::access_handler) and [`access_handler_mut`](Self::access_handler_mut)
+/// methods.
+///
+/// [`activate`]: PluginInstance::activate
+/// [`process`]: StartedPluginAudioProcessor::process
+/// [`start_processing`]: Self::start_processing
+/// [shared]: crate::prelude::SharedHandler
+/// [audio processor]: crate::prelude::AudioProcessorHandler
 pub struct StoppedPluginAudioProcessor<H: HostHandlers> {
     pub(crate) inner: Arc<PluginInstanceInner<H>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
@@ -379,12 +505,34 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         }
     }
 
+    /// Resets the plugin's audio processing state.
+    ///
+    /// This clears all the plugin's internal buffers, kills all voices, and resets all processing
+    /// state such as envelopes, LFOs, oscillators, filters, etc.
+    ///
+    /// Calling this method allows the `steady_time` parameter passed to [`process`](StartedPluginAudioProcessor::process)
+    /// to jump backwards.
     #[inline]
     pub fn reset(&mut self) {
         // SAFETY: This type ensures this can only be called in the main thread.
         unsafe { self.inner.reset() }
     }
 
+    /// Indicates to the plugin that continuous processing is about to start.
+    ///
+    /// Calling this is required in order to be able to call the [`process`] method to process
+    /// audio and events.
+    ///
+    /// If this succeeds, this returns an audio processor in the [started](StartedPluginAudioProcessor)
+    /// state.
+    ///
+    /// # Errors
+    ///
+    /// This method can fail if the underlying plugin's implementation fails for any reason.
+    /// In this case, a [`ProcessingStartError`] is returned, from which the stopped audio processor
+    /// can be recovered.
+    ///
+    /// [`process`]: StartedPluginAudioProcessor::process
     #[inline]
     pub fn start_processing(
         self,
@@ -399,21 +547,39 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         }
     }
 
+    /// Accesses the [`SharedHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`SharedHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// Unlike [`access_handler`](self.access_handler) and
+    /// [`access_handler_mut`](self.access_handler_mut), there is no way to obtain a mutable
+    /// reference to the [`SharedHandler`], as it may be concurrently accessed by other threads.
+    ///
+    /// [`SharedHandler`]: crate::prelude::SharedHandler
     #[inline]
-    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
-        Arc::ptr_eq(&self.inner, &instance.inner)
-    }
-
-    #[inline]
-    pub fn use_shared_handler<'s, R>(
+    pub fn access_shared_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
     ) -> R {
         access(self.inner.wrapper().shared())
     }
 
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler_mut`](self.access_handler_mut) method to receive a mutable
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn use_handler<'s, R>(
+    pub fn access_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
@@ -423,8 +589,19 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_ref()) }
     }
 
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler`](self.access_handler) method to receive a shared
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn use_handler_mut<'s, R>(
+    pub fn access_handler_mut<'s, R>(
         &'s mut self,
         access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
@@ -434,14 +611,22 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_mut()) }
     }
 
+    /// Returns this plugin instance's shared handle.
     #[inline]
     pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
         self.inner.plugin_shared()
     }
 
+    /// Returns this plugin instance's audio processor handle.
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
+    }
+
+    /// Returns `true` if this audio processor was created from the given plugin instance.
+    #[inline]
+    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
+        Arc::ptr_eq(&self.inner, &instance.inner)
     }
 }
 
