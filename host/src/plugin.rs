@@ -5,9 +5,11 @@ use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+mod error;
 mod handle;
 pub(crate) mod instance;
 
+pub use error::PluginInstanceError;
 pub use handle::*;
 use instance::*;
 

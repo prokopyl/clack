@@ -20,7 +20,7 @@
 //! See the [`PluginFactory`]'s type documentation for more detail and examples on how to
 //! list plugins.
 
-use crate::host::PluginInstanceError;
+use crate::plugin::PluginInstanceError;
 use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;

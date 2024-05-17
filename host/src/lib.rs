@@ -259,8 +259,6 @@
 //! # Ok(()) }
 //! ```
 
-extern crate core;
-
 pub mod bundle;
 pub mod extensions;
 pub mod factory;
@@ -283,12 +281,11 @@ pub mod prelude {
         },
         host::{
             AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,
-            MainThreadHandler, PluginInstanceError, SharedHandler,
+            MainThreadHandler, SharedHandler,
         },
-        plugin::PluginInstance,
         plugin::{
             InitializedPluginHandle, InitializingPluginHandle, PluginAudioProcessorHandle,
-            PluginMainThreadHandle, PluginSharedHandle,
+            PluginInstance, PluginInstanceError, PluginMainThreadHandle, PluginSharedHandle,
         },
         process::{
             audio_buffers::{

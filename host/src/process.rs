@@ -15,8 +15,7 @@
 
 use self::audio_buffers::InputAudioBuffers;
 use crate::host::HostHandlers;
-use crate::host::PluginInstanceError;
-use crate::plugin::{PluginAudioProcessorHandle, PluginSharedHandle};
+use crate::plugin::{PluginAudioProcessorHandle, PluginInstanceError, PluginSharedHandle};
 use crate::prelude::{OutputAudioBuffers, PluginInstance};
 use crate::process::PluginAudioProcessor::*;
 use clack_common::events::event_types::TransportEvent;

@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-//! Core types and traits to implement a Clack host.
+//! Core types and traits to implement CLAP host callback handlers.
 //!
 //! The [`HostHandlers`] trait is the main one required to be implemented for a Clack host. It provides
 //! the host's supported extensions and is associated to a main type implementing [`SharedHandler`] ,
@@ -193,7 +193,7 @@ mod error;
 mod extensions;
 mod info;
 
-pub use error::{HostError, PluginInstanceError};
+pub use error::HostError;
 pub use extensions::HostExtensions;
 pub use info::HostInfo;
 
