@@ -1,3 +1,5 @@
+//! Types to manipulate input and output audio buffers for processing.
+
 use clack_common::process::AudioPortProcessingInfo;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;

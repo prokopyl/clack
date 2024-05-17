@@ -1,3 +1,18 @@
+//! Plugin audio processing types and related utilities.
+//!
+//! A plugin's audio processor can be in two states, either `started` or `stopped`, depending on
+//! whether it is currently continuously processing audio, or has been put to sleep by the host,
+//! respectively.
+//!
+//! These states are represented by the [`StartedPluginAudioProcessor`] and [`StoppedPluginAudioProcessor`]
+//! types respectively, using a type-state pattern that only expose the methods that are valid for
+//! the plugin's current state.
+//!
+//! Alternatively, users can also use the [`PluginAudioProcessor`] convenience type that internalizes
+//! the state instead, and allows it to change and be checked at runtime.
+
+#![deny(missing_docs)]
+
 use self::audio_buffers::InputAudioBuffers;
 use crate::host::HostHandlers;
 use crate::host::PluginInstanceError;
@@ -16,14 +31,147 @@ use std::sync::Arc;
 use crate::plugin::instance::PluginInstanceInner;
 pub use clack_common::process::*;
 
+#[allow(missing_docs)] // TODO: doc this
 pub mod audio_buffers;
 
+/// A handle to a plugin's audio processor that can be in either its `started` or `stopped` state.
+///
+/// This is a convenience type that can be used where the type-states [`StartedPluginAudioProcessor`] and
+/// [`StoppedPluginAudioProcessor`] are not very ergonomic, or to perform operations that are common
+/// to both states.
 pub enum PluginAudioProcessor<H: HostHandlers> {
+    /// The audio processor is in it's `started` state.
     Started(StartedPluginAudioProcessor<H>),
+    /// The audio processor is in it's `stopped` state.
     Stopped(StoppedPluginAudioProcessor<H>),
 }
 
 impl<H: HostHandlers> PluginAudioProcessor<H> {
+    /// Resets the plugin's audio processing state.
+    ///
+    /// This clears all the plugin's internal buffers, kills all voices, and resets all processing
+    /// state such as envelopes, LFOs, oscillators, filters, etc.
+    ///
+    /// Calling this method allows the `steady_time` parameter passed to [`process`](StartedPluginAudioProcessor::process)
+    /// to jump backwards.
+    #[inline]
+    pub fn reset(&mut self) {
+        match self {
+            Started(s) => s.reset(),
+            Stopped(s) => s.reset(),
+        }
+    }
+
+    /// Accesses the [`SharedHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`SharedHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// Unlike [`access_handler`](self.access_handler) and
+    /// [`access_handler_mut`](self.access_handler_mut), there is no way to obtain a mutable
+    /// reference to the [`SharedHandler`], as it may be concurrently accessed by other threads.
+    ///
+    /// [`SharedHandler`]: crate::prelude::SharedHandler
+    #[inline]
+    pub fn access_shared_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
+    ) -> R {
+        match self {
+            Started(s) => s.access_shared_handler(access),
+            Stopped(s) => s.access_shared_handler(access),
+        }
+    }
+
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler_mut`](self.access_handler_mut) method to receive a mutable
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
+    #[inline]
+    pub fn access_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
+        match self {
+            Started(s) => s.access_handler(access),
+            Stopped(s) => s.access_handler(access),
+        }
+    }
+
+    /// Accesses the [`AudioProcessorHandler`] for this instance, using the provided closure.
+    ///
+    /// This function returns the return value of the provided closure directly.
+    ///
+    /// Note that the lifetime of the [`AudioProcessorHandler`] cannot be statically known, as it is bound
+    /// to the plugin instance itself.
+    ///
+    /// See the [`access_handler`](self.access_handler) method to receive a shared
+    /// reference to the [`AudioProcessorHandler`] instead.
+    ///
+    /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
+    #[inline]
+    pub fn access_handler_mut<'s, R>(
+        &'s mut self,
+        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    ) -> R {
+        match self {
+            Started(s) => s.access_handler_mut(access),
+            Stopped(s) => s.access_handler_mut(access),
+        }
+    }
+
+    /// Returns this plugin instance's audio processor handle.
+    #[inline]
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+        match self {
+            Started(s) => s.plugin_handle(),
+            Stopped(s) => s.plugin_handle(),
+        }
+    }
+
+    /// Returns this plugin instance's shared handle.
+    #[inline]
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+        match self {
+            Started(s) => s.shared_plugin_handle(),
+            Stopped(s) => s.shared_plugin_handle(),
+        }
+    }
+
+    /// Returns `true` if this audio processor was created from the given plugin instance.
+    #[inline]
+    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
+        match &self {
+            Started(s) => s.matches(instance),
+            Stopped(s) => s.matches(instance),
+        }
+    }
+
+    /// Returns `true` if this audio processor is its `started` state, `false` otherwise.
+    #[inline]
+    pub fn is_started(&self) -> bool {
+        match self {
+            Stopped(_) => false,
+            Started(_) => true,
+        }
+    }
+
+    /// Returns this audio processor as a shared reference to its [`StartedPluginAudioProcessor`]
+    /// state, if it is in the `started` state.
+    ///
+    /// # Errors
+    ///
+    /// This returns a [`PluginInstanceError::ProcessingStopped`] error if the audio processor is
+    /// in the `stopped` state.
     #[inline]
     pub fn as_started(&self) -> Result<&StartedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
@@ -32,6 +180,13 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    /// Returns this audio processor as a mutable reference to its [`StartedPluginAudioProcessor`]
+    /// state, if it is in the `started` state.
+    ///
+    /// # Errors
+    ///
+    /// This returns a [`PluginInstanceError::ProcessingStopped`] error if the audio processor is
+    /// in the `stopped` state.
     #[inline]
     pub fn as_started_mut(
         &mut self,
@@ -42,6 +197,13 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    /// Returns this audio processor as a shared reference to its [`StoppedPluginAudioProcessor`]
+    /// state, if it is in the `stopped` state.
+    ///
+    /// # Errors
+    ///
+    /// This returns a [`PluginInstanceError::ProcessingStarted`] error if the audio processor is
+    /// in the `started` state.
     #[inline]
     pub fn as_stopped(&self) -> Result<&StoppedPluginAudioProcessor<H>, PluginInstanceError> {
         match self {
@@ -50,6 +212,13 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    /// Returns this audio processor as a mutable reference to its [`StoppedPluginAudioProcessor`]
+    /// state, if it is in the `stopped` state.
+    ///
+    /// # Errors
+    ///
+    /// This returns a [`PluginInstanceError::ProcessingStarted`] error if the audio processor is
+    /// in the `started` state.
     #[inline]
     pub fn as_stopped_mut(
         &mut self,
@@ -60,81 +229,14 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
-    #[inline]
-    pub fn use_shared_handler<'s, R>(
-        &'s self,
-        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
-    ) -> R {
-        match self {
-            Started(s) => s.access_shared_handler(access),
-            Stopped(s) => s.access_shared_handler(access),
-        }
-    }
-
-    #[inline]
-    pub fn use_handler<'s, R>(
-        &'s self,
-        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::AudioProcessor<'a>) -> R,
-    ) -> R {
-        match self {
-            Started(s) => s.access_handler(access),
-            Stopped(s) => s.access_handler(access),
-        }
-    }
-
-    #[inline]
-    pub fn use_handler_mut<'s, R>(
-        &'s mut self,
-        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
-    ) -> R {
-        match self {
-            Started(s) => s.access_handler_mut(access),
-            Stopped(s) => s.access_handler_mut(access),
-        }
-    }
-
-    #[inline]
-    pub fn is_started(&self) -> bool {
-        match self {
-            Stopped(_) => false,
-            Started(_) => true,
-        }
-    }
-
-    #[inline]
-    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
-        match self {
-            Started(s) => s.plugin_handle(),
-            Stopped(s) => s.plugin_handle(),
-        }
-    }
-
-    #[inline]
-    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
-        match self {
-            Started(s) => s.shared_plugin_handle(),
-            Stopped(s) => s.shared_plugin_handle(),
-        }
-    }
-
-    #[inline]
-    pub fn reset(&mut self) {
-        match self {
-            Started(s) => s.reset(),
-            Stopped(s) => s.reset(),
-        }
-    }
-
-    #[inline]
-    pub fn ensure_processing_started(
-        &mut self,
-    ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
-        match self {
-            Started(s) => Ok(s),
-            _ => self.start_processing(),
-        }
-    }
-
+    /// Starts this audio processor, and returns a mutable reference to its
+    /// [`StartedPluginAudioProcessor`] state.
+    ///
+    /// # Errors
+    ///
+    /// If the start operation failed, this returns a [`PluginInstanceError::StartProcessingFailed`] error.
+    /// If the audio processor was already started, this returns a
+    /// [`PluginInstanceError::ProcessingStarted`] error.
     #[inline]
     pub fn start_processing(
         &mut self,
@@ -156,23 +258,13 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         })
     }
 
-    #[inline]
-    pub fn ensure_processing_stopped(&mut self) -> &mut StoppedPluginAudioProcessor<H> {
-        let inner = match self {
-            Stopped(s) => return s,
-            Started(a) => a.inner.clone(),
-        };
-
-        let stopped = StartedPluginAudioProcessor::new(inner).stop_processing();
-
-        *self = Stopped(stopped);
-
-        match self {
-            Stopped(s) => s,
-            _ => unreachable!(),
-        }
-    }
-
+    /// Starts this audio processor, and returns a mutable reference to its
+    /// [`StoppedPluginAudioProcessor`] state.
+    ///
+    /// # Errors
+    ///
+    /// If the audio processor was already stopped, this returns a
+    /// [`PluginInstanceError::ProcessingStopped`] error.
     #[inline]
     pub fn stop_processing(
         &mut self,
@@ -192,6 +284,59 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         })
     }
 
+    /// Starts this audio processor, if it is not already started, and returns a mutable reference
+    /// to its [`StartedPluginAudioProcessor`] state.
+    ///
+    /// If its already started, this does nothing and returns the mutable reference directly.
+    ///
+    /// # Errors
+    ///
+    /// If this audio processor was in its `stopped` state and the start operation failed, this
+    /// returns a [`PluginInstanceError::StartProcessingFailed`] error.
+    #[inline]
+    pub fn ensure_processing_started(
+        &mut self,
+    ) -> Result<&mut StartedPluginAudioProcessor<H>, PluginInstanceError> {
+        match self {
+            Started(s) => Ok(s),
+            _ => self.start_processing(),
+        }
+    }
+
+    /// Stops this audio processor, if it is not already stopped, and returns a mutable reference
+    /// to its [`StoppedPluginAudioProcessor`] state.
+    ///
+    /// If its already stopped, this does nothing and returns the mutable reference directly.
+    ///
+    /// This operation is infallible.
+    #[inline]
+    pub fn ensure_processing_stopped(&mut self) -> &mut StoppedPluginAudioProcessor<H> {
+        let inner = match self {
+            Stopped(s) => return s,
+            Started(a) => a.inner.clone(),
+        };
+
+        let stopped = StartedPluginAudioProcessor::new(inner).stop_processing();
+
+        *self = Stopped(stopped);
+
+        match self {
+            Stopped(s) => s,
+            _ => unreachable!(),
+        }
+    }
+
+    /// Starts this audio processor, if it is not already started, and returns its
+    /// [`StartedPluginAudioProcessor`] state, consuming the [`PluginAudioProcessor`] instance in
+    /// the process.
+    ///
+    /// If it is already started, this does nothing and returns the [`StartedPluginAudioProcessor`] state directly.
+    ///
+    /// # Errors
+    ///
+    /// If this audio processor was in its `stopped` state and the start operation failed, this
+    /// returns a [`ProcessingStartError`], from which the [`StoppedPluginAudioProcessor`] can be
+    /// recovered.
     #[inline]
     pub fn into_started(self) -> Result<StartedPluginAudioProcessor<H>, ProcessingStartError<H>> {
         match self {
@@ -200,19 +345,18 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
         }
     }
 
+    /// Stops this audio processor, if it is not already stopped, and returns its
+    /// [`StoppedPluginAudioProcessor`] state, consuming the [`PluginAudioProcessor`] instance in
+    /// the process.
+    ///
+    /// If it is already stopped, this does nothing and returns the [`StoppedPluginAudioProcessor`] state directly.
+    ///
+    /// This operation is infallible.
     #[inline]
     pub fn into_stopped(self) -> StoppedPluginAudioProcessor<H> {
         match self {
             Started(s) => s.stop_processing(),
             Stopped(s) => s,
-        }
-    }
-
-    #[inline]
-    pub fn matches(&self, instance: &PluginInstance<H>) -> bool {
-        match &self {
-            Started(s) => s.matches(instance),
-            Stopped(s) => s.matches(instance),
         }
     }
 }
@@ -453,17 +597,16 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
         // PANIC: This struct exists, therefore we are guaranteed the plugin is active
         unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_mut()) }
     }
+    /// Returns this plugin instance's audio processor handle.
+    #[inline]
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+        PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
+    }
 
     /// Returns this plugin instance's shared handle.
     #[inline]
     pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
         self.inner.plugin_shared()
-    }
-
-    /// Returns this plugin instance's audio processor handle.
-    #[inline]
-    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
-        PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 
     /// Returns `true` if this audio processor was created from the given plugin instance.
@@ -611,16 +754,16 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
         unsafe { access(self.inner.wrapper().audio_processor().unwrap().as_mut()) }
     }
 
-    /// Returns this plugin instance's shared handle.
-    #[inline]
-    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
-        self.inner.plugin_shared()
-    }
-
     /// Returns this plugin instance's audio processor handle.
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
+    }
+
+    /// Returns this plugin instance's shared handle.
+    #[inline]
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+        self.inner.plugin_shared()
     }
 
     /// Returns `true` if this audio processor was created from the given plugin instance.
@@ -630,11 +773,16 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
     }
 }
 
+/// An error that occurred when a plugin instance couldn't start processing.
+///
+/// The [`StoppedPluginAudioProcessor`] can be recovered using the
+/// [`into_stopped_processor`](Self::into_stopped_processor) method.
 pub struct ProcessingStartError<H: HostHandlers> {
     processor: StoppedPluginAudioProcessor<H>,
 }
 
 impl<H: HostHandlers> ProcessingStartError<H> {
+    /// Recovers the plugin instance's [`StoppedPluginAudioProcessor`] that failed to start.
     #[inline]
     pub fn into_stopped_processor(self) -> StoppedPluginAudioProcessor<H> {
         self.processor
