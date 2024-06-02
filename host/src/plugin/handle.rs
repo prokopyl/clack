@@ -142,6 +142,15 @@ impl<'a> PluginSharedHandle<'a> {
         unsafe { Some(E::from_raw(raw)) }
     }
 
+    /// Safely dereferences a [`RawExtension`] pointer produced by this plugin instance.
+    ///
+    /// See the documentation of the [`RawExtension`] type for more information about how this works
+    /// internally.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the given extension pointer does not match the plugin instance of
+    /// this handle.
     #[inline]
     pub fn use_extension<E: Sized>(
         &self,
@@ -234,6 +243,9 @@ impl Debug for PluginAudioProcessorHandle<'_> {
     }
 }
 
+/// A handle to a plugin instance that may be in the process of initializing.
+///
+/// In this state, only [querying plugin extensions](Self::get_extension) is allowed.
 #[derive(Clone, Eq, PartialEq)]
 pub struct InitializingPluginHandle<'a> {
     inner: RemoteHandleInner,
@@ -284,6 +296,16 @@ impl Debug for InitializingPluginHandle<'_> {
     }
 }
 
+/// A handle to a plugin instance that has finished initializing.
+///
+/// This handle can be used to obtain a [`PluginSharedHandle`] to then call the plugin's thread-safe
+/// method.
+///
+/// However, this handle can outlive the plugin instance, as host callbacks may be called during
+/// the plugin's destruction.
+///
+/// Therefore, the [`PluginSharedHandle`] can only be accessed through the [`access`](Self::access)
+/// method, ensuring no access can be made during or after destruction.
 #[derive(Clone, Eq, PartialEq)]
 pub struct InitializedPluginHandle<'a> {
     inner: RemoteHandleInner,
@@ -418,7 +440,7 @@ impl DestroyLock {
             return None;
         }
 
-        // Poisoning doesn't matter, we are only reading
+        // Poisoning doesn't matter, we are only reading a bool
         let guard = self.lock.read().unwrap_or_else(|err| err.into_inner());
         if *guard {
             return None;
@@ -432,6 +454,7 @@ impl DestroyLock {
     }
 }
 
+#[cold]
 fn mismatched_instance() -> ! {
     panic!("Given plugin instance handle doesn't match the extension pointer it was used on.")
 }

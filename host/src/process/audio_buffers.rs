@@ -366,6 +366,14 @@ impl<'a> InputAudioBuffers<'a> {
         }
     }
 
+    /// Shortens the [`frames_count`] of these input buffers.
+    ///
+    /// This does not actually change the underlying buffers themselves, it only reduces the
+    /// slice that will be exposed to the plugin.
+    ///
+    /// This method does nothing if `max_buffer_size` is greater or equal than the current [`frames_count`].
+    ///
+    /// [`frames_count`]: self.frames_count
     pub fn truncate(&mut self, max_buffer_size: u32) {
         if let Some(frames_count) = self.frames_count {
             self.frames_count = Some(frames_count.min(max_buffer_size))
@@ -413,6 +421,17 @@ impl<'a> InputAudioBuffers<'a> {
         self.buffers
     }
 
+    /// The number of port buffers this [`InputAudioBuffers`] has been given.
+    #[inline]
+    pub fn port_count(&self) -> usize {
+        self.buffers.len()
+    }
+
+    /// The number of frames in these input buffers.
+    ///
+    /// This is the minimum frame count of all the port buffers this has been given.
+    ///
+    /// If this has no port buffer (i.e. [`port_count`](self.port_count) is zero), this returns `None`.
     #[inline]
     pub fn frames_count(&self) -> Option<u32> {
         self.frames_count
@@ -458,6 +477,14 @@ impl<'a> OutputAudioBuffers<'a> {
         }
     }
 
+    /// Shortens the [`frames_count`] of these output buffers.
+    ///
+    /// This does not actually change the underlying buffers themselves, it only reduces the
+    /// slice that will be exposed to the plugin.
+    ///
+    /// This method does nothing if `max_buffer_size` is greater or equal than the current [`frames_count`].
+    ///
+    /// [`frames_count`]: self.frames_count
     pub fn truncate(&mut self, max_buffer_size: u32) {
         if let Some(frames_count) = self.frames_count {
             self.frames_count = Some(frames_count.min(max_buffer_size))
@@ -570,6 +597,17 @@ impl<'a> OutputAudioBuffers<'a> {
         self.buffers
     }
 
+    /// The number of port buffers this [`OutputAudioBuffers`] has been given.
+    #[inline]
+    pub fn port_count(&self) -> usize {
+        self.buffers.len()
+    }
+
+    /// The number of frames in these output buffers.
+    ///
+    /// This is the minimum frame count of all the port buffers this has been given.
+    ///
+    /// If this has no port buffer (i.e. [`port_count`](self.port_count) is zero), this returns `None`.
     #[inline]
     pub fn frames_count(&self) -> Option<u32> {
         self.frames_count

@@ -38,6 +38,11 @@ pub mod audio_buffers;
 /// This is a convenience type that can be used where the type-states [`StartedPluginAudioProcessor`] and
 /// [`StoppedPluginAudioProcessor`] are not very ergonomic, or to perform operations that are common
 /// to both states.
+///
+/// Note that in order to maintain thread-safety, this type must be either dropped or stopped and
+/// passed to either [`PluginInstance::deactivate`] or [`PluginInstance::deactivate_with`], *before*
+/// the [`PluginInstance`] itself is dropped. If this is not done, the plugin instance will never
+/// be deactivated or destroyed, and will leak all its associated resources.
 pub enum PluginAudioProcessor<H: HostHandlers> {
     /// The audio processor is in it's `started` state.
     Started(StartedPluginAudioProcessor<H>),
@@ -385,10 +390,16 @@ impl<H: HostHandlers> From<StoppedPluginAudioProcessor<H>> for PluginAudioProces
 /// [`access_handler`](Self::access_handler) and [`access_handler_mut`](Self::access_handler_mut)
 /// methods.
 ///
+/// Note that in order to maintain thread-safety, this type must be either dropped or stopped and
+/// passed to either [`PluginInstance::deactivate`] or [`PluginInstance::deactivate_with`], *before*
+/// the [`PluginInstance`] itself is dropped. If this is not done, the plugin instance will never
+/// be deactivated or destroyed, and will leak all its associated resources.
+///
 /// [`process`]: Self::process
 /// [`stop_processing`]: Self::stop_processing
 /// [shared]: crate::prelude::SharedHandler
 /// [audio processor]: crate::prelude::AudioProcessorHandler
+/// [`destroy`](PluginInstance::deactivate)
 pub struct StartedPluginAudioProcessor<H: HostHandlers> {
     inner: Arc<PluginInstanceInner<H>>,
     _no_sync: PhantomData<UnsafeCell<()>>,
@@ -627,6 +638,11 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
 /// [`access_shared_handler`](Self::access_shared_handler),
 /// [`access_handler`](Self::access_handler) and [`access_handler_mut`](Self::access_handler_mut)
 /// methods.
+///
+/// Note that in order to maintain thread-safety, this type must be either dropped or stopped and
+/// passed to either [`PluginInstance::deactivate`] or [`PluginInstance::deactivate_with`], *before*
+/// the [`PluginInstance`] itself is dropped. If this is not done, the plugin instance will never
+/// be deactivated or destroyed, and will leak all its associated resources.
 ///
 /// [`activate`]: PluginInstance::activate
 /// [`process`]: StartedPluginAudioProcessor::process

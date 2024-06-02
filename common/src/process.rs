@@ -75,6 +75,7 @@ pub struct PluginAudioConfiguration {
 
 use clap_sys::audio_buffer::clap_audio_buffer;
 
+/// Processing-related information about an audio port.
 pub struct AudioPortProcessingInfo {
     channel_count: u32,
     latency: u32,
@@ -82,6 +83,8 @@ pub struct AudioPortProcessingInfo {
 }
 
 impl AudioPortProcessingInfo {
+    /// Extracts the processing-related information from a raw, C-FFI compatible audio buffer
+    /// descriptor.
     #[inline]
     pub fn from_raw(raw: &clap_audio_buffer) -> Self {
         Self {
@@ -91,16 +94,22 @@ impl AudioPortProcessingInfo {
         }
     }
 
+    /// Returns the number of audio channels this port provides.
     #[inline]
     pub fn channel_count(&self) -> u32 {
         self.channel_count
     }
 
+    /// Returns the latency to or from the audio interface, in samples.
+    ///
+    /// Whether this latency is to or from the audio interface depends on which kind of port
+    /// this describes, an output port or an input port respectively
     #[inline]
     pub fn latency(&self) -> u32 {
         self.latency
     }
 
+    /// Returns the [`ConstantMask`] of this port, hinting which audio channels are constant.
     #[inline]
     pub fn constant_mask(&self) -> ConstantMask {
         self.constant_mask

@@ -194,6 +194,15 @@ impl<'a> HostSharedHandle<'a> {
         }
     }
 
+    /// Safely dereferences a [`RawExtension`] pointer produced by this host.
+    ///
+    /// See the documentation of the [`RawExtension`] type for more information about how this works
+    /// internally.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the given extension pointer does not match the host
+    /// this handle came from.
     #[inline]
     pub fn use_extension<E: Sized>(&self, extension: &RawExtension<HostExtensionSide, E>) -> &'a E {
         if self.raw != extension.host_ptr() {

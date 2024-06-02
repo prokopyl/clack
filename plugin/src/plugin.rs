@@ -114,6 +114,15 @@ pub trait Plugin: 'static {
     /// See the [module documentation](crate::plugin) for more information on the thread model.
     type MainThread<'a>: PluginMainThread<'a, Self::Shared<'a>>;
 
+    /// Declares the extensions this plugin supports.
+    ///
+    /// This Implemented by calling [`register`] on the given [`PluginExtensions`]
+    /// builder for every extension type that is supported.
+    ///
+    /// A reference to the [`Shared`](Self::Shared) type is also given. However, it can be `None`,
+    /// as the host is allowed to query extensions before the plugin has finished initializing.
+    ///
+    /// [`register`]: PluginExtensions::register
     #[inline]
     #[allow(unused_variables)]
     fn declare_extensions(builder: &mut PluginExtensions<Self>, shared: Option<&Self::Shared<'_>>) {

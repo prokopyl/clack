@@ -84,7 +84,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     ) -> T
     where
         D: for<'s> FnOnce(
-            <H as HostHandlers>::AudioProcessor<'_>,
+            <H as HostHandlers>::AudioProcessor<'s>,
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
@@ -101,7 +101,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     pub fn try_deactivate_with<T, D>(&mut self, drop_with: D) -> Result<T, PluginInstanceError>
     where
         D: for<'s> FnOnce(
-            <H as HostHandlers>::AudioProcessor<'_>,
+            <H as HostHandlers>::AudioProcessor<'s>,
             &mut <H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
