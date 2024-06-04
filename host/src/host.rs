@@ -176,7 +176,7 @@
 //! /* ... */
 //!
 //! // Let's check if the plugin requested a callback, by accessing our shared host data.
-//! let callback_requested: &AtomicBool = plugin_instance.use_shared_handler(|h| &h.callback_requested);
+//! let callback_requested: &AtomicBool = plugin_instance.access_shared_handler(|h| &h.callback_requested);
 //!
 //! // This fetches the previous value and sets it to false in a single atomic operation.
 //! if callback_requested.fetch_and(false, Ordering::SeqCst) {

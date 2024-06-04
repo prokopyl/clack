@@ -129,7 +129,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn use_shared_handler<'s, R>(
+    pub fn access_shared_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::Shared<'a>) -> R,
     ) -> R {
@@ -137,7 +137,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn use_handler<'s, R>(
+    pub fn access_handler<'s, R>(
         &'s self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {
@@ -147,7 +147,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn use_handler_mut<'s, R>(
+    pub fn access_handler_mut<'s, R>(
         &'s mut self,
         access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {

@@ -134,5 +134,5 @@ fn can_call_host_methods_during_init() {
     .unwrap();
 
     // Timer should have already been registered by the plugin during init().
-    assert!(instance.use_handler(|h| h.timer_registered));
+    assert!(instance.access_handler(|h| h.timer_registered));
 }

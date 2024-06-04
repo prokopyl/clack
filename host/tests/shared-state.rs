@@ -107,5 +107,5 @@ pub fn handles_drop_order() {
     )
     .unwrap();
 
-    let _ext = plugin_instance.use_shared_handler(|s| s.state_ext.get());
+    let _ext = plugin_instance.access_shared_handler(|s| s.state_ext.get());
 }
