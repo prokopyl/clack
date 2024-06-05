@@ -1,4 +1,4 @@
-use crate::extensions::wrapper::{panic, PluginWrapper, PluginWrapperError};
+use crate::extensions::wrapper::{handle_panic, PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
 use crate::host::{HostInfo, HostMainThreadHandle, HostSharedHandle};
 use crate::plugin::instance::WrapperData::*;
@@ -239,7 +239,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
 
             // We could use direct &mut access for the swap, but let's use atomic operations just in case...
             if plugin_data.state.swap(DESTROYING, Ordering::SeqCst) != DESTROYING {
-                let _ = panic::catch_unwind(|| {
+                let _ = handle_panic(|| {
                     let _ = Box::<PluginBoxInner<P>>::from_raw(
                         plugin.plugin_data as *const c_void as *mut _,
                     );

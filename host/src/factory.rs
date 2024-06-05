@@ -58,9 +58,9 @@ pub unsafe trait FactoryPointer<'a>: Sized + 'a {
 ///
 /// # mod diva { include!("./bundle/diva_stub.rs"); }
 /// # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap() };
-/// # #[cfg(never)]
+/// # /*
 /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
-///
+/// # */
 /// // Fetch the PluginFactory from the bundle, if present
 /// let plugin_factory = bundle.get_plugin_factory().unwrap();
 ///

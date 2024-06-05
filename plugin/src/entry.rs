@@ -20,7 +20,7 @@
 //! entry type, or see the provided [`SinglePluginEntry`] convenience type if you only need to
 //! expose a single plugin type to the host.
 
-use crate::extensions::wrapper::panic::catch_unwind;
+use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use std::error::Error;
 use std::ffi::{c_void, CStr};
@@ -400,7 +400,7 @@ impl<E: Entry> EntryHolder<E> {
         plugin_path: *const core::ffi::c_char,
         entry_factory: impl FnOnce(&CStr) -> Result<E, EntryLoadError> + UnwindSafe,
     ) -> bool {
-        let Ok(Ok(mut inner)) = catch_unwind(|| self.inner.lock()) else {
+        let Ok(Ok(mut inner)) = handle_panic(|| self.inner.lock()) else {
             // A poisoned lock means init() panicked, so we consider the entry unusable.
             // Same if lock() itself panicked.
             return false;
@@ -415,7 +415,7 @@ impl<E: Entry> EntryHolder<E> {
             }
             Uninitialized => {
                 let plugin_path = CStr::from_ptr(plugin_path);
-                let entry = catch_unwind(|| entry_factory(plugin_path));
+                let entry = handle_panic(|| entry_factory(plugin_path));
 
                 if let Ok(Ok(entry)) = entry {
                     *inner = Initialized {
@@ -445,7 +445,7 @@ impl<E: Entry> EntryHolder<E> {
             if *reference_count > 1 {
                 *reference_count -= 1;
             } else {
-                let _ = catch_unwind(AssertUnwindSafe(|| *inner = Uninitialized));
+                let _ = handle_panic(AssertUnwindSafe(|| *inner = Uninitialized));
             }
         }
     }
@@ -469,7 +469,7 @@ impl<E: Entry> EntryHolder<E> {
 
         let identifier = CStr::from_ptr(identifier);
 
-        catch_unwind(AssertUnwindSafe(|| {
+        handle_panic(AssertUnwindSafe(|| {
             let mut builder = EntryFactories::new(identifier);
             entry.declare_factories(&mut builder);
             builder.found()

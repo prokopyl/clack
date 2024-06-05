@@ -1,3 +1,4 @@
+use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_host::factory::PluginFactory;
 use clack_plugin::prelude::*;
 use std::ffi::CStr;
@@ -71,12 +72,25 @@ impl<'a> SharedHandler<'a> for MyHostShared {
     }
 }
 
+impl HostLogImpl for MyHostShared {
+    fn log(&self, severity: LogSeverity, message: &str) {
+        // This is the error we're expecting
+        if message != "Some error" {
+            eprintln!("[{severity}] {message}");
+        }
+    }
+}
+
 struct MyHost;
 impl HostHandlers for MyHost {
     type Shared<'a> = MyHostShared;
 
     type MainThread<'a> = ();
     type AudioProcessor<'a> = ();
+
+    fn declare_extensions(builder: &mut HostExtensions<Self>, _: &Self::Shared<'_>) {
+        builder.register::<HostLog>();
+    }
 }
 
 #[test]

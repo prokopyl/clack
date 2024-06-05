@@ -8,7 +8,7 @@
 //!
 //! See the [`factory` module documentation](crate::factory) to learn more about factories.
 
-use crate::extensions::wrapper::panic;
+use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
@@ -64,7 +64,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
     ) -> Option<T> {
         let factory = Self::from_raw(raw);
         let result = factory.and_then(|factory| {
-            match panic::catch_unwind(AssertUnwindSafe(|| handler(factory.factory()))) {
+            match handle_panic(AssertUnwindSafe(|| handler(factory.factory()))) {
                 Err(_) => Err(PluginFactoryError::Panic),
                 Ok(Err(e)) => Err(e),
                 Ok(Ok(val)) => Ok(val),

@@ -144,8 +144,9 @@
 //! // Step 1: Load the bundle in memory.
 //! # mod diva { include!("./bundle/diva_stub.rs"); }
 //! # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so")? };
-//! # #[cfg(never)]
+//! # /*
 //! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+//! # */
 //!
 //! // Step 2: Get the Plugin factory of this bundle.
 //! let plugin_factory = bundle.get_plugin_factory().unwrap();

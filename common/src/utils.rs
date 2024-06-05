@@ -1,25 +1,14 @@
 //! Various CLAP-related utilities.
 
-mod panic {
-    #[cfg(not(test))]
-    #[allow(unused)]
-    pub use std::panic::catch_unwind;
+#[cfg(not(test))]
+#[allow(unused)]
+pub(crate) use std::panic::catch_unwind as handle_panic;
 
-    #[cfg(test)]
-    #[inline]
-    #[allow(unused)]
-    pub fn catch_unwind<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
-        f: F,
-    ) -> std::thread::Result<R> {
-        Ok(f())
-    }
-}
-
+#[cfg(test)]
 #[inline]
-pub(crate) fn handle_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
-    f: F,
-) -> std::thread::Result<R> {
-    panic::catch_unwind(f)
+#[allow(unused)]
+pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
+    Ok(f())
 }
 
 mod fixed_point;

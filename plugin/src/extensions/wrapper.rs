@@ -16,19 +16,15 @@ use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
 
-pub(crate) mod panic {
-    #[cfg(not(test))]
-    #[allow(unused)]
-    pub use std::panic::catch_unwind;
+#[cfg(not(test))]
+#[allow(unused)]
+pub(crate) use std::panic::catch_unwind as handle_panic;
 
-    #[cfg(test)]
-    #[inline]
-    #[allow(unused)]
-    pub fn catch_unwind<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
-        f: F,
-    ) -> std::thread::Result<R> {
-        Ok(f())
-    }
+#[cfg(test)]
+#[inline]
+#[allow(unused)]
+pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
+    Ok(f())
 }
 
 /// A wrapper around a `clack` plugin of a given type.
@@ -276,7 +272,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     where
         F: FnOnce(Pa) -> Result<T, PluginWrapperError>,
     {
-        panic::catch_unwind(AssertUnwindSafe(|| handler(parameter)))
+        handle_panic(AssertUnwindSafe(|| handler(parameter)))
             .map_err(|_| PluginWrapperError::Panic)?
     }
 }

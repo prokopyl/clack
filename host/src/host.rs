@@ -160,8 +160,9 @@
 //!
 //! # mod diva { include!("./bundle/diva_stub.rs"); }
 //! # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so")? };
-//! # #[cfg(never)]
+//! # /*
 //! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+//! # */
 //!
 //! let mut plugin_instance = PluginInstance::<MyHost>::new(
 //!     |_| MyHostShared::default(),

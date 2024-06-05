@@ -14,19 +14,15 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Once, OnceLock};
 
-mod panic {
-    #[cfg(not(test))]
-    #[allow(unused)]
-    pub use std::panic::catch_unwind;
+#[cfg(not(test))]
+#[allow(unused)]
+use std::panic::catch_unwind as handle_panic;
 
-    #[cfg(test)]
-    #[inline]
-    #[allow(unused)]
-    pub fn catch_unwind<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
-        f: F,
-    ) -> std::thread::Result<R> {
-        Ok(f())
-    }
+#[cfg(test)]
+#[inline]
+#[allow(unused)]
+fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
+    Ok(f())
 }
 
 pub(crate) mod descriptor;
@@ -250,8 +246,7 @@ impl<H: HostHandlers> HostWrapper<H> {
     where
         F: FnOnce(Pa) -> Result<T, HostWrapperError>,
     {
-        panic::catch_unwind(AssertUnwindSafe(|| handler(param)))
-            .map_err(|_| HostWrapperError::Panic)?
+        handle_panic(AssertUnwindSafe(|| handler(param))).map_err(|_| HostWrapperError::Panic)?
     }
 
     /// # Safety
