@@ -149,7 +149,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     #[inline]
     pub fn access_handler_mut<'s, R>(
         &'s mut self,
-        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
+        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {
         // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
