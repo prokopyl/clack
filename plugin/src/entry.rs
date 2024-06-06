@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! Types to expose and customize a CLAP bundle's entry.
 //!
 //! CLAP plugins are distributed in binary files called bundles, which are prebuilt

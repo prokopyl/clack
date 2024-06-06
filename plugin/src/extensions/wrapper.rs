@@ -73,7 +73,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         let host = self.host;
 
         let processor = P::AudioProcessor::activate(
-            host.as_audio_thread_unchecked(),
+            host.as_audio_processor_unchecked(),
             self.main_thread().as_mut(),
             shared,
             audio_config,

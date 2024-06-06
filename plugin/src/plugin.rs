@@ -94,6 +94,30 @@ pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
 
 impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {}
 
+/// The main trait required to implement a CLAP plugin.
+///
+/// Types implementing this trait are never instantiated and are not meant to contain any data.
+///
+/// Their purpose is to tie together the various subtypes that will be instantiated and live across
+/// different threads.
+///
+/// # Plugin instantiation
+///
+/// Plugin instantiation and initialization is not covered by this trait. The [`Shared`] and
+/// [`MainThread`] components are created from a [`PluginFactory`] implementation
+/// (in [`PluginFactory::create_plugin`]) using the [`PluginInstance::new`] method.
+///
+/// Alternatively, if custom [`PluginFactory`] and [`Entry`] implementations are not needed, one
+/// can use a [`SinglePluginEntry`] and implement its companion trait [`DefaultPluginFactory`]
+/// to implement the instantiation instead.
+///
+/// [`Shared`]: Self::Shared
+/// [`MainThread`]: Self::MainThread
+/// [`PluginFactory`]: crate::factory::plugin::PluginFactory
+/// [`PluginFactory::create_plugin`]: crate::factory::plugin::PluginFactory::create_plugin
+/// [`Entry`]: crate::entry::Entry
+/// [`SinglePluginEntry`]: crate::entry::SinglePluginEntry
+/// [`DefaultPluginFactory`]: crate::entry::DefaultPluginFactory
 pub trait Plugin: 'static {
     /// The type holding the plugin's data and operations that belong to the audio thread.
     ///
@@ -180,6 +204,26 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError>;
 
+    /// Processes a chunk of audio samples and events.
+    ///
+    /// This method returns a [`ProcessStatus`] as a hint towards whether the host can set this
+    /// plugin to sleep, or if the plugin wants to process more audio or events.
+    /// This is only a hint however, and the host is free to ignore it.
+    ///
+    /// # Arguments
+    ///
+    /// * `process` contains metadata about the current process call, including transport information and a steady sample counter.
+    /// * `audio` contains references to all the audio buffers for this block.
+    /// * `events` contains both the [`InputEvents`](crate::prelude::InputEvents) list and the [`OutputEvents`](crate::prelude::OutputEvents) queue.
+    ///
+    /// # Realtime Safety
+    ///
+    /// This method *MUST* be realtime-safe, and is in fact the most performance-sensitive part
+    /// of the whole plugin implementation.
+    ///
+    /// # Errors
+    ///
+    /// This method may fail for any reason, depending on the plugin's implementation.
     fn process(
         &mut self,
         process: Process,
@@ -206,14 +250,33 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     #[inline]
     fn deactivate(self, main_thread: &mut M) {}
 
+    /// Resets the plugin's audio processing state.
+    ///
+    /// This clears all the plugin's internal buffers, kills all voices, and resets all processing
+    /// state such as envelopes, LFOs, oscillators, filters, etc.
+    ///
+    /// Calling this method allows the `steady_time` parameter passed to [`process`](Self::process)
+    /// to jump backwards.
     #[allow(unused)]
     #[inline]
     fn reset(&mut self) {}
 
+    /// Starts the plugin's continuous audio processing.
+    ///
+    /// This is called when the plugin needs to wake up from sleep, or after it was [activated](Self::activate).
+    ///
+    /// # Errors
+    ///
+    /// This method may fail for any reason, depending on the plugin's implementation.
     #[inline]
     fn start_processing(&mut self) -> Result<(), PluginError> {
         Ok(())
     }
+
+    /// Stops the plugin's continuous audio processing, indicating it is being sent to sleep.
+    ///
+    /// When this is called, the plugin's audio processor cannot assume that the next block of audio
+    /// and events it receives (if any) is contiguous to the last one it [processed](Self::process).
     #[inline]
     fn stop_processing(&mut self) {}
 }

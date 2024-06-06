@@ -73,7 +73,6 @@ This example code implements a very simple gain plugin that amplifies every inpu
 examples are available in the [examples](./plugin/examples) directory, and in the crate's documentation.
 
 ```rust
-use std::ffi::CStr;
 use clack_plugin::prelude::*;
 
 pub struct MyGainPlugin;

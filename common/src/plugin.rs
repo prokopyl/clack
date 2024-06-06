@@ -1,3 +1,5 @@
+//! Utilities to implement or interact with plugins.
+
 /// A set of standard plugin features meant to be used for a plugin descriptor's features.
 ///
 /// Non-standard features should be formatted as: "$namespace:$feature"

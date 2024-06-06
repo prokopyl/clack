@@ -71,6 +71,26 @@ impl<'a> HostInfo<'a> {
             .map(|ptr| unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
+    /// Retrieves the host's pointer to the given [extension type](Extension) `E`.
+    ///
+    /// This returns `None` if the host does not support the given extension.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_extensions::log::{HostLog, LogSeverity};
+    /// use clack_plugin::host::HostInfo;
+    ///
+    /// # fn foo(info: HostInfo) {
+    /// let info: HostInfo = /* ... */
+    /// # info;
+    /// if let Some(log) = info.get_extension::<HostLog>() {
+    ///     // The log extension is supported by this host
+    /// } else {
+    ///     // The log extension is not supported by this host
+    /// }
+    /// # }
+    /// ```
     pub fn get_extension<E: Extension<ExtensionSide = HostExtensionSide>>(&self) -> Option<E> {
         // SAFETY: this type ensures the function pointers are valid
         let ext =
@@ -94,6 +114,7 @@ impl<'a> HostInfo<'a> {
         }
     }
 
+    /// Returns a raw, C FFI-compatible reference to the host handle.
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type ensures the raw pointer is valid
@@ -118,7 +139,7 @@ unsafe impl<'a> Send for HostSharedHandle<'a> {}
 unsafe impl<'a> Sync for HostSharedHandle<'a> {}
 
 impl<'a> HostSharedHandle<'a> {
-    /// Returns host information.
+    /// Returns the host's information.
     #[inline]
     pub fn info(&self) -> HostInfo<'a> {
         HostInfo {
@@ -134,6 +155,7 @@ impl<'a> HostSharedHandle<'a> {
         unsafe { self.raw.as_ref() }
     }
 
+    /// Returns this handle as a reference to the host's information.
     #[inline]
     pub fn as_info(&self) -> &HostInfo<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
@@ -172,6 +194,8 @@ impl<'a> HostSharedHandle<'a> {
         }
     }
 
+    /// Unsafely creates a main-thread host handle from this thread-safe handle.
+    ///
     /// # Safety
     ///
     /// Callers *MUST* ensure this is only called on the main thread, and that they have exclusive (&mut) access.
@@ -183,11 +207,13 @@ impl<'a> HostSharedHandle<'a> {
         }
     }
 
+    /// Unsafely creates an audio-processor host handle from this thread-safe handle.
+    ///
     /// # Safety
     ///
     /// Callers *MUST* ensure this is only called on the audio thread, and that they have exclusive (&mut) access.
     #[inline]
-    pub unsafe fn as_audio_thread_unchecked(&self) -> HostAudioProcessorHandle<'a> {
+    pub unsafe fn as_audio_processor_unchecked(&self) -> HostAudioProcessorHandle<'a> {
         HostAudioProcessorHandle {
             raw: self.raw,
             _lifetime: PhantomData,
@@ -231,6 +257,9 @@ impl<'a> Deref for HostSharedHandle<'a> {
     }
 }
 
+/// A main-thread handle to the host.
+///
+/// This can be used to perform requests to the host that can only be made from the main thread.
 #[repr(transparent)]
 pub struct HostMainThreadHandle<'a> {
     raw: NonNull<clap_host>,
@@ -238,6 +267,7 @@ pub struct HostMainThreadHandle<'a> {
 }
 
 impl<'a> HostMainThreadHandle<'a> {
+    /// Gets a thread-safe host handle from this handle.
     #[inline]
     pub fn shared(&self) -> HostSharedHandle<'a> {
         HostSharedHandle {
@@ -246,12 +276,14 @@ impl<'a> HostMainThreadHandle<'a> {
         }
     }
 
+    /// Returns this handle as a reference to a thread-safe host handle from this handle.
     #[inline]
     pub fn as_shared(&self) -> &HostSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &*(self as *const Self as *const HostSharedHandle<'a>) }
     }
 
+    /// Returns a raw, C FFI-compatible reference to the host handle.
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
@@ -275,6 +307,9 @@ impl<'a> Deref for HostMainThreadHandle<'a> {
     }
 }
 
+/// An audio-processor handle to the host.
+///
+/// This can be used to perform requests to the host that can only be made from the audio thread.
 #[repr(transparent)]
 pub struct HostAudioProcessorHandle<'a> {
     raw: NonNull<clap_host>,
@@ -285,6 +320,7 @@ pub struct HostAudioProcessorHandle<'a> {
 unsafe impl<'a> Send for HostAudioProcessorHandle<'a> {}
 
 impl<'a> HostAudioProcessorHandle<'a> {
+    /// Gets a thread-safe host handle from this handle.
     #[inline]
     pub fn shared(&self) -> HostSharedHandle<'a> {
         HostSharedHandle {
@@ -293,12 +329,14 @@ impl<'a> HostAudioProcessorHandle<'a> {
         }
     }
 
+    /// Returns a raw, C FFI-compatible reference to the host handle.
     #[inline]
     pub fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { self.raw.as_ref() }
     }
 
+    /// Returns this handle as a reference to a thread-safe host handle from this handle.
     #[inline]
     pub fn as_shared(&self) -> &HostSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)

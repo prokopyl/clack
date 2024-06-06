@@ -137,6 +137,9 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
     }
 }
 
+/// A prelude which re-exports all the types and traits used for custom extension implementation.
+///
+/// See the [module docs](self) for more information on how to implement custom extensions in a plugin.
 pub mod prelude {
     pub use crate::{
         extensions::wrapper::{PluginWrapper, PluginWrapperError},

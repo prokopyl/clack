@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use clap_sys::plugin::clap_plugin_descriptor;
 use clap_sys::version::CLAP_VERSION;
 use std::ffi::{CStr, CString};

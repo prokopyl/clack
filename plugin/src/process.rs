@@ -3,8 +3,6 @@
 //! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::PluginAudioProcessor::process)
 //! method. See the [`Plugin`](crate::plugin::PluginAudioProcessor) trait documentation for examples on how these types interact.
 
-#![deny(missing_docs)]
-
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 use clap_sys::audio_buffer::clap_audio_buffer;

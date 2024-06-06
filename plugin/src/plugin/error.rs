@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use core::fmt::{self, Debug, Display, Formatter};
 use std::error::Error;
 
