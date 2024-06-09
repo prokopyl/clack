@@ -138,6 +138,21 @@ impl<'a> Window<'a> {
             _api_lifetime: PhantomData,
         }
     }
+
+    /// Matches this window's GUI API to one of the standard APIs.
+    ///
+    /// If the value matches one of the [`WIN32`](GuiApiType::WIN32), [`COCOA`](GuiApiType::COCOA),
+    /// [`X11`](GuiApiType::X11), or [`WAYLAND`](GuiApiType::WAYLAND) constants, then a window
+    /// with that constant as its API type is returned. Otherwise, [`None`] is returned.
+    pub fn to_standard_api_type(&self) -> Option<Window<'static>> {
+        Some(Window {
+            raw: clap_window {
+                api: self.api_type().to_standard_api()?.0.as_ptr(),
+                specific: self.raw.specific,
+            },
+            _api_lifetime: PhantomData,
+        })
+    }
 }
 
 #[cfg(feature = "raw-window-handle_05")]

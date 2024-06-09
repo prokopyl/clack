@@ -12,6 +12,7 @@ impl HostGui {
         }
     }
 
+    // TODO: use GuiSize?
     /// Requests the host to resize the parent window's client area to the given size.
     ///
     /// The host doesn't have to call the plugin's `set_size` method after accepting the request.
