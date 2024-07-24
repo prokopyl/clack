@@ -90,7 +90,7 @@ mod diva_stub {
         fn process(
             &mut self,
             _process: Process,
-            mut audio: Audio,
+            audio: Audio,
             _events: Events,
         ) -> Result<ProcessStatus, PluginError> {
             self.shared.host.request_callback();
@@ -99,13 +99,13 @@ mod diva_stub {
                 _events.output.try_push(event).unwrap();
             }
 
-            let mut output_channels = audio.output_port(0).unwrap().channels().unwrap();
-            let output_buf = output_channels.as_f32_mut().unwrap().iter_mut();
+            let output_channels = audio.output_port(0).unwrap().channels().unwrap();
+            let output_buf = output_channels.as_f32().unwrap().iter();
 
+            // TODO: FIXME this
             for channel in output_buf {
-                for (input, output) in [42.0f32, 69.0, 21.0, 34.5].iter().zip(channel.iter_mut()) {
-                    *output = *input;
-                }
+                // TODO: handle mismatched slice values
+                channel.copy_from_slice(&[42.0f32, 69.0, 21.0, 34.5]);
             }
             Ok(ProcessStatus::Sleep)
         }

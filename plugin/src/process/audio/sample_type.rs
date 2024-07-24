@@ -1,6 +1,5 @@
-use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
-use crate::process::audio::BufferError;
-use clap_sys::audio_buffer::clap_audio_buffer;
+use crate::internal_utils::slice_from_external_parts;
+use crate::process::audio::{BufferError, CelledClapAudioBuffer};
 
 /// A generic enum to discriminate between buffers containing [`f32`] and [`f64`] sample types.
 ///
@@ -9,8 +8,8 @@ use clap_sys::audio_buffer::clap_audio_buffer;
 ///
 /// This type is used by methods that detect which types of sample buffers are available:
 ///
-/// * [`InputPort::channels`](super::InputPort::channels) returns a [`SampleType`] of
-///   [`InputChannels`](super::InputChannels);
+/// * [`InputPort::channels`](super::Port::channels) returns a [`SampleType`] of
+///   [`InputChannels`](super::PortChannels);
 /// * [`OutputPort::channels`](super::OutputPort::channels) returns a [`SampleType`] of
 ///   [`OutputChannels`](super::OutputChannels);
 /// * [`PortPair::channels`](super::PortPair::channels) returns a [`SampleType`] of
@@ -54,6 +53,7 @@ impl<F32, F64> SampleType<F32, F64> {
         }
     }
 
+    // TODO: Remove mut/into
     /// Returns a mutable reference to the `F32` sample buffer type if it is available,
     /// or [`None`] otherwise.
     ///
@@ -273,7 +273,7 @@ impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
     ///
     /// The caller must ensure the provided buffer is valid.
     #[inline]
-    pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Result<Self, BufferError> {
+    pub(crate) unsafe fn from_raw_buffer(raw: &CelledClapAudioBuffer) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
             (true, true) => {
                 if raw.channel_count == 0 {
@@ -299,39 +299,6 @@ impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
                     raw.data64 as *const *mut f64,
                     raw.channel_count as usize,
                 ),
-            )),
-        }
-    }
-}
-
-impl<'a> SampleType<&'a mut [*mut f32], &'a mut [*mut f64]> {
-    /// # Safety
-    ///
-    /// The caller must ensure the provided buffer is valid, and that we have exclusive `&mut`
-    /// access to its contents.
-    #[inline]
-    pub(crate) unsafe fn from_raw_buffer_mut(
-        raw: &mut clap_audio_buffer,
-    ) -> Result<Self, BufferError> {
-        match (raw.data32.is_null(), raw.data64.is_null()) {
-            (true, true) => {
-                if raw.channel_count == 0 {
-                    Ok(SampleType::Both([].as_mut_slice(), [].as_mut_slice()))
-                } else {
-                    Err(BufferError::InvalidChannelBuffer)
-                }
-            }
-            (false, true) => Ok(SampleType::F32(slice_from_external_parts_mut(
-                raw.data32 as *mut _,
-                raw.channel_count as usize,
-            ))),
-            (true, false) => Ok(SampleType::F64(slice_from_external_parts_mut(
-                raw.data64 as *mut _,
-                raw.channel_count as usize,
-            ))),
-            (false, false) => Ok(SampleType::Both(
-                slice_from_external_parts_mut(raw.data32 as *mut _, raw.channel_count as usize),
-                slice_from_external_parts_mut(raw.data64 as *mut _, raw.channel_count as usize),
             )),
         }
     }

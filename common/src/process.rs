@@ -1,5 +1,6 @@
 use clap_sys::process::*;
 use std::fmt::Debug;
+use std::ptr::addr_of;
 
 mod constant_mask;
 pub use constant_mask::*;
@@ -77,9 +78,15 @@ use clap_sys::audio_buffer::clap_audio_buffer;
 
 /// Processing-related information about an audio port.
 pub struct AudioPortProcessingInfo {
-    channel_count: u32,
-    latency: u32,
-    constant_mask: ConstantMask,
+    /// The number of audio channels this port provides.
+    pub channel_count: u32,
+    /// The latency to or from the audio interface, in samples.
+    ///
+    /// Whether this latency is to or from the audio interface depends on which kind of port
+    /// this describes, an output port or an input port respectively.
+    pub latency: u32,
+    /// The [`ConstantMask`] of this port, hinting which audio channels are constant.
+    pub constant_mask: ConstantMask,
 }
 
 impl AudioPortProcessingInfo {
@@ -94,24 +101,14 @@ impl AudioPortProcessingInfo {
         }
     }
 
-    /// Returns the number of audio channels this port provides.
+    /// # Safety
+    /// TODO
     #[inline]
-    pub fn channel_count(&self) -> u32 {
-        self.channel_count
-    }
-
-    /// Returns the latency to or from the audio interface, in samples.
-    ///
-    /// Whether this latency is to or from the audio interface depends on which kind of port
-    /// this describes, an output port or an input port respectively
-    #[inline]
-    pub fn latency(&self) -> u32 {
-        self.latency
-    }
-
-    /// Returns the [`ConstantMask`] of this port, hinting which audio channels are constant.
-    #[inline]
-    pub fn constant_mask(&self) -> ConstantMask {
-        self.constant_mask
+    pub unsafe fn from_raw_ptr(raw: *const clap_audio_buffer) -> Self {
+        Self {
+            channel_count: addr_of!((*raw).channel_count).read(),
+            latency: addr_of!((*raw).latency).read(),
+            constant_mask: ConstantMask::from_bits(addr_of!((*raw).constant_mask).read()),
+        }
     }
 }
