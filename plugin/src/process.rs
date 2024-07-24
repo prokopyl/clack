@@ -5,13 +5,12 @@
 
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
+pub use clack_common::process::*;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::process::clap_process;
 use std::ops::RangeBounds;
-
-pub use clack_common::process::*;
 pub mod audio;
-use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
+use crate::internal_utils::slice_from_external_parts;
 use audio::*;
 
 /// Metadata about the current process call.
@@ -93,20 +92,20 @@ impl Events<'_> {
 /// * Each channel is a raw buffer (i.e. slice) of either [`f32`] or [`f64`] samples.
 ///
 /// This structure applies both to inputs and outputs: the [`Audio`] struct allows to retrieve
-/// [`InputPort`]s and [`OutputPort`]s separately, but they can also be accessed together as
+/// [`Port`]s and [`OutputPort`]s separately, but they can also be accessed together as
 /// Input/Output [`PortPair`]s. This allows for the common use-case of borrowing both an input
 /// and its matching output for processing, while also being safe to hosts using the same buffer for
 /// both.
 ///
 /// For each port type (input, output, or paired), ports can be accessed either individually with
-/// an index, or all at once with an iterator. For instance, [`InputPort`]s can be accessed either
+/// an index, or all at once with an iterator. For instance, [`Port`]s can be accessed either
 /// one-at-a-time with [`Audio::input_port`], or with an iterator from [`Audio::input_ports`]. A
 /// [`Audio::input_port_count`] method is also available. The same methods are available for
 /// [`OutputPort`]s and [`PortPair`]s.
 ///
 /// Note that because ports can individually hold either 32-bit or 64-bit sample data, an extra
 /// sample type detection step is necessary before the port's channels themselves can be accessed.
-/// This is done through the [`channels`](InputPort::channels) methods on each port type, and
+/// This is done through the [`channels`](Port::channels) methods on each port type, and
 /// returns a [`SampleType`] enum indicating whether the port's buffers hold 32-bit or 64-bit samples.
 ///
 /// # Example
@@ -197,8 +196,8 @@ impl Events<'_> {
 /// }
 /// ```
 pub struct Audio<'a> {
-    inputs: &'a [clap_audio_buffer],
-    outputs: &'a mut [clap_audio_buffer],
+    inputs: &'a [CelledClapAudioBuffer],
+    outputs: &'a [CelledClapAudioBuffer],
     frames_count: u32,
 }
 
@@ -215,11 +214,11 @@ impl<'a> Audio<'a> {
         Audio {
             frames_count: raw_process.frames_count,
             inputs: slice_from_external_parts(
-                raw_process.audio_inputs,
+                raw_process.audio_inputs.cast(),
                 raw_process.audio_inputs_count as usize,
             ),
-            outputs: slice_from_external_parts_mut(
-                raw_process.audio_outputs,
+            outputs: slice_from_external_parts(
+                raw_process.audio_outputs.cast(),
                 raw_process.audio_outputs_count as usize,
             ),
         }
@@ -229,69 +228,53 @@ impl<'a> Audio<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure all buffer structs are valid for 'a, including all the buffer
-    /// pointers they contain.
+    /// The caller must ensure the given pointers to all buffer structs are valid for 'a,
+    /// including all the buffer pointers they themselves contain.
     ///
     /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
     /// channel buffers pointed to by `buffers`.
     #[inline]
     pub unsafe fn from_raw_buffers(
-        inputs: &'a [clap_audio_buffer],
-        outputs: &'a mut [clap_audio_buffer],
+        inputs: *const [clap_audio_buffer],
+        outputs: *const [clap_audio_buffer],
         frames_count: u32,
     ) -> Self {
         Self {
-            inputs,
-            outputs,
+            inputs: &*(inputs as *const _),
+            outputs: &*(outputs as *const _),
             frames_count,
         }
     }
 
-    /// Returns the raw input and output buffers structs, respectively.
+    /// Returns a raw pointer to a C array of the raw output buffers structs.
+    // TODO: safety of creating & or &mut from this
     #[inline]
-    pub fn raw_buffers(&mut self) -> (&'a [clap_audio_buffer], &mut [clap_audio_buffer]) {
-        (self.inputs, self.outputs)
+    pub fn raw_inputs(&self) -> *const [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts(self.inputs.as_ptr().cast(), self.inputs.len())
     }
 
-    /// Returns the raw input and output buffers structs, respectively, consuming the audio struct.
+    /// Returns a raw pointer to a C array of the raw output buffers structs.
+    // TODO: safety of creating & or &mut from this
     #[inline]
-    pub fn to_raw_buffers(self) -> (&'a [clap_audio_buffer], &'a mut [clap_audio_buffer]) {
-        (self.inputs, self.outputs)
+    pub fn raw_outputs(&self) -> *const [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts(self.outputs.as_ptr().cast(), self.outputs.len())
     }
 
-    /// Returns the raw input buffers structs.
-    #[inline]
-    pub fn raw_input_buffers(&self) -> &'a [clap_audio_buffer] {
-        self.inputs
-    }
-
-    /// Returns the raw output buffers structs.
-    #[inline]
-    pub fn raw_output_buffers(&mut self) -> &mut [clap_audio_buffer] {
-        self.outputs
-    }
-
-    /// Returns the raw output buffers structs, consuming the audio struct.
-    #[inline]
-    pub fn to_raw_output_buffers(self) -> &'a mut [clap_audio_buffer] {
-        self.outputs
-    }
-
-    /// Retrieves the [`InputPort`] at a given index.
+    /// Retrieves the [`Port`] at a given index.
     ///
     /// This returns [`None`] if there is no input port at the given index.
     ///
     /// See also the [`input_port_count`](Audio::input_port_count) method to know how many input
     /// ports are available, and the [`input_ports`](Audio::input_ports) method to get all input ports at once.
     #[inline]
-    pub fn input_port(&self, index: usize) -> Option<InputPort> {
+    pub fn input_port(&self, index: usize) -> Option<Port> {
         self.inputs
             .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct
-            .map(|buf| unsafe { InputPort::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
     }
 
-    /// Retrieves the [`AudioPortProcessingInfo`] of the [`InputPort`] at a given index.
+    /// Retrieves the [`AudioPortProcessingInfo`] of the [`Port`] at a given index.
     ///
     /// This returns [`None`] if there is no input port at the given index.
     ///
@@ -300,24 +283,22 @@ impl<'a> Audio<'a> {
     /// all input ports at once.
     #[inline]
     pub fn input_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
-        self.inputs
-            .get(index)
-            .map(AudioPortProcessingInfo::from_raw)
+        self.inputs.get(index).map(|b| b.info())
     }
 
-    /// Retrieves the number of available [`InputPort`]s.
+    /// Retrieves the number of available [`Port`]s.
     #[inline]
     pub fn input_port_count(&self) -> usize {
         self.inputs.len()
     }
 
-    /// Returns an iterator of all the available [`InputPort`]s at once.
+    /// Returns an iterator of all the available [`Port`]s at once.
     ///
     /// See also the [`input_port`](Audio::input_port) method to retrieve a single input port by
     /// its index.
     #[inline]
-    pub fn input_ports(&self) -> InputPortsIter {
-        InputPortsIter::new(self)
+    pub fn input_ports(&self) -> PortsIter {
+        PortsIter::new(self)
     }
 
     /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
@@ -326,7 +307,7 @@ impl<'a> Audio<'a> {
     /// output port by its index.
     #[inline]
     pub fn input_ports_infos(&self) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
-        self.inputs.iter().map(AudioPortProcessingInfo::from_raw)
+        self.inputs.iter().map(|b| b.info())
     }
 
     /// Retrieves the [`OutputPort`] at a given index.
@@ -336,12 +317,12 @@ impl<'a> Audio<'a> {
     /// See also the [`output_port_count`](Audio::output_port_count) method to know how many output
     /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all output ports at once.
     #[inline]
-    pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
+    pub fn output_port(&self, index: usize) -> Option<Port> {
         self.outputs
-            .get_mut(index)
+            .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
             // Also, &mut ensures there is no input being read concurrently
-            .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
     }
 
     /// Retrieves the [`AudioPortProcessingInfo`] of the [`OutputPort`] at a given index.
@@ -353,9 +334,7 @@ impl<'a> Audio<'a> {
     /// all output ports at once.
     #[inline]
     pub fn output_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
-        self.outputs
-            .get(index)
-            .map(AudioPortProcessingInfo::from_raw)
+        self.outputs.get(index).map(|b| b.info())
     }
 
     /// Retrieves the number of available [`OutputPort`]s.
@@ -369,8 +348,8 @@ impl<'a> Audio<'a> {
     /// See also the [`output_port`](Audio::output_port) method to retrieve a single output port by
     /// its index.
     #[inline]
-    pub fn output_ports(&mut self) -> OutputPortsIter {
-        OutputPortsIter::new(self)
+    pub fn output_ports(&self) -> PortsIter {
+        PortsIter::new(self)
     }
 
     /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
@@ -381,7 +360,7 @@ impl<'a> Audio<'a> {
     pub fn output_ports_infos(
         &self,
     ) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
-        self.outputs.iter().map(AudioPortProcessingInfo::from_raw)
+        self.outputs.iter().map(|b| b.info())
     }
 
     /// Retrieves the [`PortPair`] at a given index.
@@ -396,7 +375,7 @@ impl<'a> Audio<'a> {
         unsafe {
             PortPair::from_raw(
                 self.inputs.get(index),
-                self.outputs.get_mut(index),
+                self.outputs.get(index),
                 self.frames_count,
             )
         }
@@ -423,7 +402,7 @@ impl<'a> Audio<'a> {
 
     /// Returns a sub-range of ports as a new [`Audio`] struct, similar to a subslice of items.
     #[inline]
-    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
+    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&self, range: R) -> Audio {
         let inputs = self
             .inputs
             .get((range.start_bound().cloned(), range.end_bound().cloned()))
@@ -431,8 +410,8 @@ impl<'a> Audio<'a> {
 
         let outputs = self
             .outputs
-            .get_mut((range.start_bound().cloned(), range.end_bound().cloned()))
-            .unwrap_or(&mut []);
+            .get((range.start_bound().cloned(), range.end_bound().cloned()))
+            .unwrap_or(&[]);
 
         Audio {
             inputs,
