@@ -1,9 +1,7 @@
 use crate::prelude::Audio;
 use crate::process::audio::{AudioBuffer, BufferError, CelledClapAudioBuffer, SampleType};
 use clack_common::process::ConstantMask;
-use std::ops::Index;
-use std::ptr::NonNull;
-use std::slice::{Iter, SliceIndex};
+use std::slice::Iter;
 
 /// An iterator of all the available [`Port`]s from an [`Audio`] struct.
 pub struct PortsIter<'a> {
@@ -189,12 +187,9 @@ impl<'a, S> PortChannels<'a, S> {
     pub fn channel(&self, channel_index: u32) -> Option<AudioBuffer<'a, S>> {
         // SAFETY: this type guarantees the buffer pointer is valid and of size frames_count
         unsafe {
-            self.data.get(channel_index as usize).map(|data| {
-                AudioBuffer::from_raw_parts(
-                    NonNull::new_unchecked(*data), // TODO: unwrap instead?
-                    self.frames_count as usize,
-                )
-            })
+            self.data
+                .get(channel_index as usize)
+                .map(|data| AudioBuffer::from_raw_parts(*data, self.frames_count as usize))
         }
     }
 
@@ -228,21 +223,10 @@ impl<'a, T> IntoIterator for &'a PortChannels<'a, T> {
     }
 }
 
-// TODO: hide implementation detail
-impl<'a, T, Idx: SliceIndex<[*mut T]>> Index<Idx> for PortChannels<'a, T> {
-    type Output = PortChannels<'a, T>;
-
-    #[inline]
-    fn index(&self, index: Idx) -> &Self::Output {
-        let _ = self.data.get(index);
-        todo!()
-    }
-}
-
 /// An iterator over all of an [`Port`]'s channels' sample buffers.
 pub struct PortChannelsIter<'a, T> {
-    pub(crate) data: Iter<'a, *mut T>,
-    pub(crate) frames_count: u32,
+    data: Iter<'a, *mut T>,
+    frames_count: u32,
 }
 
 impl<'a, T> Iterator for PortChannelsIter<'a, T> {
@@ -252,14 +236,9 @@ impl<'a, T> Iterator for PortChannelsIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.data
             .next()
-            // SAFETY: iterator can only get created from an InputChannels, which guarantees
+            // SAFETY: iterator can only get created from a PortChannels, which guarantees
             // the buffer is both valid and of length frames_count
-            .map(|ptr| unsafe {
-                AudioBuffer::from_raw_parts(
-                    NonNull::new_unchecked(*ptr), // TODO: unwrap instead?
-                    self.frames_count as usize,
-                )
-            })
+            .map(|ptr| unsafe { AudioBuffer::from_raw_parts(*ptr, self.frames_count as usize) })
     }
 
     #[inline]

@@ -8,7 +8,7 @@ use std::ops::RangeBounds;
 use std::ptr;
 use std::ptr::NonNull;
 
-#[derive(Copy, Clone, Eq)]
+#[derive(Copy, Clone)]
 pub struct AudioBuffer<'a, S> {
     ptr: NonNull<S>,
     len: usize,
@@ -18,9 +18,12 @@ pub struct AudioBuffer<'a, S> {
 impl<'a, S> AudioBuffer<'a, S> {
     /// # Safety
     /// TODO
-    /// TODO: panic if null ptr instead?
     #[inline]
-    pub unsafe fn from_raw_parts(ptr: NonNull<S>, len: usize) -> Self {
+    pub unsafe fn from_raw_parts(ptr: *mut S, len: usize) -> Self {
+        let Some(ptr) = NonNull::new(ptr) else {
+            null_audio_buffer()
+        };
+
         Self {
             ptr,
             len,
@@ -31,7 +34,8 @@ impl<'a, S> AudioBuffer<'a, S> {
     #[inline]
     pub fn from_mut_slice(slice: &'a mut [S]) -> Self {
         Self {
-            ptr: NonNull::new(slice.as_mut_ptr()).unwrap(), // TODO: unwrap,
+            // SAFETY: pointer comes from a reference to a slice, it has to be non-null
+            ptr: unsafe { NonNull::new_unchecked(slice.as_mut_ptr()) },
             len: slice.len(),
             _lifetime: PhantomData,
         }
@@ -59,8 +63,8 @@ impl<'a, S> AudioBuffer<'a, S> {
     }
 
     #[inline]
-    pub const fn as_ptr(&self) -> NonNull<S> {
-        self.ptr
+    pub const fn as_ptr(&self) -> *mut S {
+        self.ptr.as_ptr()
     }
 
     // TODO : test the heck outta this
@@ -142,7 +146,7 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
     #[inline]
     pub fn copy_to_slice(&self, buf: &mut [S]) {
         if buf.len() != self.len {
-            out_of_bounds() // TODO: better error
+            slice_len_mismatch(self.len, buf.len())
         }
 
         // SAFETY: TODO
@@ -152,28 +156,31 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
     #[inline]
     pub fn copy_to_buffer(&self, buf: AudioBuffer<S>) {
         if buf.len != self.len {
-            out_of_bounds() // TODO: better error
+            slice_len_mismatch(self.len, buf.len)
         }
 
-        todo!()
+        // SAFETY: TODO
+        unsafe { ptr::copy(self.ptr.as_ptr(), buf.as_ptr(), buf.len()) }
     }
 
     #[inline]
     pub fn copy_from_slice(&self, buf: &[S]) {
         if buf.len() != self.len {
-            out_of_bounds() // TODO: better error
+            slice_len_mismatch(buf.len(), self.len)
         }
 
-        todo!()
+        // SAFETY: TODO
+        unsafe { ptr::copy_nonoverlapping(buf.as_ptr(), self.ptr.as_ptr(), buf.len()) }
     }
 
     #[inline]
     pub fn copy_from_buffer(&self, buf: AudioBuffer<S>) {
         if buf.len != self.len {
-            out_of_bounds() // TODO: better error
+            slice_len_mismatch(buf.len, self.len)
         }
 
-        todo!()
+        // SAFETY: TODO
+        unsafe { ptr::copy(buf.as_ptr(), self.ptr.as_ptr(), buf.len()) }
     }
 
     #[inline]
@@ -215,44 +222,112 @@ impl<'a, S> IntoIterator for &AudioBuffer<'a, S> {
     }
 }
 
-impl<'a, S: Debug> Debug for AudioBuffer<'a, S> {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+impl<'a, S: Debug + Copy> Debug for AudioBuffer<'a, S> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut dbg = f.debug_list();
+        for s in self {
+            dbg.entry(&s.get());
+        }
+        dbg.finish()
     }
 }
 
-impl<'a, S: PartialEq> PartialEq for AudioBuffer<'a, S> {
-    fn eq(&self, _other: &Self) -> bool {
-        todo!()
+impl<'a, S: PartialEq + Copy> PartialEq for AudioBuffer<'a, S> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(other) {
+            if a.get() != b.get() {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
-impl<'a, S: PartialEq> PartialEq<[S]> for AudioBuffer<'a, S> {
-    fn eq(&self, _other: &[S]) -> bool {
-        todo!()
+impl<'a, S: PartialEq + Copy> PartialEq<[S]> for AudioBuffer<'a, S> {
+    fn eq(&self, other: &[S]) -> bool {
+        if self.len != other.len() {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(other) {
+            if a.get() != *b {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
-impl<'a, S: PartialEq, const N: usize> PartialEq<[S; N]> for AudioBuffer<'a, S> {
-    fn eq(&self, _other: &[S; N]) -> bool {
-        todo!()
+impl<'a, S: PartialEq + Copy, const N: usize> PartialEq<[S; N]> for AudioBuffer<'a, S> {
+    fn eq(&self, other: &[S; N]) -> bool {
+        if self.len != other.len() {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(other) {
+            if a.get() != *b {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
-impl<'a, S: PartialEq> PartialEq<&[S]> for AudioBuffer<'a, S> {
-    fn eq(&self, _other: &&[S]) -> bool {
-        todo!()
+impl<'a, S: PartialEq + Copy> PartialEq<&[S]> for AudioBuffer<'a, S> {
+    fn eq(&self, other: &&[S]) -> bool {
+        if self.len != other.len() {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(*other) {
+            if a.get() != *b {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
-impl<'a, S: PartialEq, const N: usize> PartialEq<&[S; N]> for AudioBuffer<'a, S> {
-    fn eq(&self, _other: &&[S; N]) -> bool {
-        todo!()
+impl<'a, S: PartialEq + Copy, const N: usize> PartialEq<&[S; N]> for AudioBuffer<'a, S> {
+    fn eq(&self, other: &&[S; N]) -> bool {
+        if self.len != other.len() {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(*other) {
+            if a.get() != *b {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
 #[cold]
 #[inline(never)]
-pub fn out_of_bounds() -> ! {
+fn out_of_bounds() -> ! {
     panic!("Out of bounds") // TODO: better error message
+}
+
+#[cold]
+#[inline(never)]
+fn null_audio_buffer() -> ! {
+    panic!("Invalid audio buffer: buffer pointer is NULL.")
+}
+
+#[cold]
+#[inline(never)]
+fn slice_len_mismatch(src_len: usize, dst_len: usize) -> ! {
+    panic!(
+        "Buffer size mismatch: source has length {src_len}, but destination has length {dst_len}"
+    )
 }
