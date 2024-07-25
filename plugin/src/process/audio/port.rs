@@ -1,4 +1,3 @@
-use crate::prelude::Audio;
 use crate::process::audio::{AudioBuffer, BufferError, CelledClapAudioBuffer, SampleType};
 use clack_common::process::ConstantMask;
 use std::slice::Iter;
@@ -11,10 +10,10 @@ pub struct PortsIter<'a> {
 
 impl<'a> PortsIter<'a> {
     #[inline]
-    pub(crate) fn new(audio: &Audio<'a>) -> Self {
+    pub(crate) fn new(ports: &'a [CelledClapAudioBuffer], frames_count: u32) -> Self {
         Self {
-            inputs: audio.inputs.iter(),
-            frames_count: audio.frames_count,
+            inputs: ports.iter(),
+            frames_count,
         }
     }
 }
