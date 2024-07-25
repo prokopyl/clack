@@ -166,7 +166,7 @@ pub mod tests {
         let mut total = 0;
 
         for channel in channels {
-            assert!(channel.iter().all(|f| f.get() == 0.0));
+            assert!(channel.iter().all(|f| f.get() == 1.0));
             total += 1;
         }
 
@@ -212,7 +212,7 @@ pub mod tests {
 
         for i in 0..port.channel_count() {
             let channel = channels.channel(i).unwrap();
-            assert!(channel.iter().all(|f| f.get() == 0.0));
+            assert!(channel.iter().all(|f| f.get() == 1.0));
         }
 
         let port = audio.output_port(0).unwrap();

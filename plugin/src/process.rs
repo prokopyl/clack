@@ -298,7 +298,7 @@ impl<'a> Audio<'a> {
     /// its index.
     #[inline]
     pub fn input_ports(&self) -> PortsIter {
-        PortsIter::new(self)
+        PortsIter::new(self.inputs, self.frames_count)
     }
 
     /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
@@ -349,7 +349,7 @@ impl<'a> Audio<'a> {
     /// its index.
     #[inline]
     pub fn output_ports(&self) -> PortsIter {
-        PortsIter::new(self)
+        PortsIter::new(self.outputs, self.frames_count)
     }
 
     /// Retrieves the [`AudioPortProcessingInfo`] of all the available [`OutputPort`]s at once.
