@@ -6,7 +6,6 @@ use std::fmt::{Debug, Formatter};
 use std::ops::RangeBounds;
 use std::ptr;
 
-#[derive(Copy, Clone)]
 pub struct AudioBuffer<'a, S> {
     inner: &'a [Cell<S>],
 }
@@ -163,6 +162,15 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
         }
     }
 }
+
+impl<'a, S> Clone for AudioBuffer<'a, S> {
+    #[inline]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, S> Copy for AudioBuffer<'a, S> {}
 
 pub struct AudioBufferIter<'a, S> {
     inner: core::slice::Iter<'a, Cell<S>>,
