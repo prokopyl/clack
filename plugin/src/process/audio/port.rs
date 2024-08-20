@@ -148,7 +148,6 @@ impl<'a> Port<'a> {
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`Port::channels`].
-#[derive(Copy, Clone)]
 pub struct PortChannels<'a, S> {
     frames_count: u32,
     data: &'a [*mut S],
@@ -201,6 +200,15 @@ impl<'a, S> PortChannels<'a, S> {
         }
     }
 }
+
+impl<'a, S> Clone for PortChannels<'a, S> {
+    #[inline]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, S> Copy for PortChannels<'a, S> {}
 
 impl<'a, T> IntoIterator for PortChannels<'a, T> {
     type Item = AudioBuffer<'a, T>;

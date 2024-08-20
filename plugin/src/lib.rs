@@ -35,7 +35,7 @@ pub mod prelude {
             PluginShared,
         },
         process::{
-            audio::{ChannelPair, SampleType},
+            audio::{AudioBuffer, ChannelPair, SampleType},
             Audio, Events, PluginAudioConfiguration, Process, ProcessStatus,
         },
         utils::ClapId,

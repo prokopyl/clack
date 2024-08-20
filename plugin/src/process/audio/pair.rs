@@ -1,8 +1,7 @@
-use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::process::audio::pair::ChannelPair::*;
-use crate::process::audio::{BufferError, CelledClapAudioBuffer, Port, SampleType};
+use crate::process::audio::{AudioBuffer, BufferError, CelledClapAudioBuffer, Port, SampleType};
 use crate::process::Audio;
-use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
+use clack_common::process::AudioPortProcessingInfo;
 use std::slice::Iter;
 
 /// A pair of Input and Output ports.
@@ -13,6 +12,7 @@ use std::slice::Iter;
 ///
 /// In those cases, a given pair will only contain one port instead of two. However,
 /// a [`PortPair`] is always guaranteed to contain at least one port, be it an input or output.
+#[derive(Copy, Clone)]
 pub struct PortPair<'a> {
     input: Option<&'a CelledClapAudioBuffer>,
     output: Option<&'a CelledClapAudioBuffer>,
@@ -54,7 +54,7 @@ impl<'a> PortPair<'a> {
     ///
     /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
-    pub fn output(&mut self) -> Option<Port> {
+    pub fn output(&self) -> Option<Port> {
         self.output
             // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { Port::from_raw(i, self.frames_count) })
@@ -112,7 +112,7 @@ impl<'a> PortPair<'a> {
     /// ```
     #[inline]
     pub fn channels(
-        &mut self,
+        &self,
     ) -> Result<SampleType<PairedChannels<'a, f32>, PairedChannels<'a, f64>>, BufferError> {
         let input = match self.input {
             None => SampleType::Both([].as_slice(), [].as_slice()),
@@ -161,45 +161,13 @@ impl<'a> PortPair<'a> {
     pub fn frames_count(&self) -> u32 {
         self.frames_count
     }
-
-    /// The latency from and to the audio interface for this port pair, in samples.
-    ///
-    /// This returns a tuple containing the latenciess for the input and output port,
-    /// respectively.
-    ///
-    /// If one port isn't present in this pair, then [`None`] is returned.
-    #[inline]
-    pub fn latencies(&self) -> (Option<u32>, Option<u32>) {
-        (
-            self.input.map(|i| i.latency),
-            self.output.as_ref().map(|o| o.latency),
-        )
-    }
-
-    /// The [`ConstantMask`]s for the two ports.
-    ///
-    /// This returns a tuple containing the [`ConstantMask`]s for the input and output port,
-    /// respectively.
-    ///
-    /// If one port isn't present in this pair, then [`ConstantMask::FULLY_CONSTANT`] is returned.
-    #[inline]
-    pub fn constant_masks(&self) -> (ConstantMask, ConstantMask) {
-        (
-            self.input
-                .map(|i| ConstantMask::from_bits(i.constant_mask.get()))
-                .unwrap_or(ConstantMask::FULLY_CONSTANT),
-            self.output
-                .as_ref()
-                .map(|o| ConstantMask::from_bits(o.constant_mask.get()))
-                .unwrap_or(ConstantMask::FULLY_CONSTANT),
-        )
-    }
 }
 
 /// An [`PortPair`]'s channels' data buffers, which contains samples of a given type `S`.
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`PortPair::channels`].
+#[derive(Copy, Clone)]
 pub struct PairedChannels<'a, S> {
     input_data: &'a [*mut S],
     output_data: &'a [*mut S],
@@ -245,25 +213,25 @@ impl<'a, S> PairedChannels<'a, S> {
     ///
     /// See [`ChannelPair`]'s documentation for examples on how to access sample buffers from it.
     #[inline]
-    pub fn channel_pair(&mut self, index: usize) -> Option<ChannelPair<'a, S>> {
+    pub fn channel_pair(&self, index: usize) -> Option<ChannelPair<'a, S>> {
         let input = self
             .input_data
             .get(index)
             // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
-            .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
+            .map(|ptr| unsafe { AudioBuffer::from_raw_parts(*ptr, self.frames_count as usize) });
 
         let output = self
             .output_data
             .get(index)
             // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
-            .map(|ptr| unsafe { slice_from_external_parts_mut(*ptr, self.frames_count as usize) });
+            .map(|ptr| unsafe { AudioBuffer::from_raw_parts(*ptr, self.frames_count as usize) });
 
         ChannelPair::from_optional_io(input, output)
     }
 
     /// Gets an iterator over all the ports' [`ChannelPair`]s.
     #[inline]
-    pub fn iter_mut(&mut self) -> PairedChannelsIter<S> {
+    pub fn iter(&self) -> PairedChannelsIter<'a, S> {
         PairedChannelsIter {
             input_iter: self.input_data.iter(),
             output_iter: self.output_data.iter(),
@@ -278,11 +246,17 @@ impl<'a, S> IntoIterator for PairedChannels<'a, S> {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        PairedChannelsIter {
-            input_iter: self.input_data.iter(),
-            output_iter: self.output_data.iter(),
-            frames_count: self.frames_count,
-        }
+        self.iter()
+    }
+}
+
+impl<'a, S> IntoIterator for &PairedChannels<'a, S> {
+    type Item = ChannelPair<'a, S>;
+    type IntoIter = PairedChannelsIter<'a, S>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -302,11 +276,11 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
             .input_iter
             .next()
             // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
-            .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
+            .map(|ptr| unsafe { AudioBuffer::from_raw_parts(*ptr, self.frames_count as usize) });
 
         // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
         let output = self.output_iter.next().map(|ptr| unsafe {
-            slice_from_external_parts_mut((*ptr) as *mut _, self.frames_count as usize)
+            AudioBuffer::from_raw_parts((*ptr) as *mut _, self.frames_count as usize)
         });
 
         ChannelPair::from_optional_io(input, output)
@@ -334,7 +308,7 @@ pub struct PortPairsIter<'a> {
 
 impl<'a> PortPairsIter<'a> {
     #[inline]
-    pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
+    pub(crate) fn new(audio: &Audio<'a>) -> Self {
         Self {
             inputs: audio.inputs.iter(),
             outputs: audio.outputs.iter(),
@@ -372,25 +346,26 @@ impl ExactSizeIterator for PortPairsIter<'_> {
 ///
 /// This enum also allows to check for the fairly common case where Host may re-use the same
 /// buffer for both the input and output, and expect the plugin to do in-place processing.
+#[derive(Copy, Clone)]
 pub enum ChannelPair<'a, S> {
     /// There is only an input channel present, there was no matching output.
-    InputOnly(&'a [S]),
+    InputOnly(AudioBuffer<'a, S>),
     /// There is only an output channel present, there was no matching input.
-    OutputOnly(&'a mut [S]),
+    OutputOnly(AudioBuffer<'a, S>),
     /// Both the input and output channels are present, and available separately.
-    InputOutput(&'a [S], &'a mut [S]),
+    InputOutput(AudioBuffer<'a, S>, AudioBuffer<'a, S>),
     /// Both the input and output channels are present, but they actually share the same buffer.
     ///
     /// In this case, the slice is already filled with the input channel's data, and the host
     /// considers the contents of this buffer after processing to be the output channel's data.
-    InPlace(&'a mut [S]),
+    InPlace(AudioBuffer<'a, S>),
 }
 
 impl<'a, S> ChannelPair<'a, S> {
     #[inline]
     pub(crate) fn from_optional_io(
-        input: Option<&'a [S]>,
-        output: Option<&'a mut [S]>,
+        input: Option<AudioBuffer<'a, S>>,
+        output: Option<AudioBuffer<'a, S>>,
     ) -> Option<ChannelPair<'a, S>> {
         match (input, output) {
             (None, None) => None,
@@ -406,30 +381,20 @@ impl<'a, S> ChannelPair<'a, S> {
 
     /// Attempts to retrieve the input channel's buffer data, if the input channel is present.
     #[inline]
-    pub fn input(&'a self) -> Option<&'a [S]> {
+    pub fn input(&self) -> Option<AudioBuffer<'a, S>> {
         match self {
-            InputOnly(i) | InputOutput(i, _) => Some(i),
+            InputOnly(i) | InputOutput(i, _) => Some(*i),
             OutputOnly(_) => None,
-            InPlace(io) => Some(io),
+            InPlace(io) => Some(*io),
         }
     }
 
     /// Attempts to retrieve a read-only reference to the output channel's buffer data,
     /// if the output channel is present.
     #[inline]
-    pub fn output(&'a self) -> Option<&'a [S]> {
+    pub fn output(&'a self) -> Option<AudioBuffer<'a, S>> {
         match self {
-            OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
-            InputOnly(_) => None,
-        }
-    }
-
-    /// Attempts to retrieve a read-write reference to the output channel's buffer data,
-    /// if the output channel is present.
-    #[inline]
-    pub fn output_mut(&'a mut self) -> Option<&'a mut [S]> {
-        match self {
-            OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
+            OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(*o),
             InputOnly(_) => None,
         }
     }
