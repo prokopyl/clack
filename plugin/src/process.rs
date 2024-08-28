@@ -3,14 +3,15 @@
 //! All of those types are exclusively used in the [`Plugin::process`](crate::plugin::PluginAudioProcessor::process)
 //! method. See the [`Plugin`](crate::plugin::PluginAudioProcessor) trait documentation for examples on how these types interact.
 
+use crate::internal_utils::slice_from_external_parts;
 use clack_common::events::event_types::TransportEvent;
 use clack_common::events::io::{InputEvents, OutputEvents};
 pub use clack_common::process::*;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::process::clap_process;
 use std::ops::RangeBounds;
+
 pub mod audio;
-use crate::internal_utils::slice_from_external_parts;
 use audio::*;
 
 /// Metadata about the current process call.
@@ -92,7 +93,7 @@ impl Events<'_> {
 /// * Each channel is a raw buffer (i.e. slice) of either [`f32`] or [`f64`] samples.
 ///
 /// This structure applies both to inputs and outputs: the [`Audio`] struct allows to retrieve
-/// [`Port`]s and [`OutputPort`]s separately, but they can also be accessed together as
+/// input and output [`Port`]s separately, but they can also be accessed together as
 /// Input/Output [`PortPair`]s. This allows for the common use-case of borrowing both an input
 /// and its matching output for processing, while also being safe to hosts using the same buffer for
 /// both.
@@ -101,7 +102,7 @@ impl Events<'_> {
 /// an index, or all at once with an iterator. For instance, [`Port`]s can be accessed either
 /// one-at-a-time with [`Audio::input_port`], or with an iterator from [`Audio::input_ports`]. A
 /// [`Audio::input_port_count`] method is also available. The same methods are available for
-/// [`OutputPort`]s and [`PortPair`]s.
+/// the output [`Port`]s and [`PortPair`]s.
 ///
 /// Note that because ports can individually hold either 32-bit or 64-bit sample data, an extra
 /// sample type detection step is necessary before the port's channels themselves can be accessed.
@@ -229,8 +230,8 @@ impl<'a> Audio<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure the given pointers to all buffer structs are valid for 'a,
-    /// including all the buffer pointers they themselves contain.
+    /// The caller must ensure the given pointers to all buffer structs are valid for both reads
+    /// and writes for the duration of 'a, including all the buffer pointers they themselves contain.
     ///
     /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
     /// channel buffers pointed to by `buffers`.
@@ -247,8 +248,26 @@ impl<'a> Audio<'a> {
         }
     }
 
-    /// Returns a raw pointer to a C array of the raw output buffers structs.
-    // TODO: safety of creating & or &mut from this
+    /// Returns a raw pointer to a slice of the raw input buffers structs.
+    ///
+    /// # Safety
+    ///
+    /// While this function is safe to use, there are many cases where using the resulting pointer
+    /// is not.
+    ///
+    /// This is because the contents slice of buffer structs (as well as the raw audio buffers these
+    /// point to) are valid for both reads and writes from other, potentially aliased pointers to
+    /// that data.
+    ///
+    /// This means it is not valid to create either shared (`&`) or mutable (`&mut`) Rust references
+    /// to these buffers or their data.
+    ///
+    /// In order to safely access the data, you can either use [`Cell`]s, or perform direct
+    /// read or write operations, e.g. using [`ptr::read`] or [`ptr::write`].
+    ///
+    /// [`ptr::read`]: core::ptr::read
+    /// [`ptr::write`]: core::ptr::write
+    /// [`Cell`]: core::cell::Cell
     #[inline]
     pub fn raw_inputs(&self) -> *const [clap_audio_buffer] {
         core::ptr::slice_from_raw_parts(self.inputs.as_ptr().cast(), self.inputs.len())
@@ -261,7 +280,7 @@ impl<'a> Audio<'a> {
         core::ptr::slice_from_raw_parts(self.outputs.as_ptr().cast(), self.outputs.len())
     }
 
-    /// Retrieves the [`Port`] at a given index.
+    /// Retrieves the input [`Port`] at a given index.
     ///
     /// This returns [`None`] if there is no input port at the given index.
     ///
@@ -275,13 +294,13 @@ impl<'a> Audio<'a> {
             .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
     }
 
-    /// Retrieves the number of available [`Port`]s.
+    /// Retrieves the number of available input [`Port`]s.
     #[inline]
     pub fn input_port_count(&self) -> usize {
         self.inputs.len()
     }
 
-    /// Returns an iterator of all the available [`Port`]s at once.
+    /// Returns an iterator of all the available input [`Port`]s at once.
     ///
     /// See also the [`input_port`](Audio::input_port) method to retrieve a single input port by
     /// its index.
@@ -290,7 +309,7 @@ impl<'a> Audio<'a> {
         PortsIter::new(self.inputs, self.frames_count)
     }
 
-    /// Retrieves the [`OutputPort`] at a given index.
+    /// Retrieves the output [`Port`] at a given index.
     ///
     /// This returns [`None`] if there is no output port at the given index.
     ///
@@ -304,13 +323,13 @@ impl<'a> Audio<'a> {
             .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
     }
 
-    /// Retrieves the number of available [`OutputPort`]s.
+    /// Retrieves the number of available output [`Port`]s.
     #[inline]
     pub fn output_port_count(&self) -> usize {
         self.outputs.len()
     }
 
-    /// Returns an iterator of all the available [`OutputPort`]s at once.
+    /// Returns an iterator of all the available output [`Port`]s at once.
     ///
     /// See also the [`output_port`](Audio::output_port) method to retrieve a single output port by
     /// its index.

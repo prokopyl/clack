@@ -7,7 +7,6 @@ mod port;
 mod sample_type;
 
 pub use buffer::AudioBuffer;
-use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
 pub use error::BufferError;
 pub use pair::*;
 pub use port::*;
@@ -21,17 +20,6 @@ pub(crate) struct CelledClapAudioBuffer {
     pub channel_count: u32,
     pub latency: u32,
     pub constant_mask: Cell<u64>, // Cell has the same memory layout as the inner type
-}
-
-impl CelledClapAudioBuffer {
-    #[inline]
-    pub(crate) fn info(&self) -> AudioPortProcessingInfo {
-        AudioPortProcessingInfo {
-            channel_count: self.channel_count,
-            latency: self.latency,
-            constant_mask: ConstantMask::from_bits(self.constant_mask.get()),
-        }
-    }
 }
 
 #[cfg(test)]

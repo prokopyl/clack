@@ -418,8 +418,8 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     /// This plugin function requires the following arguments:
     /// * `audio_inputs`: The [`AudioBuffers`] the plugin is going to read audio frames from.
     ///   Can be [`AudioBuffers::empty`] if the plugin takes no audio input at all.
-    /// * `audio_output`: The [`OutputAudioBuffers`] the plugin is going to read audio frames from.
-    ///   Can be [`OutputAudioBuffers::empty`] if the plugin produces no audio output at all.
+    /// * `audio_output`: The [`AudioBuffers`] the plugin is going to read audio frames from.
+    ///   Can be [`AudioBuffers::empty`] if the plugin produces no audio output at all.
     /// * `input_events`: The [`InputEvents`] list the plugin is going to receive events from.
     ///   Can be [`InputEvents::empty`] if the plugin doesn't need to receive any events.
     /// * `output_events`: The [`OutputEvents`] buffer the plugin is going to write the events it

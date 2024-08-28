@@ -3,6 +3,8 @@ use clack_common::process::ConstantMask;
 use std::slice::Iter;
 
 /// An iterator of all the available [`Port`]s from an [`Audio`] struct.
+///
+/// [`Audio`]: crate::process::Audio
 pub struct PortsIter<'a> {
     inputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,

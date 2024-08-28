@@ -86,11 +86,10 @@
 //!
 //!    Those buffer wrappers are [`InputEvents`](events::io::InputEvents) and
 //!    [`OutputEvents`](events::io::OutputEvents) for events, and
-//!    [`InputAudioBuffers`](process::audio_buffers::AudioBuffers) and
-//!    [`OutputAudioBuffers`](process::audio_buffers::OutputAudioBuffers) for audio (obtained via a call to
-//!    [`AudioPorts::with_input_buffers`](process::audio_buffers::AudioPorts::with_input_buffers) and.
+//!    [`AudioBuffers`](process::audio_buffers::AudioBuffers) for audio (obtained via a call to
+//!    [`AudioPorts::with_input_buffers`](process::audio_buffers::AudioPorts::with_input_buffers) or
 //!    [`AudioPorts::with_output_buffers`](process::audio_buffers::AudioPorts::with_output_buffers)
-//!    respectively).
+//!    ).
 //!
 //!    See the documentation of those buffer types for more detail on what types they support, as
 //!    well as the [`process`](process::StartedPluginAudioProcessor::process) method's
