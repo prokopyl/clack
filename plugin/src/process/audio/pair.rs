@@ -332,23 +332,23 @@ impl ExactSizeIterator for PortPairsIter<'_> {
 #[derive(Copy, Clone)]
 pub enum ChannelPair<'a, S> {
     /// There is only an input channel present, there was no matching output.
-    InputOnly(AudioBuffer<'a, S>),
+    InputOnly(&'a AudioBuffer<S>),
     /// There is only an output channel present, there was no matching input.
-    OutputOnly(AudioBuffer<'a, S>),
+    OutputOnly(&'a AudioBuffer<S>),
     /// Both the input and output channels are present, and available separately.
-    InputOutput(AudioBuffer<'a, S>, AudioBuffer<'a, S>),
+    InputOutput(&'a AudioBuffer<S>, &'a AudioBuffer<S>),
     /// Both the input and output channels are present, but they actually share the same buffer.
     ///
     /// In this case, the slice is already filled with the input channel's data, and the host
     /// considers the contents of this buffer after processing to be the output channel's data.
-    InPlace(AudioBuffer<'a, S>),
+    InPlace(&'a AudioBuffer<S>),
 }
 
 impl<'a, S> ChannelPair<'a, S> {
     #[inline]
     pub(crate) fn from_optional_io(
-        input: Option<AudioBuffer<'a, S>>,
-        output: Option<AudioBuffer<'a, S>>,
+        input: Option<&'a AudioBuffer<S>>,
+        output: Option<&'a AudioBuffer<S>>,
     ) -> Option<ChannelPair<'a, S>> {
         match (input, output) {
             (None, None) => None,
@@ -364,7 +364,7 @@ impl<'a, S> ChannelPair<'a, S> {
 
     /// Attempts to retrieve the input channel's buffer data, if the input channel is present.
     #[inline]
-    pub fn input(&self) -> Option<AudioBuffer<'a, S>> {
+    pub fn input(&self) -> Option<&'a AudioBuffer<S>> {
         match self {
             InputOnly(i) | InputOutput(i, _) => Some(*i),
             OutputOnly(_) => None,
@@ -375,7 +375,7 @@ impl<'a, S> ChannelPair<'a, S> {
     /// Attempts to retrieve a read-only reference to the output channel's buffer data,
     /// if the output channel is present.
     #[inline]
-    pub fn output(&'a self) -> Option<AudioBuffer<'a, S>> {
+    pub fn output(&'a self) -> Option<&'a AudioBuffer<S>> {
         match self {
             OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(*o),
             InputOnly(_) => None,

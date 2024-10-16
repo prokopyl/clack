@@ -184,7 +184,7 @@ impl<'a, S> PortChannels<'a, S> {
     /// If there is no channel at the given index (i.e. `channel_index` is greater or equal than
     /// [`channel_count`](Self::channel_count)), this returns [`None`].
     #[inline]
-    pub fn channel(&self, channel_index: u32) -> Option<AudioBuffer<'a, S>> {
+    pub fn channel(&self, channel_index: u32) -> Option<&'a AudioBuffer<S>> {
         // SAFETY: this type guarantees the buffer pointer is valid and of size frames_count
         unsafe {
             self.data
@@ -213,7 +213,7 @@ impl<'a, S> Clone for PortChannels<'a, S> {
 impl<'a, S> Copy for PortChannels<'a, S> {}
 
 impl<'a, T> IntoIterator for PortChannels<'a, T> {
-    type Item = AudioBuffer<'a, T>;
+    type Item = &'a AudioBuffer<T>;
     type IntoIter = PortChannelsIter<'a, T>;
 
     #[inline]
@@ -223,7 +223,7 @@ impl<'a, T> IntoIterator for PortChannels<'a, T> {
 }
 
 impl<'a, T> IntoIterator for &'a PortChannels<'a, T> {
-    type Item = AudioBuffer<'a, T>;
+    type Item = &'a AudioBuffer<T>;
     type IntoIter = PortChannelsIter<'a, T>;
 
     #[inline]
@@ -239,7 +239,7 @@ pub struct PortChannelsIter<'a, T> {
 }
 
 impl<'a, T> Iterator for PortChannelsIter<'a, T> {
-    type Item = AudioBuffer<'a, T>;
+    type Item = &'a AudioBuffer<T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

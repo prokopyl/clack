@@ -3,7 +3,7 @@
 use clack_common::process::AudioPortProcessingInfo;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
-use std::marker::PhantomData;
+use std::cell::Cell;
 
 pub struct InputChannel<'a, T> {
     pub buffer: &'a mut [T],
@@ -207,14 +207,16 @@ impl AudioPorts {
             }
         }
 
-        AudioBuffers {
-            buffers: &self.buffer_configs[..total],
-            frames_count: if min_channel_buffer_length == usize::MAX {
-                None
-            } else {
-                Some(min_channel_buffer_length as u32)
-            },
-            _lifetime: PhantomData,
+        // SAFETY: TODO
+        unsafe {
+            AudioBuffers {
+                buffers: *(&mut self.buffer_configs[..total] as *mut _ as *mut _),
+                frames_count: if min_channel_buffer_length == usize::MAX {
+                    None
+                } else {
+                    Some(min_channel_buffer_length as u32)
+                },
+            }
         }
     }
 
@@ -306,14 +308,16 @@ impl AudioPorts {
             }
         }
 
-        AudioBuffers {
-            buffers: &mut self.buffer_configs[..total],
-            frames_count: if min_channel_buffer_length == usize::MAX {
-                None
-            } else {
-                Some(min_channel_buffer_length as u32)
-            },
-            _lifetime: PhantomData,
+        // SAFETY: TODO
+        unsafe {
+            AudioBuffers {
+                buffers: *(&mut self.buffer_configs[..total] as *mut _ as *mut _),
+                frames_count: if min_channel_buffer_length == usize::MAX {
+                    None
+                } else {
+                    Some(min_channel_buffer_length as u32)
+                },
+            }
         }
     }
 
@@ -323,11 +327,31 @@ impl AudioPorts {
     }
 }
 
+#[repr(C)]
+pub(crate) struct CelledClapAudioBuffer {
+    pub data32: *const *const f32,
+    pub data64: *const *const f64,
+    pub channel_count: u32,
+    pub latency: u32,
+    pub constant_mask: Cell<u64>, // Cell has the same memory layout as the inner type
+}
+
+impl CelledClapAudioBuffer {
+    #[inline]
+    pub(crate) fn as_raw_ptr(&self) -> *mut clap_audio_buffer {
+        self as *const _ as *const _ as *mut _
+    }
+
+    #[inline]
+    pub(crate) fn slice_as_raw_ptr(slice: &[CelledClapAudioBuffer]) -> *mut [clap_audio_buffer] {
+        slice as *const _ as *const _ as *mut _
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct AudioBuffers<'a> {
-    buffers: *const [clap_audio_buffer],
+    buffers: &'a [CelledClapAudioBuffer],
     frames_count: Option<u32>,
-    _lifetime: PhantomData<&'a [clap_audio_buffer]>,
 }
 
 impl<'a> AudioBuffers<'a> {
@@ -336,7 +360,6 @@ impl<'a> AudioBuffers<'a> {
         Self {
             buffers: &[],
             frames_count: None,
-            _lifetime: PhantomData,
         }
     }
 
@@ -362,17 +385,16 @@ impl<'a> AudioBuffers<'a> {
     /// The caller must also ensure `frames_count` is lower than or equal to the sizes of the
     /// channel buffers pointed to by `buffers`.
     #[inline]
-    pub unsafe fn from_raw_buffers(buffers: *const [clap_audio_buffer], frames_count: u32) -> Self {
+    pub unsafe fn from_raw_buffers(buffers: *mut [clap_audio_buffer], frames_count: u32) -> Self {
         Self {
-            buffers,
+            buffers: *(buffers as *const _ as *const _),
             frames_count: Some(frames_count),
-            _lifetime: PhantomData,
         }
     }
 
     #[inline]
-    pub fn as_raw_buffers(&self) -> *const [clap_audio_buffer] {
-        self.buffers
+    pub fn as_raw_buffers(&self) -> *mut [clap_audio_buffer] {
+        CelledClapAudioBuffer::slice_as_raw_ptr(self.buffers)
     }
 
     #[cfg(feature = "clack-plugin")]
@@ -398,8 +420,8 @@ impl<'a> AudioBuffers<'a> {
         // SAFETY: the validity of the buffers is guaranteed by this type
         unsafe {
             clack_plugin::prelude::Audio::from_raw_buffers(
-                self.buffers,
-                outputs.buffers,
+                self.as_raw_buffers(),
+                outputs.as_raw_buffers(),
                 frames_count,
             )
         }
@@ -423,54 +445,19 @@ impl<'a> AudioBuffers<'a> {
 
     #[inline]
     pub fn port_info(&self, port_index: u32) -> Option<AudioPortProcessingInfo> {
-        let port_index = port_index as usize;
-        if port_index > self.buffers.len() {
-            return None;
-        }
-
         // SAFETY: We checked port_index was in-bounds above.
-        // Since it comes from a slice, it also implies it is reasonably sized.
-        let info_ptr = unsafe { self.buffers.cast::<clap_audio_buffer>().add(port_index) };
+        let info_ptr = self.buffers.get(port_index as usize)?;
 
         // SAFETY: TODO
-        unsafe { Some(AudioPortProcessingInfo::from_raw_ptr(info_ptr)) }
+        unsafe { Some(AudioPortProcessingInfo::from_raw_ptr(info_ptr.as_raw_ptr())) }
     }
 
     #[inline]
     pub fn port_infos(&self) -> impl Iterator<Item = AudioPortProcessingInfo> + '_ {
-        struct Iter<'a> {
-            start: *const clap_audio_buffer,
-            end: *const clap_audio_buffer,
-            _lifetime: PhantomData<&'a [clap_audio_buffer]>,
-        }
-
-        impl<'a> Iterator for Iter<'a> {
-            type Item = AudioPortProcessingInfo;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                if self.start == self.end {
-                    return None;
-                }
-
-                let value = unsafe { AudioPortProcessingInfo::from_raw_ptr(self.start) };
-                unsafe {
-                    self.start = self.start.add(1);
-                }
-
-                Some(value)
-            }
-        }
-
-        Iter {
-            start: self.buffers.cast(),
+        self.buffers
+            .iter()
             // SAFETY: TODO
-            end: unsafe {
-                self.buffers
-                    .cast::<clap_audio_buffer>()
-                    .add(self.buffers.len())
-            },
-            _lifetime: PhantomData,
-        }
+            .map(|i| unsafe { AudioPortProcessingInfo::from_raw_ptr(i.as_raw_ptr()) })
     }
 
     /// Returns the minimum number of frames available both in this [`AudioBuffers`] and
@@ -602,13 +589,11 @@ mod test {
         assert_eq!(output_buffers.buffers.len(), 2);
         assert_eq!(output_buffers.frames_count, Some(4));
 
-        let raw_input_buffers = input_buffers.as_raw_buffers();
-        let raw_output_buffers = output_buffers.as_raw_buffers();
         let process = clap_process {
-            audio_inputs: raw_input_buffers.cast(),
-            audio_outputs: raw_output_buffers.cast_mut().cast(),
-            audio_inputs_count: raw_input_buffers.len() as u32,
-            audio_outputs_count: raw_output_buffers.len() as u32,
+            audio_inputs: input_buffers.as_raw_buffers().cast(),
+            audio_outputs: output_buffers.as_raw_buffers().cast(),
+            audio_inputs_count: input_buffers.port_count() as u32,
+            audio_outputs_count: output_buffers.port_count() as u32,
 
             steady_time: 0,
             frames_count: 4,

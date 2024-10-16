@@ -1,44 +1,42 @@
 #![allow(missing_docs)] // TODO
 
-use std::cell::Cell;
-use std::collections::Bound;
-use std::fmt::{Debug, Formatter};
-use std::ops::RangeBounds;
-use std::ptr;
+use core::cell::Cell;
+use core::fmt::{Debug, Formatter};
+use core::ops::Index;
+use core::ptr;
+use core::slice::SliceIndex;
 
-pub struct AudioBuffer<'a, S> {
-    inner: &'a [Cell<S>],
+#[repr(transparent)]
+pub struct AudioBuffer<S> {
+    inner: [Cell<S>],
 }
 
-impl<'a, S> AudioBuffer<'a, S> {
+impl<'a, S> AudioBuffer<S> {
     /// # Safety
     /// TODO
     #[inline]
-    pub unsafe fn from_raw_parts(ptr: *mut S, len: usize) -> Self {
+    pub unsafe fn from_raw_parts(ptr: *mut S, len: usize) -> &'a Self {
         if ptr.is_null() {
             null_audio_buffer()
         };
 
-        Self {
-            inner: core::slice::from_raw_parts(ptr.cast(), len),
-        }
+        Self::from_slice_of_cells(core::slice::from_raw_parts(ptr.cast(), len))
     }
 
     #[inline]
-    pub fn from_mut_slice(slice: &'a mut [S]) -> Self {
-        Self {
-            inner: Cell::from_mut(slice).as_slice_of_cells(),
-        }
+    pub fn from_mut_slice(slice: &'a mut [S]) -> &'a Self {
+        Self::from_slice_of_cells(Cell::from_mut(slice).as_slice_of_cells())
     }
 
     #[inline]
-    pub fn from_slice_of_cells(slice: &'a [Cell<S>]) -> Self {
-        Self { inner: slice }
+    pub const fn from_slice_of_cells(slice: &'a [Cell<S>]) -> &'a Self {
+        // SAFETY: TODO (omg)
+        unsafe { core::mem::transmute(slice) }
     }
 
     #[inline]
-    pub const fn empty() -> Self {
-        Self { inner: &[] }
+    pub const fn empty() -> &'static Self {
+        Self::from_slice_of_cells(&[])
     }
 
     #[inline]
@@ -57,38 +55,24 @@ impl<'a, S> AudioBuffer<'a, S> {
     }
 
     #[inline]
-    pub fn slice_range(&self, range: impl RangeBounds<usize>) -> Self {
-        let start = match range.start_bound() {
-            Bound::Included(i) => Bound::Included(*i),
-            Bound::Excluded(i) => Bound::Excluded(*i),
-            Bound::Unbounded => Bound::Unbounded,
-        };
-
-        let end = match range.end_bound() {
-            Bound::Included(i) => Bound::Included(*i),
-            Bound::Excluded(i) => Bound::Excluded(*i),
-            Bound::Unbounded => Bound::Unbounded,
-        };
-
-        let slice = self.inner.get((start, end)).unwrap_or(&[]);
-
-        Self { inner: slice }
+    pub fn as_slice_of_cells(&'a self) -> &'a [Cell<S>] {
+        &self.inner
     }
 
     #[inline]
-    pub fn as_slice_of_cells(&self) -> &'a [Cell<S>] {
-        self.inner
-    }
-
-    #[inline]
-    pub fn iter(&self) -> AudioBufferIter<'a, S> {
+    pub fn iter(&'a self) -> AudioBufferIter<'a, S> {
         AudioBufferIter {
             inner: self.inner.iter(),
         }
     }
+
+    #[inline]
+    fn reslice<I: SliceIndex<[Cell<S>], Output = [Cell<S>]>>(&self, index: I) -> &Self {
+        AudioBuffer::from_slice_of_cells(self.inner.get(index).unwrap_or(&[]))
+    }
 }
 
-impl<'a, S: Copy> AudioBuffer<'a, S> {
+impl<S: Copy> AudioBuffer<S> {
     /// # Safety
     /// TODO
     #[inline]
@@ -126,7 +110,7 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
     }
 
     #[inline]
-    pub fn copy_to_buffer(&self, buf: AudioBuffer<S>) {
+    pub fn copy_to_buffer(&self, buf: &AudioBuffer<S>) {
         if buf.len() != self.len() {
             slice_len_mismatch(self.len(), buf.len())
         }
@@ -146,7 +130,7 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
     }
 
     #[inline]
-    pub fn copy_from_buffer(&self, buf: AudioBuffer<S>) {
+    pub fn copy_from_buffer(&self, buf: &AudioBuffer<S>) {
         if buf.len() != self.len() {
             slice_len_mismatch(buf.len(), self.len())
         }
@@ -157,20 +141,11 @@ impl<'a, S: Copy> AudioBuffer<'a, S> {
 
     #[inline]
     pub fn fill(&self, value: S) {
-        for i in self.inner {
+        for i in &self.inner {
             i.set(value)
         }
     }
 }
-
-impl<'a, S> Clone for AudioBuffer<'a, S> {
-    #[inline]
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'a, S> Copy for AudioBuffer<'a, S> {}
 
 pub struct AudioBufferIter<'a, S> {
     inner: core::slice::Iter<'a, Cell<S>>,
@@ -185,7 +160,7 @@ impl<'a, S> Iterator for AudioBufferIter<'a, S> {
     }
 }
 
-impl<'a, S> IntoIterator for AudioBuffer<'a, S> {
+impl<'a, S> IntoIterator for &'a AudioBuffer<S> {
     type Item = &'a Cell<S>;
     type IntoIter = AudioBufferIter<'a, S>;
 
@@ -195,17 +170,72 @@ impl<'a, S> IntoIterator for AudioBuffer<'a, S> {
     }
 }
 
-impl<'a, S> IntoIterator for &AudioBuffer<'a, S> {
-    type Item = &'a Cell<S>;
-    type IntoIter = AudioBufferIter<'a, S>;
+impl<S> Index<usize> for AudioBuffer<S> {
+    type Output = Cell<S>;
 
     #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+impl<S> Index<core::ops::RangeFull> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::RangeFull) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<core::ops::Range<usize>> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<core::ops::RangeFrom<usize>> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::RangeFrom<usize>) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<core::ops::RangeTo<usize>> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::RangeTo<usize>) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<core::ops::RangeInclusive<usize>> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::RangeInclusive<usize>) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<core::ops::RangeToInclusive<usize>> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: core::ops::RangeToInclusive<usize>) -> &Self::Output {
+        self.reslice(index)
+    }
+}
+impl<S> Index<(core::ops::Bound<usize>, core::ops::Bound<usize>)> for AudioBuffer<S> {
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: (core::ops::Bound<usize>, core::ops::Bound<usize>)) -> &Self::Output {
+        self.reslice(index)
     }
 }
 
-impl<'a, S: Debug + Copy> Debug for AudioBuffer<'a, S> {
+impl<S: Debug + Copy> Debug for AudioBuffer<S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut dbg = f.debug_list();
         for s in self {
@@ -215,14 +245,14 @@ impl<'a, S: Debug + Copy> Debug for AudioBuffer<'a, S> {
     }
 }
 
-impl<'a, S: PartialEq + Copy> PartialEq for AudioBuffer<'a, S> {
+impl<S: PartialEq + Copy> PartialEq for AudioBuffer<S> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.inner.eq(other.inner)
+        self.inner.eq(&other.inner)
     }
 }
 
-impl<'a, S: PartialEq + Copy> PartialEq<[S]> for AudioBuffer<'a, S> {
+impl<S: PartialEq + Copy> PartialEq<[S]> for AudioBuffer<S> {
     fn eq(&self, other: &[S]) -> bool {
         if self.len() != other.len() {
             return false;
@@ -238,21 +268,21 @@ impl<'a, S: PartialEq + Copy> PartialEq<[S]> for AudioBuffer<'a, S> {
     }
 }
 
-impl<'a, S: PartialEq + Copy, const N: usize> PartialEq<[S; N]> for AudioBuffer<'a, S> {
+impl<S: PartialEq + Copy, const N: usize> PartialEq<[S; N]> for AudioBuffer<S> {
     #[inline]
     fn eq(&self, other: &[S; N]) -> bool {
         PartialEq::<[S]>::eq(self, other)
     }
 }
 
-impl<'a, S: PartialEq + Copy> PartialEq<&[S]> for AudioBuffer<'a, S> {
+impl<S: PartialEq + Copy> PartialEq<&[S]> for AudioBuffer<S> {
     #[inline]
     fn eq(&self, other: &&[S]) -> bool {
         PartialEq::<[S]>::eq(self, other)
     }
 }
 
-impl<'a, S: PartialEq + Copy, const N: usize> PartialEq<&[S; N]> for AudioBuffer<'a, S> {
+impl<S: PartialEq + Copy, const N: usize> PartialEq<&[S; N]> for AudioBuffer<S> {
     #[inline]
     fn eq(&self, other: &&[S; N]) -> bool {
         PartialEq::<[S]>::eq(self, *other)
