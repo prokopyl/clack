@@ -196,7 +196,7 @@ impl PolyOscillator {
     /// This method assumes the buffer is initialized with `0`s.
     pub fn generate_next_samples(
         &mut self,
-        output_buffer: AudioBuffer<f32>,
+        output_buffer: &AudioBuffer<f32>,
         global_volume: f32,
         global_volume_mod: f32,
     ) {

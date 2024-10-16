@@ -119,7 +119,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 
             // With all the events out of the way, we can now handle a whole batch of sample
             // all at once.
-            let output_buffer = output_buffer.slice_range(event_batch.sample_bounds());
+            let output_buffer = &output_buffer[event_batch.sample_bounds()];
             self.poly_osc.generate_next_samples(
                 output_buffer,
                 self.shared.params.get_volume(),

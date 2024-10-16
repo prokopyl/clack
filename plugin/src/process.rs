@@ -269,15 +269,21 @@ impl<'a> Audio<'a> {
     /// [`ptr::write`]: core::ptr::write
     /// [`Cell`]: core::cell::Cell
     #[inline]
-    pub fn raw_inputs(&self) -> *const [clap_audio_buffer] {
-        core::ptr::slice_from_raw_parts(self.inputs.as_ptr().cast(), self.inputs.len())
+    pub fn raw_inputs(&self) -> *mut [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts_mut(
+            self.inputs.as_ptr().cast_mut().cast(),
+            self.inputs.len(),
+        )
     }
 
     /// Returns a raw pointer to a C array of the raw output buffers structs.
     // TODO: safety of creating & or &mut from this
     #[inline]
-    pub fn raw_outputs(&self) -> *const [clap_audio_buffer] {
-        core::ptr::slice_from_raw_parts(self.outputs.as_ptr().cast(), self.outputs.len())
+    pub fn raw_outputs(&self) -> *mut [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts_mut(
+            self.outputs.as_ptr().cast_mut().cast(),
+            self.outputs.len(),
+        )
     }
 
     /// Retrieves the input [`Port`] at a given index.

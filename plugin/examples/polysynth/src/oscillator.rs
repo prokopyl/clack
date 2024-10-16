@@ -56,7 +56,7 @@ impl SquareOscillator {
     ///
     /// The given volume should be in the `0..1` range.
     #[inline]
-    pub fn add_next_samples_to_buffer(&mut self, buf: AudioBuffer<f32>, volume: f32) {
+    pub fn add_next_samples_to_buffer(&mut self, buf: &AudioBuffer<f32>, volume: f32) {
         for value in buf {
             if self.current_phase <= PI {
                 value.set(value.get() + volume);

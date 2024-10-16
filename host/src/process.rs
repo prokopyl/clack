@@ -471,19 +471,16 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     ) -> Result<ProcessStatus, PluginInstanceError> {
         let frames_count = audio_inputs.min_available_frames_with(audio_outputs);
 
-        let audio_inputs = audio_inputs.as_raw_buffers();
-        let audio_outputs = audio_outputs.as_raw_buffers();
-
         let process = clap_process {
             frames_count,
 
             in_events: input_events.as_raw(),
             out_events: output_events.as_raw_mut(),
 
-            audio_inputs: audio_inputs.cast(),
-            audio_outputs: audio_outputs.cast_mut().cast(),
-            audio_inputs_count: audio_inputs.len() as u32,
-            audio_outputs_count: audio_outputs.len() as u32,
+            audio_inputs: audio_inputs.as_raw_buffers().cast(),
+            audio_outputs: audio_outputs.as_raw_buffers().cast(),
+            audio_inputs_count: audio_inputs.port_count() as u32,
+            audio_outputs_count: audio_outputs.port_count() as u32,
 
             steady_time: match steady_time {
                 None => -1,
