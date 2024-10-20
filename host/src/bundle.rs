@@ -71,6 +71,7 @@ mod entry;
 mod library;
 
 #[cfg(test)]
+#[allow(missing_docs)]
 pub mod diva_stub;
 
 use crate::bundle::cache::CachedEntry;

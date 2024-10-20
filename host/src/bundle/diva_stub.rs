@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
 
