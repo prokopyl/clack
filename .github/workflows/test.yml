@@ -63,7 +63,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: "1.72.0"
           override: true
       - name: Build
         run: cd clack; cargo build --release -p clack-plugin-gain -p clack-plugin-polysynth --verbose
