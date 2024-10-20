@@ -10,7 +10,7 @@ pub struct DivaPluginStubAudioProcessor;
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread;
 
-impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {}
+impl PluginMainThread<'_, ()> for DivaPluginStubMainThread {}
 
 impl Plugin for DivaPluginStub {
     type AudioProcessor<'a> = DivaPluginStubAudioProcessor;
@@ -60,7 +60,7 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
 pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared;
-impl<'a> SharedHandler<'a> for MyHostShared {
+impl SharedHandler<'_> for MyHostShared {
     fn request_restart(&self) {
         unreachable!()
     }

@@ -34,7 +34,7 @@ impl HostGuiImpl for CpalHostShared {
     }
 }
 
-impl<'a> CpalHostMainThread<'a> {}
+impl CpalHostMainThread<'_> {}
 
 /// Tracks a plugin's GUI state and configuration.
 pub struct Gui {

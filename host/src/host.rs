@@ -318,9 +318,9 @@ pub trait HostHandlers: 'static {
 
 // QoL implementations
 
-impl<'a> AudioProcessorHandler<'a> for () {}
-impl<'a> MainThreadHandler<'a> for () {}
-impl<'a> SharedHandler<'a> for () {
+impl AudioProcessorHandler<'_> for () {}
+impl MainThreadHandler<'_> for () {}
+impl SharedHandler<'_> for () {
     fn request_restart(&self) {}
     fn request_process(&self) {}
     fn request_callback(&self) {}

@@ -71,7 +71,7 @@ pub struct Events<'a> {
     pub output: &'a mut OutputEvents<'a>,
 }
 
-impl<'a> Events<'a> {
+impl Events<'_> {
     /// # Safety
     ///
     /// The user must ensure the given process struct is fully valid, and for the lifetime `'a`.

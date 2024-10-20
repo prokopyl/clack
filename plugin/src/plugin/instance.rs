@@ -18,7 +18,7 @@ pub(crate) trait PluginInitializer<'a, P: Plugin>: 'a {
     fn init(
         self: Box<Self>,
         host: HostMainThreadHandle<'a>,
-    ) -> Result<PluginWrapper<P>, PluginError>;
+    ) -> Result<PluginWrapper<'a, P>, PluginError>;
 }
 
 impl<'a, P: Plugin, FS: 'a, FM: 'a> PluginInitializer<'a, P> for (FS, FM)
@@ -32,7 +32,7 @@ where
     fn init(
         self: Box<Self>,
         host: HostMainThreadHandle<'a>,
-    ) -> Result<PluginWrapper<P>, PluginError> {
+    ) -> Result<PluginWrapper<'a, P>, PluginError> {
         let (shared_initializer, main_thread_initializer) = *self;
         let shared_handle = host.shared();
         let shared = Box::pin(shared_initializer(shared_handle)?);
@@ -54,7 +54,7 @@ where
     fn init(
         self: Box<Self>,
         host: HostMainThreadHandle<'a>,
-    ) -> Result<PluginWrapper<P>, PluginError> {
+    ) -> Result<PluginWrapper<'a, P>, PluginError> {
         let shared_handle = host.shared();
         let (shared, main_thread_initializer) = self(host)?;
         let shared = Box::pin(shared);
@@ -469,7 +469,7 @@ impl<'a> PluginInstance<'a> {
 }
 
 // In case the instance is dropped by a faulty plugin factory implementation.
-impl<'a> Drop for PluginInstance<'a> {
+impl Drop for PluginInstance<'_> {
     #[inline]
     fn drop(&mut self) {
         if let Some(destroy) = self.inner.destroy {

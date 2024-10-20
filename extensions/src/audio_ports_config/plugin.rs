@@ -95,7 +95,7 @@ pub struct AudioPortConfigWriter<'a> {
     is_set: bool,
 }
 
-impl<'a> AudioPortConfigWriter<'a> {
+impl AudioPortConfigWriter<'_> {
     /// # Safety
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.

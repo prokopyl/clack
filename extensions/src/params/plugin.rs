@@ -12,7 +12,7 @@ pub struct ParamInfoWriter<'a> {
     is_set: bool,
 }
 
-impl<'a> ParamInfoWriter<'a> {
+impl ParamInfoWriter<'_> {
     /// # Safety
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.
@@ -78,7 +78,7 @@ impl<'a> ParamDisplayWriter<'a> {
     }
 }
 
-impl<'a> core::fmt::Write for ParamDisplayWriter<'a> {
+impl core::fmt::Write for ParamDisplayWriter<'_> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         let s = s.as_bytes();
         let requested_len = core::cmp::min(s.len(), self.remaining_len());

@@ -167,7 +167,7 @@ impl<'a, I: OutputEventBuffer> From<&'a mut I> for OutputEvents<'a> {
     }
 }
 
-impl<'a> OutputEventBuffer for OutputEvents<'a> {
+impl OutputEventBuffer for OutputEvents<'_> {
     #[inline]
     fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
         OutputEvents::try_push(self, event)

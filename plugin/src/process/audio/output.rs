@@ -40,7 +40,7 @@ impl<'a> Iterator for OutputPortsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for OutputPortsIter<'a> {
+impl ExactSizeIterator for OutputPortsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.outputs.len()
@@ -156,7 +156,7 @@ pub struct OutputChannels<'a, S> {
     pub(crate) data: &'a mut [*mut S],
 }
 
-impl<'a, S> OutputChannels<'a, S> {
+impl<S> OutputChannels<'_, S> {
     /// Returns the number of frames to process in this block.
     ///
     /// This will always match the number of samples of every audio channel buffer.
@@ -317,7 +317,7 @@ impl<'a, T> Iterator for OutputChannelsIter<'a, T> {
     }
 }
 
-impl<'a, S> ExactSizeIterator for OutputChannelsIter<'a, S> {
+impl<S> ExactSizeIterator for OutputChannelsIter<'_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.data.len()

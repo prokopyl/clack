@@ -84,9 +84,9 @@ pub struct PluginSharedHandle<'a> {
 }
 
 // SAFETY: The Shared handle only exposes thread-safe methods
-unsafe impl<'a> Send for PluginSharedHandle<'a> {}
+unsafe impl Send for PluginSharedHandle<'_> {}
 // SAFETY: The Shared handle only exposes thread-safe methods
-unsafe impl<'a> Sync for PluginSharedHandle<'a> {}
+unsafe impl Sync for PluginSharedHandle<'_> {}
 
 impl<'a> PluginSharedHandle<'a> {
     /// # Safety
@@ -181,7 +181,7 @@ pub struct PluginAudioProcessorHandle<'a> {
 }
 
 // SAFETY: This type only exposes audio-thread methods
-unsafe impl<'a> Send for PluginAudioProcessorHandle<'a> {}
+unsafe impl Send for PluginAudioProcessorHandle<'_> {}
 
 impl<'a> PluginAudioProcessorHandle<'a> {
     pub(crate) fn new(raw: NonNull<clap_plugin>) -> Self {

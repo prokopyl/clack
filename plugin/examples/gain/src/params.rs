@@ -68,7 +68,7 @@ impl GainParams {
 ///
 /// Our state "serialization" is extremely simple and basic: we only have the value of the
 /// volume parameter to store, so we just store its bytes (in little-endian) and call it a day.
-impl<'a> PluginStateImpl for GainPluginMainThread<'a> {
+impl PluginStateImpl for GainPluginMainThread<'_> {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
         let volume_param = self.shared.params.get_volume();
 
@@ -85,7 +85,7 @@ impl<'a> PluginStateImpl for GainPluginMainThread<'a> {
     }
 }
 
-impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
+impl PluginMainThreadParams for GainPluginMainThread<'_> {
     fn count(&mut self) -> u32 {
         1
     }
@@ -150,7 +150,7 @@ impl<'a> PluginMainThreadParams for GainPluginMainThread<'a> {
     }
 }
 
-impl<'a> PluginAudioProcessorParams for GainPluginAudioProcessor<'a> {
+impl PluginAudioProcessorParams for GainPluginAudioProcessor<'_> {
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,

@@ -262,7 +262,7 @@ impl<'a, I: InputEventBuffer> From<&'a I> for InputEvents<'a> {
     }
 }
 
-impl<'a> InputEventBuffer for InputEvents<'a> {
+impl InputEventBuffer for InputEvents<'_> {
     #[inline]
     fn len(&self) -> u32 {
         InputEvents::len(self)
@@ -276,7 +276,7 @@ impl<'a> InputEventBuffer for InputEvents<'a> {
 
 const INDEX_ERROR: &str = "Indexed InputEvents list out of bounds";
 
-impl<'a> Index<usize> for InputEvents<'a> {
+impl Index<usize> for InputEvents<'_> {
     type Output = UnknownEvent;
 
     #[inline]
@@ -285,7 +285,7 @@ impl<'a> Index<usize> for InputEvents<'a> {
     }
 }
 
-impl<'a> Debug for InputEvents<'a> {
+impl Debug for InputEvents<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut list = f.debug_list();
         for event in self {
@@ -314,7 +314,7 @@ impl<'a> InputEventsIter<'a> {
     }
 }
 
-impl<'a> Clone for InputEventsIter<'a> {
+impl Clone for InputEventsIter<'_> {
     #[inline]
     fn clone(&self) -> Self {
         InputEventsIter {
@@ -337,14 +337,14 @@ impl<'a> Iterator for InputEventsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for InputEventsIter<'a> {
+impl ExactSizeIterator for InputEventsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.range.len()
     }
 }
 
-impl<'a> DoubleEndedIterator for InputEventsIter<'a> {
+impl DoubleEndedIterator for InputEventsIter<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         self.range.next_back().and_then(|i| self.list.get(i))

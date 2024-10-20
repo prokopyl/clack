@@ -65,7 +65,7 @@ impl<'a> InputStream<'a> {
     }
 }
 
-impl<'a> Read for InputStream<'a> {
+impl Read for InputStream<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let ret = if let Some(read) = self.0.read {
             // SAFETY: this function pointer is guaranteed to be valid by from_raw_mut and from_reader
@@ -115,7 +115,7 @@ impl<'a> OutputStream<'a> {
     }
 }
 
-impl<'a> Write for OutputStream<'a> {
+impl Write for OutputStream<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let ret = if let Some(write) = self.0.write {
             // SAFETY: this function pointer is guaranteed to be valid by from_raw_mut and from_reader

@@ -50,7 +50,7 @@ impl<'a, S: EventSpace<'a>> From<EventSpaceId<S>> for EventSpaceId<()> {
     }
 }
 
-impl<'a> EventSpaceId<CoreEventSpace<'a>> {
+impl EventSpaceId<CoreEventSpace<'_>> {
     #[inline]
     pub const fn core() -> Self {
         Self {

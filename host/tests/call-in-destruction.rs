@@ -26,7 +26,7 @@ struct MyPluginMainThread {
     data: String,
 }
 
-impl<'a> PluginMainThread<'a, ()> for MyPluginMainThread {}
+impl PluginMainThread<'_, ()> for MyPluginMainThread {}
 
 impl PluginStateImpl for MyPluginMainThread {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
@@ -99,7 +99,7 @@ impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
     }
 }
 
-impl<'a> Drop for MyHostMainThread<'a> {
+impl Drop for MyHostMainThread<'_> {
     fn drop(&mut self) {
         let instance = self.instance.as_ref().unwrap();
         assert!(instance.get_extension::<PluginState>().is_none());

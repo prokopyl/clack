@@ -64,7 +64,7 @@ pub struct NoteNameWriter<'a> {
     is_set: bool,
 }
 
-impl<'a> NoteNameWriter<'a> {
+impl NoteNameWriter<'_> {
     /// # Safety
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.

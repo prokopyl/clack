@@ -119,7 +119,7 @@ pub struct MainPortInfo<'a> {
 }
 
 #[cfg(feature = "clack-host")]
-impl<'a> MainPortInfo<'a> {
+impl MainPortInfo<'_> {
     /// # Safety
     ///
     /// User must make sure port_type is either null or points to a NULL-terminated C string that

@@ -9,7 +9,7 @@ pub struct NotePortInfoWriter<'a> {
     is_set: bool,
 }
 
-impl<'a> NotePortInfoWriter<'a> {
+impl NotePortInfoWriter<'_> {
     /// # Safety
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.

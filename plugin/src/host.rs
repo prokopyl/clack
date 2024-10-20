@@ -134,9 +134,9 @@ pub struct HostSharedHandle<'a> {
 }
 
 // SAFETY: this type only safely exposes the thread-safe operations of clap_host
-unsafe impl<'a> Send for HostSharedHandle<'a> {}
+unsafe impl Send for HostSharedHandle<'_> {}
 // SAFETY: this type only safely exposes the thread-safe operations of clap_host
-unsafe impl<'a> Sync for HostSharedHandle<'a> {}
+unsafe impl Sync for HostSharedHandle<'_> {}
 
 impl<'a> HostSharedHandle<'a> {
     /// Returns the host's information.
@@ -317,7 +317,7 @@ pub struct HostAudioProcessorHandle<'a> {
 }
 
 // SAFETY: this type only exposes the audio-thread-safe (Send) operation of clap_host
-unsafe impl<'a> Send for HostAudioProcessorHandle<'a> {}
+unsafe impl Send for HostAudioProcessorHandle<'_> {}
 
 impl<'a> HostAudioProcessorHandle<'a> {
     /// Gets a thread-safe host handle from this handle.

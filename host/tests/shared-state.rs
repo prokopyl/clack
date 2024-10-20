@@ -8,7 +8,7 @@ pub struct DivaPluginStubAudioProcessor;
 pub struct DivaPluginStub;
 pub struct DivaPluginStubMainThread;
 
-impl<'a> PluginMainThread<'a, ()> for DivaPluginStubMainThread {}
+impl PluginMainThread<'_, ()> for DivaPluginStubMainThread {}
 
 impl Plugin for DivaPluginStub {
     type AudioProcessor<'a> = DivaPluginStubAudioProcessor;

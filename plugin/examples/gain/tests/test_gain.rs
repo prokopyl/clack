@@ -143,7 +143,7 @@ struct TestHostShared;
 struct TestHostAudioProcessor;
 struct TestHostHandlers;
 
-impl<'a> SharedHandler<'a> for TestHostShared {
+impl SharedHandler<'_> for TestHostShared {
     fn request_restart(&self) {
         unimplemented!()
     }
@@ -157,9 +157,9 @@ impl<'a> SharedHandler<'a> for TestHostShared {
     }
 }
 
-impl<'a> AudioProcessorHandler<'a> for TestHostAudioProcessor {}
+impl AudioProcessorHandler<'_> for TestHostAudioProcessor {}
 
-impl<'a> MainThreadHandler<'a> for TestHostMainThread {}
+impl MainThreadHandler<'_> for TestHostMainThread {}
 
 impl HostHandlers for TestHostHandlers {
     type Shared<'a> = TestHostShared;

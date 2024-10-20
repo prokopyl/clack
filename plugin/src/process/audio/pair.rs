@@ -324,7 +324,7 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
     }
 }
 
-impl<'a, S> ExactSizeIterator for PairedChannelsIter<'a, S> {
+impl<S> ExactSizeIterator for PairedChannelsIter<'_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.input_iter.len().max(self.output_iter.len())
@@ -364,7 +364,7 @@ impl<'a> Iterator for PortPairsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PortPairsIter<'a> {
+impl ExactSizeIterator for PortPairsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inputs.len().max(self.outputs.len())

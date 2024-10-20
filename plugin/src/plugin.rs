@@ -10,8 +10,8 @@
 //! audio processing thread, those happening in the main thread, and thread-safe operations:
 //!
 //! * The *audio thread* (`[audio-thread]` in the CLAP specification): this is represented by a type
-//! implementing the main [`PluginAudioProcessor`] trait (also named the audio processor), which is [`Send`] but
-//! [`!Sync`](Sync), and is the only one required to implement a Clack plugin.
+//!   implementing the main [`PluginAudioProcessor`] trait (also named the audio processor), which is [`Send`] but
+//!   [`!Sync`](Sync), and is the only one required to implement a Clack plugin.
 //!
 //!   This type handles all DSP in one of the host's audio threads, of which there may be
 //!   multiple, if the host uses a thread pool for example.
@@ -72,7 +72,7 @@ pub use clack_common::plugin::*;
 /// See the [module documentation](crate::plugin) for more information on the thread model.
 pub trait PluginShared<'a>: Sized + Send + Sync + 'a {}
 
-impl<'a> PluginShared<'a> for () {}
+impl PluginShared<'_> for () {}
 
 /// The part of the data and operation of a plugin that must be on the main thread.
 ///

@@ -5,7 +5,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-impl<'a> HostTimerImpl for CpalHostMainThread<'a> {
+impl HostTimerImpl for CpalHostMainThread<'_> {
     fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
         Ok(self
             .timers

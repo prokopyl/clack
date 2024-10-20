@@ -65,7 +65,7 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
     }
 }
 
-impl<'a> Debug for CoreEventSpace<'a> {
+impl Debug for CoreEventSpace<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -39,7 +39,7 @@ impl<'a> Iterator for InputPortsIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for InputPortsIter<'a> {
+impl ExactSizeIterator for InputPortsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inputs.len()
@@ -243,7 +243,7 @@ impl<'a, T> Iterator for InputChannelsIter<'a, T> {
     }
 }
 
-impl<'a, S> ExactSizeIterator for InputChannelsIter<'a, S> {
+impl<S> ExactSizeIterator for InputChannelsIter<'_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.data.len()

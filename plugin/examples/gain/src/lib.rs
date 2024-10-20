@@ -131,7 +131,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
     }
 }
 
-impl<'a> PluginAudioPortsImpl for GainPluginMainThread<'a> {
+impl PluginAudioPortsImpl for GainPluginMainThread<'_> {
     fn count(&mut self, _is_input: bool) -> u32 {
         1
     }
@@ -156,7 +156,7 @@ pub struct GainPluginShared {
     params: GainParams,
 }
 
-impl<'a> PluginShared<'a> for GainPluginShared {}
+impl PluginShared<'_> for GainPluginShared {}
 
 /// The data that belongs to the main thread of our plugin.
 pub struct GainPluginMainThread<'a> {

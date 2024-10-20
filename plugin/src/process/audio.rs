@@ -13,6 +13,7 @@ pub use pair::*;
 pub use sample_type::SampleType;
 
 #[cfg(test)]
+#[allow(missing_docs)]
 pub mod tests {
     use super::*;
     use crate::prelude::Audio;

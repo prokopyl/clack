@@ -10,7 +10,7 @@ pub struct AudioPortInfoWriter<'a> {
     is_set: bool,
 }
 
-impl<'a> AudioPortInfoWriter<'a> {
+impl AudioPortInfoWriter<'_> {
     /// # Safety
     ///
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.

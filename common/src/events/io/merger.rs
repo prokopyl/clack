@@ -14,7 +14,7 @@ pub struct EventMerger<'a, I1, I2> {
     started: bool,
 }
 
-impl<'a, I1, I2> EventMerger<'a, I1, I2> {
+impl<I1, I2> EventMerger<'_, I1, I2> {
     /// Creates a new event merger from two iterators.
     #[inline]
     pub fn new(iter_1: I1, iter_2: I2) -> Self {

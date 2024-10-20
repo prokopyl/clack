@@ -353,7 +353,7 @@ impl HostLogImpl for CpalHostShared {
     }
 }
 
-impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
+impl HostAudioPortsImpl for CpalHostMainThread<'_> {
     fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
         false
     }
@@ -363,7 +363,7 @@ impl<'a> HostAudioPortsImpl for CpalHostMainThread<'a> {
     }
 }
 
-impl<'a> HostNotePortsImpl for CpalHostMainThread<'a> {
+impl HostNotePortsImpl for CpalHostMainThread<'_> {
     fn supported_dialects(&self) -> NoteDialects {
         NoteDialects::CLAP
     }
@@ -373,7 +373,7 @@ impl<'a> HostNotePortsImpl for CpalHostMainThread<'a> {
     }
 }
 
-impl<'a> HostParamsImplMainThread for CpalHostMainThread<'a> {
+impl HostParamsImplMainThread for CpalHostMainThread<'_> {
     fn rescan(&mut self, _flags: ParamRescanFlags) {
         // We don't track param values at all
     }

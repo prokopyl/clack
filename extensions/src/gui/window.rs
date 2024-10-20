@@ -163,7 +163,7 @@ const _: () = {
     };
 
     // SAFETY: this type ensures the handles are valid and are consistent across calls
-    unsafe impl<'a> HasRawWindowHandle for Window<'a> {
+    unsafe impl HasRawWindowHandle for Window<'_> {
         fn raw_window_handle(&self) -> RawWindowHandle {
             let api_type = self.api_type();
 
@@ -223,7 +223,7 @@ const _: () = {
     use std::ptr::NonNull;
 
     // SAFETY: The host ensures the underlying window handles are still valid
-    unsafe impl<'a> HasRawWindowHandle for Window<'a> {
+    unsafe impl HasRawWindowHandle for Window<'_> {
         fn raw_window_handle(&self) -> Result<RawWindowHandle, HandleError> {
             let api_type = self.api_type();
 

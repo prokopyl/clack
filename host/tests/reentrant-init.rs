@@ -20,7 +20,7 @@ impl Plugin for MyPlugin {
 
 struct MyPluginMainThread;
 
-impl<'a> PluginMainThread<'a, ()> for MyPluginMainThread {}
+impl PluginMainThread<'_, ()> for MyPluginMainThread {}
 
 impl PluginTimerImpl for MyPluginMainThread {
     fn on_timer(&mut self, timer_id: TimerId) {
@@ -91,7 +91,7 @@ impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
     fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
 }
 
-impl<'a> HostTimerImpl for MyHostMainThread<'a> {
+impl HostTimerImpl for MyHostMainThread<'_> {
     fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
         assert_eq!(period_ms, 1000);
 

@@ -16,7 +16,7 @@ pub struct HostAudioPorts(RawExtension<HostExtensionSide, clap_host_audio_ports>
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AudioPortType<'a>(pub &'a CStr);
 
-impl<'a> AudioPortType<'a> {
+impl AudioPortType<'_> {
     pub const MONO: AudioPortType<'static> = AudioPortType(CLAP_PORT_MONO);
     pub const STEREO: AudioPortType<'static> = AudioPortType(CLAP_PORT_STEREO);
 
@@ -126,7 +126,7 @@ impl<'a> AudioPortInfo<'a> {
     }
 }
 
-impl<'a> Debug for AudioPortInfo<'a> {
+impl Debug for AudioPortInfo<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AudioPortInfoData")
             .field("id", &self.id)

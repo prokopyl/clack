@@ -333,7 +333,7 @@ pub struct GuiConfiguration<'a> {
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct GuiApiType<'a>(pub &'a CStr);
 
-impl<'a> GuiApiType<'a> {
+impl GuiApiType<'_> {
     /// Represents the Win32 API used by Windows.
     ///
     /// This API uses physical size for pixels.
@@ -454,7 +454,7 @@ impl<'a> GuiApiType<'a> {
     }
 }
 
-impl<'a> Debug for GuiApiType<'a> {
+impl Debug for GuiApiType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.0.to_str() {
             Ok(s) => f.write_str(s),

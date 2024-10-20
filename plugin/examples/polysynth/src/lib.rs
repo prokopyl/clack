@@ -154,7 +154,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
     }
 }
 
-impl<'a> PolySynthAudioProcessor<'a> {
+impl PolySynthAudioProcessor<'_> {
     /// Handles an incoming event.
     fn handle_event(&mut self, event: &UnknownEvent) {
         match event.as_core_event() {
@@ -181,7 +181,7 @@ impl<'a> PolySynthAudioProcessor<'a> {
     }
 }
 
-impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
+impl PluginAudioPortsImpl for PolySynthPluginMainThread<'_> {
     fn count(&mut self, is_input: bool) -> u32 {
         if is_input {
             0
@@ -204,7 +204,7 @@ impl<'a> PluginAudioPortsImpl for PolySynthPluginMainThread<'a> {
     }
 }
 
-impl<'a> PluginNotePortsImpl for PolySynthPluginMainThread<'a> {
+impl PluginNotePortsImpl for PolySynthPluginMainThread<'_> {
     fn count(&mut self, is_input: bool) -> u32 {
         if is_input {
             1
@@ -231,7 +231,7 @@ pub struct PolySynthPluginShared {
     params: PolySynthParams,
 }
 
-impl<'a> PluginShared<'a> for PolySynthPluginShared {}
+impl PluginShared<'_> for PolySynthPluginShared {}
 
 /// The data that belongs to the main thread of our plugin.
 pub struct PolySynthPluginMainThread<'a> {

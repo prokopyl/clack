@@ -159,7 +159,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     /// Besides providing a reference, this function does a few extra safety checks:
     ///
     /// * The given `clap_plugin` pointer is null-checked, as well as some other host-provided
-    /// pointers;
+    ///   pointers;
     /// * The handler is wrapped in [`std::panic::catch_unwind`];
     /// * Any [`PluginWrapperError`] returned by the handler is caught.
     ///
@@ -279,10 +279,10 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
 
 // SAFETY: the wrapper itself can be shared and used across threads, accessing any inner part that
 // isn't requires unsafe.
-unsafe impl<'a, P: Plugin> Send for PluginWrapper<'a, P> {}
+unsafe impl<P: Plugin> Send for PluginWrapper<'_, P> {}
 // SAFETY: the wrapper itself can be shared and used across threads, accessing any inner part that
 // isn't requires unsafe.
-unsafe impl<'a, P: Plugin> Sync for PluginWrapper<'a, P> {}
+unsafe impl<P: Plugin> Sync for PluginWrapper<'_, P> {}
 
 /// Errors raised by a [`PluginWrapper`].
 #[derive(Debug)]
