@@ -163,8 +163,8 @@ impl Events<'_> {
 ///         let Some(mut channel_pairs) = port_pair.channels()?.into_f32() else { continue; };
 ///
 ///         // Buffers to hold pointers to the left and right channels
-///         let mut input_channels: [Option<AudioBuffer<f32>>; 2] = [None, None];
-///         let mut output_channels: [Option<AudioBuffer<f32>>; 2] = [None, None];
+///         let mut input_channels: [Option<&AudioBuffer<f32>>; 2] = [None, None];
+///         let mut output_channels: [Option<&AudioBuffer<f32>>; 2] = [None, None];
 ///
 ///         // Before we can process the buffers, we need to check all the necessary channels
 ///         // are present, in case the host messed up the port configuration.

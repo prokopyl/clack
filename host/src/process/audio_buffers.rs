@@ -68,7 +68,7 @@ pub struct AudioPortBuffer<I32, I64> {
     pub latency: u32,
 }
 
-// bikeshed
+// TODO: bikeshed
 pub struct AudioPorts {
     buffer_lists: Vec<*mut f32>, // Can be f32 or f64, cast on-demand
     buffer_configs: Vec<clap_audio_buffer>,
@@ -207,16 +207,13 @@ impl AudioPorts {
             }
         }
 
-        // SAFETY: TODO
-        unsafe {
-            AudioBuffers {
-                buffers: *(&mut self.buffer_configs[..total] as *mut _ as *mut _),
-                frames_count: if min_channel_buffer_length == usize::MAX {
-                    None
-                } else {
-                    Some(min_channel_buffer_length as u32)
-                },
-            }
+        AudioBuffers {
+            buffers: CelledClapAudioBuffer::from_raw_slice(&mut self.buffer_configs[..total]),
+            frames_count: if min_channel_buffer_length == usize::MAX {
+                None
+            } else {
+                Some(min_channel_buffer_length as u32)
+            },
         }
     }
 
@@ -308,16 +305,13 @@ impl AudioPorts {
             }
         }
 
-        // SAFETY: TODO
-        unsafe {
-            AudioBuffers {
-                buffers: *(&mut self.buffer_configs[..total] as *mut _ as *mut _),
-                frames_count: if min_channel_buffer_length == usize::MAX {
-                    None
-                } else {
-                    Some(min_channel_buffer_length as u32)
-                },
-            }
+        AudioBuffers {
+            buffers: CelledClapAudioBuffer::from_raw_slice(&mut self.buffer_configs[..total]),
+            frames_count: if min_channel_buffer_length == usize::MAX {
+                None
+            } else {
+                Some(min_channel_buffer_length as u32)
+            },
         }
     }
 
@@ -345,6 +339,12 @@ impl CelledClapAudioBuffer {
     #[inline]
     pub(crate) fn slice_as_raw_ptr(slice: &[CelledClapAudioBuffer]) -> *mut [clap_audio_buffer] {
         slice as *const _ as *const _ as *mut _
+    }
+
+    #[inline]
+    pub(crate) fn from_raw_slice(slice: &mut [clap_audio_buffer]) -> &[Self] {
+        // SAFETY: TODO
+        unsafe { &*(slice as *mut [clap_audio_buffer] as *mut [CelledClapAudioBuffer]) }
     }
 }
 
