@@ -6,7 +6,7 @@ mod pair;
 mod port;
 mod sample_type;
 
-pub use buffer::AudioBuffer;
+pub use buffer::*;
 pub use error::BufferError;
 pub use pair::*;
 pub use port::*;
