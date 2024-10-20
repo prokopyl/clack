@@ -4,7 +4,7 @@ A set of crates offering low-level, safe Rust wrappers to create audio plugins a
 the [CLAP](https://github.com/free-audio/clap) audio plugin API.
 
 This library is made of lightweight, low-level wrappers built on top
-of [`clap-sys`](https://github.com/prokopyl/clap-sys),
+of [`clap-sys`](https://github.com/glowcoil/clap-sys),
 and is split in two main crates: `clack-plugin`, which allows to implement CLAP plugins, and `clack-host`, which allows
 to implement
 CLAP hosts. A common, separate `clack-extensions` crate implements all the standard and stable CLAP extensions.
