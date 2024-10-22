@@ -3,8 +3,6 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![deny(missing_docs)]
 
-extern crate core;
-
 #[macro_use]
 pub mod entry;
 pub mod extensions;

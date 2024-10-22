@@ -1,5 +1,3 @@
-#![allow(missing_docs)] // TODO
-
 use core::cell::Cell;
 use core::fmt::{Debug, Formatter};
 use core::ops::Index;
@@ -164,8 +162,47 @@ impl<S> AudioBuffer<S> {
         unsafe { &*(slice as *const [Cell<S>] as *const Self) }
     }
 
+    /// Forms a slice from a pointer and a length.
+    ///
+    /// The `len` argument is the number of *samples*, not the number of bytes.
+    ///
     /// # Safety
-    /// TODO
+    ///
+    /// Behavior is undefined if any of the following conditions are violated:
+    ///
+    /// * `data` must be [valid] for both reads *and* writes for `len * mem::size_of::<T>()` many bytes,
+    ///   and it must be properly aligned. This means in particular:
+    ///
+    ///     * The entire memory range of this slice must be contained within a single allocated object!
+    ///       Slices can never span across multiple allocated objects. See [below](#incorrect-usage)
+    ///       for an example incorrectly not taking this into account.
+    ///     * `data` must be non-null and aligned even for zero-length slices. One
+    ///       reason for this is that enum layout optimizations may rely on references
+    ///       (including slices of any length) being aligned and non-null to distinguish
+    ///       them from other data. You can obtain a pointer that is usable as `data`
+    ///       for zero-length slices using [`NonNull::dangling()`].
+    ///
+    /// * `data` must point to `len` consecutive properly initialized values of type `T`.
+    ///
+    /// * The total size `len * mem::size_of::<T>()` of the slice must be no larger than `isize::MAX`,
+    ///   and adding that size to `data` must not "wrap around" the address space.
+    ///   See the safety documentation of [`pointer::offset`].
+    ///
+    /// Note that unlike with the similar [`slice::from_raw_parts`] function, the memory referenced
+    /// by the returned buffer *can* be mutated during the lifetime `'a`.
+    ///
+    /// # Caveat
+    ///
+    /// The lifetime for the returned slice is inferred from its usage. To
+    /// prevent accidental misuse, it's suggested to tie the lifetime to whichever
+    /// source lifetime is safe in the context, such as by providing a helper
+    /// function taking the lifetime of a host value for the slice, or by explicit
+    /// annotation.
+    ///
+    /// [valid]: ptr#safety
+    /// [`pointer::offset`]: ptr::NonNull::offset
+    /// [`NonNull::dangling()`]: ptr::NonNull::dangling
+    /// [`slice::from_raw_parts`]: core::slice::from_raw_parts
     #[inline]
     pub unsafe fn from_raw_parts<'a>(ptr: *mut S, len: usize) -> &'a Self {
         if ptr.is_null() {
@@ -260,38 +297,108 @@ impl<S> AudioBuffer<S> {
 }
 
 impl<S: Copy> AudioBuffer<S> {
-    /// # Safety
-    /// TODO
-    #[inline]
-    #[must_use]
-    pub unsafe fn get_unchecked(&self, index: usize) -> S {
-        self.inner.get_unchecked(index).get()
-    }
-
+    /// Returns the value of the sample at the given `index` in the buffer.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `index` is out of bounds.
+    /// See [`try_get`](Self::try_get) for a non-panicking version of this method.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_plugin::prelude::AudioBuffer;
+    ///
+    /// let mut data = [0.0, 1.0, 2.0];
+    /// let buf = AudioBuffer::from_mut_slice(&mut data);
+    ///
+    /// assert_eq!(buf.get(0), 0.0);
+    /// assert_eq!(buf.get(1), 1.0);
+    /// assert_eq!(buf.get(2), 2.0);
+    /// ```
     #[inline]
     #[must_use]
     pub fn get(&self, index: usize) -> S {
         self.inner[index].get()
     }
 
+    /// Writes the given sample `value` at the given `index` in the buffer.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `index` is out of bounds.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_plugin::prelude::AudioBuffer;
+    ///
+    /// let mut data = [0.0, 1.0, 2.0];
+    /// let buf = AudioBuffer::from_mut_slice(&mut data);
+    ///
+    /// buf.put(1, 42.0);
+    ///
+    /// assert_eq!(data, [0.0, 42.0, 2.0]);
+    /// ```
+    #[inline]
+    pub fn put(&self, index: usize, value: S) {
+        self.inner[index].set(value)
+    }
+
+    /// Returns the value of the sample at the given `index` in the buffer, or `None` if `index` is
+    /// out of bounds.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_plugin::prelude::AudioBuffer;
+    ///
+    /// let mut data = [0.0, 1.0, 2.0];
+    /// let buf = AudioBuffer::from_mut_slice(&mut data);
+    ///
+    /// assert_eq!(buf.try_get(0), Some(0.0));
+    /// assert_eq!(buf.try_get(1), Some(1.0));
+    /// assert_eq!(buf.try_get(2), Some(2.0));
+    /// assert_eq!(buf.try_get(3), None);
+    /// ```
     #[inline]
     #[must_use]
     pub fn try_get(&self, index: usize) -> Option<S> {
         Some(self.inner.get(index)?.get())
     }
 
+    /// Returns the value of the sample at the given `index` in the buffer, without doing bounds
+    /// checking.
+    ///
+    /// For a safe alternative, see [`get`](Self::get).
+    ///
     /// # Safety
-    /// TODO
+    ///
+    /// Calling this method with an out-of-bounds index is *undefined behavior*.
+    #[inline]
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> S {
+        self.inner.get_unchecked(index).get()
+    }
+
+    /// Writes the given sample `value` at the given `index` in the buffer, without doing bounds
+    /// checking.
+    ///
+    /// For a safe alternative, see [`put`](Self::put).
+    ///
+    /// # Safety
+    ///
+    /// Calling this method with an out-of-bounds index is *undefined behavior*.
     #[inline]
     pub unsafe fn put_unchecked(&self, index: usize, value: S) {
         self.inner.get_unchecked(index).set(value)
     }
 
-    #[inline]
-    pub fn put(&self, index: usize, value: S) {
-        self.inner[index].set(value)
-    }
-
+    /// Copies all the samples in this buffer into the given `buf` slice.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the buffer and the `buf` slice have different lengths.
     #[inline]
     pub fn copy_to_slice(&self, buf: &mut [S]) {
         if buf.len() != self.len() {
@@ -300,21 +407,27 @@ impl<S: Copy> AudioBuffer<S> {
 
         // SAFETY: buf is guaranteed to be valid for writes, and this type guarantees the buffer
         // is valid for both reads and writes.
+        // Buf was checked above to have the same length as this buffer.
         // Both are guaranteed to be properly aligned, since they are slices already.
         // Buf cannot overlap with this buffer, as it is behind an exclusive mutable reference.
         unsafe { ptr::copy_nonoverlapping(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
     }
 
+    /// Copies all the samples in this buffer into a different buffer.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the two buffers have different lengths.
     #[inline]
     pub fn copy_to_buffer(&self, buf: &AudioBuffer<S>) {
-        if buf.len() != self.len() {
-            slice_len_mismatch(self.len(), buf.len())
-        }
-
-        // SAFETY: This type guarantees the buffer are aligned and valid for both reads and writes.
-        unsafe { ptr::copy(self.as_ptr(), buf.as_ptr(), buf.len()) }
+        buf.copy_from_buffer(self)
     }
 
+    /// Copies all the samples in the given `buf` slice into this buffer.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the buffer and the `buf` slice have different lengths.
     #[inline]
     pub fn copy_from_slice(&self, buf: &[S]) {
         if buf.len() != self.len() {
@@ -323,11 +436,17 @@ impl<S: Copy> AudioBuffer<S> {
 
         // SAFETY: buf is guaranteed to be valid for reads, and this type guarantees the buffer
         // is valid for both reads and writes.
+        // Buf was checked above to have the same length as this buffer.
         // Both are guaranteed to be properly aligned, since they are slices already.
         // Buf cannot overlap with this buffer, as it is behind a shared immutable reference.
         unsafe { ptr::copy_nonoverlapping(buf.as_ptr(), self.as_ptr(), buf.len()) }
     }
 
+    /// Copies all the samples from another buffer into this buffer.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the two buffers have different lengths.
     #[inline]
     pub fn copy_from_buffer(&self, buf: &AudioBuffer<S>) {
         if buf.len() != self.len() {
@@ -335,9 +454,24 @@ impl<S: Copy> AudioBuffer<S> {
         }
 
         // SAFETY: This type guarantees the buffer are aligned and valid for both reads and writes.
+        // Buf was checked above to have the same length as this buffer.
         unsafe { ptr::copy(buf.as_ptr(), self.as_ptr(), buf.len()) }
     }
 
+    /// Fills the buffer with the given value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_plugin::prelude::AudioBuffer;
+    ///
+    /// let mut data = [0.0, 1.0, 2.0];
+    /// let buf = AudioBuffer::from_mut_slice(&mut data);
+    ///
+    /// buf.fill(42.0);
+    ///
+    /// assert_eq!(data, [42.0; 3]);
+    /// ```
     #[inline]
     pub fn fill(&self, value: S) {
         for i in &self.inner {
@@ -346,6 +480,8 @@ impl<S: Copy> AudioBuffer<S> {
     }
 }
 
+/// An iterator over the samples in an [`AudioBuffer`].
+#[derive(Clone)]
 pub struct AudioBufferIter<'a, S> {
     inner: core::slice::Iter<'a, Cell<S>>,
 }
