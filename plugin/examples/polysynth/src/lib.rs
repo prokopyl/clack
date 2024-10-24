@@ -129,8 +129,8 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 
         // If somehow the host didn't give us a mono output, we copy the output to all channels
         if output_channels.channel_count() > 1 {
-            let first_channel = output_channels.channel(0).unwrap();
             // PANIC: we just checked that channel_count is > 1.
+            let first_channel = &output_channels[0];
 
             // Copy the first channel into all the other channels.
             for other_channel in output_channels.iter().skip(1) {

@@ -1,5 +1,6 @@
 use crate::process::audio::{AudioBuffer, BufferError, CelledClapAudioBuffer, SampleType};
 use clack_common::process::ConstantMask;
+use std::ops::Index;
 use std::slice::Iter;
 
 /// An iterator of all the available [`Port`]s from an [`Audio`] struct.
@@ -211,6 +212,15 @@ impl<'a, S> Clone for PortChannels<'a, S> {
 }
 
 impl<'a, S> Copy for PortChannels<'a, S> {}
+
+impl<'a, S> Index<usize> for PortChannels<'a, S> {
+    type Output = AudioBuffer<S>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        // SAFETY: this type guarantees the buffer pointer is valid and of size frames_count
+        unsafe { AudioBuffer::from_raw_parts(self.data[index], self.frames_count as usize) }
+    }
+}
 
 impl<'a, T> IntoIterator for PortChannels<'a, T> {
     type Item = &'a AudioBuffer<T>;
