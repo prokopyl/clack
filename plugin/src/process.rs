@@ -237,8 +237,8 @@ impl<'a> Audio<'a> {
     /// channel buffers pointed to by `buffers`.
     #[inline]
     pub unsafe fn from_raw_buffers(
-        inputs: *const [clap_audio_buffer],
-        outputs: *const [clap_audio_buffer],
+        inputs: *mut [clap_audio_buffer],
+        outputs: *mut [clap_audio_buffer],
         frames_count: u32,
     ) -> Self {
         Self {

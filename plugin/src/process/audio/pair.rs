@@ -43,7 +43,7 @@ impl<'a> PortPair<'a> {
     ///
     /// If the port layout is asymmetric and there is no input port, this returns [`None`].
     #[inline]
-    pub fn input(&self) -> Option<Port> {
+    pub fn input(&self) -> Option<Port<'a>> {
         self.input
             // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { Port::from_raw(i, self.frames_count) })
@@ -53,7 +53,7 @@ impl<'a> PortPair<'a> {
     ///
     /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
-    pub fn output(&self) -> Option<Port> {
+    pub fn output(&self) -> Option<Port<'a>> {
         self.output
             // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { Port::from_raw(i, self.frames_count) })
@@ -150,7 +150,6 @@ impl<'a> PortPair<'a> {
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`PortPair::channels`].
-#[derive(Copy, Clone)]
 pub struct PairedChannels<'a, S> {
     input_data: &'a [*mut S],
     output_data: &'a [*mut S],
@@ -223,6 +222,13 @@ impl<'a, S> PairedChannels<'a, S> {
     }
 }
 
+impl<'a, S> Copy for PairedChannels<'a, S> {}
+impl<'a, S> Clone for PairedChannels<'a, S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 impl<'a, S> IntoIterator for PairedChannels<'a, S> {
     type Item = ChannelPair<'a, S>;
     type IntoIter = PairedChannelsIter<'a, S>;
@@ -282,7 +288,19 @@ impl<S> ExactSizeIterator for PairedChannelsIter<'_, S> {
     }
 }
 
+impl<'a, S> Clone for PairedChannelsIter<'a, S> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            input_iter: self.input_iter.clone(),
+            output_iter: self.output_iter.clone(),
+            frames_count: self.frames_count,
+        }
+    }
+}
+
 /// An iterator of all of the available [`PortPair`]s from an [`Audio`] struct.
+#[derive(Clone)]
 pub struct PortPairsIter<'a> {
     inputs: Iter<'a, CelledClapAudioBuffer>,
     outputs: Iter<'a, CelledClapAudioBuffer>,
