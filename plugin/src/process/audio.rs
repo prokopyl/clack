@@ -77,7 +77,7 @@ pub mod tests {
         let port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.iter().len(), 2);
         assert_eq!(channels.iter().size_hint(), (2, Some(2)));
         let mut constant_mask = ConstantMask::FULLY_CONSTANT;
@@ -112,7 +112,7 @@ pub mod tests {
         let port = audio.port_pair(0).unwrap();
         assert_eq!(port.channel_pair_count(), 2);
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.channel_pair_count(), 2);
 
         let mut constant_mask = ConstantMask::FULLY_CONSTANT;
@@ -148,7 +148,7 @@ pub mod tests {
         let port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.iter().len(), 2);
         assert_eq!(channels.iter().size_hint(), (2, Some(2)));
         let mut total = 0;
@@ -166,7 +166,7 @@ pub mod tests {
         let port = ports.next().unwrap();
         assert!(ports.next().is_none());
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.iter().len(), 2);
         assert_eq!(channels.iter().size_hint(), (2, Some(2)));
         let mut total = 0;
@@ -195,7 +195,7 @@ pub mod tests {
         let port = audio.input_port(0).unwrap();
         assert_eq!(port.channel_count(), 2);
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.channel_count(), 2);
 
         for i in 0..port.channel_count() {
@@ -206,7 +206,7 @@ pub mod tests {
         let port = audio.output_port(0).unwrap();
         assert_eq!(port.channel_count(), 2);
 
-        let channels = port.channels().unwrap().into_f32().unwrap();
+        let channels = port.channels().unwrap().to_f32().unwrap();
         assert_eq!(channels.channel_count(), 2);
 
         let constant_mask = ConstantMask::FULLY_CONSTANT;

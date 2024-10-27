@@ -100,7 +100,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 
         let output_channels = output_port
             .channels()?
-            .into_f32()
+            .to_f32()
             .ok_or(PluginError::Message("Expected f32 output"))?;
 
         let output_buffer = output_channels

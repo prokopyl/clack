@@ -94,7 +94,7 @@ impl<'a> Port<'a> {
     ///
     /// // If we're only interested in a single buffer type,
     /// // we can use SampleType's helper methods:
-    /// let channels: PortChannels<f32> = port.channels().unwrap().into_f32().unwrap();
+    /// let channels: PortChannels<f32> = port.channels().unwrap().to_f32().unwrap();
     /// # }
     /// ```
     #[inline]

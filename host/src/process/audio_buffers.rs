@@ -606,7 +606,7 @@ mod test {
         let audio = unsafe { Audio::from_raw(&process) };
 
         for (port, bufs) in audio.input_ports().zip(&input_bufs) {
-            let channels = port.channels().unwrap().into_f32().unwrap();
+            let channels = port.channels().unwrap().to_f32().unwrap();
 
             assert_eq!(channels.channel_count(), 128);
             for (channel, buf) in channels.iter().zip(bufs.iter()) {
@@ -615,7 +615,7 @@ mod test {
         }
 
         for (port, bufs) in audio.output_ports().zip(&output_bufs) {
-            let channels = port.channels().unwrap().into_f32().unwrap();
+            let channels = port.channels().unwrap().to_f32().unwrap();
 
             assert_eq!(channels.channel_count(), 128);
             for (channel, buf) in channels.iter().zip(bufs.iter()) {

@@ -58,11 +58,11 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
         self.shared.host.request_callback();
 
         for event in _events.input {
-            _events.output.try_push(event).unwrap();
+            _events.output.try_push(event)?;
         }
 
-        let output_channels = audio.output_port(0).unwrap().channels().unwrap();
-        let output_buf = output_channels.into_f32().unwrap();
+        let output_channels = audio.output_port(0).unwrap().channels()?;
+        let output_buf = output_channels.to_f32().unwrap();
 
         for channel in output_buf {
             // TODO: handle mismatched slice length values

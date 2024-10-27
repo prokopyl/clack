@@ -39,61 +39,17 @@ impl<F32, F64> SampleType<F32, F64> {
     /// ```
     /// use clack_plugin::process::audio::SampleType;
     ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).as_f32(), Some(&1.0f32));
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).as_f32(), None);
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).as_f32(), Some(&1.0f32));
+    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).to_f32(), Some(1.0f32));
+    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).to_f32(), None);
+    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).to_f32(), Some(1.0f32));
     /// ```
     #[inline]
-    pub fn as_f32(&self) -> Option<&F32> {
+    pub fn to_f32(&self) -> Option<F32>
+    where
+        F32: Copy,
+    {
         match self {
-            SampleType::F32(c) | SampleType::Both(c, _) => Some(c),
-            _ => None,
-        }
-    }
-
-    // TODO: Remove mut/into
-    /// Returns a mutable reference to the `F32` sample buffer type if it is available,
-    /// or [`None`] otherwise.
-    ///
-    /// If both buffer types are available, the `F64` buffer type is ignored.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use clack_plugin::process::audio::SampleType;
-    ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).as_f32_mut(), Some(&mut 1.0f32));
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).as_f32_mut(), None);
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).as_f32_mut(), Some(&mut 1.0f32));
-    /// ```
-    #[inline]
-    pub fn as_f32_mut(&mut self) -> Option<&mut F32> {
-        match self {
-            SampleType::F32(c) | SampleType::Both(c, _) => Some(c),
-            _ => None,
-        }
-    }
-
-    /// Returns the `F32` sample buffer type if it is available, or [`None`] otherwise.
-    ///
-    /// If both buffer types are available, the `F64` buffer type is discarded.
-    ///
-    /// This method consumes the enum. For a non-consuming operation, see the
-    /// [`as_f32`](SampleType::as_f32) and [`as_f32_mut`](SampleType::as_f32_mut) methods.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use clack_plugin::process::audio::SampleType;
-    ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).into_f32(), Some(1.0f32));
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).into_f32(), None);
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).into_f32(), Some(1.0f32));
-    /// ```
-    #[inline]
-    pub fn into_f32(self) -> Option<F32> {
-        match self {
-            SampleType::F32(c) | SampleType::Both(c, _) => Some(c),
+            SampleType::F32(c) | SampleType::Both(c, _) => Some(*c),
             _ => None,
         }
     }
@@ -108,60 +64,17 @@ impl<F32, F64> SampleType<F32, F64> {
     /// ```
     /// use clack_plugin::process::audio::SampleType;
     ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).as_f64(), None);
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).as_f64(), Some(&1.0f64));
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).as_f64(), Some(&1.0f64));
+    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).to_f64(), None);
+    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).to_f64(), Some(1.0f64));
+    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).to_f64(), Some(1.0f64));
     /// ```
     #[inline]
-    pub fn as_f64(&self) -> Option<&F64> {
+    pub fn to_f64(&self) -> Option<F64>
+    where
+        F64: Copy,
+    {
         match self {
-            SampleType::F64(c) | SampleType::Both(_, c) => Some(c),
-            _ => None,
-        }
-    }
-
-    /// Returns a mutable reference to the `F64` sample buffer type if it is available,
-    /// or [`None`] otherwise.
-    ///
-    /// If both buffer types are available, the `F32` buffer type is ignored.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use clack_plugin::process::audio::SampleType;
-    ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).as_f64_mut(), None);
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).as_f64_mut(), Some(&mut 1.0f64));
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).as_f64_mut(), Some(&mut 1.0f64));
-    /// ```
-    #[inline]
-    pub fn as_f64_mut(&mut self) -> Option<&mut F64> {
-        match self {
-            SampleType::F64(c) | SampleType::Both(_, c) => Some(c),
-            _ => None,
-        }
-    }
-
-    /// Returns the `F64` sample buffer type if it is available, or [`None`] otherwise.
-    ///
-    /// If both buffer types are available, the `F32` buffer type is discarded.
-    ///
-    /// This method consumes the enum. For a non-consuming operation, see the
-    /// [`as_f32`](SampleType::as_f64) and [`as_f64_mut`](SampleType::as_f64_mut) methods.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use clack_plugin::process::audio::SampleType;
-    ///
-    /// assert_eq!(SampleType::<f32, f64>::F32(1.0).into_f64(), None);
-    /// assert_eq!(SampleType::<f32, f64>::F64(1.0).into_f64(), Some(1.0f64));
-    /// assert_eq!(SampleType::<f32, f64>::Both(1.0, 1.0).into_f64(), Some(1.0f64));
-    /// ```
-    #[inline]
-    pub fn into_f64(self) -> Option<F64> {
-        match self {
-            SampleType::F64(c) | SampleType::Both(_, c) => Some(c),
+            SampleType::F64(c) | SampleType::Both(_, c) => Some(*c),
             _ => None,
         }
     }

@@ -100,7 +100,7 @@ mod diva_stub {
             }
 
             let output_channels = audio.output_port(0).unwrap().channels().unwrap();
-            let output_buf = output_channels.as_f32().unwrap().iter();
+            let output_buf = output_channels.to_f32().unwrap().iter();
 
             // TODO: FIXME this
             for channel in output_buf {

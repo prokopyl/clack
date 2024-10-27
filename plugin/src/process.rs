@@ -120,7 +120,7 @@ impl Events<'_> {
 /// pub fn process(audio: Audio) -> Result<ProcessStatus, PluginError> {
 ///     for mut port_pair in audio {
 ///         // For this example, we'll only care about 32-bit sample data.
-///         let Some(channel_pairs) = port_pair.channels()?.into_f32() else { continue };
+///         let Some(channel_pairs) = port_pair.channels()?.to_f32() else { continue };
 ///
 ///         for channel_pair in channel_pairs {
 ///             match channel_pair {
@@ -160,7 +160,7 @@ impl Events<'_> {
 /// pub fn process(audio: Audio) -> Result<ProcessStatus, PluginError> {
 ///     for mut port_pair in audio {
 ///         // For this example, we'll only care about 32-bit sample data.
-///         let Some(mut channel_pairs) = port_pair.channels()?.into_f32() else { continue; };
+///         let Some(mut channel_pairs) = port_pair.channels()?.to_f32() else { continue; };
 ///
 ///         // Buffers to hold pointers to the left and right channels
 ///         let mut input_channels: [Option<&AudioBuffer<f32>>; 2] = [None, None];

@@ -89,7 +89,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
 
         let output_channels = port_pair
             .channels()?
-            .into_f32()
+            .to_f32()
             .ok_or(PluginError::Message("Expected f32 input/output"))?;
 
         let mut channel_buffers = [None, None];

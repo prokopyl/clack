@@ -111,7 +111,7 @@ impl<'a> PluginAudioProcessor<'a, (), ()> for MyGainPluginAudioProcessor {
     fn process(&mut self, _process: Process, audio: Audio, _events: Events) -> Result<ProcessStatus, PluginError> {
         for mut port_pair in audio {
             // For this example, we'll only care about 32-bit sample data.
-            let Some(channel_pairs) = port_pair.channels()?.into_f32() else { continue; };
+            let Some(channel_pairs) = port_pair.channels()?.to_f32() else { continue; };
 
             for channel_pair in channel_pairs {
                 match channel_pair {
