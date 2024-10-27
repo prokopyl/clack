@@ -291,7 +291,7 @@ impl<S> AudioBuffer<S> {
     }
 
     #[inline]
-    fn reslice<I: SliceIndex<[Cell<S>], Output = [Cell<S>]>>(&self, index: I) -> &Self {
+    fn re_slice<I: SliceIndex<[Cell<S>], Output = [Cell<S>]>>(&self, index: I) -> &Self {
         AudioBuffer::from_slice_of_cells(self.inner.get(index).unwrap_or(&[]))
     }
 }
@@ -518,7 +518,7 @@ impl<S> Index<core::ops::RangeFull> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::RangeFull) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<core::ops::Range<usize>> for AudioBuffer<S> {
@@ -526,7 +526,7 @@ impl<S> Index<core::ops::Range<usize>> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<core::ops::RangeFrom<usize>> for AudioBuffer<S> {
@@ -534,7 +534,7 @@ impl<S> Index<core::ops::RangeFrom<usize>> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::RangeFrom<usize>) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<core::ops::RangeTo<usize>> for AudioBuffer<S> {
@@ -542,7 +542,7 @@ impl<S> Index<core::ops::RangeTo<usize>> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::RangeTo<usize>) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<core::ops::RangeInclusive<usize>> for AudioBuffer<S> {
@@ -550,7 +550,7 @@ impl<S> Index<core::ops::RangeInclusive<usize>> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::RangeInclusive<usize>) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<core::ops::RangeToInclusive<usize>> for AudioBuffer<S> {
@@ -558,7 +558,7 @@ impl<S> Index<core::ops::RangeToInclusive<usize>> for AudioBuffer<S> {
 
     #[inline]
     fn index(&self, index: core::ops::RangeToInclusive<usize>) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 impl<S> Index<(core::ops::Bound<usize>, core::ops::Bound<usize>)> for AudioBuffer<S> {
@@ -566,7 +566,7 @@ impl<S> Index<(core::ops::Bound<usize>, core::ops::Bound<usize>)> for AudioBuffe
 
     #[inline]
     fn index(&self, index: (core::ops::Bound<usize>, core::ops::Bound<usize>)) -> &Self::Output {
-        self.reslice(index)
+        self.re_slice(index)
     }
 }
 

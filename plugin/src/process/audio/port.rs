@@ -79,7 +79,7 @@ impl<'a> Port<'a> {
     /// # Example
     ///
     /// ```
-    /// use clack_plugin::process::audio::{PortChannels, Port, SampleType};
+    /// use clack_plugin::process::audio::{Channels, Port, SampleType};
     ///
     /// # fn foo(port: Port) {
     /// let port: Port = /* ... */
@@ -94,20 +94,20 @@ impl<'a> Port<'a> {
     ///
     /// // If we're only interested in a single buffer type,
     /// // we can use SampleType's helper methods:
-    /// let channels: PortChannels<f32> = port.channels().unwrap().to_f32().unwrap();
+    /// let channels: Channels<f32> = port.channels().unwrap().to_f32().unwrap();
     /// # }
     /// ```
     #[inline]
     pub fn channels(
         &self,
-    ) -> Result<SampleType<PortChannels<'a, f32>, PortChannels<'a, f64>>, BufferError> {
+    ) -> Result<SampleType<Channels<'a, f32>, Channels<'a, f64>>, BufferError> {
         // SAFETY: this type ensures the provided buffer is valid
         Ok(unsafe { SampleType::from_raw_buffer(self.inner) }?.map(
-            |data| PortChannels {
+            |data| Channels {
                 data,
                 frames_count: self.frames_count,
             },
-            |data| PortChannels {
+            |data| Channels {
                 data,
                 frames_count: self.frames_count,
             },
@@ -151,17 +151,25 @@ impl<'a> Port<'a> {
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`Port::channels`].
-pub struct PortChannels<'a, S> {
+pub struct Channels<'a, S> {
     frames_count: u32,
     data: &'a [*mut S],
 }
 
-impl<'a, S> PortChannels<'a, S> {
+impl<'a, S> Channels<'a, S> {
+    /// # Safety
+    /// Both data and the pointers in it must be valid for 'a.
+    /// Every pointer in data must point to a slice of size `frames_count`, and be valid for both reads and writes.
+    #[inline]
+    pub(crate) const unsafe fn from_raw(data: &'a [*mut S], frames_count: u32) -> Self {
+        Channels { data, frames_count }
+    }
+
     /// Returns the number of frames to process in this block.
     ///
     /// This will always match the number of samples of every audio channel buffer.
     #[inline]
-    pub fn frames_count(&self) -> u32 {
+    pub const fn frames_count(&self) -> u32 {
         self.frames_count
     }
 
@@ -170,13 +178,13 @@ impl<'a, S> PortChannels<'a, S> {
     /// In CLAP's API, hosts provide a port's audio data as an array of raw pointers, each of which points
     /// to the start of a sample array of type `S` and of [`frames_count`](Self::frames_count) length.
     #[inline]
-    pub fn raw_data(&self) -> &'a [*mut S] {
+    pub const fn raw_data(&self) -> &'a [*mut S] {
         self.data
     }
 
     /// The number of channels.
     #[inline]
-    pub fn channel_count(&self) -> u32 {
+    pub const fn channel_count(&self) -> u32 {
         self.data.len() as u32
     }
 
@@ -196,24 +204,24 @@ impl<'a, S> PortChannels<'a, S> {
 
     /// Gets an iterator over all the port's channels' sample buffers.
     #[inline]
-    pub fn iter(&self) -> PortChannelsIter<'a, S> {
-        PortChannelsIter {
+    pub fn iter(&self) -> ChannelsIter<'a, S> {
+        ChannelsIter {
             data: self.data.iter(),
             frames_count: self.frames_count,
         }
     }
 }
 
-impl<'a, S> Clone for PortChannels<'a, S> {
+impl<'a, S> Clone for Channels<'a, S> {
     #[inline]
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, S> Copy for PortChannels<'a, S> {}
+impl<'a, S> Copy for Channels<'a, S> {}
 
-impl<'a, S> Index<usize> for PortChannels<'a, S> {
+impl<'a, S> Index<usize> for Channels<'a, S> {
     type Output = AudioBuffer<S>;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -222,9 +230,9 @@ impl<'a, S> Index<usize> for PortChannels<'a, S> {
     }
 }
 
-impl<'a, T> IntoIterator for PortChannels<'a, T> {
+impl<'a, T> IntoIterator for Channels<'a, T> {
     type Item = &'a AudioBuffer<T>;
-    type IntoIter = PortChannelsIter<'a, T>;
+    type IntoIter = ChannelsIter<'a, T>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -232,9 +240,9 @@ impl<'a, T> IntoIterator for PortChannels<'a, T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a PortChannels<'a, T> {
+impl<'a, T> IntoIterator for &'a Channels<'a, T> {
     type Item = &'a AudioBuffer<T>;
-    type IntoIter = PortChannelsIter<'a, T>;
+    type IntoIter = ChannelsIter<'a, T>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -243,12 +251,12 @@ impl<'a, T> IntoIterator for &'a PortChannels<'a, T> {
 }
 
 /// An iterator over all of an [`Port`]'s channels' sample buffers.
-pub struct PortChannelsIter<'a, T> {
+pub struct ChannelsIter<'a, T> {
     data: Iter<'a, *mut T>,
     frames_count: u32,
 }
 
-impl<'a, T> Iterator for PortChannelsIter<'a, T> {
+impl<'a, T> Iterator for ChannelsIter<'a, T> {
     type Item = &'a AudioBuffer<T>;
 
     #[inline]
@@ -266,7 +274,7 @@ impl<'a, T> Iterator for PortChannelsIter<'a, T> {
     }
 }
 
-impl<S> ExactSizeIterator for PortChannelsIter<'_, S> {
+impl<S> ExactSizeIterator for ChannelsIter<'_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.data.len()

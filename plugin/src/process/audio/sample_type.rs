@@ -9,9 +9,9 @@ use crate::process::audio::{BufferError, CelledClapAudioBuffer};
 /// This type is used by methods that detect which types of sample buffers are available:
 ///
 /// * [`Port::channels`](super::Port::channels) returns a [`SampleType`] of
-///   [`PortChannels`](super::PortChannels);
+///   [`Channels`](super::Channels);
 /// * [`PortPair::channels`](super::PortPair::channels) returns a [`SampleType`] of
-///   [`PairedChannels`](super::PairedChannels);
+///   [`ChannelsPair`](super::ChannelsPair);
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum SampleType<F32, F64> {
     /// Only [`f32`] sample buffers are available.
