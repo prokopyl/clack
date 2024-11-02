@@ -96,15 +96,13 @@ mod diva_stub {
             self.shared.host.request_callback();
 
             for event in _events.input {
-                _events.output.try_push(event).unwrap();
+                _events.output.try_push(event)?;
             }
 
-            let output_channels = audio.output_port(0).unwrap().channels().unwrap();
-            let output_buf = output_channels.to_f32().unwrap().iter();
+            let output_channels = audio.output_port(0).unwrap().channels()?;
+            let output_buf = output_channels.to_f32().unwrap();
 
-            // TODO: FIXME this
             for channel in output_buf {
-                // TODO: handle mismatched slice values
                 channel.copy_from_slice(&[42.0f32, 69.0, 21.0, 34.5]);
             }
             Ok(ProcessStatus::Sleep)

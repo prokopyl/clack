@@ -277,7 +277,25 @@ impl<'a> Audio<'a> {
     }
 
     /// Returns a raw pointer to a C array of the raw output buffers structs.
-    // TODO: safety of creating & or &mut from this
+    ///
+    /// # Safety
+    ///
+    /// While this function is safe to use, there are many cases where using the resulting pointer
+    /// is not.
+    ///
+    /// This is because the contents slice of buffer structs (as well as the raw audio buffers these
+    /// point to) are valid for both reads and writes from other, potentially aliased pointers to
+    /// that data.
+    ///
+    /// This means it is not valid to create either shared (`&`) or mutable (`&mut`) Rust references
+    /// to these buffers or their data.
+    ///
+    /// In order to safely access the data, you can either use [`Cell`]s, or perform direct
+    /// read or write operations, e.g. using [`ptr::read`] or [`ptr::write`].
+    ///
+    /// [`ptr::read`]: core::ptr::read
+    /// [`ptr::write`]: core::ptr::write
+    /// [`Cell`]: core::cell::Cell
     #[inline]
     pub fn raw_outputs(&self) -> *mut [clap_audio_buffer] {
         core::ptr::slice_from_raw_parts_mut(

@@ -101,8 +101,16 @@ impl AudioPortProcessingInfo {
         }
     }
 
+    /// Extracts the processing-related information from a raw, C-FFI compatible audio buffer
+    /// descriptor.
+    ///
+    /// Unlike [`from_raw`](Self::from_raw), this method does not require any references to perform
+    /// the read.
+    ///
     /// # Safety
-    /// TODO
+    ///
+    /// The caller must ensure the given pointer is well-aligned, and points to an initialized
+    /// `clap_audio_buffer` instance that is valid for reads.
     #[inline]
     pub unsafe fn from_raw_ptr(raw: *const clap_audio_buffer) -> Self {
         Self {

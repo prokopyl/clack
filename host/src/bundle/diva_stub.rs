@@ -65,7 +65,6 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
         let output_buf = output_channels.to_f32().unwrap();
 
         for channel in output_buf {
-            // TODO: handle mismatched slice length values
             channel.copy_from_slice(&[42.0f32, 69.0, 21.0, 34.5]);
         }
         Ok(ProcessStatus::Sleep)
