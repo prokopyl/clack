@@ -6,6 +6,7 @@ use std::slice::Iter;
 /// An iterator of all the available [`Port`]s from an [`Audio`] struct.
 ///
 /// [`Audio`]: crate::process::Audio
+#[derive(Clone)]
 pub struct PortsIter<'a> {
     inputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,
@@ -278,5 +279,15 @@ impl<S> ExactSizeIterator for ChannelsIter<'_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.data.len()
+    }
+}
+
+impl<'a, T> Clone for ChannelsIter<'a, T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            frames_count: self.frames_count,
+        }
     }
 }

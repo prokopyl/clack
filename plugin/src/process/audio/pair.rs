@@ -77,7 +77,7 @@ impl<'a> PortPair<'a> {
     /// # Example
     ///
     /// ```
-    /// use clack_plugin::process::audio::{ChannelsPair, PortPair, SampleType};
+    /// use clack_plugin::process::audio::{ChannelsPairs, PortPair, SampleType};
     ///
     /// # fn foo(port: PortPair) {
     /// let mut port: PortPair = /* ... */
@@ -92,13 +92,13 @@ impl<'a> PortPair<'a> {
     ///
     /// // If we're only interested in a single buffer type,
     /// // we can use SampleType's helper methods:
-    /// let channels: ChannelsPair<f32> = port.channels().unwrap().to_f32().unwrap();
+    /// let channels: ChannelsPairs<f32> = port.channels().unwrap().to_f32().unwrap();
     /// # }
     /// ```
     #[inline]
     pub fn channels(
         &self,
-    ) -> Result<SampleType<ChannelsPair<'a, f32>, ChannelsPair<'a, f64>>, BufferError> {
+    ) -> Result<SampleType<ChannelsPairs<'a, f32>, ChannelsPairs<'a, f64>>, BufferError> {
         let input = match self.input {
             None => SampleType::Both([].as_slice(), [].as_slice()),
             // SAFETY: this type ensures the buffer is valid
@@ -112,12 +112,12 @@ impl<'a> PortPair<'a> {
         };
 
         Ok(input.try_match_with(output)?.map(
-            |(i, o)| ChannelsPair {
+            |(i, o)| ChannelsPairs {
                 inputs: i,
                 outputs: o,
                 frames_count: self.frames_count,
             },
-            |(i, o)| ChannelsPair {
+            |(i, o)| ChannelsPairs {
                 inputs: i,
                 outputs: o,
                 frames_count: self.frames_count,
@@ -152,13 +152,13 @@ impl<'a> PortPair<'a> {
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
 /// [`PortPair::channels`].
-pub struct ChannelsPair<'a, S> {
+pub struct ChannelsPairs<'a, S> {
     inputs: &'a [*mut S],
     outputs: &'a [*mut S],
     frames_count: u32,
 }
 
-impl<'a, S> ChannelsPair<'a, S> {
+impl<'a, S> ChannelsPairs<'a, S> {
     /// Creates a new pair of [`Channels`] list from an input and output channels list.
     ///
     /// # Panics
@@ -262,14 +262,14 @@ impl<'a, S> ChannelsPair<'a, S> {
     }
 }
 
-impl<'a, S> Copy for ChannelsPair<'a, S> {}
-impl<'a, S> Clone for ChannelsPair<'a, S> {
+impl<'a, S> Copy for ChannelsPairs<'a, S> {}
+impl<'a, S> Clone for ChannelsPairs<'a, S> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, S> IntoIterator for ChannelsPair<'a, S> {
+impl<'a, S> IntoIterator for ChannelsPairs<'a, S> {
     type Item = ChannelPair<'a, S>;
     type IntoIter = ChannelsPairsIter<'a, S>;
 
@@ -279,7 +279,7 @@ impl<'a, S> IntoIterator for ChannelsPair<'a, S> {
     }
 }
 
-impl<'a, S> IntoIterator for &ChannelsPair<'a, S> {
+impl<'a, S> IntoIterator for &ChannelsPairs<'a, S> {
     type Item = ChannelPair<'a, S>;
     type IntoIter = ChannelsPairsIter<'a, S>;
 

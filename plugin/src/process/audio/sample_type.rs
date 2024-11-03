@@ -11,7 +11,7 @@ use crate::process::audio::{BufferError, CelledClapAudioBuffer};
 /// * [`Port::channels`](super::Port::channels) returns a [`SampleType`] of
 ///   [`Channels`](super::Channels);
 /// * [`PortPair::channels`](super::PortPair::channels) returns a [`SampleType`] of
-///   [`ChannelsPair`](super::ChannelsPair);
+///   [`ChannelsPairs`](super::ChannelsPairs);
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum SampleType<F32, F64> {
     /// Only [`f32`] sample buffers are available.

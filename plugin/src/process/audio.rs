@@ -1,4 +1,5 @@
 //! Various types related to accessing [`Audio`](super::Audio) buffers.
+// TODO: explain hierarchy
 
 mod buffer;
 mod error;
