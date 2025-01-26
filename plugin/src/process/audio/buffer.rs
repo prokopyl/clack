@@ -262,6 +262,13 @@ impl<S> AudioBuffer<S> {
         &self.inner
     }
 
+    fn overlaps_with<T>(&self, other: &AudioBuffer<T>) -> bool {
+        let (start1, start2) = (self.inner.as_ptr() as usize, other.inner.as_ptr() as usize);
+        let (end1, end2) = (start1 + self.len(), start1 + other.len());
+
+        start1 < end2 && start2 < end1
+    }
+
     /// Returns an iterator over the buffer.
     ///
     /// The iterator yields reference to [`Cell`s](Cell) of the samples, which allows for both

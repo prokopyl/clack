@@ -221,4 +221,15 @@ pub mod tests {
 
         assert_eq!(ins, outs);
     }
+
+    #[test]
+    fn can_do_some_cell_stuff() {
+        let mut ins = [[1f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut input_ports = AudioPorts::with_capacity(2, 1);
+        let mut output_ports = AudioPorts::with_capacity(2, 1);
+
+        let audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+    }
 }
