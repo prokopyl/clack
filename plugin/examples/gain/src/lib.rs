@@ -4,8 +4,17 @@
 
 use crate::params::GainParams;
 use clack_extensions::state::PluginState;
+use clack_extensions::wrappers::auv2::{
+    PluginFactoryAsAUV2, PluginFactoryAsAUV2Wrapper, PluginInfoAsAuv2,
+};
+use clack_extensions::wrappers::vst3::{
+    PluginAsVST3, PluginAsVST3Impl, PluginFactoryAsVST3, PluginFactoryAsVST3Wrapper,
+    PluginInfoAsVST3,
+};
 use clack_extensions::{audio_ports::*, params::*};
+use clack_plugin::entry::{EntryFactories, EntryLoadError};
 use clack_plugin::prelude::*;
+use std::ffi::CStr;
 
 mod params;
 
@@ -26,7 +35,8 @@ impl Plugin for GainPlugin {
         builder
             .register::<PluginAudioPorts>()
             .register::<PluginParams>()
-            .register::<PluginState>();
+            .register::<PluginState>()
+            .register::<PluginAsVST3>();
     }
 }
 
@@ -158,6 +168,16 @@ pub struct GainPluginShared {
 
 impl PluginShared<'_> for GainPluginShared {}
 
+impl PluginAsVST3Impl for GainPluginShared {
+    fn num_midi_channels(&self, note_port: u32) -> u32 {
+        42
+    }
+
+    fn supported_note_expressions(&self) -> u32 {
+        0
+    }
+}
+
 /// The data that belongs to the main thread of our plugin.
 pub struct GainPluginMainThread<'a> {
     /// A reference to the plugin's shared data.
@@ -165,5 +185,52 @@ pub struct GainPluginMainThread<'a> {
 }
 
 impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {}
+
+/// f
+struct MyAuV2Factory;
+
+impl PluginFactoryAsAUV2 for MyAuV2Factory {
+    fn get_auv2_info(&self, index: u32) -> Option<PluginInfoAsAuv2> {
+        Some(PluginInfoAsAuv2::new("no", "idea"))
+    }
+}
+
+/// f
+struct MyVST3Factory;
+
+impl PluginFactoryAsVST3 for MyVST3Factory {
+    fn get_vst3_info(&self, index: u32) -> Option<&PluginInfoAsVST3> {
+        static INFO: PluginInfoAsVST3<'static> =
+            PluginInfoAsVST3::new(Some(c"foo"), Some(b"birbbirbbirbbirb"), Some(c"baz"));
+
+        Some(&INFO)
+    }
+}
+
+/// F
+struct MyEntry {
+    /// F
+    auv2_factory: PluginFactoryAsAUV2Wrapper<MyAuV2Factory>,
+}
+impl Entry for MyEntry {
+    fn new(bundle_path: &CStr) -> Result<Self, EntryLoadError> {
+        Ok(Self {
+            auv2_factory: PluginFactoryAsAUV2Wrapper::new(
+                c"birb_made",
+                c"Birb Made ™",
+                MyAuV2Factory,
+            ),
+        })
+    }
+
+    fn declare_factories<'a>(&'a self, builder: &mut EntryFactories<'a>) {
+        static WRAPPER: PluginFactoryAsVST3Wrapper<MyVST3Factory> =
+            PluginFactoryAsVST3Wrapper::new(None, None, None, MyVST3Factory);
+
+        builder
+            .register_factory(&self.auv2_factory)
+            .register_factory(&WRAPPER);
+    }
+}
 
 clack_export_entry!(SinglePluginEntry<GainPlugin>);
