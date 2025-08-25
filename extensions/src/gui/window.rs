@@ -119,7 +119,7 @@ impl<'a> Window<'a> {
     /// Returns the window's handle as an X11 window handle, if this is an X11 window.
     /// Otherwise, this returns `None`.
     pub fn as_x11_handle(&self) -> Option<c_ulong> {
-        if self.api_type() == GuiApiType::COCOA {
+        if self.api_type() == GuiApiType::X11 {
             // SAFETY: We just checked this was a COCOA window
             unsafe { Some(self.raw.specific.x11) }
         } else {
