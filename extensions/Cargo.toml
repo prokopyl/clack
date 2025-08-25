@@ -19,8 +19,12 @@ raw-window-handle_06 = { workspace = true, optional = true }
 
 [features]
 all-extensions = [
+    "ambisonic",
     "audio-ports",
+    "audio-ports-activation",
     "audio-ports-config",
+    "configurable-audio-ports",
+    "context-menu",
     "event-registry",
     "gui",
     "latency",
@@ -28,16 +32,27 @@ all-extensions = [
     "note-name",
     "note-ports",
     "params",
+    "param-indication",
     "posix-fd",
+    "preset-load",
+    "remote-controls",
     "render",
     "state",
+    "state-context",
+    "surround",
     "tail",
     "thread-check",
     "thread-pool",
-    "timer"
+    "timer",
+    "track-info",
+    "voice-info"
 ]
+ambisonic = []
 audio-ports = []
+audio-ports-activation = []
 audio-ports-config = []
+configurable-audio-ports = []
+context-menu = []
 event-registry = []
 gui = []
 latency = []
@@ -45,11 +60,18 @@ log = []
 note-name = []
 note-ports = []
 params = []
+param-indication = []
 posix-fd = []
+preset-load = []
+remote-controls = []
 render = []
 state = []
+# If a plugin implements state-context, it must also implement state
+state-context = ["state"]
+surround = []
 tail = []
 thread-check = []
 thread-pool = []
 timer = []
+track-info = []
 voice-info = []
