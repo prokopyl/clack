@@ -63,10 +63,8 @@ mod host {
             match plugin.use_extension(&self.0).can_activate_while_processing {
                 None => false,
                 Some(can_activate_while_processing) => {
-                    #[allow(clippy::undocumented_unsafe_blocks)]
-                    unsafe {
-                        can_activate_while_processing(plugin.as_raw())
-                    }
+                    // SAFETY: This type ensures the function pointer is valid.
+                    unsafe { can_activate_while_processing(plugin.as_raw()) }
                 }
             }
         }
@@ -83,7 +81,7 @@ mod host {
             match plugin.use_extension(&self.0).set_active {
                 None => false,
                 Some(set_active) => {
-                    #[allow(clippy::undocumented_unsafe_blocks)]
+                    // SAFETY: This type ensures the function pointer is valid.
                     unsafe {
                         set_active(
                             plugin.as_raw(),

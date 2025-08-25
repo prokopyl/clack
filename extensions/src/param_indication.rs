@@ -5,10 +5,16 @@ use std::{ffi::CStr, fmt::Display};
 #[repr(u32)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum ParamIndicationAutomation {
+    /// Host does not have automation for this parameter
     None = CLAP_PARAM_INDICATION_AUTOMATION_NONE,
+    /// Host has automation for this parameter, but is not playing it
     Present = CLAP_PARAM_INDICATION_AUTOMATION_PRESENT,
+    /// Host is playing automation for this parameter
     Playing = CLAP_PARAM_INDICATION_AUTOMATION_PLAYING,
+    /// Host is recording automation for this parameter
     Recording = CLAP_PARAM_INDICATION_AUTOMATION_RECORDING,
+    /// Host should play automation for this parameter, but the user has started to adjust this
+    /// parameter and is overriding the automation playback
     Overriding = CLAP_PARAM_INDICATION_AUTOMATION_OVERRIDING,
 }
 
@@ -81,7 +87,7 @@ mod host {
             if let Some(set_mapping) = plugin.use_extension(&self.0).set_mapping {
                 let label = CString::new(label).unwrap();
                 let description = CString::new(description).unwrap();
-                #[allow(clippy::undocumented_unsafe_blocks)]
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe {
                     set_mapping(
                         plugin.as_raw(),
@@ -104,7 +110,7 @@ mod host {
             color: clap_color,
         ) {
             if let Some(set_automation) = plugin.use_extension(&self.0).set_automation {
-                #[allow(clippy::undocumented_unsafe_blocks)]
+                // SAFETY: This type ensures the function pointer is valid.
                 unsafe {
                     set_automation(
                         plugin.as_raw(),
