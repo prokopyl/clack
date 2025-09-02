@@ -54,6 +54,9 @@ bitflags! {
         const IS_READONLY = CLAP_PARAM_IS_READONLY;
         const IS_STEPPED = CLAP_PARAM_IS_STEPPED;
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
+        // NOTE: From the CLAP requirements: if CLAP_PARAM_IS_ENUM is set, then CLAP_PARAM_IS_STEPPED must
+        // *also* be set, so just encode them together.
+        const IS_ENUM = CLAP_PARAM_IS_ENUM | CLAP_PARAM_IS_STEPPED;
     }
 }
 
