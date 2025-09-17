@@ -48,10 +48,10 @@ pub struct NoteName<'a> {
     /// A user-facing display name for the note.
     pub name: &'a [u8],
 
-    /// The Port this note name applies to, or `-1` if it applies to every key.
+    /// The Port this note name applies to, or `-1` if it applies to every port.
     pub port: Match<u16>,
 
-    /// The MIDI Channel this note name applies to, or `-1` if it applies to every key.
+    /// The MIDI Channel this note name applies to, or `-1` if it applies to every channel.
     pub channel: Match<u16>,
 
     /// The Key this note name applies to, or `-1` if it applies to every key.

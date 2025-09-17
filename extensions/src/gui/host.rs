@@ -288,10 +288,10 @@ impl PluginGui {
             plugin
                 .use_extension(&self.0)
                 .hide
-                .ok_or(GuiError::ShowError)?(plugin.as_raw())
+                .ok_or(GuiError::HideError)?(plugin.as_raw())
         }
         .then_some(())
-        .ok_or(GuiError::ShowError)
+        .ok_or(GuiError::HideError)
     }
 }
 
