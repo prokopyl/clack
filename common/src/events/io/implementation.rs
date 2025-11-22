@@ -243,6 +243,18 @@ impl<T: InputEventBuffer> InputEventBuffer for Option<T> {
     }
 }
 
+impl InputEventBuffer for () {
+    #[inline]
+    fn len(&self) -> u32 {
+        0
+    }
+
+    #[inline]
+    fn get(&self, _index: u32) -> Option<&UnknownEvent> {
+        None
+    }
+}
+
 impl<'a, T: Event<EventSpace<'a> = CoreEventSpace<'a>> + Clone> OutputEventBuffer for Option<T> {
     fn try_push(&mut self, event: &UnknownEvent) -> Result<(), TryPushError> {
         if self.is_some() {
@@ -266,5 +278,12 @@ impl<'a, T: Event<EventSpace<'a> = CoreEventSpace<'a>> + Clone> OutputEventBuffe
         } else {
             Err(TryPushError)
         }
+    }
+}
+
+impl OutputEventBuffer for () {
+    #[inline]
+    fn try_push(&mut self, _event: &UnknownEvent) -> Result<(), TryPushError> {
+        Ok(())
     }
 }
