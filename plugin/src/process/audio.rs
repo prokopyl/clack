@@ -3,12 +3,14 @@
 
 mod buffer;
 mod error;
+mod output_port;
 mod pair;
 mod port;
 mod sample_type;
 
 pub use buffer::*;
 pub use error::BufferError;
+pub use output_port::*;
 pub use pair::*;
 pub use port::*;
 pub use sample_type::SampleType;
@@ -71,7 +73,7 @@ pub mod tests {
         let mut input_ports = AudioPorts::with_capacity(2, 1);
         let mut output_ports = AudioPorts::with_capacity(2, 1);
 
-        let audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+        let mut audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
         let mut ports = audio.port_pairs();
         assert_eq!(ports.len(), 1);
         assert_eq!(ports.size_hint(), (1, Some(1)));
@@ -220,5 +222,23 @@ pub mod tests {
         port.set_constant_mask(constant_mask);
 
         assert_eq!(ins, outs);
+    }
+
+    #[test]
+    fn can_operate_on_mut_slices() {
+        let mut ins = [[1f32; 4]; 2];
+        let mut outs = [[0f32; 4]; 2];
+
+        let mut input_ports = AudioPorts::with_capacity(2, 1);
+        let mut output_ports = AudioPorts::with_capacity(2, 1);
+
+        let audio = get_audio(&mut ins, &mut outs, &mut input_ports, &mut output_ports);
+        assert_eq!(audio.port_pair_count(), 1);
+
+        for pairs in audio {
+            let channels = pairs.channels().unwrap().to_f32().unwrap();
+            channels.
+        }
+        let pair = audio.port_pair(0).unwrap();
     }
 }

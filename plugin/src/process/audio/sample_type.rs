@@ -8,8 +8,8 @@ use crate::process::audio::{BufferError, CelledClapAudioBuffer};
 ///
 /// This type is used by methods that detect which types of sample buffers are available:
 ///
-/// * [`Port::channels`](super::Port::channels) returns a [`SampleType`] of
-///   [`Channels`](super::Channels);
+/// * [`Port::channels`](super::OutputPort::channels) returns a [`SampleType`] of
+///   [`Channels`](super::OutputChannels);
 /// * [`PortPair::channels`](super::PortPair::channels) returns a [`SampleType`] of
 ///   [`ChannelsPairs`](super::ChannelsPairs);
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]

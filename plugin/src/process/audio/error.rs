@@ -8,7 +8,7 @@ pub enum BufferError {
     ///
     /// This happens when both the [`f32`] and [`f64`] buffer pointers provided by the host are null.
     ///
-    /// This error can be returned by the [`InputPort::channels`](super::Port::channels) or
+    /// This error can be returned by the [`InputPort::channels`](super::OutputPort::channels) or
     /// [`PortPair::channels`](super::PortPair::channels) methods.
     InvalidChannelBuffer,
     /// A pair of mismatched buffer types (i.e. one [`f32`] and the other [`f64`]) were tried to

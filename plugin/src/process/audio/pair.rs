@@ -1,6 +1,6 @@
 use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{
-    AudioBuffer, BufferError, CelledClapAudioBuffer, Channels, Port, SampleType,
+    AudioBuffer, BufferError, CelledClapAudioBuffer, OutputChannels, OutputPort, SampleType,
 };
 use crate::process::Audio;
 use std::slice::Iter;
@@ -41,24 +41,24 @@ impl<'a> PortPair<'a> {
         }
     }
 
-    /// Gets the input [`Port`] of this pair.
+    /// Gets the input [`OutputPort`] of this pair.
     ///
     /// If the port layout is asymmetric and there is no input port, this returns [`None`].
     #[inline]
-    pub fn input(&self) -> Option<Port<'a>> {
+    pub fn input(&self) -> Option<OutputPort<'a>> {
         self.input
             // SAFETY: this type ensures the buffer is valid and matches frame_count
-            .map(|i| unsafe { Port::from_raw(i, self.frames_count) })
+            .map(|i| unsafe { OutputPort::from_raw(i, self.frames_count) })
     }
 
-    /// Gets the output [`Port`] of this pair.
+    /// Gets the output [`OutputPort`] of this pair.
     ///
     /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
-    pub fn output(&self) -> Option<Port<'a>> {
+    pub fn output(&self) -> Option<OutputPort<'a>> {
         self.output
             // SAFETY: this type ensures the buffer is valid and matches frame_count
-            .map(|i| unsafe { Port::from_raw(i, self.frames_count) })
+            .map(|i| unsafe { OutputPort::from_raw(i, self.frames_count) })
     }
 
     /// Retrieves the port pair's channels.
@@ -159,12 +159,12 @@ pub struct ChannelsPairs<'a, S> {
 }
 
 impl<'a, S> ChannelsPairs<'a, S> {
-    /// Creates a new pair of [`Channels`] list from an input and output channels list.
+    /// Creates a new pair of [`OutputChannels`] list from an input and output channels list.
     ///
     /// # Panics
     ///
     /// This function will panic if `inputs` and `outputs` don't have the same `frame_count`.
-    pub fn from_channels(inputs: Channels<'a, S>, outputs: Channels<'a, S>) -> Self {
+    pub fn from_channels(inputs: OutputChannels<'a, S>, outputs: OutputChannels<'a, S>) -> Self {
         if inputs.frames_count() != outputs.frames_count() {
             mismatched_frames_count(inputs.frames_count(), outputs.frames_count())
         }
@@ -217,15 +217,15 @@ impl<'a, S> ChannelsPairs<'a, S> {
     }
 
     /// Returns the input channels.
-    pub fn input_channels(&self) -> Channels<'a, S> {
+    pub fn input_channels(&self) -> OutputChannels<'a, S> {
         // SAFETY: The input_data and frames_count fields are guaranteed to be valid
-        unsafe { Channels::from_raw(self.inputs, self.frames_count) }
+        unsafe { OutputChannels::from_raw(self.inputs, self.frames_count) }
     }
 
     /// Returns the output channels.
-    pub fn output_channels(&self) -> Channels<'a, S> {
+    pub fn output_channels(&self) -> OutputChannels<'a, S> {
         // SAFETY: The input_data and frames_count fields are guaranteed to be valid
-        unsafe { Channels::from_raw(self.outputs, self.frames_count) }
+        unsafe { OutputChannels::from_raw(self.outputs, self.frames_count) }
     }
 
     /// Retrieves the pair of sample buffers for the pair of channels at a given index.

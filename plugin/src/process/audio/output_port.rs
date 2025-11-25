@@ -3,16 +3,16 @@ use clack_common::process::ConstantMask;
 use std::ops::Index;
 use std::slice::Iter;
 
-/// An iterator of all the available [`Port`]s from an [`Audio`] struct.
+/// An iterator of all the available [`OutputPort`]s from an [`Audio`] struct.
 ///
 /// [`Audio`]: crate::process::Audio
 #[derive(Clone)]
-pub struct PortsIter<'a> {
+pub struct OutputPortsIter<'a> {
     inputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,
 }
 
-impl<'a> PortsIter<'a> {
+impl<'a> OutputPortsIter<'a> {
     #[inline]
     pub(crate) fn new(ports: &'a [CelledClapAudioBuffer], frames_count: u32) -> Self {
         Self {
@@ -22,8 +22,8 @@ impl<'a> PortsIter<'a> {
     }
 }
 
-impl<'a> Iterator for PortsIter<'a> {
-    type Item = Port<'a>;
+impl<'a> Iterator for OutputPortsIter<'a> {
+    type Item = OutputPort<'a>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -31,7 +31,7 @@ impl<'a> Iterator for PortsIter<'a> {
             .next()
             // SAFETY: The Audio type this is built from ensures each buffer is valid
             // and is of length frames_count.
-            .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
     #[inline]
@@ -40,7 +40,7 @@ impl<'a> Iterator for PortsIter<'a> {
     }
 }
 
-impl ExactSizeIterator for PortsIter<'_> {
+impl ExactSizeIterator for OutputPortsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.inputs.len()
@@ -49,12 +49,12 @@ impl ExactSizeIterator for PortsIter<'_> {
 
 /// An audio port.
 #[derive(Copy, Clone)]
-pub struct Port<'a> {
+pub struct OutputPort<'a> {
     inner: &'a CelledClapAudioBuffer,
     frames_count: u32,
 }
 
-impl<'a> Port<'a> {
+impl<'a> OutputPort<'a> {
     /// # Safety
     ///
     /// * The provided buffer must be valid;
@@ -67,7 +67,7 @@ impl<'a> Port<'a> {
         }
     }
 
-    /// Retrieves the input port's channels.
+    /// Retrieves the output port's channels.
     ///
     /// Because each port can hold either [`f32`] or [`f64`] sample data, this method returns a
     /// [`SampleType`] enum of the input channels, to indicate which one the port holds.
@@ -101,14 +101,14 @@ impl<'a> Port<'a> {
     #[inline]
     pub fn channels(
         &self,
-    ) -> Result<SampleType<Channels<'a, f32>, Channels<'a, f64>>, BufferError> {
+    ) -> Result<SampleType<OutputChannels<'a, f32>, OutputChannels<'a, f64>>, BufferError> {
         // SAFETY: this type ensures the provided buffer is valid
         Ok(unsafe { SampleType::from_raw_buffer(self.inner) }?.map(
-            |data| Channels {
+            |data| OutputChannels {
                 data,
                 frames_count: self.frames_count,
             },
-            |data| Channels {
+            |data| OutputChannels {
                 data,
                 frames_count: self.frames_count,
             },
@@ -148,22 +148,22 @@ impl<'a> Port<'a> {
     }
 }
 
-/// An [`Port`]'s channels' data buffers, which contains samples of a given type `S`.
+/// An [`OutputPort`]'s channels' data buffers, which contains samples of a given type `S`.
 ///
 /// The sample type `S` is always going to be either [`f32`] or [`f64`], as returned by
-/// [`Port::channels`].
-pub struct Channels<'a, S> {
+/// [`OutputPort::channels`].
+pub struct OutputChannels<'a, S> {
     frames_count: u32,
     data: &'a [*mut S],
 }
 
-impl<'a, S> Channels<'a, S> {
+impl<'a, S> OutputChannels<'a, S> {
     /// # Safety
     /// Both data and the pointers in it must be valid for 'a.
     /// Every pointer in data must point to a slice of size `frames_count`, and be valid for both reads and writes.
     #[inline]
     pub(crate) const unsafe fn from_raw(data: &'a [*mut S], frames_count: u32) -> Self {
-        Channels { data, frames_count }
+        OutputChannels { data, frames_count }
     }
 
     /// Returns the number of frames to process in this block.
@@ -213,16 +213,16 @@ impl<'a, S> Channels<'a, S> {
     }
 }
 
-impl<'a, S> Clone for Channels<'a, S> {
+impl<'a, S> Clone for OutputChannels<'a, S> {
     #[inline]
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, S> Copy for Channels<'a, S> {}
+impl<'a, S> Copy for OutputChannels<'a, S> {}
 
-impl<'a, S> Index<usize> for Channels<'a, S> {
+impl<'a, S> Index<usize> for OutputChannels<'a, S> {
     type Output = AudioBuffer<S>;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -231,7 +231,7 @@ impl<'a, S> Index<usize> for Channels<'a, S> {
     }
 }
 
-impl<'a, T> IntoIterator for Channels<'a, T> {
+impl<'a, T> IntoIterator for OutputChannels<'a, T> {
     type Item = &'a AudioBuffer<T>;
     type IntoIter = ChannelsIter<'a, T>;
 
@@ -241,7 +241,7 @@ impl<'a, T> IntoIterator for Channels<'a, T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a Channels<'a, T> {
+impl<'a, T> IntoIterator for &'a OutputChannels<'a, T> {
     type Item = &'a AudioBuffer<T>;
     type IntoIter = ChannelsIter<'a, T>;
 
@@ -251,7 +251,7 @@ impl<'a, T> IntoIterator for &'a Channels<'a, T> {
     }
 }
 
-/// An iterator over all of an [`Port`]'s channels' sample buffers.
+/// An iterator over all of an [`OutputPort`]'s channels' sample buffers.
 pub struct ChannelsIter<'a, T> {
     data: Iter<'a, *mut T>,
     frames_count: u32,

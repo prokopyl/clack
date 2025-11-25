@@ -93,20 +93,20 @@ impl Events<'_> {
 /// * Each channel is a raw buffer (i.e. slice) of either [`f32`] or [`f64`] samples.
 ///
 /// This structure applies both to inputs and outputs: the [`Audio`] struct allows to retrieve
-/// input and output [`Port`]s separately, but they can also be accessed together as
+/// input and output [`OutputPort`]s separately, but they can also be accessed together as
 /// Input/Output [`PortPair`]s. This allows for the common use-case of borrowing both an input
 /// and its matching output for processing, while also being safe to hosts using the same buffer for
 /// both.
 ///
 /// For each port type (input, output, or paired), ports can be accessed either individually with
-/// an index, or all at once with an iterator. For instance, [`Port`]s can be accessed either
+/// an index, or all at once with an iterator. For instance, [`OutputPort`]s can be accessed either
 /// one-at-a-time with [`Audio::input_port`], or with an iterator from [`Audio::input_ports`]. A
 /// [`Audio::input_port_count`] method is also available. The same methods are available for
-/// the output [`Port`]s and [`PortPair`]s.
+/// the output [`OutputPort`]s and [`PortPair`]s.
 ///
 /// Note that because ports can individually hold either 32-bit or 64-bit sample data, an extra
 /// sample type detection step is necessary before the port's channels themselves can be accessed.
-/// This is done through the [`channels`](Port::channels) methods on each port type, and
+/// This is done through the [`channels`](OutputPort::channels) methods on each port type, and
 /// returns a [`SampleType`] enum indicating whether the port's buffers hold 32-bit or 64-bit samples.
 ///
 /// # Example
@@ -304,62 +304,62 @@ impl<'a> Audio<'a> {
         )
     }
 
-    /// Retrieves the input [`Port`] at a given index.
+    /// Retrieves the input [`OutputPort`] at a given index.
     ///
     /// This returns [`None`] if there is no input port at the given index.
     ///
     /// See also the [`input_port_count`](Audio::input_port_count) method to know how many input
     /// ports are available, and the [`input_ports`](Audio::input_ports) method to get all input ports at once.
     #[inline]
-    pub fn input_port(&self, index: usize) -> Option<Port<'a>> {
+    pub fn input_port(&self, index: usize) -> Option<OutputPort<'a>> {
         self.inputs
             .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct
-            .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
-    /// Retrieves the number of available input [`Port`]s.
+    /// Retrieves the number of available input [`OutputPort`]s.
     #[inline]
     pub fn input_port_count(&self) -> usize {
         self.inputs.len()
     }
 
-    /// Returns an iterator of all the available input [`Port`]s at once.
+    /// Returns an iterator of all the available input [`OutputPort`]s at once.
     ///
     /// See also the [`input_port`](Audio::input_port) method to retrieve a single input port by
     /// its index.
     #[inline]
-    pub fn input_ports(&self) -> PortsIter<'a> {
-        PortsIter::new(self.inputs, self.frames_count)
+    pub fn input_ports(&self) -> OutputPortsIter<'a> {
+        OutputPortsIter::new(self.inputs, self.frames_count)
     }
 
-    /// Retrieves the output [`Port`] at a given index.
+    /// Retrieves the output [`OutputPort`] at a given index.
     ///
     /// This returns [`None`] if there is no output port at the given index.
     ///
     /// See also the [`output_port_count`](Audio::output_port_count) method to know how many output
     /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all output ports at once.
     #[inline]
-    pub fn output_port(&self, index: usize) -> Option<Port<'a>> {
+    pub fn output_port(&self, index: usize) -> Option<OutputPort<'a>> {
         self.outputs
             .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
-            .map(|buf| unsafe { Port::from_raw(buf, self.frames_count) })
+            .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
     }
 
-    /// Retrieves the number of available output [`Port`]s.
+    /// Retrieves the number of available output [`OutputPort`]s.
     #[inline]
     pub fn output_port_count(&self) -> usize {
         self.outputs.len()
     }
 
-    /// Returns an iterator of all the available output [`Port`]s at once.
+    /// Returns an iterator of all the available output [`OutputPort`]s at once.
     ///
     /// See also the [`output_port`](Audio::output_port) method to retrieve a single output port by
     /// its index.
     #[inline]
-    pub fn output_ports(&self) -> PortsIter<'a> {
-        PortsIter::new(self.outputs, self.frames_count)
+    pub fn output_ports(&self) -> OutputPortsIter<'a> {
+        OutputPortsIter::new(self.outputs, self.frames_count)
     }
 
     /// Retrieves the [`PortPair`] at a given index.
@@ -382,7 +382,7 @@ impl<'a> Audio<'a> {
 
     /// Retrieves the number of available [`PortPair`]s.
     ///
-    /// Because [`PortPair`] can be mismatched (i.e. have an input but no output, or vice-versa),
+    /// Because [`PortPair`] can be mismatched (i.e. have an input but no output, or vice versa),
     /// this is effectively equal to the maximum number of ports available, either on the input side
     /// or the output side.
     #[inline]
@@ -395,7 +395,7 @@ impl<'a> Audio<'a> {
     /// See also the [`port_pair`](Audio::port_pair) method to retrieve a single input port by
     /// its index.
     #[inline]
-    pub fn port_pairs(&self) -> PortPairsIter<'a> {
+    pub fn port_pairs(&mut self) -> PortPairsIter<'_> {
         PortPairsIter::new(self)
     }
 
