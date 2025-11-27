@@ -28,7 +28,7 @@ impl AsRef<UnknownEvent> for MidiEvent {
 
 impl MidiEvent {
     #[inline]
-    pub fn new(time: u32, port_index: u16, data: [u8; 3]) -> Self {
+    pub const fn new(time: u32, port_index: u16, data: [u8; 3]) -> Self {
         Self {
             inner: clap_event_midi {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -39,33 +39,33 @@ impl MidiEvent {
     }
 
     #[inline]
-    pub fn data(&self) -> [u8; 3] {
+    pub const fn data(&self) -> [u8; 3] {
         self.inner.data
     }
 
     #[inline]
-    pub fn set_data(&mut self, data: [u8; 3]) {
+    pub const fn set_data(&mut self, data: [u8; 3]) {
         self.inner.data = data
     }
 
     #[inline]
-    pub fn with_data(mut self, data: [u8; 3]) -> Self {
+    pub const fn with_data(mut self, data: [u8; 3]) -> Self {
         self.inner.data = data;
         self
     }
 
     #[inline]
-    pub fn port_index(&self) -> u16 {
+    pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: u16) {
+    pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index
     }
 
     #[inline]
-    pub fn with_port_index(mut self, port_index: u16) -> Self {
+    pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
         self
     }
@@ -113,7 +113,7 @@ impl AsRef<UnknownEvent> for MidiSysExEvent {
 
 impl MidiSysExEvent {
     #[inline]
-    pub fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
+    pub const fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
         Self {
             inner: clap_event_midi_sysex {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -125,28 +125,28 @@ impl MidiSysExEvent {
     }
 
     #[inline]
-    pub fn port_index(&self) -> u16 {
+    pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: u16) {
+    pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
     }
 
     #[inline]
-    pub fn with_port_index(mut self, port_index: u16) -> Self {
+    pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
         self
     }
 
     #[inline]
-    pub fn buffer_ptr(&self) -> *const u8 {
+    pub const fn buffer_ptr(&self) -> *const u8 {
         self.inner.buffer
     }
 
     #[inline]
-    pub fn buffer_size(&self) -> u32 {
+    pub const fn buffer_size(&self) -> u32 {
         self.inner.size
     }
 
@@ -159,7 +159,7 @@ impl MidiSysExEvent {
     /// As a host, plugin-provided buffers usually live at least until the next plugin call from the
     /// same thread.
     #[inline]
-    pub unsafe fn data<'a>(&self) -> &'a [u8] {
+    pub const unsafe fn data<'a>(&self) -> &'a [u8] {
         // SAFETY: this struct ensures the buffer is valid, and the user enforces the lifetime
         unsafe { slice_from_external_parts(self.inner.buffer, self.inner.size as usize) }
     }
@@ -208,7 +208,7 @@ impl AsRef<UnknownEvent> for Midi2Event {
 
 impl Midi2Event {
     #[inline]
-    pub fn new(time: u32, port_index: u16, data: [u32; 4]) -> Self {
+    pub const fn new(time: u32, port_index: u16, data: [u32; 4]) -> Self {
         Self {
             inner: clap_event_midi2 {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -219,33 +219,33 @@ impl Midi2Event {
     }
 
     #[inline]
-    pub fn data(&self) -> [u32; 4] {
+    pub const fn data(&self) -> [u32; 4] {
         self.inner.data
     }
 
     #[inline]
-    pub fn set_data(&mut self, data: [u32; 4]) {
+    pub const fn set_data(&mut self, data: [u32; 4]) {
         self.inner.data = data
     }
 
     #[inline]
-    pub fn with_data(mut self, data: [u32; 4]) -> Self {
+    pub const fn with_data(mut self, data: [u32; 4]) -> Self {
         self.inner.data = data;
         self
     }
 
     #[inline]
-    pub fn port_index(&self) -> u16 {
+    pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
     #[inline]
-    pub fn set_port_index(&mut self, port_index: u16) {
+    pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
     }
 
     #[inline]
-    pub fn with_port_index(mut self, port_index: u16) -> Self {
+    pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
         self
     }

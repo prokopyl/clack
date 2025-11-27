@@ -19,7 +19,7 @@ impl ParamRescanFlags {
     /// Returns `true` if any of the given flags that are set imply that a plugin instance's restart
     /// is needed before params can be rescanned.
     #[inline]
-    pub fn requires_restart(&self) -> bool {
+    pub const fn requires_restart(&self) -> bool {
         self.contains(Self::ALL)
     }
 }

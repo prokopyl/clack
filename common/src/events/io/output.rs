@@ -46,7 +46,7 @@ impl<'a> OutputEvents<'a> {
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
-    pub unsafe fn from_raw_mut(raw: &mut clap_output_events) -> &'a mut Self {
+    pub const unsafe fn from_raw_mut(raw: &mut clap_output_events) -> &'a mut Self {
         // SAFETY: OutputEvents list has the same layout and is repr(C)
         &mut *(raw as *mut _ as *mut _)
     }
@@ -55,7 +55,7 @@ impl<'a> OutputEvents<'a> {
     ///
     /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub fn as_raw_mut(&mut self) -> &mut clap_output_events {
+    pub const fn as_raw_mut(&mut self) -> &mut clap_output_events {
         // SAFETY: OutputEvents list has the same layout and is repr(C)
         unsafe { &mut *(self as *mut _ as *mut _) }
     }
@@ -84,7 +84,7 @@ impl<'a> OutputEvents<'a> {
     /// let output_events = OutputEvents::from_buffer(&mut buf);
     /// ```
     #[inline]
-    pub fn from_buffer<O: OutputEventBuffer>(buffer: &'a mut O) -> Self {
+    pub const fn from_buffer<O: OutputEventBuffer>(buffer: &'a mut O) -> Self {
         Self {
             inner: raw_output_events(buffer),
             _lifetime: PhantomData,

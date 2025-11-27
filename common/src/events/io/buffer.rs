@@ -54,7 +54,7 @@ pub struct EventBuffer {
 
 #[inline]
 pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
-    let type_size = core::mem::size_of::<T>();
+    let type_size = size_of::<T>();
     if type_size == 0 {
         0
     } else {
@@ -65,7 +65,7 @@ pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
 impl EventBuffer {
     /// Creates a new, empty [`EventBuffer`].
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             headers: Vec::new(),
             indexes: Vec::new(),
@@ -85,7 +85,7 @@ impl EventBuffer {
     pub fn with_capacity(events: usize) -> Self {
         Self {
             // TransportEvent is the largest standard CLAP event.
-            headers: Vec::with_capacity(events * core::mem::size_of::<TransportEvent>()),
+            headers: Vec::with_capacity(events * size_of::<TransportEvent>()),
             indexes: Vec::with_capacity(events),
         }
     }

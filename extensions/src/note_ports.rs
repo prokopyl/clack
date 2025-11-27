@@ -49,7 +49,7 @@ pub enum NoteDialect {
 }
 
 impl NoteDialect {
-    pub fn from_raw(raw: clap_note_dialect) -> Option<Self> {
+    pub const fn from_raw(raw: clap_note_dialect) -> Option<Self> {
         match raw {
             CLAP_NOTE_DIALECT_CLAP => Some(Self::Clap),
             CLAP_NOTE_DIALECT_MIDI => Some(Self::Midi),

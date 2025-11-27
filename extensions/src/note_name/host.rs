@@ -18,7 +18,7 @@ impl Default for NoteNameBuffer {
 impl NoteNameBuffer {
     /// Creates an uninitialized Note Name buffer.
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             inner: MaybeUninit::zeroed(),
         }

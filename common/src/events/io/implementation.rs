@@ -46,7 +46,7 @@ pub(crate) const fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_in
     }
 }
 
-pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
+pub(crate) const fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
     clap_output_events {
         ctx: buffer as *mut _ as *mut _,
         try_push: Some(try_push::<I>),

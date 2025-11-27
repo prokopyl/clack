@@ -77,7 +77,7 @@ impl TransportEvent {
 
     #[inline]
     pub const fn from_raw(raw: &clap_event_transport) -> Self {
-        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+        crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
         let this = unsafe { &*(raw as *const clap_event_transport as *const Self) };
@@ -86,14 +86,14 @@ impl TransportEvent {
 
     #[inline]
     pub const fn from_raw_ref(raw: &clap_event_transport) -> &Self {
-        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+        crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
         unsafe { &*(raw as *const clap_event_transport as *const Self) }
     }
 
     #[inline]
-    pub fn from_raw_mut(raw: &mut clap_event_transport) -> &mut Self {
+    pub const fn from_raw_mut(raw: &mut clap_event_transport) -> &mut Self {
         crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport

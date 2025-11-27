@@ -31,7 +31,7 @@ impl FixedPoint {
     }
 
     #[inline]
-    pub fn to_float(&self) -> f64 {
+    pub const fn to_float(&self) -> f64 {
         self.0 as f64 / Self::FACTOR as f64
     }
 

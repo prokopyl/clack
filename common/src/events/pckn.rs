@@ -346,7 +346,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn set_pckn(&mut self, pckn: Pckn) {
+        pub const fn set_pckn(&mut self, pckn: Pckn) {
             self.inner.port_index = pckn.raw_port_index();
             self.inner.channel = pckn.raw_channel();
             self.inner.key = pckn.raw_key();
@@ -354,7 +354,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn with_pckn(mut self, pckn: Pckn) -> Self {
+        pub const fn with_pckn(mut self, pckn: Pckn) -> Self {
             self.set_pckn(pckn);
             self
         }
@@ -365,7 +365,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn set_port_index(&mut self, port_index: Match<u16>) {
+        pub const fn set_port_index(&mut self, port_index: Match<u16>) {
             self.inner.port_index = port_index.to_raw()
         }
 
@@ -381,7 +381,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn set_channel(&mut self, channel: Match<u16>) {
+        pub const fn set_channel(&mut self, channel: Match<u16>) {
             self.inner.channel = channel.to_raw();
         }
 
@@ -397,7 +397,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn set_key(&mut self, key: Match<u16>) {
+        pub const fn set_key(&mut self, key: Match<u16>) {
             self.inner.key = key.to_raw();
         }
 
@@ -413,7 +413,7 @@ macro_rules! impl_event_pckn {
         }
 
         #[inline]
-        pub fn set_note_id(&mut self, note_id: Match<u32>) {
+        pub const fn set_note_id(&mut self, note_id: Match<u32>) {
             self.inner.note_id = note_id.to_raw();
         }
 

@@ -39,7 +39,10 @@ pub(crate) unsafe fn write_to_array_buf<const N: usize>(dst: *mut [c_char; N], v
 /// Same requirements as [`core::slice::from_raw_parts_mut`], except the pointer *can* be null or
 /// dangling if `len == 0`.
 #[inline]
-pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
+pub(crate) const unsafe fn slice_from_external_parts_mut<'a, T>(
+    data: *mut T,
+    len: usize,
+) -> &'a mut [T] {
     if len == 0 {
         return &mut [];
     }

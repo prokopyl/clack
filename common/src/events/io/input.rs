@@ -43,7 +43,7 @@ impl<'a> InputEvents<'a> {
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
-    pub unsafe fn from_raw(raw: &'a clap_input_events) -> &'a Self {
+    pub const unsafe fn from_raw(raw: &'a clap_input_events) -> &'a Self {
         &*(raw as *const _ as *const _)
     }
 
@@ -51,7 +51,7 @@ impl<'a> InputEvents<'a> {
     ///
     /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub fn as_raw(&self) -> &clap_input_events {
+    pub const fn as_raw(&self) -> &clap_input_events {
         &self.inner
     }
 
@@ -309,7 +309,7 @@ pub struct InputEventsIter<'a> {
 
 impl<'a> InputEventsIter<'a> {
     #[inline]
-    pub(crate) fn new(list: &'a InputEvents<'a>, range: Range<u32>) -> Self {
+    pub(crate) const fn new(list: &'a InputEvents<'a>, range: Range<u32>) -> Self {
         Self { list, range }
     }
 }

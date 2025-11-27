@@ -72,7 +72,7 @@ pub struct VoiceInfo {
 
 impl VoiceInfo {
     #[inline]
-    fn from_raw(raw: &clap_voice_info) -> Self {
+    pub const fn from_raw(raw: &clap_voice_info) -> Self {
         Self {
             voice_count: raw.voice_count,
             voice_capacity: raw.voice_capacity,
@@ -81,7 +81,7 @@ impl VoiceInfo {
     }
 
     #[inline]
-    fn to_raw(&self) -> clap_voice_info {
+    pub const fn to_raw(&self) -> clap_voice_info {
         clap_voice_info {
             voice_count: self.voice_count,
             voice_capacity: self.voice_capacity,

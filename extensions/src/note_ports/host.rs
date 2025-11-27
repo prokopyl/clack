@@ -16,7 +16,7 @@ impl Default for NotePortInfoBuffer {
 
 impl NotePortInfoBuffer {
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             inner: MaybeUninit::zeroed(),
         }

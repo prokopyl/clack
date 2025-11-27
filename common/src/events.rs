@@ -318,55 +318,21 @@ impl AsRef<UnknownEvent> for UnknownEvent {
 }
 
 #[inline]
-pub(crate) const fn ensure_event_matches_const<
-    's,
-    E: Event<EventSpace<'s> = CoreEventSpace<'s>>,
->(
+pub(crate) const fn ensure_event_matches<'s, E: Event<EventSpace<'s> = CoreEventSpace<'s>>>(
     header: &clap_event_header,
 ) {
     if header.space_id != 0 {
-        panic_event_space_mismatch_const()
+        panic_event_space_mismatch()
     }
 
     if header.type_ != E::TYPE_ID {
-        panic_event_type_mismatch_const()
-    }
-}
-
-#[inline]
-pub(crate) fn ensure_event_matches<'s, E: Event<EventSpace<'s> = CoreEventSpace<'s>>>(
-    header: &clap_event_header,
-) {
-    if header.space_id != 0 {
-        panic_event_space_mismatch(header.space_id)
-    }
-
-    if header.type_ != E::TYPE_ID {
-        panic_event_type_mismatch(E::TYPE_ID, header.type_)
+        panic_event_type_mismatch()
     }
 }
 
 #[inline(never)]
 #[cold]
-fn panic_event_space_mismatch(actual_id: u16) {
-    panic!(
-        "CLAP Event mismatch: expected core event space (ID 0), got event space ID {} instead.",
-        actual_id
-    )
-}
-
-#[inline(never)]
-#[cold]
-fn panic_event_type_mismatch(expected_id: u16, actual_id: u16) {
-    panic!(
-        "CLAP Event mismatch: expected event ID {}, got event ID {} instead.",
-        expected_id, actual_id
-    )
-}
-
-#[inline(never)]
-#[cold]
-const fn panic_event_space_mismatch_const() {
+const fn panic_event_space_mismatch() {
     panic!(
         "CLAP Event mismatch: expected core event space (ID 0), got a non-core event space instead.",
     )
@@ -374,6 +340,6 @@ const fn panic_event_space_mismatch_const() {
 
 #[inline(never)]
 #[cold]
-const fn panic_event_type_mismatch_const() {
+const fn panic_event_type_mismatch() {
     panic!("CLAP Event mismatch: got a different event ID from expected")
 }

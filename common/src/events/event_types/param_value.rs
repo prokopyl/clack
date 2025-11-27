@@ -51,7 +51,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: ClapId) {
+    pub const fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
@@ -67,7 +67,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_value(&mut self, value: f64) {
+    pub const fn set_value(&mut self, value: f64) {
         self.inner.value = value
     }
 
@@ -86,7 +86,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_cookie(&mut self, cookie: Cookie) {
+    pub const fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
