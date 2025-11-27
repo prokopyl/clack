@@ -105,14 +105,6 @@ impl Debug for ConstantMask {
     }
 }
 
-impl Default for ConstantMask {
-    /// Returns an empty constant mask, i.e. one where every channel is considered dynamic.
-    #[inline]
-    fn default() -> Self {
-        ConstantMask::FULLY_DYNAMIC
-    }
-}
-
 impl IntoIterator for ConstantMask {
     type Item = bool;
     type IntoIter = ConstantMaskIter;
