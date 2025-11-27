@@ -1,6 +1,7 @@
 //! Types to manipulate input and output audio buffers for processing.
 
 use crate::process::celled_audio_buffers::CelledClapAudioBuffer;
+use crate::process::into_buffers::{ChannelBuffer, IntoPortsBuffers, PortBuffers};
 use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
@@ -30,9 +31,33 @@ impl<'a, T> InputChannel<'a, T> {
     }
 }
 
+impl<'a> ChannelBuffer<'a> for InputChannel<'a, f32> {
+    const IS_F64: bool = false;
+
+    #[inline]
+    fn buf_len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    #[inline]
+    fn is_constant(&self) -> bool {
+        self.is_constant
+    }
+
+    #[inline]
+    fn buf_ptr(&mut self) -> *mut f32 {
+        self.buffer.as_mut_ptr()
+    }
+}
+
 pub enum AudioPortBufferType<I32, I64> {
     F32(I32),
     F64(I64),
+}
+
+pub trait IntoChannelsBuffers<'a> {
+    type ChannelBuffer: ChannelBuffer<'a>;
+    fn into_channels_buffers(self) -> impl Iterator<Item = Self::ChannelBuffer>;
 }
 
 impl<I32> AudioPortBufferType<I32, IntoIter<InputChannel<'static, f64>, 0>> {
@@ -66,6 +91,23 @@ impl<I64> AudioPortBufferType<IntoIter<&'static mut [f32], 0>, I64> {
 pub struct AudioPortBuffer<I32, I64> {
     pub channels: AudioPortBufferType<I32, I64>,
     pub latency: u32,
+}
+
+impl<F32, F64> PortBuffers<'_> for AudioPortBuffer<F32, F64> {
+    type ChannelBuffer = ();
+
+    fn is_f64(&self) -> bool {
+        todo!()
+    }
+
+    fn latency(&self) -> u32 {
+        todo!()
+    }
+
+    fn into_channels_refs(self) -> impl Iterator<Item = Self::ChannelBuffer> {
+        todo!();
+        core::iter::empty()
+    }
 }
 
 // TODO: bikeshed
@@ -110,67 +152,42 @@ impl AudioPorts {
         }
     }
 
-    pub fn with_input_buffers<'a, I, Iter, ChannelIter32, ChannelIter64>(
-        &'a mut self,
-        iter: I,
-    ) -> AudioBuffers<'a>
-    where
-        I: IntoIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>, IntoIter = Iter>,
-        Iter: ExactSizeIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>>,
-        ChannelIter32: IntoIterator<Item = InputChannel<'a, f32>>,
-        ChannelIter64: IntoIterator<Item = InputChannel<'a, f64>>,
-    {
-        let iter = iter.into_iter();
-        self.resize_buffer_configs(iter.len());
+    pub fn with_buffers<'a>(&'a mut self, bufs: impl IntoPortsBuffers<'a>) -> AudioBuffers<'a> {
+        let port_count = bufs.port_count();
+        self.resize_buffer_configs(port_count);
         self.buffer_lists.clear();
 
         let mut min_channel_buffer_length = usize::MAX;
         let mut total = 0;
         let mut has_reallocated = false;
 
-        for (i, port) in iter.enumerate() {
+        for (i, port) in bufs.into_iterator().enumerate() {
             total = i + 1;
+
+            let latency = port.latency();
 
             let last = self.buffer_lists.len();
 
             let mut constant_mask = ConstantMask::FULLY_DYNAMIC;
-            let is_f64 = match port.channels {
-                AudioPortBufferType::F32(channels) => {
-                    for channel in channels {
-                        min_channel_buffer_length =
-                            min_channel_buffer_length.min(channel.buffer.len());
-                        constant_mask.set_channel_constant(i as u64, channel.is_constant);
+            let is_f64 = port.is_f64();
 
-                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
-                            has_reallocated = true;
-                        }
+            for mut channel in port.into_channels_refs() {
+                min_channel_buffer_length = min_channel_buffer_length.min(channel.buf_len());
+                constant_mask.set_channel_constant(i as u64, channel.is_constant());
 
-                        self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
-                    }
-                    false
+                if self.buffer_lists.len() >= self.buffer_lists.capacity() {
+                    has_reallocated = true;
                 }
-                AudioPortBufferType::F64(channels) => {
-                    for channel in channels {
-                        min_channel_buffer_length =
-                            min_channel_buffer_length.min(channel.buffer.len());
-                        constant_mask.set_channel_constant(i as u64, channel.is_constant);
 
-                        if self.buffer_lists.len() >= self.buffer_lists.capacity() {
-                            has_reallocated = true;
-                        }
-
-                        self.buffer_lists.push(channel.buffer.as_mut_ptr().cast())
-                    }
-                    true
-                }
-            };
+                self.buffer_lists.push(channel.buf_ptr())
+            }
 
             let buffers = self.buffer_lists.get_mut(last..).unwrap_or(&mut []);
 
             // PANIC: this can only panic with an invalid implementation of ExactSizeIterator
             let descriptor = &mut self.buffer_configs[i];
             descriptor.channel_count = buffers.len() as u32;
-            descriptor.latency = port.latency;
+            descriptor.latency = latency;
             descriptor.constant_mask = constant_mask.to_bits();
 
             if is_f64 {
@@ -462,11 +479,22 @@ mod test {
     use std::ptr::null_mut;
 
     #[test]
+    pub fn audio_buffers_work_with_many_types() {
+        let mut ports = AudioPorts::with_capacity(2, 1);
+        let mut bufs = [[0f32; 4]; 2];
+
+        let buffers = ports.with_buffers(&mut bufs);
+
+        assert_eq!(buffers.buffers.len(), 1);
+        assert_eq!(buffers.frames_count, Some(4));
+    }
+
+    #[test]
     pub fn input_audio_buffers_work() {
         let mut ports = AudioPorts::with_capacity(2, 1);
         let mut bufs = [[0f32; 4]; 2];
 
-        let buffers = ports.with_input_buffers([AudioPortBuffer {
+        let buffers = ports.with_buffers([AudioPortBuffer {
             latency: 0,
             channels: AudioPortBufferType::f32_input_only(bufs.iter_mut().map(|b| InputChannel {
                 buffer: b.as_mut_slice(),
@@ -503,7 +531,7 @@ mod test {
         let bufs = [RefCell::new([0f32; 4]), RefCell::new([0f32; 4])];
         let mut borrowed: Vec<_> = bufs.iter().map(|c| c.borrow_mut()).collect();
 
-        let buffers = ports.with_input_buffers([AudioPortBuffer {
+        let buffers = ports.with_buffers([AudioPortBuffer {
             latency: 0,
             channels: AudioPortBufferType::f32_input_only(borrowed.iter_mut().map(|b| {
                 InputChannel {
@@ -545,7 +573,7 @@ mod test {
         let mut output_bufs = [[[42f32; 4]; 128], [[69f32; 4]; 128]];
 
         let input_buffers =
-            input_ports.with_input_buffers(input_bufs.iter_mut().map(|bufs| AudioPortBuffer {
+            input_ports.with_buffers(input_bufs.iter_mut().map(|bufs| AudioPortBuffer {
                 latency: 0,
                 channels: AudioPortBufferType::f32_input_only(bufs.iter_mut().map(|b| {
                     InputChannel {

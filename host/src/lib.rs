@@ -88,7 +88,7 @@
 //!    [`OutputEvents`](events::io::OutputEvents) for events, and
 //!    [`InputAudioBuffers`](process::audio_buffers::AudioBuffers) and
 //!    [`OutputAudioBuffers`](process::audio_buffers::OutputAudioBuffers) for audio (obtained via a call to
-//!    [`AudioPorts::with_input_buffers`](process::audio_buffers::AudioPorts::with_input_buffers) and.
+//!    [`AudioPorts::with_input_buffers`](process::audio_buffers::AudioPorts::with_buffers) and.
 //!    [`AudioPorts::with_output_buffers`](process::audio_buffers::AudioPorts::with_output_buffers)
 //!    respectively).
 //!

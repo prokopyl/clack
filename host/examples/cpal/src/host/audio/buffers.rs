@@ -132,7 +132,7 @@ impl HostAudioBuffers {
 
         (
             self.input_ports
-                .with_input_buffers(self.input_port_channels.iter_mut().map(|port_buf| {
+                .with_buffers(self.input_port_channels.iter_mut().map(|port_buf| {
                     AudioPortBuffer {
                         latency: 0,
                         channels: AudioPortBufferType::f32_input_only(

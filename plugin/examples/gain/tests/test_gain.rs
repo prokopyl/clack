@@ -101,7 +101,7 @@ pub fn it_works() {
     let mut inputs_descriptors = AudioPorts::with_capacity(2, 1);
     let mut outputs_descriptors = AudioPorts::with_capacity(2, 1);
 
-    let input_channels = inputs_descriptors.with_input_buffers([AudioPortBuffer {
+    let input_channels = inputs_descriptors.with_buffers([AudioPortBuffer {
         channels: AudioPortBufferType::f32_input_only(
             input_buffers.iter_mut().map(InputChannel::variable),
         ),

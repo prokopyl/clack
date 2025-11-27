@@ -34,6 +34,7 @@ pub use clack_common::process::*;
 pub mod audio_buffers;
 
 pub(crate) mod celled_audio_buffers;
+mod into_buffers;
 
 /// A handle to a plugin's audio processor that can be in either its `started` or `stopped` state.
 ///
