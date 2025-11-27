@@ -278,8 +278,8 @@ impl<'a, S> PairedChannels<'a, S> {
     }
 }
 
-impl<'a, S> IntoIterator for PairedChannels<'a, S> {
-    type Item = ChannelPair<'a, S>;
+impl<'i, 'o, S> IntoIterator for PairedChannels<'o, S> {
+    type Item = ChannelPair<'i, 'o, S>;
     type IntoIter = PairedChannelsIter<'a, S>;
 
     #[inline]
@@ -293,14 +293,14 @@ impl<'a, S> IntoIterator for PairedChannels<'a, S> {
 }
 
 /// An iterator over all of a [`PortPair`]'s [`ChannelPair`]s.
-pub struct PairedChannelsIter<'a, S> {
-    input_iter: Iter<'a, *mut S>,
-    output_iter: IterMut<'a, *mut S>,
+pub struct PairedChannelsIter<'o, S> {
+    input_iter: Iter<'o, *mut S>,
+    output_iter: IterMut<'o, *mut S>,
     frames_count: u32,
 }
 
-impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
-    type Item = ChannelPair<'a, S>;
+impl<'i, 'o, S> Iterator for PairedChannelsIter<'i, 'o, S> {
+    type Item = ChannelPair<'i, 'o, S>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -324,7 +324,7 @@ impl<'a, S> Iterator for PairedChannelsIter<'a, S> {
     }
 }
 
-impl<S> ExactSizeIterator for PairedChannelsIter<'_, S> {
+impl<S> ExactSizeIterator for PairedChannelsIter<'_, '_, S> {
     #[inline]
     fn len(&self) -> usize {
         self.input_iter.len().max(self.output_iter.len())
@@ -378,26 +378,26 @@ impl ExactSizeIterator for PortPairsIter<'_> {
 ///
 /// This enum also allows to check for the fairly common case where Host may re-use the same
 /// buffer for both the input and output, and expect the plugin to do in-place processing.
-pub enum ChannelPair<'a, S> {
+pub enum ChannelPair<'i, 'o, S> {
     /// There is only an input channel present, there was no matching output.
-    InputOnly(&'a [S]),
+    InputOnly(&'i [S]),
     /// There is only an output channel present, there was no matching input.
-    OutputOnly(&'a mut [S]),
+    OutputOnly(&'o mut [S]),
     /// Both the input and output channels are present, and available separately.
-    InputOutput(&'a [S], &'a mut [S]),
+    InputOutput(&'i [S], &'o mut [S]),
     /// Both the input and output channels are present, but they actually share the same buffer.
     ///
     /// In this case, the slice is already filled with the input channel's data, and the host
     /// considers the contents of this buffer after processing to be the output channel's data.
-    InPlace(&'a mut [S]),
+    InPlace(&'o mut [S]),
 }
 
-impl<'a, S> ChannelPair<'a, S> {
+impl<'i, 'o, S> ChannelPair<'i, 'o, S> {
     #[inline]
     pub(crate) fn from_optional_io(
-        input: Option<&'a [S]>,
-        output: Option<&'a mut [S]>,
-    ) -> Option<ChannelPair<'a, S>> {
+        input: Option<&'i [S]>,
+        output: Option<&'o mut [S]>,
+    ) -> Option<ChannelPair<'i, 'o, S>> {
         match (input, output) {
             (None, None) => None,
             (Some(input), None) => Some(InputOnly(input)),
@@ -412,7 +412,7 @@ impl<'a, S> ChannelPair<'a, S> {
 
     /// Attempts to retrieve the input channel's buffer data, if the input channel is present.
     #[inline]
-    pub fn input(&'a self) -> Option<&'a [S]> {
+    pub fn input(&'i self) -> Option<&'i [S]> {
         match self {
             InputOnly(i) | InputOutput(i, _) => Some(i),
             OutputOnly(_) => None,
@@ -423,7 +423,7 @@ impl<'a, S> ChannelPair<'a, S> {
     /// Attempts to retrieve a read-only reference to the output channel's buffer data,
     /// if the output channel is present.
     #[inline]
-    pub fn output(&'a self) -> Option<&'a [S]> {
+    pub fn output(&'o self) -> Option<&'o [S]> {
         match self {
             OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
             InputOnly(_) => None,
@@ -433,7 +433,7 @@ impl<'a, S> ChannelPair<'a, S> {
     /// Attempts to retrieve a read-write reference to the output channel's buffer data,
     /// if the output channel is present.
     #[inline]
-    pub fn output_mut(&'a mut self) -> Option<&'a mut [S]> {
+    pub fn output_mut(&'o mut self) -> Option<&'o mut [S]> {
         match self {
             OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
             InputOnly(_) => None,

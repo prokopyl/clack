@@ -423,7 +423,7 @@ impl<'a> Audio<'a> {
 
     /// Returns a sub-range of ports as a new [`Audio`] struct, similar to a subslice of items.
     #[inline]
-    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
+    pub fn port_subset<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
         let inputs = self
             .inputs
             .get((range.start_bound().cloned(), range.end_bound().cloned()))
