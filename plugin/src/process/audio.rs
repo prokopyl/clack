@@ -42,10 +42,13 @@ pub mod tests {
 
         let frames_count = input_buffers.min_available_frames_with(&output_buffers);
 
-        Audio {
-            inputs: input_buffers.as_raw_buffers(),
-            frames_count,
-            outputs: output_buffers.into_raw_buffers(),
+        // SAFETY: the validity of the buffers is guaranteed by this type
+        unsafe {
+            Audio::from_raw_buffers(
+                input_buffers.as_raw_buffers(),
+                output_buffers.as_raw_buffers(),
+                frames_count,
+            )
         }
     }
 

@@ -1,14 +1,13 @@
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::prelude::Audio;
 use crate::process::audio::{BufferError, SampleType};
-use crate::process::InputChannelsIter;
+use crate::process::{CelledClapAudioBuffer, InputChannelsIter};
 use clack_common::process::ConstantMask;
-use clap_sys::audio_buffer::clap_audio_buffer;
-use std::slice::IterMut;
+use std::slice::{Iter, IterMut};
 
 /// An iterator of all the available [`OutputPort`]s from an [`Audio`] struct.
 pub struct OutputPortsIter<'a> {
-    outputs: IterMut<'a, clap_audio_buffer>,
+    outputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,
 }
 
@@ -16,7 +15,7 @@ impl<'a> OutputPortsIter<'a> {
     #[inline]
     pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
         Self {
-            outputs: audio.outputs.iter_mut(),
+            outputs: audio.outputs.iter(),
             frames_count: audio.frames_count,
         }
     }
@@ -49,7 +48,7 @@ impl ExactSizeIterator for OutputPortsIter<'_> {
 
 /// An output audio port.
 pub struct OutputPort<'a> {
-    inner: &'a mut clap_audio_buffer,
+    inner: &'a CelledClapAudioBuffer,
     frames_count: u32,
 }
 
@@ -59,7 +58,7 @@ impl<'a> OutputPort<'a> {
     /// * The provided buffer must be valid;
     /// * `frames_count` *must* match the size of the buffers.
     #[inline]
-    pub(crate) unsafe fn from_raw(inner: &'a mut clap_audio_buffer, frames_count: u32) -> Self {
+    pub(crate) unsafe fn from_raw(inner: &'a CelledClapAudioBuffer, frames_count: u32) -> Self {
         Self {
             inner,
             frames_count,
@@ -137,13 +136,13 @@ impl<'a> OutputPort<'a> {
     /// The constant mask for this port.
     #[inline]
     pub fn constant_mask(&self) -> ConstantMask {
-        ConstantMask::from_bits(self.inner.constant_mask)
+        ConstantMask::from_bits(self.inner.constant_mask.get())
     }
 
     /// Sets the constant mask for this port.
     #[inline]
     pub fn set_constant_mask(&mut self, new_mask: ConstantMask) {
-        self.inner.constant_mask = new_mask.to_bits()
+        self.inner.constant_mask.set(new_mask.to_bits())
     }
 }
 
