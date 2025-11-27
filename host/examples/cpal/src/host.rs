@@ -205,7 +205,7 @@ fn run_gui_floating(
     for message in receiver {
         match message {
             MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-            MainThreadMessage::GuiClosed { .. } => {
+            MainThreadMessage::GuiClosed => {
                 println!("Window closed!");
                 break;
             }

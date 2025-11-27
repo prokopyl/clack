@@ -135,7 +135,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
 
     /// Returns this plugin instance's audio processor handle.
     #[inline]
-    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle<'_> {
         match self {
             Started(s) => s.plugin_handle(),
             Stopped(s) => s.plugin_handle(),
@@ -144,7 +144,7 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
 
     /// Returns this plugin instance's shared handle.
     #[inline]
-    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle<'_> {
         match self {
             Started(s) => s.shared_plugin_handle(),
             Stopped(s) => s.shared_plugin_handle(),
@@ -609,13 +609,13 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     }
     /// Returns this plugin instance's audio processor handle.
     #[inline]
-    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle<'_> {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 
     /// Returns this plugin instance's shared handle.
     #[inline]
-    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle<'_> {
         self.inner.plugin_shared()
     }
 
@@ -771,13 +771,13 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
 
     /// Returns this plugin instance's audio processor handle.
     #[inline]
-    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle {
+    pub fn plugin_handle(&mut self) -> PluginAudioProcessorHandle<'_> {
         PluginAudioProcessorHandle::new(self.inner.raw_instance().into())
     }
 
     /// Returns this plugin instance's shared handle.
     #[inline]
-    pub fn shared_plugin_handle(&self) -> PluginSharedHandle {
+    pub fn shared_plugin_handle(&self) -> PluginSharedHandle<'_> {
         self.inner.plugin_shared()
     }
 

@@ -118,7 +118,7 @@ pub trait PluginGuiImpl {
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    fn get_preferred_api(&mut self) -> Option<GuiConfiguration>;
+    fn get_preferred_api(&mut self) -> Option<GuiConfiguration<'_>>;
 
     /// Create and allocate all resources needed for the GUI
     ///

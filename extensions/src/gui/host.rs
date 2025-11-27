@@ -27,7 +27,7 @@ impl PluginGui {
     pub fn get_preferred_api(
         &self,
         plugin: &mut PluginMainThreadHandle,
-    ) -> Option<GuiConfiguration> {
+    ) -> Option<GuiConfiguration<'_>> {
         let mut api_type = core::ptr::null();
         let mut is_floating = true;
 

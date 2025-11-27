@@ -98,7 +98,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     }
 
     #[inline]
-    pub fn plugin_shared(&self) -> PluginSharedHandle {
+    pub fn plugin_shared(&self) -> PluginSharedHandle<'_> {
         // SAFETY: the raw instance is guaranteed to be valid
         unsafe { PluginSharedHandle::new(self.raw_instance().into()) }
     }

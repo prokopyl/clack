@@ -304,7 +304,7 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     #[inline]
-    pub fn get_plugin_factory(&self) -> Option<PluginFactory> {
+    pub fn get_plugin_factory(&self) -> Option<PluginFactory<'_>> {
         self.get_factory()
     }
 

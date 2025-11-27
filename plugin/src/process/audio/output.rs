@@ -205,7 +205,7 @@ impl<S> OutputChannels<'_, S> {
 
     /// Gets a read-only iterator over all the port's channels' sample buffers.
     #[inline]
-    pub fn iter(&self) -> InputChannelsIter<S> {
+    pub fn iter(&self) -> InputChannelsIter<'_, S> {
         InputChannelsIter {
             data: self.data.iter(),
             frames_count: self.frames_count,
@@ -214,7 +214,7 @@ impl<S> OutputChannels<'_, S> {
 
     /// Gets an iterator over all the port's channels' writable sample buffers.
     #[inline]
-    pub fn iter_mut(&mut self) -> OutputChannelsIter<S> {
+    pub fn iter_mut(&mut self) -> OutputChannelsIter<'_, S> {
         OutputChannelsIter {
             data: self.data.as_mut().iter_mut(),
             frames_count: self.frames_count,
@@ -231,7 +231,7 @@ impl<S> OutputChannels<'_, S> {
     /// `mid` is larger than `channel_count`.
     /// The second [`OutputChannels`] will only be empty in this case.
     #[inline]
-    pub fn split_at_mut(&mut self, mid: u32) -> (OutputChannels<S>, OutputChannels<S>) {
+    pub fn split_at_mut(&mut self, mid: u32) -> (OutputChannels<'_, S>, OutputChannels<'_, S>) {
         let mid = mid as usize;
         if mid >= self.data.len() {
             return (

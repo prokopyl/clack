@@ -134,7 +134,7 @@ impl EventBuffer {
 
     /// Returns an iterator of all the events contained in this buffer.
     #[inline]
-    pub fn iter(&self) -> EventBufferIter {
+    pub fn iter(&self) -> EventBufferIter<'_> {
         EventBufferIter {
             buffer: self,
             range: 0..self.len(),
@@ -185,7 +185,7 @@ impl EventBuffer {
     ///
     /// This helper method is strictly equivalent to using [`InputEvents::from_buffer`].
     #[inline]
-    pub fn as_input(&self) -> InputEvents {
+    pub fn as_input(&self) -> InputEvents<'_> {
         InputEvents::from_buffer(self)
     }
 
@@ -193,7 +193,7 @@ impl EventBuffer {
     ///
     /// This helper method is strictly equivalent to using [`OutputEvents::from_buffer`].
     #[inline]
-    pub fn as_output(&mut self) -> OutputEvents {
+    pub fn as_output(&mut self) -> OutputEvents<'_> {
         OutputEvents::from_buffer(self)
     }
 

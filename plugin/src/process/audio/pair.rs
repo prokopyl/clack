@@ -45,7 +45,7 @@ impl<'a> PortPair<'a> {
     ///
     /// If the port layout is asymmetric and there is no input port, this returns [`None`].
     #[inline]
-    pub fn input(&self) -> Option<InputPort> {
+    pub fn input(&self) -> Option<InputPort<'_>> {
         self.input
             // SAFETY: this type ensures the buffer is valid and matches frame_count
             .map(|i| unsafe { InputPort::from_raw(i, self.frames_count) })
@@ -55,7 +55,7 @@ impl<'a> PortPair<'a> {
     ///
     /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
-    pub fn output(&mut self) -> Option<OutputPort> {
+    pub fn output(&mut self) -> Option<OutputPort<'_>> {
         self.output
             .as_mut()
             // SAFETY: this type ensures the buffer is valid and matches frame_count
@@ -269,7 +269,7 @@ impl<'a, S> PairedChannels<'a, S> {
 
     /// Gets an iterator over all the ports' [`ChannelPair`]s.
     #[inline]
-    pub fn iter_mut(&mut self) -> PairedChannelsIter<S> {
+    pub fn iter_mut(&mut self) -> PairedChannelsIter<'_, S> {
         PairedChannelsIter {
             input_iter: self.input_data.iter(),
             output_iter: self.output_data.iter_mut(),

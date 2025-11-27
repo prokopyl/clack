@@ -38,7 +38,7 @@ impl DefaultPluginFactory for GainPlugin {
             .with_features([AUDIO_EFFECT, STEREO])
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(GainPluginShared {
             params: GainParams::new(),
         })

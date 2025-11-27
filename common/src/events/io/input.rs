@@ -146,7 +146,7 @@ impl<'a> InputEvents<'a> {
 
     /// Returns an iterator over all the events in this [`InputEvents`].
     #[inline]
-    pub fn iter(&self) -> InputEventsIter {
+    pub fn iter(&self) -> InputEventsIter<'_> {
         InputEventsIter {
             list: self,
             range: 0..self.len(),
@@ -157,7 +157,7 @@ impl<'a> InputEvents<'a> {
     ///
     /// If the given `range` is out of bounds, then `None` is returned.
     #[inline]
-    pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter> {
+    pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter<'_>> {
         let len = self.len();
         if range.start > len || range.end > len {
             None
@@ -240,7 +240,7 @@ impl<'a> InputEvents<'a> {
     ///
     ///
     #[inline]
-    pub fn batch(&self) -> EventBatcher {
+    pub fn batch(&self) -> EventBatcher<'_> {
         EventBatcher::new(self)
     }
 }

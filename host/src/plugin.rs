@@ -157,12 +157,12 @@ impl<H: HostHandlers> PluginInstance<H> {
     }
 
     #[inline]
-    pub fn plugin_shared_handle(&self) -> PluginSharedHandle {
+    pub fn plugin_shared_handle(&self) -> PluginSharedHandle<'_> {
         self.inner.plugin_shared()
     }
 
     #[inline]
-    pub fn plugin_handle(&mut self) -> PluginMainThreadHandle {
+    pub fn plugin_handle(&mut self) -> PluginMainThreadHandle<'_> {
         // SAFETY: this type can only exist on the main thread.
         unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
     }

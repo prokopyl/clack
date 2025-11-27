@@ -196,7 +196,7 @@ impl UnknownEvent {
     ///
     /// ```
     #[inline]
-    pub fn as_core_event(&self) -> Option<CoreEventSpace> {
+    pub fn as_core_event(&self) -> Option<CoreEventSpace<'_>> {
         self.as_event_space(EventSpaceId::core())
     }
 

@@ -119,7 +119,7 @@ impl HostAudioBuffers {
     pub fn prepare_plugin_buffers(
         &mut self,
         cpal_buf_len: usize,
-    ) -> (InputAudioBuffers, OutputAudioBuffers) {
+    ) -> (InputAudioBuffers<'_>, OutputAudioBuffers<'_>) {
         let sample_count = self.cpal_buf_len_to_frame_count(cpal_buf_len);
         assert!(sample_count <= self.actual_frame_count);
 
