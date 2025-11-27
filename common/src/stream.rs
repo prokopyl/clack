@@ -75,7 +75,7 @@ impl Read for InputStream<'_> {
         };
         match ret {
             i if i >= 0 => Ok(i as usize),
-            code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),
+            code => Err(std::io::Error::other(StreamError { code })),
         }
     }
 }
@@ -126,7 +126,7 @@ impl Write for OutputStream<'_> {
 
         match ret {
             i if i >= 0 => Ok(i as usize),
-            code => Err(std::io::Error::new(ErrorKind::Other, StreamError { code })),
+            code => Err(std::io::Error::other(StreamError { code })),
         }
     }
 

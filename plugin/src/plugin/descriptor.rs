@@ -49,8 +49,7 @@ unsafe impl Send for PluginDescriptor {}
 // SAFETY: PluginDescriptor does not have any interior mutability.
 unsafe impl Sync for PluginDescriptor {}
 
-// SAFETY: there is a null byte in this string.
-const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
+const EMPTY: &CStr = c"";
 const EMPTY_FEATURES: &[*const c_char] = &[core::ptr::null()];
 
 impl PluginDescriptor {

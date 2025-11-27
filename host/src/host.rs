@@ -169,7 +169,7 @@
 //!     |shared| MyHostMainThread { shared, instance: None, latency_changed: false },
 //!     &bundle,
 //!     // We're hard-coding a specific plugin to load for this example
-//!     CStr::from_bytes_with_nul(b"com.u-he.diva\0")?,
+//!     c"com.u-he.diva",
 //!     &host_info
 //! )?;
 //!

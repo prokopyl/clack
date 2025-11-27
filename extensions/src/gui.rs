@@ -340,10 +340,7 @@ impl GuiApiType<'_> {
     ///
     /// See <https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent> to learn
     /// more about embedding using the Win32 API.
-    pub const WIN32: GuiApiType<'static> = GuiApiType(
-        // SAFETY: this constant string is NULL-terminated
-        unsafe { CStr::from_bytes_with_nul_unchecked(b"win32\0") },
-    );
+    pub const WIN32: GuiApiType<'static> = GuiApiType(c"win32");
 
     /// Represents the Cocoa API used by acOS.
     ///
@@ -351,10 +348,7 @@ impl GuiApiType<'_> {
     ///
     /// The `set_scale` method should not be called with this GUI API, as it is all handled by the
     /// OS directly.
-    pub const COCOA: GuiApiType<'static> = GuiApiType(
-        // SAFETY: this constant string is NULL-terminated
-        unsafe { CStr::from_bytes_with_nul_unchecked(b"cocoa\0") },
-    );
+    pub const COCOA: GuiApiType<'static> = GuiApiType(c"cocoa");
 
     /// Represents the X11 API, used by various Unix OSes.
     ///
@@ -362,20 +356,14 @@ impl GuiApiType<'_> {
     ///
     /// See <https://specifications.freedesktop.org/xembed-spec/xembed-spec-latest.html> to learn more
     /// about embedding using the X11 API.
-    pub const X11: GuiApiType<'static> = GuiApiType(
-        // SAFETY: this constant string is NULL-terminated
-        unsafe { CStr::from_bytes_with_nul_unchecked(b"x11\0") },
-    );
+    pub const X11: GuiApiType<'static> = GuiApiType(c"x11");
 
     /// Represents the Wayland API, used by various, newer Unix OSes.
     ///
     /// This API uses physical size for pixels.
     ///
     /// This API does *not* support embedding as of now. You can still use floating windows.
-    pub const WAYLAND: GuiApiType<'static> = GuiApiType(
-        // SAFETY: this constant string is NULL-terminated
-        unsafe { CStr::from_bytes_with_nul_unchecked(b"wayland\0") },
-    );
+    pub const WAYLAND: GuiApiType<'static> = GuiApiType(c"wayland");
 
     /// Whether this API type can provide a `RawWindowHandle`.
     pub fn can_provide_raw_window_handle(&self) -> bool {
@@ -405,22 +393,19 @@ impl GuiApiType<'_> {
     /// ```
     /// use core::ffi::CStr;
     /// use clack_extensions::gui::GuiApiType;
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///
     /// assert_eq!(
-    ///     GuiApiType(CStr::from_bytes_with_nul(b"win32\0")?).to_standard_api(),
+    ///     GuiApiType(c"win32").to_standard_api(),
     ///     Some(GuiApiType::WIN32)
     /// );
     /// assert_eq!(
-    ///     GuiApiType(CStr::from_bytes_with_nul(b"x11\0")?).to_standard_api(),
+    ///     GuiApiType(c"x11").to_standard_api(),
     ///     Some(GuiApiType::X11)
     /// );
     /// assert_eq!(
-    ///     GuiApiType(CStr::from_bytes_with_nul(b"custom\0")?).to_standard_api(),
+    ///     GuiApiType(c"custom").to_standard_api(),
     ///     None
     /// );
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn to_standard_api(&self) -> Option<GuiApiType<'static>> {
         if self == &Self::WIN32 {

@@ -3,7 +3,6 @@ use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
-use std::ffi::CStr;
 use std::io::Write;
 use std::sync::OnceLock;
 
@@ -44,7 +43,7 @@ impl DefaultPluginFactory for MyPlugin {
         PluginDescriptor::new("my.plugin", "My plugin")
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
@@ -117,7 +116,7 @@ fn can_call_host_methods_during_init() {
         },
         |_| MyHostMainThread { instance: None },
         &bundle,
-        CStr::from_bytes_with_nul(b"my.plugin\0").unwrap(),
+        c"my.plugin",
         &host,
     )
     .unwrap();

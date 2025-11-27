@@ -1,5 +1,4 @@
 use clack_plugin::prelude::*;
-use std::ffi::CStr;
 use std::thread;
 use std::thread::{current, ThreadId};
 use std::time::Duration;
@@ -32,7 +31,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
@@ -136,7 +135,7 @@ fn instantiate() -> PluginInstance<MyHost> {
         |_| MyHostShared,
         |_| (),
         &bundle,
-        CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
+        c"com.u-he.diva",
         &host_info,
     );
 

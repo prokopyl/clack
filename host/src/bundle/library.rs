@@ -10,8 +10,7 @@ pub(crate) struct PluginEntryLibrary {
     entry_ptr: NonNull<EntryDescriptor>,
 }
 
-// SAFETY: this has a null byte at the end
-const SYMBOL_NAME: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"clap_entry\0") };
+const SYMBOL_NAME: &CStr = c"clap_entry";
 impl PluginEntryLibrary {
     /// # Safety
     ///

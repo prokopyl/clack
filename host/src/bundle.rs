@@ -184,7 +184,7 @@ impl PluginBundle {
     ///
     /// let path = "/home/user/.clap/u-he/libdiva.so";
     /// let lib = unsafe { Library::new(path) }.unwrap();
-    /// let symbol_name = CStr::from_bytes_with_nul(b"clap_entry\0").unwrap();
+    /// let symbol_name = c"clap_entry";
     ///
     /// let bundle = unsafe { PluginBundle::load_from_symbol_in_library(path, lib, symbol_name)? };
     ///
