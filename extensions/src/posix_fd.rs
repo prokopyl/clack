@@ -117,9 +117,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostPosixFd
+    unsafe impl<H> ExtensionImplementation<H> for HostPosixFd
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
+        H: HostHandlers<MainThread: HostPosixFdImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =

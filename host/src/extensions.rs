@@ -194,8 +194,7 @@
 //! }
 //!
 //! // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-//! unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
-//!     where for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
+//! unsafe impl<H: for<'a> HostHandlers<MainThread<'a>: HostLatencyImpl>> ExtensionImplementation<H> for HostLatency
 //! {
 //!     const IMPLEMENTATION: RawExtensionImplementation =
 //!         RawExtensionImplementation::new(&clap_host_latency {
@@ -203,8 +202,7 @@
 //!         });
 //! }
 //!
-//! unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
-//!     where for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
+//! unsafe extern "C" fn changed<H: for<'a> HostHandlers<MainThread<'a>: HostLatencyImpl>>(host: *const clap_host)
 //! {
 //!     HostWrapper::<H>::handle(host, |host| {
 //!         host.main_thread().as_mut().changed();

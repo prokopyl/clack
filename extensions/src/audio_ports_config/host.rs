@@ -102,9 +102,9 @@ pub trait HostAudioPortsConfigImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostAudioPortsConfig
+unsafe impl<H> ExtensionImplementation<H> for HostAudioPortsConfig
 where
-    for<'h> <H as HostHandlers>::MainThread<'h>: HostAudioPortsConfigImpl,
+    H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -114,9 +114,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host)
+unsafe extern "C" fn rescan<H>(host: *const clap_host)
 where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostAudioPortsConfigImpl,
+    H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().rescan();
