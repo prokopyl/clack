@@ -130,4 +130,4 @@ jobs:
         # Prevent sudden announcement of a new advisory from failing ci:
         continue-on-error: ${{ matrix.checks == 'advisories' }}
         with:
-          command: advisories
+          command: check advisories

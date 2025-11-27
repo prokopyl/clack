@@ -62,7 +62,7 @@ impl<S: ExtensionSide, T> RawExtension<S, T> {
     /// See the [`RawExtension`] type documentation for more information on how to get a valid
     /// reference to the extension struct instead.
     #[inline]
-    pub fn as_ptr(&self) -> NonNull<T> {
+    pub const fn as_ptr(&self) -> NonNull<T> {
         self.extension_ptr
     }
 }
@@ -73,7 +73,7 @@ impl<S: ExtensionSide> RawExtension<S, ()> {
     /// # Safety
     ///
     /// Users *must* ensure that `T` matches the actual type behind the pointer.
-    pub unsafe fn cast<T>(&self) -> RawExtension<S, T> {
+    pub const unsafe fn cast<T>(&self) -> RawExtension<S, T> {
         RawExtension {
             extension_ptr: self.extension_ptr.cast(),
             host_or_plugin_ptr: self.host_or_plugin_ptr,
@@ -93,7 +93,7 @@ impl<T> RawExtension<PluginExtensionSide, T> {
     /// This is the case for pointers received from the raw `clap_plugin.get_extension` method.
     ///
     /// The given `plugin_ptr` however doesn't have to be valid, and may be dangling.
-    pub unsafe fn from_raw_plugin_extension(
+    pub const unsafe fn from_raw_plugin_extension(
         extension_ptr: NonNull<T>,
         plugin_ptr: NonNull<clap_plugin>,
     ) -> Self {
@@ -109,7 +109,7 @@ impl<T> RawExtension<PluginExtensionSide, T> {
     /// This pointer may be dangling at any time, and is not meant to be de-referenced, only
     /// compared to.
     /// See the [`RawExtension`] type documentation for more information.
-    pub fn plugin_ptr(&self) -> NonNull<clap_plugin> {
+    pub const fn plugin_ptr(&self) -> NonNull<clap_plugin> {
         self.host_or_plugin_ptr.cast()
     }
 }
@@ -125,7 +125,7 @@ impl<T> RawExtension<HostExtensionSide, T> {
     /// This is the case for pointers received from the raw `clap_host.get_extension` method.
     ///
     /// The given `host_ptr` however doesn't have to be valid, and may be dangling.
-    pub unsafe fn from_raw_host_extension(
+    pub const unsafe fn from_raw_host_extension(
         extension_ptr: NonNull<T>,
         host_ptr: NonNull<clap_host>,
     ) -> Self {
@@ -141,7 +141,7 @@ impl<T> RawExtension<HostExtensionSide, T> {
     /// This pointer may be dangling at any time, and is not meant to be de-referenced, only
     /// compared to.
     /// See the [`RawExtension`] type documentation for more information.
-    pub fn host_ptr(&self) -> NonNull<clap_host> {
+    pub const fn host_ptr(&self) -> NonNull<clap_host> {
         self.host_or_plugin_ptr.cast()
     }
 }

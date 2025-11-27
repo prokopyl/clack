@@ -53,7 +53,7 @@ impl PluginEntryLibrary {
     }
 
     #[inline]
-    pub fn entry(&self) -> &EntryDescriptor {
+    pub const fn entry(&self) -> &EntryDescriptor {
         // SAFETY: this type's only constructor guarantees this pointer is valid
         unsafe { self.entry_ptr.as_ref() }
     }
