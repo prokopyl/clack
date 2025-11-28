@@ -1,11 +1,10 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{impl_event_pckn, Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent};
+use crate::events::{Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent, impl_event_pckn};
 use crate::utils::{ClapId, Cookie};
 use clap_sys::events::{
-    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
     CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
-    CLAP_EVENT_PARAM_VALUE,
+    CLAP_EVENT_PARAM_VALUE, clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
 };
 use std::fmt::{Debug, Formatter};
 

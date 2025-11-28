@@ -84,7 +84,7 @@
 //! ```
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
-use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
+use clap_sys::ext::state::{CLAP_EXT_STATE, clap_host_state, clap_plugin_state};
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};

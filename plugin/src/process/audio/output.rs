@@ -1,7 +1,7 @@
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use crate::prelude::Audio;
-use crate::process::audio::{BufferError, SampleType};
 use crate::process::InputChannelsIter;
+use crate::process::audio::{BufferError, SampleType};
 use clack_common::process::ConstantMask;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::IterMut;

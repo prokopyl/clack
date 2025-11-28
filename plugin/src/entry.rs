@@ -21,7 +21,7 @@
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use std::error::Error;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::fmt::{Display, Formatter};
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::ptr::NonNull;
@@ -38,8 +38,8 @@ pub mod prelude {
     pub use crate::{
         entry::{Entry, EntryDescriptor, EntryFactories, EntryLoadError, SinglePluginEntry},
         factory::{
-            plugin::{PluginFactory, PluginFactoryWrapper},
             Factory,
+            plugin::{PluginFactory, PluginFactoryWrapper},
         },
         host::HostInfo,
         plugin::{PluginDescriptor, PluginInstance},

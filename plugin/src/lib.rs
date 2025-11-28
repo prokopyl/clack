@@ -25,8 +25,8 @@ pub mod prelude {
         clack_export_entry,
         entry::{DefaultPluginFactory, Entry, EntryDescriptor, SinglePluginEntry},
         events::{
-            io::{InputEvents, OutputEvents},
             Event, EventHeader, Pckn, UnknownEvent,
+            io::{InputEvents, OutputEvents},
         },
         extensions::PluginExtensions,
         host::{HostAudioProcessorHandle, HostMainThreadHandle, HostSharedHandle},
@@ -35,8 +35,8 @@ pub mod prelude {
             PluginShared,
         },
         process::{
-            audio::{ChannelPair, SampleType},
             Audio, Events, PluginAudioConfiguration, Process, ProcessStatus,
+            audio::{ChannelPair, SampleType},
         },
         utils::ClapId,
     };

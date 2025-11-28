@@ -1,12 +1,12 @@
-use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::extensions::wrapper::HostWrapper;
+use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::prelude::*;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
 use std::ptr::NonNull;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub(crate) struct PluginInstanceInner<H: HostHandlers> {
     host_wrapper: Pin<Arc<HostWrapper<H>>>,

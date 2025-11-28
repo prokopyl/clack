@@ -277,8 +277,8 @@ pub mod prelude {
     pub use crate::{
         bundle::PluginBundle,
         events::{
-            io::{EventBuffer, InputEvents, OutputEvents},
             Event, EventHeader, Pckn, UnknownEvent,
+            io::{EventBuffer, InputEvents, OutputEvents},
         },
         host::{
             AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,
@@ -289,12 +289,12 @@ pub mod prelude {
             PluginInstance, PluginInstanceError, PluginMainThreadHandle, PluginSharedHandle,
         },
         process::{
+            AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
+            StoppedPluginAudioProcessor,
             audio_buffers::{
                 AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
                 OutputAudioBuffers,
             },
-            AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
-            StoppedPluginAudioProcessor,
         },
         utils::ClapId,
     };

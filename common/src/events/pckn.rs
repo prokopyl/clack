@@ -289,11 +289,7 @@ impl Match<u16> {
     /// Creates the [`Match`] that corresponds to the given raw C-FFI compatible `i16` type.
     #[inline]
     pub const fn from_raw(raw: i16) -> Self {
-        if raw < 0 {
-            All
-        } else {
-            Specific(raw as u16)
-        }
+        if raw < 0 { All } else { Specific(raw as u16) }
     }
 
     /// Returns the raw C-FFI compatible `i16` type that corresponds to this [`Match`].
@@ -313,11 +309,7 @@ impl Match<u32> {
     /// Creates the [`Match`] that corresponds to the given raw C-FFI compatible `i32` type.
     #[inline]
     pub const fn from_raw(raw: i32) -> Self {
-        if raw < 0 {
-            All
-        } else {
-            Specific(raw as u32)
-        }
+        if raw < 0 { All } else { Specific(raw as u32) }
     }
 
     /// Returns the raw C-FFI compatible `i32` type that corresponds to this [`Match`].

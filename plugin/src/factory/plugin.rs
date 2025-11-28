@@ -12,7 +12,7 @@ use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
-use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
+use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use std::error::Error;

@@ -1,6 +1,6 @@
-use crate::events::io::implementation::{raw_output_events, OutputEventBuffer};
-use crate::events::io::void_output_events;
 use crate::events::UnknownEvent;
+use crate::events::io::implementation::{OutputEventBuffer, raw_output_events};
+use crate::events::io::void_output_events;
 use clap_sys::events::clap_output_events;
 use std::error::Error;
 use std::fmt::{Display, Formatter};

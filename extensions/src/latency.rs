@@ -1,5 +1,5 @@
 use clack_common::extensions::*;
-use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
+use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]

@@ -324,14 +324,18 @@ pub fn get_config_from_ports(
         if is_input {
             return PluginAudioPortsConfig::empty();
         }
-        eprintln!("Warning: Plugin's audio port extension returned NO port at all? Using default stereo configuration instead.");
+        eprintln!(
+            "Warning: Plugin's audio port extension returned NO port at all? Using default stereo configuration instead."
+        );
         return PluginAudioPortsConfig::default();
     }
 
     let main_port_index = if let Some(main_port_index) = main_port_index {
         main_port_index
     } else {
-        eprintln!("Warning: Plugin's audio port extension defines no main port! Using the first decent port as a fallback.");
+        eprintln!(
+            "Warning: Plugin's audio port extension defines no main port! Using the first decent port as a fallback."
+        );
         if let Some(first_stereo_port) = discovered_ports
             .iter()
             .enumerate()

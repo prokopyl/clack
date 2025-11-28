@@ -63,11 +63,7 @@ impl PluginParams {
             plugin.use_extension(&self.0).get_value?(plugin.as_raw(), param_id.get(), &mut value)
         };
 
-        if valid {
-            Some(value)
-        } else {
-            None
-        }
+        if valid { Some(value) } else { None }
     }
 
     pub fn value_to_text<'b>(
@@ -121,11 +117,7 @@ impl PluginParams {
             )
         };
 
-        if valid {
-            Some(value)
-        } else {
-            None
-        }
+        if valid { Some(value) } else { None }
     }
 
     pub fn flush(

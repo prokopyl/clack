@@ -1,6 +1,6 @@
 use clack_plugin::prelude::*;
 use std::thread;
-use std::thread::{current, ThreadId};
+use std::thread::{ThreadId, current};
 use std::time::Duration;
 
 use clack_host::prelude::*;

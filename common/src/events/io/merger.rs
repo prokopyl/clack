@@ -57,9 +57,9 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::events::Event;
     use crate::events::event_types::MidiEvent;
     use crate::events::io::merger::EventMerger;
-    use crate::events::Event;
 
     #[test]
     fn it_works() {

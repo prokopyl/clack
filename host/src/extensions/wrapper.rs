@@ -4,7 +4,7 @@ use crate::plugin::DestroyLock;
 use crate::prelude::*;
 use crate::util::UnsafeOptionCell;
 use clap_sys::ext::log::{
-    clap_log_severity, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING,
+    CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
 };
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;

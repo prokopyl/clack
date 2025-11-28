@@ -2,7 +2,7 @@ use crate::extensions::wrapper::HostWrapper;
 use crate::host::{HostExtensions, HostHandlers, HostInfo, SharedHandler};
 use clack_common::utils::ClapVersion;
 use clap_sys::host::clap_host;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 
 pub(crate) struct RawHostDescriptor {
     raw: clap_host,

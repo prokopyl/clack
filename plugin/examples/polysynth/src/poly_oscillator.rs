@@ -2,10 +2,10 @@
 
 use crate::oscillator::SquareOscillator;
 use crate::params::PARAM_VOLUME_ID;
+use clack_plugin::events::Match;
 use clack_plugin::events::event_types::{
     NoteOffEvent, NoteOnEvent, ParamModEvent, ParamValueEvent,
 };
-use clack_plugin::events::Match;
 
 /// A voice in the polyphonic oscillator.
 ///

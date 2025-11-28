@@ -1,7 +1,7 @@
+use crate::events::UnknownEvent;
 use crate::events::event_types::TransportEvent;
 use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::io::{InputEvents, OutputEvents, TryPushError};
-use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
 use core::mem::MaybeUninit;
 use std::fmt::{Debug, Formatter};
@@ -309,9 +309,9 @@ impl<'a> Iterator for EventBufferIter<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::events::Event;
     use crate::events::event_types::MidiEvent;
     use crate::events::io::EventBuffer;
-    use crate::events::Event;
 
     #[test]
     fn it_works() {

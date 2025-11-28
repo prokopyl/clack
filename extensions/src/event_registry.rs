@@ -1,5 +1,5 @@
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
-use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
+use clap_sys::ext::event_registry::{CLAP_EXT_EVENT_REGISTRY, clap_host_event_registry};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]

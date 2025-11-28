@@ -1,5 +1,5 @@
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
-use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
+use clap_sys::ext::thread_check::{CLAP_EXT_THREAD_CHECK, clap_host_thread_check};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]

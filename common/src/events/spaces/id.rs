@@ -1,5 +1,5 @@
-use crate::events::spaces::core::CoreEventSpace;
 use crate::events::EventSpace;
+use crate::events::spaces::core::CoreEventSpace;
 use clap_sys::events::CLAP_CORE_EVENT_SPACE_ID;
 use std::marker::PhantomData;
 

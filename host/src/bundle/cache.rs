@@ -1,8 +1,8 @@
-use crate::bundle::entry::LoadedEntry;
 use crate::bundle::PluginBundleError;
+use crate::bundle::entry::LoadedEntry;
 use clack_common::entry::EntryDescriptor;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::sync::{Arc, LazyLock, Mutex};
 
 #[derive(Hash, Eq, PartialEq)]

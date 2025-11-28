@@ -1,6 +1,6 @@
-use crate::events::io::implementation::{raw_input_events, InputEventBuffer};
-use crate::events::io::EventBatcher;
 use crate::events::UnknownEvent;
+use crate::events::io::EventBatcher;
+use crate::events::io::implementation::{InputEventBuffer, raw_input_events};
 use clap_sys::events::clap_input_events;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;

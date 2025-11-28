@@ -21,10 +21,10 @@
 //! list plugins.
 
 use crate::plugin::PluginInstanceError;
-use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
+use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 

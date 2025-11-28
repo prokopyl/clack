@@ -1,6 +1,6 @@
 use crate::gui::GuiApiType;
 use clap_sys::ext::gui::*;
-use core::ffi::{c_ulong, c_void, CStr};
+use core::ffi::{CStr, c_ulong, c_void};
 use std::marker::PhantomData;
 
 /// A handle to a host-provided parent window.

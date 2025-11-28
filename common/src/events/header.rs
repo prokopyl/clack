@@ -1,7 +1,7 @@
 //#![deny(missing_docs)]
 
-use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use crate::events::Event;
+use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
 use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};

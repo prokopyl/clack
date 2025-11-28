@@ -231,9 +231,9 @@ unsafe extern "C" fn flush<P>(
     output_parameter_changes: *const clap_output_events,
 ) where
     for<'a> P: Plugin<
-        MainThread<'a>: PluginMainThreadParams,
-        AudioProcessor<'a>: PluginAudioProcessorParams,
-    >,
+            MainThread<'a>: PluginMainThreadParams,
+            AudioProcessor<'a>: PluginAudioProcessorParams,
+        >,
 {
     let input_parameter_changes = InputEvents::from_raw(&*input_parameter_changes);
     let output_parameter_changes =
@@ -257,9 +257,9 @@ unsafe extern "C" fn flush<P>(
 unsafe impl<P> ExtensionImplementation<P> for PluginParams
 where
     for<'a> P: Plugin<
-        MainThread<'a>: PluginMainThreadParams,
-        AudioProcessor<'a>: PluginAudioProcessorParams,
-    >,
+            MainThread<'a>: PluginMainThreadParams,
+            AudioProcessor<'a>: PluginAudioProcessorParams,
+        >,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_plugin_params {

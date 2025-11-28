@@ -1,6 +1,6 @@
 use crate::extensions::wrapper::PluginWrapperError;
 use crate::plugin::{Plugin, PluginBoxInner};
-use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
+use clap_sys::ext::log::{CLAP_EXT_LOG, clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::os::raw::c_char;

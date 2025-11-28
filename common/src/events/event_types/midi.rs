@@ -3,8 +3,8 @@ use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventFlags, EventHeader, UnknownEvent};
 use crate::utils::slice_from_external_parts;
 use clap_sys::events::{
-    clap_event_midi, clap_event_midi2, clap_event_midi_sysex, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI2,
-    CLAP_EVENT_MIDI_SYSEX,
+    CLAP_EVENT_MIDI, CLAP_EVENT_MIDI_SYSEX, CLAP_EVENT_MIDI2, clap_event_midi,
+    clap_event_midi_sysex, clap_event_midi2,
 };
 use std::fmt::{Debug, Formatter};
 
