@@ -3,7 +3,7 @@ use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::io::{InputEvents, OutputEvents, TryPushError};
 use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
-use core::mem::{size_of_val, MaybeUninit};
+use core::mem::MaybeUninit;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Index, Range};
 

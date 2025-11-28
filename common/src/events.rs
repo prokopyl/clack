@@ -212,7 +212,7 @@ impl UnknownEvent {
         let raw = self.header().as_raw();
         if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
-            || raw.size != core::mem::size_of::<E>() as u32
+            || raw.size != size_of::<E>() as u32
         {
             return None;
         }
