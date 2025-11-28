@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        toolchain: [ "1.72.1", stable, beta, nightly ]
+        toolchain: [ "1.85.1", stable, beta, nightly ]
 
     runs-on: ${{ matrix.os }}
     env:
@@ -24,11 +24,11 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           override: true
       - name: Build
-        if: matrix.toolchain != '1.72.1'
+        if: matrix.toolchain != '1.85.1'
         run: cargo build --all --all-features --verbose
         # We already check this example works with latest rust, we don't need to check it with MSRV
       - name: Build (except CPAL example)
-        if: matrix.toolchain == '1.72.1'
+        if: matrix.toolchain == '1.85.1'
         run: cargo build --all --all-features --verbose --exclude clack-host-cpal
       - name: Check Plugin-only Extensions
         run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-plugin" --no-default-features
@@ -68,7 +68,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: "1.72.0"
+          toolchain: "1.85.1"
           override: true
       - name: Build
         run: cd clack; cargo build --release -p clack-plugin-gain -p clack-plugin-polysynth --verbose
