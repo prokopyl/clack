@@ -76,7 +76,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'free-audio/clap-validator'
-          ref: '0.3.2'
+          ref: '2f71690639a742ce805574ce42e31250e3147aa9'
           path: 'clap-validator'
       - name: Validate
         run: cd clap-validator; cargo run --release -- validate ../clack/target/release/libclack_plugin_gain.so ../clack/target/release/libclack_plugin_polysynth.so
