@@ -19,9 +19,9 @@ pub trait PluginStateImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginState
+unsafe impl<P> ExtensionImplementation<P> for PluginState
 where
-    for<'a> P::MainThread<'a>: PluginStateImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginStateImpl>,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_plugin_state {
@@ -31,12 +31,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn load<P: Plugin>(
-    plugin: *const clap_plugin,
-    stream: *const clap_istream,
-) -> bool
+unsafe extern "C" fn load<P>(plugin: *const clap_plugin, stream: *const clap_istream) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginStateImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginStateImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
@@ -47,12 +44,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn save<P: Plugin>(
-    plugin: *const clap_plugin,
-    stream: *const clap_ostream,
-) -> bool
+unsafe extern "C" fn save<P>(plugin: *const clap_plugin, stream: *const clap_ostream) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginStateImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginStateImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));

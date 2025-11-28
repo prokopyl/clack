@@ -27,9 +27,9 @@ pub trait PluginAudioPortsConfigImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPortsConfig
+unsafe impl<P> ExtensionImplementation<P> for PluginAudioPortsConfig
 where
-    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -41,21 +41,21 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
-    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get<P: Plugin>(
+unsafe extern "C" fn get<P>(
     plugin: *const clap_plugin,
     index: u32,
     config: *mut clap_audio_ports_config,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {
@@ -70,9 +70,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn select<P: Plugin>(plugin: *const clap_plugin, config_id: u32) -> bool
+unsafe extern "C" fn select<P>(plugin: *const clap_plugin, config_id: u32) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginAudioPortsConfigImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if p.is_active() {

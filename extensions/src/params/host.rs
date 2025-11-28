@@ -181,10 +181,10 @@ pub trait HostParamsImplMainThread {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostParams
+unsafe impl<H> ExtensionImplementation<H> for HostParams
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostParamsImplShared,
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> H:
+        HostHandlers<Shared<'a>: HostParamsImplShared, MainThread<'a>: HostParamsImplMainThread>,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_host_params {
@@ -195,9 +195,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H: HostHandlers>(host: *const clap_host, flags: clap_param_rescan_flags)
+unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: clap_param_rescan_flags)
 where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
@@ -214,7 +214,7 @@ unsafe extern "C" fn clear<H: HostHandlers>(
     param_id: u32,
     flags: clap_param_clear_flags,
 ) where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostParamsImplMainThread,
+    for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
     HostWrapper::<H>::handle(host, |host| {
         let param_id = ClapId::from_raw(param_id)
@@ -228,9 +228,9 @@ unsafe extern "C" fn clear<H: HostHandlers>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_flush<H: HostHandlers>(host: *const clap_host)
+unsafe extern "C" fn request_flush<H>(host: *const clap_host)
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostParamsImplShared,
+    for<'a> H: HostHandlers<Shared<'a>: HostParamsImplShared>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().request_flush();

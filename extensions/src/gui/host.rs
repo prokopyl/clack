@@ -340,9 +340,9 @@ pub trait HostGuiImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostGui
+unsafe impl<H> ExtensionImplementation<H> for HostGui
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -356,9 +356,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn resize_hints_changed<H: HostHandlers>(host: *const clap_host)
+unsafe extern "C" fn resize_hints_changed<H>(host: *const clap_host)
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().resize_hints_changed();
@@ -367,13 +367,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_resize<H: HostHandlers>(
-    host: *const clap_host,
-    width: u32,
-    height: u32,
-) -> bool
+unsafe extern "C" fn request_resize<H>(host: *const clap_host, width: u32, height: u32) -> bool
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
@@ -385,25 +381,25 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_show<H: HostHandlers>(host: *const clap_host) -> bool
+unsafe extern "C" fn request_show<H>(host: *const clap_host) -> bool
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show().is_ok())).unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn request_hide<H: HostHandlers>(host: *const clap_host) -> bool
+unsafe extern "C" fn request_hide<H>(host: *const clap_host) -> bool
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide().is_ok())).unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn closed<H: HostHandlers>(host: *const clap_host, was_destroyed: bool)
+unsafe extern "C" fn closed<H>(host: *const clap_host, was_destroyed: bool)
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostGuiImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.shared().closed(was_destroyed);

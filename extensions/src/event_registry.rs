@@ -68,7 +68,7 @@ mod host {
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
     unsafe impl<H> ExtensionImplementation<H> for HostEventRegistry
     where
-        H: HostHandlers<MainThread: HostEventRegistryImpl>,
+        H: for<'a> HostHandlers<MainThread<'a>: HostEventRegistryImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_event_registry {

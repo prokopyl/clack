@@ -72,7 +72,7 @@ pub struct VoiceInfo {
 
 impl VoiceInfo {
     #[inline]
-    pub const fn from_raw(raw: &clap_voice_info) -> Self {
+    const fn from_raw(raw: &clap_voice_info) -> Self {
         Self {
             voice_count: raw.voice_count,
             voice_capacity: raw.voice_capacity,
@@ -81,7 +81,7 @@ impl VoiceInfo {
     }
 
     #[inline]
-    pub const fn to_raw(&self) -> clap_voice_info {
+    const fn to_raw(&self) -> clap_voice_info {
         clap_voice_info {
             voice_count: self.voice_count,
             voice_capacity: self.voice_capacity,
@@ -121,9 +121,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: for<'a> HostHandlers> ExtensionImplementation<H> for HostVoiceInfo
+    unsafe impl<H> ExtensionImplementation<H> for HostVoiceInfo
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostVoiceInfoImpl,
+        H: for<'a> HostHandlers<MainThread<'a>: HostVoiceInfoImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_voice_info {
@@ -132,9 +132,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
+    unsafe extern "C" fn changed<H>(host: *const clap_host)
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostVoiceInfoImpl,
+        H: for<'a> HostHandlers<MainThread<'a>: HostVoiceInfoImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();
@@ -173,7 +173,7 @@ mod plugin {
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
     unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginVoiceInfo
     where
-        for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginVoiceInfoImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_plugin_voice_info {
@@ -182,12 +182,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn get<P: Plugin>(
-        plugin: *const clap_plugin,
-        info: *mut clap_voice_info,
-    ) -> bool
+    unsafe extern "C" fn get<P>(plugin: *const clap_plugin, info: *mut clap_voice_info) -> bool
     where
-        for<'a> P::MainThread<'a>: PluginVoiceInfoImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginVoiceInfoImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| match plugin.main_thread().as_mut().get() {
             None => Ok(false),

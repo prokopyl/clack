@@ -66,9 +66,9 @@ pub trait HostNoteNameImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostNoteName
+unsafe impl<H> ExtensionImplementation<H> for HostNoteName
 where
-    for<'h> <H as HostHandlers>::MainThread<'h>: HostNoteNameImpl,
+    for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -78,9 +78,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
+unsafe extern "C" fn changed<H>(host: *const clap_host)
 where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostNoteNameImpl,
+    for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().changed();

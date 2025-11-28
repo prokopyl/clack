@@ -97,9 +97,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginLatency
+    unsafe impl<P> ExtensionImplementation<P> for PluginLatency
     where
-        for<'a> P::MainThread<'a>: PluginLatencyImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_plugin_latency {
@@ -108,9 +108,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
+    unsafe extern "C" fn get<P>(plugin: *const clap_plugin) -> u32
     where
-        for<'a> P::MainThread<'a>: PluginLatencyImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().get()))
             .unwrap_or(0)

@@ -17,9 +17,9 @@ pub trait PluginNoteNameImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
+unsafe impl<P> ExtensionImplementation<P> for PluginNoteName
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -30,21 +30,21 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count() as u32)).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get<P: Plugin>(
+unsafe extern "C" fn get<P>(
     plugin: *const clap_plugin,
     index: u32,
     config: *mut clap_note_name,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {

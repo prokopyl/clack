@@ -56,7 +56,7 @@ pub trait HostStateImpl {
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
 unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostState
 where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostStateImpl,
+    for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -66,9 +66,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn mark_dirty<H: HostHandlers>(host: *const clap_host)
+unsafe extern "C" fn mark_dirty<H>(host: *const clap_host)
 where
-    for<'a> <H as HostHandlers>::MainThread<'a>: HostStateImpl,
+    for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread().as_mut().mark_dirty();

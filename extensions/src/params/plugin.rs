@@ -120,21 +120,21 @@ pub trait PluginAudioProcessorParams {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_info<P: Plugin>(
+unsafe extern "C" fn get_info<P>(
     plugin: *const clap_plugin,
     param_index: u32,
     value: *mut clap_param_info,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
     let mut info = ParamInfoWriter::new(value);
     PluginWrapper::<P>::handle(plugin, |p| {
@@ -146,13 +146,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_value<P: Plugin>(
+unsafe extern "C" fn get_value<P>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: *mut f64,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
     let val = PluginWrapper::<P>::handle(plugin, |p| {
         let param_id = ClapId::from_raw(param_id)
@@ -172,7 +172,7 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn value_to_text<P: Plugin>(
+unsafe extern "C" fn value_to_text<P>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     value: f64,
@@ -180,7 +180,7 @@ unsafe extern "C" fn value_to_text<P: Plugin>(
     size: u32,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
     let buf = slice_from_external_parts_mut(display as *mut u8, size as usize);
     let mut writer = ParamDisplayWriter::new(buf);
@@ -198,14 +198,14 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn text_to_value<P: Plugin>(
+unsafe extern "C" fn text_to_value<P>(
     plugin: *const clap_plugin,
     param_id: clap_id,
     display: *const std::os::raw::c_char,
     value: *mut f64,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
+    for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
     let result = PluginWrapper::<P>::handle(plugin, |p| {
         let param_id = ClapId::from_raw(param_id)
@@ -225,13 +225,15 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn flush<P: Plugin>(
+unsafe extern "C" fn flush<P>(
     plugin: *const clap_plugin,
     input_parameter_changes: *const clap_input_events,
     output_parameter_changes: *const clap_output_events,
 ) where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
-    for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,
+    for<'a> P: Plugin<
+        MainThread<'a>: PluginMainThreadParams,
+        AudioProcessor<'a>: PluginAudioProcessorParams,
+    >,
 {
     let input_parameter_changes = InputEvents::from_raw(&*input_parameter_changes);
     let output_parameter_changes =
@@ -252,10 +254,12 @@ unsafe extern "C" fn flush<P: Plugin>(
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginParams
+unsafe impl<P> ExtensionImplementation<P> for PluginParams
 where
-    for<'a> P::MainThread<'a>: PluginMainThreadParams,
-    for<'a> P::AudioProcessor<'a>: PluginAudioProcessorParams,
+    for<'a> P: Plugin<
+        MainThread<'a>: PluginMainThreadParams,
+        AudioProcessor<'a>: PluginAudioProcessorParams,
+    >,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_plugin_params {

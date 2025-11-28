@@ -49,9 +49,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadCheck
+    unsafe impl<H> ExtensionImplementation<H> for HostThreadCheck
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_thread_check {
@@ -61,17 +61,17 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn is_main_thread<H: HostHandlers>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_main_thread<H>(host: *const clap_host) -> bool
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn is_audio_thread<H: HostHandlers>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_audio_thread<H>(host: *const clap_host) -> bool
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_audio_thread())).unwrap_or(false)
     }

@@ -67,9 +67,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginThreadPool
+    unsafe impl<P> ExtensionImplementation<P> for PluginThreadPool
     where
-        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
+        for<'a> P: Plugin<Shared<'a>: PluginThreadPoolImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -79,9 +79,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn exec<P: Plugin>(plugin: *const clap_plugin, task_index: u32)
+    unsafe extern "C" fn exec<P>(plugin: *const clap_plugin, task_index: u32)
     where
-        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
+        for<'a> P: Plugin<Shared<'a>: PluginThreadPoolImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin.shared().exec(task_index);
@@ -148,9 +148,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadPool
+    unsafe impl<H> ExtensionImplementation<H> for HostThreadPool
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> H: HostHandlers<AudioProcessor<'a>: HostThreadPoolImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_thread_pool {
@@ -159,12 +159,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn request_exec<H: HostHandlers>(
-        host: *const clap_host,
-        num_tasks: u32,
-    ) -> bool
+    unsafe extern "C" fn request_exec<H>(host: *const clap_host, num_tasks: u32) -> bool
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> H: HostHandlers<AudioProcessor<'a>: HostThreadPoolImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
