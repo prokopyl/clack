@@ -2,7 +2,6 @@ use super::*;
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
-use std::ptr::addr_of_mut;
 
 /// Implementation of the Plugin-side of the Note Name extension.
 pub trait PluginNoteNameImpl {
@@ -86,11 +85,11 @@ impl NoteNameWriter<'_> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
+            write_to_array_buf(&raw mut (*buf).name, data.name);
 
-            write(addr_of_mut!((*buf).port), data.port.to_raw());
-            write(addr_of_mut!((*buf).channel), data.channel.to_raw());
-            write(addr_of_mut!((*buf).key), data.key.to_raw());
+            write(&raw mut (*buf).port, data.port.to_raw());
+            write(&raw mut (*buf).channel, data.channel.to_raw());
+            write(&raw mut (*buf).key, data.key.to_raw());
         }
 
         self.is_set = true;

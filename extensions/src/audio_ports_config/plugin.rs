@@ -2,7 +2,6 @@ use super::*;
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
-use std::ptr::addr_of_mut;
 
 /// Implementation of the Plugin-side of the Audio Ports Configuration extension.
 pub trait PluginAudioPortsConfigImpl {
@@ -117,52 +116,43 @@ impl AudioPortConfigWriter<'_> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), data.id.get());
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
+            write(&raw mut (*buf).id, data.id.get());
+            write_to_array_buf(&raw mut (*buf).name, data.name);
 
-            write(addr_of_mut!((*buf).input_port_count), data.input_port_count);
-            write(
-                addr_of_mut!((*buf).output_port_count),
-                data.output_port_count,
-            );
+            write(&raw mut (*buf).input_port_count, data.input_port_count);
+            write(&raw mut (*buf).output_port_count, data.output_port_count);
 
             if let Some(info) = data.main_input {
-                write(addr_of_mut!((*buf).has_main_input), true);
+                write(&raw mut (*buf).has_main_input, true);
+                write(&raw mut (*buf).main_input_channel_count, info.channel_count);
                 write(
-                    addr_of_mut!((*buf).main_input_channel_count),
-                    info.channel_count,
-                );
-                write(
-                    addr_of_mut!((*buf).main_input_port_type),
+                    &raw mut (*buf).main_input_port_type,
                     info.port_type
                         .map(|t| t.0.as_ptr())
                         .unwrap_or(core::ptr::null()),
                 );
             } else {
-                write(addr_of_mut!((*buf).has_main_input), false);
-                write(addr_of_mut!((*buf).main_input_channel_count), 0);
-                write(addr_of_mut!((*buf).main_input_port_type), core::ptr::null());
+                write(&raw mut (*buf).has_main_input, false);
+                write(&raw mut (*buf).main_input_channel_count, 0);
+                write(&raw mut (*buf).main_input_port_type, core::ptr::null());
             }
 
             if let Some(info) = data.main_output {
-                write(addr_of_mut!((*buf).has_main_output), true);
+                write(&raw mut (*buf).has_main_output, true);
                 write(
-                    addr_of_mut!((*buf).main_output_channel_count),
+                    &raw mut (*buf).main_output_channel_count,
                     info.channel_count,
                 );
                 write(
-                    addr_of_mut!((*buf).main_output_port_type),
+                    &raw mut (*buf).main_output_port_type,
                     info.port_type
                         .map(|t| t.0.as_ptr())
                         .unwrap_or(core::ptr::null()),
                 );
             } else {
-                write(addr_of_mut!((*buf).has_main_output), false);
-                write(addr_of_mut!((*buf).main_output_channel_count), 0);
-                write(
-                    addr_of_mut!((*buf).main_output_port_type),
-                    core::ptr::null(),
-                );
+                write(&raw mut (*buf).has_main_output, false);
+                write(&raw mut (*buf).main_output_channel_count, 0);
+                write(&raw mut (*buf).main_output_port_type, core::ptr::null());
             }
         }
 

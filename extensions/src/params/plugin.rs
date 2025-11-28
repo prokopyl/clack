@@ -31,15 +31,15 @@ impl ParamInfoWriter<'_> {
 
         // SAFETY: all pointers come from `inner`, which is valid for writes and well-aligned
         unsafe {
-            core::ptr::addr_of_mut!((*buf).id).write(info.id.get());
-            core::ptr::addr_of_mut!((*buf).flags).write(info.flags.bits());
-            core::ptr::addr_of_mut!((*buf).min_value).write(info.min_value);
-            core::ptr::addr_of_mut!((*buf).max_value).write(info.max_value);
-            core::ptr::addr_of_mut!((*buf).default_value).write(info.default_value);
-            core::ptr::addr_of_mut!((*buf).cookie).write(info.cookie.as_raw());
+            (&raw mut (*buf).id).write(info.id.get());
+            (&raw mut (*buf).flags).write(info.flags.bits());
+            (&raw mut (*buf).min_value).write(info.min_value);
+            (&raw mut (*buf).max_value).write(info.max_value);
+            (&raw mut (*buf).default_value).write(info.default_value);
+            (&raw mut (*buf).cookie).write(info.cookie.as_raw());
 
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).name), info.name);
-            write_to_array_buf(core::ptr::addr_of_mut!((*buf).module), info.module);
+            write_to_array_buf(&raw mut ((*buf).name), info.name);
+            write_to_array_buf(&raw mut ((*buf).module), info.module);
         }
         self.is_set = true;
     }

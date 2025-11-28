@@ -3,7 +3,6 @@ use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
 use std::mem::MaybeUninit;
-use std::ptr::addr_of_mut;
 
 pub struct AudioPortInfoWriter<'a> {
     buf: &'a mut MaybeUninit<clap_audio_port_info>,
@@ -31,21 +30,21 @@ impl AudioPortInfoWriter<'_> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), data.id.get());
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
+            write(&raw mut (*buf).id, data.id.get());
+            write_to_array_buf(&raw mut (*buf).name, data.name);
 
-            write(addr_of_mut!((*buf).flags), data.flags.bits());
-            write(addr_of_mut!((*buf).channel_count), data.channel_count);
+            write(&raw mut (*buf).flags, data.flags.bits());
+            write(&raw mut (*buf).channel_count, data.channel_count);
 
             write(
-                addr_of_mut!((*buf).port_type),
+                &raw mut (*buf).port_type,
                 data.port_type
                     .map(|s| s.0.as_ptr())
                     .unwrap_or(core::ptr::null()),
             );
 
             write(
-                addr_of_mut!((*buf).in_place_pair),
+                &raw mut (*buf).in_place_pair,
                 ClapId::optional_to_raw(data.in_place_pair),
             );
         }

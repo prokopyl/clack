@@ -161,7 +161,7 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn on_timer<P: Plugin>(plugin: *const clap_plugin, timer_id: u32)
+    unsafe extern "C" fn on_timer<P>(plugin: *const clap_plugin, timer_id: u32)
     where
         for<'a> P: Plugin<MainThread<'a>: PluginTimerImpl>,
     {

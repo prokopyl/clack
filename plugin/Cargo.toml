@@ -3,7 +3,7 @@ name = "clack-plugin"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-rust-version = "1.77.0"
+rust-version = "1.85.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,5 +12,5 @@ clap-sys = { workspace = true }
 clack-common = { workspace = true }
 
 [dev-dependencies]
-clack-host = { workspace = true, default-features = false, features = ["clack-plugin"] }
+clack-host = { workspace = true, default-features = false }
 clack-extensions = { workspace = true, features = ["log"] }

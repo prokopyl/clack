@@ -209,11 +209,8 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn clear<H: HostHandlers>(
-    host: *const clap_host,
-    param_id: u32,
-    flags: clap_param_clear_flags,
-) where
+unsafe extern "C" fn clear<H>(host: *const clap_host, param_id: u32, flags: clap_param_clear_flags)
+where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
     HostWrapper::<H>::handle(host, |host| {
