@@ -37,7 +37,8 @@ unsafe impl Extension for PluginAudioPortsConfig {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -53,7 +54,8 @@ unsafe impl Extension for HostAudioPortsConfig {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -129,16 +131,14 @@ impl MainPortInfo<'_> {
         channel_count: u32,
         port_type: *const std::os::raw::c_char,
     ) -> Option<Self> {
-        use core::ptr::NonNull;
-
         if !exists {
             return None;
         }
 
         Some(Self {
             channel_count,
-            port_type: NonNull::new(port_type as *mut _)
-                .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr()))),
+            // SAFETY: upheld by caller
+            port_type: unsafe { AudioPortType::from_raw(port_type) },
         })
     }
 }

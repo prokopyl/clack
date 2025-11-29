@@ -156,7 +156,7 @@
 //!
 //!     #[inline]
 //!     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-//!         Self(raw.cast())
+//!         Self(unsafe { raw.cast() })
 //!     }
 //! }
 //!
