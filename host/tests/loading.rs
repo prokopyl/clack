@@ -10,6 +10,7 @@ pub fn it_works() {
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX
     );
+    // SAFETY: we made the plugin, if it's not UB-free then this is what this test is for :)
     let bundle = unsafe { PluginBundle::load(bundle_path).unwrap() };
 
     let desc = bundle
@@ -33,6 +34,7 @@ pub fn it_works_concurrently() {
     std::thread::scope(|s| {
         for _ in 0..300 {
             s.spawn(|| {
+                // SAFETY: same as test above
                 let bundle = unsafe { PluginBundle::load(&bundle_path).unwrap() };
 
                 let desc = bundle

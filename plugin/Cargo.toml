@@ -14,3 +14,6 @@ clack-common = { workspace = true }
 [dev-dependencies]
 clack-host = { workspace = true, default-features = false }
 clack-extensions = { workspace = true, features = ["log"] }
+
+[lints]
+workspace = true

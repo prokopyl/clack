@@ -53,3 +53,6 @@ thread-check = []
 thread-pool = []
 timer = []
 voice-info = []
+
+[lints]
+workspace = true

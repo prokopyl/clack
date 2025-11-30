@@ -26,3 +26,7 @@ raw-window-handle_06 = { package = "raw-window-handle", version = "0.6.0" }
 
 [workspace.lints.rust]
 unsafe-op-in-unsafe-fn = "allow"
+# missing-docs = "deny"
+
+[workspace.lints.clippy]
+undocumented-unsafe-blocks = "deny"
