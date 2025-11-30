@@ -19,7 +19,7 @@ impl<'a> PluginMainThreadHandle<'a> {
     /// # Safety
     /// The user must ensure the provided plugin pointer is valid.
     /// This can only be called on the main thread.
-    pub(crate) unsafe fn new(raw: NonNull<clap_plugin>) -> Self {
+    pub(crate) const unsafe fn new(raw: NonNull<clap_plugin>) -> Self {
         Self {
             raw,
             lifetime: PhantomData,
@@ -33,7 +33,7 @@ impl<'a> PluginMainThreadHandle<'a> {
     /// If you need to access the raw pointer without dereferencing it first, use
     /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_plugin {
+    pub const fn as_raw(&self) -> &'a clap_plugin {
         // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
         unsafe { self.raw.as_ref() }
     }
@@ -43,18 +43,18 @@ impl<'a> PluginMainThreadHandle<'a> {
     /// If you need to safely access the plugin instance struct through a shared reference,
     /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
     #[inline]
-    pub fn shared(&self) -> PluginSharedHandle<'a> {
+    pub const fn shared(&self) -> PluginSharedHandle<'a> {
         // SAFETY: This type ensures the provided pointer is valid for 'a
         unsafe { PluginSharedHandle::new(self.raw) }
     }
 
     #[inline]
-    pub fn as_shared(&self) -> &PluginSharedHandle<'a> {
+    pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
     }
@@ -92,7 +92,7 @@ impl<'a> PluginSharedHandle<'a> {
     /// # Safety
     ///
     /// Users must ensure the provided instance pointer is valid.
-    pub(crate) unsafe fn new(raw: NonNull<clap_plugin>) -> Self {
+    pub(crate) const unsafe fn new(raw: NonNull<clap_plugin>) -> Self {
         Self {
             raw,
             lifetime: PhantomData,
@@ -103,9 +103,14 @@ impl<'a> PluginSharedHandle<'a> {
     ///
     /// This may return `None` if the underlying plugin implementation didn't properly populate
     /// the descriptor pointer.
-    pub fn descriptor(&self) -> Option<PluginDescriptor<'a>> {
+    pub const fn descriptor(&self) -> Option<PluginDescriptor<'a>> {
         // SAFETY: the desc pointer is guaranteed to be valid (if present) by the CLAP spec.
-        Some(unsafe { PluginDescriptor::from_raw(self.as_raw().desc.as_ref()?) })
+        let Some(descriptor) = (unsafe { self.as_raw().desc.as_ref() }) else {
+            return None;
+        };
+
+        // SAFETY: the desc pointer is guaranteed to be valid (if present) by the CLAP spec.
+        Some(unsafe { PluginDescriptor::from_raw(descriptor) })
     }
 
     /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
@@ -115,7 +120,7 @@ impl<'a> PluginSharedHandle<'a> {
     /// If you need to access the raw pointer without dereferencing it first, use
     /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_plugin {
+    pub const fn as_raw(&self) -> &'a clap_plugin {
         // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
         unsafe { self.raw.as_ref() }
     }
@@ -125,7 +130,7 @@ impl<'a> PluginSharedHandle<'a> {
     /// If you need to safely access the plugin instance struct through a shared reference,
     /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
@@ -184,7 +189,7 @@ pub struct PluginAudioProcessorHandle<'a> {
 unsafe impl Send for PluginAudioProcessorHandle<'_> {}
 
 impl<'a> PluginAudioProcessorHandle<'a> {
-    pub(crate) fn new(raw: NonNull<clap_plugin>) -> Self {
+    pub(crate) const fn new(raw: NonNull<clap_plugin>) -> Self {
         Self {
             raw,
             lifetime: PhantomData,
@@ -198,7 +203,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
     /// If you need to access the raw pointer without dereferencing it first, use
     /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_plugin {
+    pub const fn as_raw(&self) -> &'a clap_plugin {
         // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
         unsafe { self.raw.as_ref() }
     }
@@ -208,12 +213,12 @@ impl<'a> PluginAudioProcessorHandle<'a> {
     /// If you need to safely access the plugin instance struct through a shared reference,
     /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
         self.raw.as_ptr()
     }
 
     #[inline]
-    pub fn shared(&self) -> PluginSharedHandle<'a> {
+    pub const fn shared(&self) -> PluginSharedHandle<'a> {
         PluginSharedHandle {
             raw: self.raw,
             lifetime: PhantomData,
@@ -221,7 +226,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
     }
 
     #[inline]
-    pub fn as_shared(&self) -> &PluginSharedHandle<'a> {
+    pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
     }
@@ -256,7 +261,7 @@ impl<'a> InitializingPluginHandle<'a> {
     /// # Safety
     ///
     /// Users must ensure the provided instance pointer is valid until the given lock is marked as destroying.
-    pub(crate) unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
+    pub(crate) const unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
         Self {
             lifetime: PhantomData,
             inner: RemoteHandleInner { instance, lock },
@@ -270,7 +275,7 @@ impl<'a> InitializingPluginHandle<'a> {
     /// If you need to access the raw pointer without dereferencing it first, use
     /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_plugin {
+    pub const fn as_raw(&self) -> &'a clap_plugin {
         // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
         unsafe { self.inner.instance.as_ref() }
     }
@@ -280,7 +285,7 @@ impl<'a> InitializingPluginHandle<'a> {
     /// If you need to safely access the plugin instance struct through a shared reference,
     /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
         self.inner.instance.as_ptr()
     }
 
@@ -316,7 +321,7 @@ impl<'a> InitializedPluginHandle<'a> {
     /// # Safety
     ///
     /// Users must ensure the provided instance pointer is valid until the given lock is marked as destroying.
-    pub(crate) unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
+    pub(crate) const unsafe fn new(lock: Arc<DestroyLock>, instance: NonNull<clap_plugin>) -> Self {
         Self {
             lifetime: PhantomData,
             inner: RemoteHandleInner { instance, lock },
@@ -330,7 +335,7 @@ impl<'a> InitializedPluginHandle<'a> {
     /// If you need to access the raw pointer without dereferencing it first, use
     /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
     #[inline]
-    pub fn as_raw(&self) -> &'a clap_plugin {
+    pub const fn as_raw(&self) -> &'a clap_plugin {
         // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
         unsafe { self.inner.instance.as_ref() }
     }
@@ -340,7 +345,7 @@ impl<'a> InitializedPluginHandle<'a> {
     /// If you need to safely access the plugin instance struct through a shared reference,
     /// use [`as_raw`](Self::as_raw) instead.
     #[inline]
-    pub fn as_raw_ptr(&self) -> *const clap_plugin {
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
         self.inner.instance.as_ptr()
     }
 
@@ -455,6 +460,6 @@ impl DestroyLock {
 }
 
 #[cold]
-fn mismatched_instance() -> ! {
+const fn mismatched_instance() -> ! {
     panic!("Given plugin instance handle doesn't match the extension pointer it was used on.")
 }

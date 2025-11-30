@@ -8,7 +8,7 @@ use clack_extensions::params::{
 };
 use clack_extensions::timer::{HostTimer, PluginTimer};
 use clack_host::prelude::*;
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::error::Error;
 use std::ffi::CString;
 use std::rc::Rc;
@@ -205,7 +205,7 @@ fn run_gui_floating(
     for message in receiver {
         match message {
             MainThreadMessage::RunOnMainThread => instance.call_on_main_thread_callback(),
-            MainThreadMessage::GuiClosed { .. } => {
+            MainThreadMessage::GuiClosed => {
                 println!("Window closed!");
                 break;
             }

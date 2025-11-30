@@ -5,7 +5,7 @@
 
 use crate::host::HostSharedHandle;
 use crate::internal_utils::UnsafeOptionCell;
-use crate::plugin::{logging, Plugin, PluginAudioProcessor, PluginBoxInner, PluginError};
+use crate::plugin::{Plugin, PluginAudioProcessor, PluginBoxInner, PluginError, logging};
 use crate::process::PluginAudioConfiguration;
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;

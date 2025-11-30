@@ -1,5 +1,5 @@
 use crate::extensions::prelude::HostWrapperError;
-use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
+use clap_sys::ext::log::{CLAP_EXT_LOG, clap_host_log, clap_log_severity};
 use clap_sys::host::clap_host;
 use std::os::raw::c_char;
 use std::{error::Error, ffi::CString, fmt::Write};

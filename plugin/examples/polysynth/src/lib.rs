@@ -183,11 +183,7 @@ impl PolySynthAudioProcessor<'_> {
 
 impl PluginAudioPortsImpl for PolySynthPluginMainThread<'_> {
     fn count(&mut self, is_input: bool) -> u32 {
-        if is_input {
-            0
-        } else {
-            1
-        }
+        if is_input { 0 } else { 1 }
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
@@ -206,11 +202,7 @@ impl PluginAudioPortsImpl for PolySynthPluginMainThread<'_> {
 
 impl PluginNotePortsImpl for PolySynthPluginMainThread<'_> {
     fn count(&mut self, is_input: bool) -> u32 {
-        if is_input {
-            1
-        } else {
-            0
-        }
+        if is_input { 1 } else { 0 }
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter) {

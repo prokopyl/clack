@@ -18,7 +18,8 @@ unsafe impl Extension for PluginTail {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -34,7 +35,8 @@ unsafe impl Extension for HostTail {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -125,9 +127,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostTail
+    unsafe impl<H> ExtensionImplementation<H> for HostTail
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostTailImpl,
+        H: for<'a> HostHandlers<AudioProcessor<'a>: HostTailImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -137,9 +139,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
+    unsafe extern "C" fn changed<H>(host: *const clap_host)
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostTailImpl,
+        for<'a> H: HostHandlers<AudioProcessor<'a>: HostTailImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.audio_processor()?.as_mut().changed();
@@ -174,9 +176,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginTail
+    unsafe impl<P> ExtensionImplementation<P> for PluginTail
     where
-        for<'a> P::AudioProcessor<'a>: PluginTailImpl,
+        for<'a> P: Plugin<AudioProcessor<'a>: PluginTailImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -186,9 +188,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
+    unsafe extern "C" fn get<P>(plugin: *const clap_plugin) -> u32
     where
-        for<'a> P::AudioProcessor<'a>: PluginTailImpl,
+        for<'a> P: Plugin<AudioProcessor<'a>: PluginTailImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin.audio_processor()?.as_ref().get().to_raw())

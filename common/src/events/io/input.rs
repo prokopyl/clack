@@ -1,6 +1,6 @@
-use crate::events::io::implementation::{raw_input_events, InputEventBuffer};
-use crate::events::io::EventBatcher;
 use crate::events::UnknownEvent;
+use crate::events::io::EventBatcher;
+use crate::events::io::implementation::{InputEventBuffer, raw_input_events};
 use clap_sys::events::clap_input_events;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -43,7 +43,7 @@ impl<'a> InputEvents<'a> {
     /// # Safety
     /// The caller must ensure the given pointer is valid for the lifetime `'a`.
     #[inline]
-    pub unsafe fn from_raw(raw: &'a clap_input_events) -> &'a Self {
+    pub const unsafe fn from_raw(raw: &'a clap_input_events) -> &'a Self {
         &*(raw as *const _ as *const _)
     }
 
@@ -51,7 +51,7 @@ impl<'a> InputEvents<'a> {
     ///
     /// This pointer is only valid until the list is dropped.
     #[inline]
-    pub fn as_raw(&self) -> &clap_input_events {
+    pub const fn as_raw(&self) -> &clap_input_events {
         &self.inner
     }
 
@@ -146,7 +146,7 @@ impl<'a> InputEvents<'a> {
 
     /// Returns an iterator over all the events in this [`InputEvents`].
     #[inline]
-    pub fn iter(&self) -> InputEventsIter {
+    pub fn iter(&self) -> InputEventsIter<'_> {
         InputEventsIter {
             list: self,
             range: 0..self.len(),
@@ -157,7 +157,7 @@ impl<'a> InputEvents<'a> {
     ///
     /// If the given `range` is out of bounds, then `None` is returned.
     #[inline]
-    pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter> {
+    pub fn iter_range(&self, range: Range<u32>) -> Option<InputEventsIter<'_>> {
         let len = self.len();
         if range.start > len || range.end > len {
             None
@@ -240,7 +240,7 @@ impl<'a> InputEvents<'a> {
     ///
     ///
     #[inline]
-    pub fn batch(&self) -> EventBatcher {
+    pub fn batch(&self) -> EventBatcher<'_> {
         EventBatcher::new(self)
     }
 }
@@ -309,7 +309,7 @@ pub struct InputEventsIter<'a> {
 
 impl<'a> InputEventsIter<'a> {
     #[inline]
-    pub(crate) fn new(list: &'a InputEvents<'a>, range: Range<u32>) -> Self {
+    pub(crate) const fn new(list: &'a InputEvents<'a>, range: Range<u32>) -> Self {
         Self { list, range }
     }
 }

@@ -53,14 +53,14 @@ impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> NoteEvent<E> {
     }
 
     #[inline]
-    pub fn set_pckn(&mut self, pckn: Pckn) {
+    pub const fn set_pckn(&mut self, pckn: Pckn) {
         self.inner.port_index = pckn.raw_port_index();
         self.inner.channel = pckn.raw_channel();
         self.inner.key = pckn.raw_key();
         self.inner.note_id = pckn.raw_note_id();
     }
 
-    pub fn fmt(&self, f: &mut Formatter<'_>, event_name: &'static str) -> core::fmt::Result {
+    pub(crate) fn fmt(&self, f: &mut Formatter<'_>, event_name: &'static str) -> core::fmt::Result {
         f.debug_struct(event_name)
             .field("header", self.header())
             .field("port_index", &self.inner.port_index)
@@ -93,7 +93,7 @@ macro_rules! impl_note_helpers {
 
         /// Sets the [`Pckn`](crate::events::Pckn) tuple for this event.
         #[inline]
-        pub fn set_pckn(&mut self, pckn: Pckn) {
+        pub const fn set_pckn(&mut self, pckn: Pckn) {
             self.inner.set_pckn(pckn)
         }
 
@@ -102,7 +102,7 @@ macro_rules! impl_note_helpers {
         /// This method takes and returns ownership of the event, allowing it to be used in a
         /// builder-style pattern.
         #[inline]
-        pub fn with_pckn(mut self, pckn: Pckn) -> Self {
+        pub const fn with_pckn(mut self, pckn: Pckn) -> Self {
             self.inner.set_pckn(pckn);
             self
         }
@@ -119,7 +119,7 @@ macro_rules! impl_note_helpers {
         ///
         /// Use [`Match::All`] to target all possible note ports.
         #[inline]
-        pub fn set_port_index(&mut self, port_index: Match<u16>) {
+        pub const fn set_port_index(&mut self, port_index: Match<u16>) {
             self.inner.inner.port_index = port_index.to_raw()
         }
 
@@ -147,7 +147,7 @@ macro_rules! impl_note_helpers {
         ///
         /// Use [`Match::All`] to target all possible channels.
         #[inline]
-        pub fn set_channel(&mut self, channel: Match<u16>) {
+        pub const fn set_channel(&mut self, channel: Match<u16>) {
             self.inner.inner.channel = channel.to_raw();
         }
 
@@ -175,7 +175,7 @@ macro_rules! impl_note_helpers {
         ///
         /// Use [`Match::All`] to target all possible note keys.
         #[inline]
-        pub fn set_key(&mut self, key: Match<u16>) {
+        pub const fn set_key(&mut self, key: Match<u16>) {
             self.inner.inner.key = key.to_raw();
         }
 
@@ -204,7 +204,7 @@ macro_rules! impl_note_helpers {
         ///
         /// Use [`Match::All`] to not target a single specific note in particular.
         #[inline]
-        pub fn set_note_id(&mut self, note_id: Match<u32>) {
+        pub const fn set_note_id(&mut self, note_id: Match<u32>) {
             self.inner.inner.note_id = note_id.to_raw();
         }
 
@@ -215,7 +215,7 @@ macro_rules! impl_note_helpers {
         /// This method takes and returns ownership of the event, allowing it to be used in a
         /// builder-style pattern.
         #[inline]
-        pub fn with_note_id(mut self, note_id: Match<u32>) -> Self {
+        pub const fn with_note_id(mut self, note_id: Match<u32>) -> Self {
             self.inner.inner.note_id = note_id.to_raw();
             self
         }
@@ -228,7 +228,7 @@ macro_rules! impl_note_helpers {
 
         /// Returns a mutable reference to the underlying raw, C-FFI compatible event struct.
         #[inline]
-        pub fn as_raw_mut(&mut self) -> &mut clap_event_note {
+        pub const fn as_raw_mut(&mut self) -> &mut clap_event_note {
             &mut self.inner.inner
         }
 
@@ -241,7 +241,7 @@ macro_rules! impl_note_helpers {
         /// the expected note event type.
         #[inline]
         pub const fn from_raw(raw: &clap_event_note) -> Self {
-            crate::events::ensure_event_matches_const::<Self>(&raw.header);
+            crate::events::ensure_event_matches::<Self>(&raw.header);
 
             Self {
                 inner: NoteEvent::from_raw(raw),
@@ -257,7 +257,7 @@ macro_rules! impl_note_helpers {
         /// the expected note event type.
         #[inline]
         pub const fn from_raw_ref(raw: &clap_event_note) -> &Self {
-            crate::events::ensure_event_matches_const::<Self>(&raw.header);
+            crate::events::ensure_event_matches::<Self>(&raw.header);
 
             // SAFETY: This type is #[repr(C)]-compatible with clap_event_note
             unsafe { &*(raw as *const clap_event_note as *const Self) }
@@ -271,7 +271,7 @@ macro_rules! impl_note_helpers {
         /// This method will panic if the given event struct's header doesn't actually match
         /// the expected note event type.
         #[inline]
-        pub fn from_raw_mut(raw: &mut clap_event_note) -> &mut Self {
+        pub const fn from_raw_mut(raw: &mut clap_event_note) -> &mut Self {
             crate::events::ensure_event_matches::<Self>(&raw.header);
 
             // SAFETY: This type is #[repr(C)]-compatible with clap_event_note

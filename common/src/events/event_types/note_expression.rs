@@ -1,6 +1,6 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{impl_event_pckn, Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent};
+use crate::events::{Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent, impl_event_pckn};
 use clap_sys::events::*;
 use std::fmt::{Debug, Formatter};
 
@@ -83,7 +83,7 @@ impl NoteExpressionEvent {
     }
 
     #[inline]
-    pub fn set_expression_type(&mut self, expression_type: NoteExpressionType) {
+    pub const fn set_expression_type(&mut self, expression_type: NoteExpressionType) {
         self.inner.expression_id = expression_type.into_raw()
     }
 
@@ -99,7 +99,7 @@ impl NoteExpressionEvent {
     }
 
     #[inline]
-    pub fn set_value(&mut self, value: f64) {
+    pub const fn set_value(&mut self, value: f64) {
         self.inner.value = value
     }
 

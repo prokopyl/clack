@@ -132,7 +132,7 @@ pub trait DefaultPluginFactory: Plugin {
     /// # Errors
     /// This operation may fail for any reason, in which case `Err` is returned and the plugin is
     /// not instantiated.
-    fn new_shared(host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError>;
+    fn new_shared(host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError>;
 
     /// Creates a new instance of the plugin's main thread.
     ///

@@ -84,7 +84,7 @@
 //! ```
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
-use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
+use clap_sys::ext::state::{CLAP_EXT_STATE, clap_host_state, clap_plugin_state};
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -100,7 +100,8 @@ unsafe impl Extension for PluginState {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -115,7 +116,8 @@ unsafe impl Extension for HostState {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 

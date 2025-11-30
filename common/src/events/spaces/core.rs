@@ -19,12 +19,10 @@ pub enum CoreEventSpace<'a> {
     Midi2(&'a Midi2Event),
     MidiSysEx(&'a MidiSysExEvent),
 }
-// SAFETY: there is a null byte in this string.
-const EMPTY: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
 
 // SAFETY: The core event space has the empty C string for a name.
 unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
-    const NAME: &'static CStr = EMPTY;
+    const NAME: &'static CStr = c"";
 
     unsafe fn from_unknown(event: &'a UnknownEvent) -> Option<Self> {
         use CoreEventSpace::*;

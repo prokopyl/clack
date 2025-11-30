@@ -42,7 +42,8 @@ unsafe impl Extension for PluginPosixFd {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -53,7 +54,8 @@ unsafe impl Extension for HostPosixFd {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -117,9 +119,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostPosixFd
+    unsafe impl<H> ExtensionImplementation<H> for HostPosixFd
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
+        H: for<'a> HostHandlers<MainThread<'a>: HostPosixFdImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -264,9 +266,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginPosixFd
+    unsafe impl<P> ExtensionImplementation<P> for PluginPosixFd
     where
-        for<'a> P::MainThread<'a>: PluginPosixFdImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginPosixFdImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -276,12 +278,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn on_fd<P: Plugin>(
-        plugin: *const clap_plugin,
-        fd: i32,
-        flags: clap_posix_fd_flags,
-    ) where
-        for<'a> P::MainThread<'a>: PluginPosixFdImpl,
+    unsafe extern "C" fn on_fd<P>(plugin: *const clap_plugin, fd: i32, flags: clap_posix_fd_flags)
+    where
+        for<'a> P: Plugin<MainThread<'a>: PluginPosixFdImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin

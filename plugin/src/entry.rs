@@ -21,7 +21,7 @@
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use std::error::Error;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::fmt::{Display, Formatter};
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::ptr::NonNull;
@@ -38,8 +38,8 @@ pub mod prelude {
     pub use crate::{
         entry::{Entry, EntryDescriptor, EntryFactories, EntryLoadError, SinglePluginEntry},
         factory::{
-            plugin::{PluginFactory, PluginFactoryWrapper},
             Factory,
+            plugin::{PluginFactory, PluginFactoryWrapper},
         },
         host::HostInfo,
         plugin::{PluginDescriptor, PluginInstance},
@@ -231,7 +231,7 @@ macro_rules! clack_export_entry {
         #[allow(non_upper_case_globals, missing_docs)]
         #[allow(unsafe_code)]
         #[allow(warnings, unused)]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub static clap_entry: $crate::entry::EntryDescriptor =
             $crate::clack_entry!($entry_type, $entry_lambda);
     };
@@ -239,7 +239,7 @@ macro_rules! clack_export_entry {
         #[allow(non_upper_case_globals, missing_docs)]
         #[allow(unsafe_code)]
         #[allow(warnings, unused)]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub static clap_entry: $crate::entry::EntryDescriptor = $crate::clack_entry!($entry_type);
     };
 }

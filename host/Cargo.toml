@@ -1,8 +1,8 @@
 [package]
 name = "clack-host"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.72.0"
+edition = "2024"
+rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
@@ -23,3 +23,6 @@ clack-extensions = { workspace = true, features = ["clack-host", "latency", "log
 
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
 static_assertions = "1.1.0"
+
+[lints]
+workspace = true

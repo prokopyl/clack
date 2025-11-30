@@ -25,7 +25,7 @@ pub struct PluginDescriptor<'a> {
 /// # Safety
 ///
 /// Same as [`CStr::from_ptr`], except the given pointer *can* be null.
-unsafe fn cstr_to_str<'a>(ptr: *const std::os::raw::c_char) -> Option<&'a CStr> {
+const unsafe fn cstr_to_str<'a>(ptr: *const std::os::raw::c_char) -> Option<&'a CStr> {
     if ptr.is_null() {
         return None;
     }
@@ -43,7 +43,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # Safety
     /// The user must ensure the provided descriptor is valid, including all of its pointers.
     #[inline]
-    pub(crate) unsafe fn from_raw(descriptor: &'a clap_plugin_descriptor) -> Self {
+    pub(crate) const unsafe fn from_raw(descriptor: &'a clap_plugin_descriptor) -> Self {
         Self { descriptor }
     }
 
@@ -68,7 +68,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"com.u-he.diva", descriptor.id().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn id(&self) -> Option<&'a CStr> {
+    pub const fn id(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.id) }
     }
@@ -88,7 +88,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"Diva", descriptor.name().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn name(&self) -> Option<&'a CStr> {
+    pub const fn name(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.name) }
     }
@@ -105,7 +105,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"u-he", descriptor.vendor().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn vendor(&self) -> Option<&'a CStr> {
+    pub const fn vendor(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.vendor) }
     }
@@ -122,7 +122,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"https://u-he.com/products/diva/", descriptor.url().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn url(&self) -> Option<&'a CStr> {
+    pub const fn url(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.url) }
     }
@@ -142,7 +142,7 @@ impl<'a> PluginDescriptor<'a> {
     /// );
     /// # }
     /// ```
-    pub fn manual_url(&self) -> Option<&'a CStr> {
+    pub const fn manual_url(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.manual_url) }
     }
@@ -159,7 +159,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"https://u-he.com/support/", descriptor.support_url().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn support_url(&self) -> Option<&'a CStr> {
+    pub const fn support_url(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.support_url) }
     }
@@ -179,7 +179,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"1.4.4", descriptor.version().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn version(&self) -> Option<&'a CStr> {
+    pub const fn version(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.version) }
     }
@@ -196,7 +196,7 @@ impl<'a> PluginDescriptor<'a> {
     /// assert_eq!(b"The spirit of analogue", descriptor.description().unwrap().to_bytes());
     /// # }
     /// ```
-    pub fn description(&self) -> Option<&'a CStr> {
+    pub const fn description(&self) -> Option<&'a CStr> {
         // SAFETY: this type ensures the string pointer is valid
         unsafe { cstr_to_str(self.descriptor.description) }
     }
@@ -215,7 +215,7 @@ impl<'a> PluginDescriptor<'a> {
     /// # }
     /// ```
     #[inline]
-    pub fn features(&self) -> impl Iterator<Item = &'a CStr> {
+    pub const fn features(&self) -> impl Iterator<Item = &'a CStr> {
         FeaturesIter {
             current: self.descriptor.features,
             _lifetime: PhantomData,

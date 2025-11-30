@@ -1,9 +1,9 @@
-use crate::bundle::entry::LoadedEntry;
 use crate::bundle::PluginBundleError;
+use crate::bundle::entry::LoadedEntry;
 use clack_common::entry::EntryDescriptor;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::collections::hash_map::Entry;
+use std::sync::{Arc, LazyLock, Mutex};
 
 #[derive(Hash, Eq, PartialEq)]
 struct EntryPointer(*const EntryDescriptor);
@@ -14,17 +14,14 @@ unsafe impl Send for EntryPointer {}
 // SAFETY: we're treating those pointers as pure addresses, we never read from them
 unsafe impl Sync for EntryPointer {}
 
-static ENTRY_CACHE: OnceLock<Mutex<HashMap<EntryPointer, Arc<EntrySourceInner>>>> = OnceLock::new();
+static ENTRY_CACHE: LazyLock<Mutex<HashMap<EntryPointer, Arc<EntrySourceInner>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn get_or_insert(
     entry_pointer: EntryPointer,
     load_entry: impl FnOnce() -> Result<EntrySourceInner, PluginBundleError>,
 ) -> Result<CachedEntry, PluginBundleError> {
-    let cache = ENTRY_CACHE
-        .get_or_init(|| Mutex::new(HashMap::new()))
-        .lock();
-
-    let mut cache = cache.unwrap_or_else(|e| e.into_inner());
+    let mut cache = ENTRY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
 
     let s = match cache.entry(entry_pointer) {
         Entry::Occupied(e) => Arc::clone(e.get()),
@@ -104,9 +101,7 @@ impl Drop for CachedEntry {
         // Drop the Arc. If it was the only one outside the cache, then its refcount should be 1.
         self.0 = None;
 
-        let cache = ENTRY_CACHE
-            .get_or_init(|| Mutex::new(HashMap::new()))
-            .lock();
+        let cache = ENTRY_CACHE.lock();
 
         let mut cache = cache.unwrap_or_else(|e| e.into_inner());
 

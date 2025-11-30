@@ -10,9 +10,9 @@ pub trait HostLogImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLog
+unsafe impl<H> ExtensionImplementation<H> for HostLog
 where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostLogImpl,
+    for<'a> H: HostHandlers<Shared<'a>: HostLogImpl>,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_host_log {
@@ -21,12 +21,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn log<H: HostHandlers>(
-    host: *const clap_host,
-    severity: clap_log_severity,
-    msg: *const c_char,
-) where
-    for<'a> <H as HostHandlers>::Shared<'a>: HostLogImpl,
+unsafe extern "C" fn log<H>(host: *const clap_host, severity: clap_log_severity, msg: *const c_char)
+where
+    for<'a> H: HostHandlers<Shared<'a>: HostLogImpl>,
 {
     let msg = CStr::from_ptr(msg).to_string_lossy();
     let res = HostWrapper::<H>::handle(host, |host| {

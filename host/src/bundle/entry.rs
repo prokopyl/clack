@@ -33,7 +33,7 @@ impl LoadedEntry {
     }
 
     #[inline]
-    pub fn entry(&self) -> &EntryDescriptor {
+    pub const fn entry(&self) -> &EntryDescriptor {
         // SAFETY: this type ensures entry is still valid.
         unsafe { self.entry.as_ref() }
     }

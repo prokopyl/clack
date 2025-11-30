@@ -1,7 +1,7 @@
 //#![deny(missing_docs)]
 
-use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use crate::events::Event;
+use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
 use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
@@ -61,7 +61,7 @@ impl<E> EventHeader<E> {
     pub const fn payload_size(&self) -> u32 {
         self.inner
             .size
-            .saturating_sub(core::mem::size_of::<EventHeader>() as u32)
+            .saturating_sub(size_of::<EventHeader>() as u32)
     }
 
     /// The raw event type ID.
@@ -82,7 +82,7 @@ impl<E> EventHeader<E> {
     ///
     /// This timestamp is relative to the frame count of the current `process` invocation.
     #[inline]
-    pub fn set_time(&mut self, time: u32) {
+    pub const fn set_time(&mut self, time: u32) {
         self.inner.time = time
     }
 
@@ -106,7 +106,7 @@ impl<E> EventHeader<E> {
 
     /// Sets the event's [flags](EventFlags).
     #[inline]
-    pub fn set_flags(&mut self, flags: EventFlags) {
+    pub const fn set_flags(&mut self, flags: EventFlags) {
         self.inner.flags = flags.bits();
     }
 
@@ -141,7 +141,7 @@ impl<E> EventHeader<E> {
     ///
     /// The caller *must* ensure the given header matches the given event type `E`.
     #[inline]
-    pub unsafe fn from_raw_unchecked_mut(header: &mut clap_event_header) -> &mut Self {
+    pub const unsafe fn from_raw_unchecked_mut(header: &mut clap_event_header) -> &mut Self {
         // SAFETY: EventHeader is repr(C) and ABI compatible
         &mut *(header as *mut clap_event_header as *mut Self)
     }
@@ -154,7 +154,7 @@ impl<E> EventHeader<E> {
 
     /// Returns this header as a mutable reference to a raw, C-FFI compatible header struct.
     #[inline]
-    pub fn as_raw_mut(&mut self) -> &mut clap_event_header {
+    pub const fn as_raw_mut(&mut self) -> &mut clap_event_header {
         &mut self.inner
     }
 
@@ -209,7 +209,7 @@ impl<E: Event> EventHeader<E> {
     ) -> Self {
         Self {
             inner: clap_event_header {
-                size: core::mem::size_of::<E>() as u32,
+                size: size_of::<E>() as u32,
                 time,
                 space_id: space_id.id(),
                 type_: E::TYPE_ID,
@@ -221,7 +221,7 @@ impl<E: Event> EventHeader<E> {
 
     /// The typed event space ID from this event header.
     #[inline]
-    pub fn space_id(&self) -> EventSpaceId<E::EventSpace<'static>> {
+    pub const fn space_id(&self) -> EventSpaceId<E::EventSpace<'static>> {
         // SAFETY: the EventHeader type guarantees the space_id correctness
         unsafe { EventSpaceId::new_unchecked(self.inner.space_id) }
     }

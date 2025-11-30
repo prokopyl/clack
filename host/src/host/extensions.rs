@@ -1,6 +1,6 @@
 use crate::host::HostHandlers;
 use clack_common::extensions::*;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 

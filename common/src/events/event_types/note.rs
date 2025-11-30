@@ -42,7 +42,7 @@ impl NoteOnEvent {
     }
 
     #[inline]
-    pub fn set_velocity(&mut self, velocity: f64) {
+    pub const fn set_velocity(&mut self, velocity: f64) {
         self.inner.inner.velocity = velocity
     }
 
@@ -52,7 +52,7 @@ impl NoteOnEvent {
         self
     }
 
-    self::impl_note_helpers!();
+    impl_note_helpers!();
 }
 
 impl NoteOffEvent {
@@ -69,7 +69,7 @@ impl NoteOffEvent {
     }
 
     #[inline]
-    pub fn set_velocity(&mut self, velocity: f64) {
+    pub const fn set_velocity(&mut self, velocity: f64) {
         self.inner.inner.velocity = velocity
     }
 
@@ -79,7 +79,7 @@ impl NoteOffEvent {
         self
     }
 
-    self::impl_note_helpers!();
+    impl_note_helpers!();
 }
 
 impl NoteChokeEvent {
@@ -90,7 +90,7 @@ impl NoteChokeEvent {
         }
     }
 
-    self::impl_note_helpers!();
+    impl_note_helpers!();
 }
 
 impl NoteEndEvent {
@@ -101,7 +101,7 @@ impl NoteEndEvent {
         }
     }
 
-    self::impl_note_helpers!();
+    impl_note_helpers!();
 }
 
 // SAFETY: this matches the type ID and event space
@@ -128,7 +128,7 @@ unsafe impl Event for NoteEndEvent {
     type EventSpace<'a> = CoreEventSpace<'a>;
 }
 
-self::impl_note_traits!(NoteOnEvent);
-self::impl_note_traits!(NoteOffEvent);
-self::impl_note_traits!(NoteChokeEvent);
-self::impl_note_traits!(NoteEndEvent);
+impl_note_traits!(NoteOnEvent);
+impl_note_traits!(NoteOffEvent);
+impl_note_traits!(NoteChokeEvent);
+impl_note_traits!(NoteEndEvent);
