@@ -45,8 +45,8 @@ pub struct TransportEvent {
     pub bar_start: BeatTime,
     pub bar_number: i32,
 
-    pub time_signature_numerator: i16,
-    pub time_signature_denominator: i16,
+    pub time_signature_numerator: u16,
+    pub time_signature_denominator: u16,
 }
 
 // SAFETY: this matches the type ID and event space

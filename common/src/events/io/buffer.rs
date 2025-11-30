@@ -145,7 +145,8 @@ impl EventBuffer {
     ///
     /// It is necessary to sort the events before passing them to a plugin.
     pub fn sort(&mut self) {
-        self.indexes.sort_by_key(|i| {
+        // this needs to be an unstable sort, as the std stable sort might allocate
+        self.indexes.sort_unstable_by_key(|i| {
             // SAFETY: Registered indexes always have actual event headers written by append_header_data
             // PANIC: We used registered indexes, this should never panic
             let event = unsafe { self.headers[*i as usize].assume_init_ref() };

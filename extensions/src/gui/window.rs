@@ -120,7 +120,7 @@ impl<'a> Window<'a> {
     /// Otherwise, this returns `None`.
     pub fn as_x11_handle(&self) -> Option<c_ulong> {
         if self.api_type() == GuiApiType::X11 {
-            // SAFETY: We just checked this was a COCOA window
+            // SAFETY: We just checked this was an X11 window
             unsafe { Some(self.raw.specific.x11) }
         } else {
             None

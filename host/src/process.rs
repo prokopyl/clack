@@ -522,7 +522,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     /// to jump backwards.
     #[inline]
     pub fn reset(&mut self) {
-        // SAFETY: This type ensures this can only be called in the main thread.
+        // SAFETY: This type ensures this can only be called on the audio thread.
         unsafe { self.inner.reset() }
     }
 
@@ -672,7 +672,7 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
     /// to jump backwards.
     #[inline]
     pub fn reset(&mut self) {
-        // SAFETY: This type ensures this can only be called in the main thread.
+        // SAFETY: This type ensures this can only be called on the audio thread.
         unsafe { self.inner.reset() }
     }
 
