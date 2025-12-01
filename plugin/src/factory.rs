@@ -19,7 +19,9 @@ use core::ffi::c_void;
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
+mod error;
 pub mod plugin;
+mod wrapper;
 
 /// A base trait for plugin-side factory implementations.
 ///

@@ -10,6 +10,8 @@
 
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
+use crate::factory::error::FactoryError;
+use crate::factory::wrapper::FactoryWrapper;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
@@ -27,73 +29,41 @@ use std::ptr::NonNull;
 /// needs to be exposed by an [`Entry`](crate::entry::Entry).
 #[repr(C)]
 pub struct PluginFactoryWrapper<F> {
-    raw: clap_plugin_factory,
-    factory: F,
+    inner: FactoryWrapper<clap_plugin_factory, F>,
 }
 
 impl<F: PluginFactory> PluginFactoryWrapper<F> {
+    const RAW: clap_plugin_factory = clap_plugin_factory {
+        get_plugin_count: Some(Self::get_plugin_count),
+        get_plugin_descriptor: Some(Self::get_plugin_descriptor),
+        create_plugin: Some(Self::create_plugin),
+    };
+
     /// Wraps a given [`PluginFactory`] instance.
     pub const fn new(factory: F) -> Self {
         Self {
-            raw: clap_plugin_factory {
-                get_plugin_count: Some(Self::get_plugin_count),
-                get_plugin_descriptor: Some(Self::get_plugin_descriptor),
-                create_plugin: Some(Self::create_plugin),
-            },
-            factory,
+            inner: FactoryWrapper::new(Self::RAW, factory),
         }
     }
 
     /// Returns a shared reference to the wrapped [`PluginFactory`].
     #[inline]
     pub fn factory(&self) -> &F {
-        &self.factory
+        self.inner.factory()
     }
 
     /// Returns a raw CLAP plugin factory pointer, ready to be used by the host.
     #[inline]
     pub fn as_raw_ptr(&self) -> *const clap_plugin_factory {
-        &self.raw
-    }
-
-    /// # Safety
-    /// The plugin factory pointer must be valid
-    unsafe fn handle<T>(
-        raw: *const clap_plugin_factory,
-        handler: impl FnOnce(&F) -> Result<T, PluginFactoryError>,
-    ) -> Option<T> {
-        let factory = Self::from_raw(raw);
-        let result = factory.and_then(|factory| {
-            match handle_panic(AssertUnwindSafe(|| handler(factory.factory()))) {
-                Err(_) => Err(PluginFactoryError::Panic),
-                Ok(Err(e)) => Err(e),
-                Ok(Ok(val)) => Ok(val),
-            }
-        });
-
-        match result {
-            Ok(value) => Some(value),
-            Err(e) => {
-                eprintln!("[CLAP_PLUGIN_FACTORY_ERROR] {e}");
-
-                None
-            }
-        }
-    }
-
-    /// # Safety
-    /// The plugin factory pointer must be valid (but it can be null)
-    unsafe fn from_raw<'a>(
-        raw: *const clap_plugin_factory,
-    ) -> Result<&'a Self, PluginFactoryError> {
-        (raw as *const Self)
-            .as_ref()
-            .ok_or(PluginFactoryError::NullFactoryInstance)
+        self.inner.as_raw()
     }
 
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get_plugin_count(factory: *const clap_plugin_factory) -> u32 {
-        Self::handle(factory, |factory| Ok(factory.plugin_count())).unwrap_or(0)
+        FactoryWrapper::<clap_plugin_factory, F>::handle(factory, |factory| {
+            Ok(factory.plugin_count())
+        })
+        .unwrap_or(0)
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -101,9 +71,11 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         factory: *const clap_plugin_factory,
         index: u32,
     ) -> *const clap_plugin_descriptor {
-        Self::handle(factory, |factory| match factory.plugin_descriptor(index) {
-            None => Ok(core::ptr::null()),
-            Some(d) => Ok(d.as_raw()),
+        FactoryWrapper::<clap_plugin_factory, F>::handle(factory, |factory| {
+            match factory.plugin_descriptor(index) {
+                None => Ok(core::ptr::null()),
+                Some(d) => Ok(d.as_raw()),
+            }
         })
         .unwrap_or(core::ptr::null())
     }
@@ -114,10 +86,10 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
         clap_host: *const clap_host,
         plugin_id: *const std::os::raw::c_char,
     ) -> *const clap_plugin {
-        Self::handle(factory, |factory| {
+        FactoryWrapper::<clap_plugin_factory, F>::handle(factory, |factory| {
             let plugin_id = CStr::from_ptr(plugin_id);
             let clap_host =
-                NonNull::new(clap_host as *mut _).ok_or(PluginFactoryError::NulPtr("clap_host"))?;
+                NonNull::new(clap_host as *mut _).ok_or(FactoryError::NulPtr("clap_host"))?;
 
             let host_info = HostInfo::from_raw(clap_host);
 
@@ -215,29 +187,3 @@ pub trait PluginFactory: Send + Sync {
         plugin_id: &CStr,
     ) -> Option<PluginInstance<'a>>;
 }
-
-#[derive(Debug)]
-enum PluginFactoryError {
-    NullFactoryInstance,
-    NulPtr(&'static str),
-    Panic,
-}
-
-impl Display for PluginFactoryError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PluginFactoryError::NullFactoryInstance => f.write_str(
-                "Plugin factory method was called with null clap_plugin_factory pointer",
-            ),
-            PluginFactoryError::NulPtr(ptr_name) => {
-                write!(
-                    f,
-                    "Plugin factory method was called with null {ptr_name} pointer"
-                )
-            }
-            PluginFactoryError::Panic => f.write_str("Plugin factory panicked"),
-        }
-    }
-}
-
-impl Error for PluginFactoryError {}
