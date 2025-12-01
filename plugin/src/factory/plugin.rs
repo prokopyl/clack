@@ -10,7 +10,7 @@
 
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
-use crate::factory::error::FactoryError;
+use crate::factory::error::FactoryWrapperError;
 use crate::factory::wrapper::FactoryWrapper;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
@@ -88,8 +88,8 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
     ) -> *const clap_plugin {
         FactoryWrapper::<clap_plugin_factory, F>::handle(factory, |factory| {
             let plugin_id = CStr::from_ptr(plugin_id);
-            let clap_host =
-                NonNull::new(clap_host as *mut _).ok_or(FactoryError::NulPtr("clap_host"))?;
+            let clap_host = NonNull::new(clap_host as *mut _)
+                .ok_or(FactoryWrapperError::NulPtr("clap_host"))?;
 
             let host_info = HostInfo::from_raw(clap_host);
 

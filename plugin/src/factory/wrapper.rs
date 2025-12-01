@@ -1,5 +1,5 @@
 use crate::extensions::wrapper::handle_panic;
-use crate::factory::error::FactoryError;
+use crate::factory::error::FactoryWrapperError;
 use std::panic::AssertUnwindSafe;
 
 #[repr(C)]
@@ -28,12 +28,12 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
     /// The plugin factory pointer must be valid
     pub unsafe fn handle<T>(
         raw: *const Raw,
-        handler: impl FnOnce(&F) -> Result<T, FactoryError>,
+        handler: impl FnOnce(&F) -> Result<T, FactoryWrapperError>,
     ) -> Option<T> {
         let factory = Self::from_raw(raw);
         let result = factory.and_then(|factory| {
             match handle_panic(AssertUnwindSafe(|| handler(factory.factory()))) {
-                Err(_) => Err(FactoryError::Panic),
+                Err(_) => Err(FactoryWrapperError::Panic),
                 Ok(Err(e)) => Err(e),
                 Ok(Ok(val)) => Ok(val),
             }
@@ -51,9 +51,9 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
 
     /// # Safety
     /// The plugin factory pointer must be valid (but it can be null)
-    unsafe fn from_raw<'a>(raw: *const Raw) -> Result<&'a Self, FactoryError> {
+    unsafe fn from_raw<'a>(raw: *const Raw) -> Result<&'a Self, FactoryWrapperError> {
         (raw as *const Self)
             .as_ref()
-            .ok_or(FactoryError::NullFactoryInstance)
+            .ok_or(FactoryWrapperError::NullFactoryInstance)
     }
 }
