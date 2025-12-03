@@ -19,7 +19,12 @@ use core::ffi::c_void;
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
+mod error;
 pub mod plugin;
+mod wrapper;
+
+pub use error::FactoryWrapperError;
+pub use wrapper::FactoryWrapper;
 
 /// A base trait for plugin-side factory implementations.
 ///
