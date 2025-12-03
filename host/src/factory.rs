@@ -190,7 +190,15 @@ impl<'a> Iterator for PluginDescriptorsIter<'a> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.count as usize, Some(self.count as usize))
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl ExactSizeIterator for PluginDescriptorsIter<'_> {
+    #[inline]
+    fn len(&self) -> usize {
+        (self.count - self.current_index) as usize
     }
 }
 

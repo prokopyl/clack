@@ -8,7 +8,6 @@
 //!
 //! See the [`factory` module documentation](crate::factory) to learn more about factories.
 
-use crate::extensions::wrapper::handle_panic;
 use crate::factory::Factory;
 use crate::factory::error::FactoryWrapperError;
 use crate::factory::wrapper::FactoryWrapper;
@@ -17,10 +16,7 @@ use crate::plugin::{PluginDescriptor, PluginInstance};
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
-use std::error::Error;
 use std::ffi::CStr;
-use std::fmt::{Display, Formatter};
-use std::panic::AssertUnwindSafe;
 use std::ptr::NonNull;
 
 /// A wrapper around a given [`PluginFactory`] implementation.

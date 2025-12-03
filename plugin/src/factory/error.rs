@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 use clap_sys::ext::log::{
     CLAP_LOG_ERROR, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
 };
@@ -42,7 +44,7 @@ impl FactoryWrapperError {
         }
     }
 
-    /// Returns a closure that maps an error to a [`PluginWrapperError::Error`] error of a given
+    /// Returns a closure that maps an error to a [`FactoryWrapperError::Error`] error of a given
     /// severity.
     ///
     /// This is a useful helper method when paired with [`Result::map_err`].

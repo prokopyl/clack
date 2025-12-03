@@ -23,6 +23,9 @@ mod error;
 pub mod plugin;
 mod wrapper;
 
+pub use error::FactoryWrapperError;
+pub use wrapper::FactoryWrapper;
+
 /// A base trait for plugin-side factory implementations.
 ///
 /// # Safety
