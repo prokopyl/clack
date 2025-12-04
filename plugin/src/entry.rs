@@ -335,6 +335,7 @@ impl<'a> EntryFactories<'a> {
     }
 
     #[doc(hidden)]
+    #[inline]
     pub fn found(&self) -> *const c_void {
         self.found
             .map(|p| p.as_ptr())
