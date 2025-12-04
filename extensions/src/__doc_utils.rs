@@ -10,7 +10,6 @@ mod diva_stub {
     use clack_extensions::state::*;
 
     use clack_common::stream::{InputStream, OutputStream};
-    use clack_plugin::clack_entry;
     use clack_plugin::prelude::*;
     use std::io::{Read, Write};
 
@@ -110,9 +109,6 @@ mod diva_stub {
             Ok(ProcessStatus::Sleep)
         }
     }
-
-    #[allow(unused)] // This is only used in doctests
-    pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 }
 
 pub fn get_working_instance<H: HostHandlers, FS, FH>(
@@ -123,15 +119,11 @@ where
     FS: for<'b> FnOnce(&'b ()) -> <H as HostHandlers>::Shared<'b>,
     FH: for<'b> FnOnce(&'b <H as HostHandlers>::Shared<'b>) -> <H as HostHandlers>::MainThread<'b>,
 {
+    use clack_plugin::prelude::*;
+    use diva_stub::DivaPluginStub;
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
-    // SAFETY: we're loading our own bundle here
-    let bundle = unsafe {
-        PluginBundle::load_from_raw(
-            &diva_stub::DIVA_STUB_ENTRY,
-            "/home/user/.clap/u-he/libdiva.so",
-        )?
-    };
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>("")?;
 
     let plugin_descriptor = bundle
         .get_plugin_factory()

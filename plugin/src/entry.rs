@@ -325,16 +325,17 @@ pub struct EntryFactories<'a> {
 }
 
 impl<'a> EntryFactories<'a> {
+    #[doc(hidden)]
     #[inline]
-    pub(crate) fn new(requested: &'a CStr) -> Self {
+    pub fn new(requested: &'a CStr) -> Self {
         Self {
             found: None,
             requested,
         }
     }
 
-    #[inline]
-    pub(crate) fn found(&self) -> *const c_void {
+    #[doc(hidden)]
+    pub fn found(&self) -> *const c_void {
         self.found
             .map(|p| p.as_ptr())
             .unwrap_or(core::ptr::null_mut())

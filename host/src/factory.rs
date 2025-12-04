@@ -57,7 +57,7 @@ pub unsafe trait FactoryPointer<'a>: Sized + 'a {
 /// use clack_host::prelude::PluginBundle;
 ///
 /// # mod diva { include!("./bundle/diva_stub.rs"); }
-/// # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap() };
+/// # let bundle = PluginBundle::load_from_clack::<diva::Entry>("/home/user/.clap/u-he/libdiva.so").unwrap();
 /// # /*
 /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
 /// # */

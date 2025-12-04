@@ -1,7 +1,6 @@
 use clack_common::stream::{InputStream, OutputStream};
 use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
 use std::io::Write;
 use std::sync::OnceLock;
@@ -57,8 +56,6 @@ impl DefaultPluginFactory for MyPlugin {
     }
 }
 
-static MY_PLUGIN_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<MyPlugin>);
-
 struct MyHost;
 
 impl HostHandlers for MyHost {
@@ -109,7 +106,9 @@ impl Drop for MyHostMainThread<'_> {
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
-    let bundle = unsafe { PluginBundle::load_from_raw(&MY_PLUGIN_ENTRY, "/my/plugin") }.unwrap();
+    let bundle =
+        PluginBundle::load_from_clack::<SinglePluginEntry<MyPlugin>>("/my/plugin").unwrap();
+
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {
             init: OnceLock::new(),

@@ -1,4 +1,3 @@
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
 
 pub struct DivaPluginStub;
@@ -73,5 +72,7 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
     }
 }
 
-#[allow(unused)] // This is only used in doctests
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
+pub type Entry = SinglePluginEntry<DivaPluginStub>;
+
+//#[allow(unused)] // This is only used in doctests
+//pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);

@@ -59,7 +59,7 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::NulError;
+use std::ffi::{CString, NulError};
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
@@ -69,6 +69,9 @@ mod entry;
 
 #[cfg(feature = "libloading")]
 mod library;
+
+#[cfg(feature = "clack-plugin")]
+mod clack_plugin;
 
 #[cfg(test)]
 #[allow(missing_docs)]
@@ -109,7 +112,14 @@ use clack_common::utils::ClapVersion;
 /// ```
 #[derive(Clone)]
 pub struct PluginBundle {
-    inner: CachedEntry,
+    inner: PluginBundleInner,
+}
+
+#[derive(Clone)]
+enum PluginBundleInner {
+    Cached(CachedEntry),
+    #[cfg(feature = "clack-plugin")]
+    FromClack(clack_plugin::ClackEntry),
 }
 
 impl PluginBundle {
@@ -150,6 +160,34 @@ impl PluginBundle {
         let library = PluginEntryLibrary::load(path)?;
 
         let inner = cache::load_from_library(library, path_str)?;
+
+        Ok(Self {
+            inner: PluginBundleInner::Cached(inner),
+        })
+    }
+
+    /// Loads a CLAP bundle from an [`Entry`](::clack_plugin::entry::Entry) created by [`clack_plugin`](::clack_plugin).
+    ///
+    /// Note that CLAP plugins loaded this way still need a valid path, as they may perform various
+    /// filesystem operations relative to their bundle files.
+    ///
+    /// Note that unlike other methods to load [`PluginBundle`]s, this method is completely safe, as
+    /// it can rely on the safety guarantees provided by [`clack_plugin`](::clack_plugin).
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if initializing the entry fails.
+    /// See [`PluginBundleError`] for all the possible errors that may occur.
+    ///
+    #[cfg(feature = "clack-plugin")]
+    pub fn load_from_clack<E: ::clack_plugin::entry::Entry>(
+        path: impl AsRef<std::ffi::OsStr>,
+    ) -> Result<Self, PluginBundleError> {
+        let path = path.as_ref().as_encoded_bytes();
+        let path_cstr = CString::new(path).map_err(PluginBundleError::InvalidNulPath)?;
+
+        let entry = E::new(&path_cstr).map_err(|_| PluginBundleError::EntryInitFailed)?;
+        let inner = PluginBundleInner::FromClack(clack_plugin::ClackEntry::new(entry));
 
         Ok(Self { inner })
     }
@@ -206,7 +244,9 @@ impl PluginBundle {
 
         let inner = cache::load_from_library(library, path_str)?;
 
-        Ok(Self { inner })
+        Ok(Self {
+            inner: PluginBundleInner::Cached(inner),
+        })
     }
 
     /// Loads a CLAP bundle from a `'static` [`EntryDescriptor`].
@@ -246,14 +286,18 @@ impl PluginBundle {
         plugin_path: &str,
     ) -> Result<Self, PluginBundleError> {
         Ok(Self {
-            inner: cache::load_from_raw(inner, plugin_path)?,
+            inner: PluginBundleInner::Cached(cache::load_from_raw(inner, plugin_path)?),
         })
     }
 
     /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
     pub fn raw_entry(&self) -> &EntryDescriptor {
-        self.inner.raw_entry()
+        match &self.inner {
+            PluginBundleInner::Cached(entry) => entry.raw_entry(),
+            #[cfg(feature = "clack-plugin")]
+            PluginBundleInner::FromClack(_) => &clack_plugin::ClackEntry::DUMMY_DESCRIPTOR,
+        }
     }
 
     /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.
@@ -278,10 +322,17 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
-        // SAFETY: this type ensures the function pointer is valid.
-        let ptr = unsafe { self.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
-        // SAFETY: pointer was created using F's own identifier.
-        NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
+        match &self.inner {
+            PluginBundleInner::Cached(entry) => {
+                // SAFETY: this type ensures the function pointer is valid.
+                let ptr =
+                    unsafe { entry.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
+                // SAFETY: pointer was created using F's own identifier.
+                NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
+            }
+            #[cfg(feature = "clack-plugin")]
+            PluginBundleInner::FromClack(clack) => clack.get_factory(),
+        }
     }
 
     /// Returns the [`PluginFactory`] exposed by this bundle, if it exists.
