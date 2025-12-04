@@ -368,8 +368,6 @@ impl PluginBundle {
 /// See [`PluginBundle::load`] and [`PluginBundle::load_from_raw`].
 #[derive(Debug)]
 pub enum PluginBundleError {
-    /// The path given to [`PluginBundle::load`] is not valid UTF-8.
-    InvalidUtf8Path,
     /// The dynamic library file could not be loaded.
     ///
     /// This contains the error type from the underlying
@@ -412,9 +410,6 @@ impl Display for PluginBundleError {
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => {
                 write!(f, "Failed to load plugin descriptor library: {e}")
-            }
-            PluginBundleError::InvalidUtf8Path => {
-                f.write_str("Plugin descriptor path contains invalid UTF-8")
             }
             PluginBundleError::NullEntryPointer => f.write_str("Plugin entry pointer is null"),
             PluginBundleError::IncompatibleClapVersion { plugin_version } => write!(
