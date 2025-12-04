@@ -73,6 +73,3 @@ impl<'a> PluginAudioProcessor<'a, DivaPluginStubShared<'a>, ()>
 }
 
 pub type Entry = SinglePluginEntry<DivaPluginStub>;
-
-//#[allow(unused)] // This is only used in doctests
-//pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
