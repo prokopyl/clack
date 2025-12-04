@@ -20,6 +20,7 @@ pub struct PluginInfoAsAUv2 {
 }
 
 impl PluginInfoAsAUv2 {
+    #[cfg(feature = "clack-host")]
     pub(crate) fn empty() -> PluginInfoAsAUv2 {
         Self {
             inner: clap_plugin_info_as_auv2 {
