@@ -396,6 +396,7 @@ pub enum PluginBundleError {
 impl Error for PluginBundleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            #[cfg(feature = "libloading")]
             PluginBundleError::InvalidNulPath(e) => Some(e),
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => Some(e),
@@ -408,6 +409,7 @@ impl Display for PluginBundleError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PluginBundleError::EntryInitFailed => f.write_str("Plugin entry initialization failed"),
+            #[cfg(feature = "libloading")]
             PluginBundleError::InvalidNulPath(e) => {
                 write!(f, "Invalid plugin descriptor path: {e}")
             }
