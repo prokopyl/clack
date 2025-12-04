@@ -59,7 +59,7 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::{CStr, CString, NulError};
+use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
@@ -153,6 +153,7 @@ impl PluginBundle {
     #[cfg(feature = "libloading")]
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
+        use std::ffi::CString;
 
         let path = path.as_ref();
         let path_cstr = CString::new(path.as_encoded_bytes())?;
@@ -233,6 +234,7 @@ impl PluginBundle {
         symbol_name: &CStr,
     ) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
+        use std::ffi::CString;
 
         let path = path.as_ref();
         let path_cstr = CString::new(path.as_encoded_bytes())?;
@@ -367,6 +369,7 @@ impl PluginBundle {
 ///
 /// See [`PluginBundle::load`] and [`PluginBundle::load_from_raw`].
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PluginBundleError {
     /// The dynamic library file could not be loaded.
     ///
@@ -374,6 +377,9 @@ pub enum PluginBundleError {
     /// [`libloading`](https://crates.io/crates/libloading) library.
     #[cfg(feature = "libloading")]
     LibraryLoadingError(libloading::Error),
+    #[cfg(feature = "libloading")]
+    /// The given path is not a valid C string.
+    InvalidNulPath(std::ffi::NulError),
     /// The entry pointer exposed by the dynamic library file is `null`.
     NullEntryPointer,
     /// The exposed entry used an incompatible CLAP version.
@@ -383,8 +389,6 @@ pub enum PluginBundleError {
         /// See [`ClapVersion::CURRENT`] to get the current clap version.
         plugin_version: ClapVersion,
     },
-    /// The given path is not a valid C string.
-    InvalidNulPath(NulError),
     /// The entry's `init` method failed.
     EntryInitFailed,
 }
@@ -422,9 +426,10 @@ impl Display for PluginBundleError {
     }
 }
 
-impl From<NulError> for PluginBundleError {
+#[cfg(feature = "libloading")]
+impl From<std::ffi::NulError> for PluginBundleError {
     #[inline]
-    fn from(value: NulError) -> Self {
+    fn from(value: std::ffi::NulError) -> Self {
         Self::InvalidNulPath(value)
     }
 }
