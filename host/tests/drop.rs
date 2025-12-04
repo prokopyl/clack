@@ -125,9 +125,10 @@ impl HostHandlers for MyHost {
 }
 
 fn instantiate() -> PluginInstance<MyHost> {
-    let bundle = unsafe {
-        PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
-    };
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+        c"/home/user/.clap/u-he/libdiva.so",
+    )
+    .unwrap();
     let host_info =
         HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2").unwrap();
 

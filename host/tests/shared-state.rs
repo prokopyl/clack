@@ -1,5 +1,4 @@
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
 use std::sync::OnceLock;
 
@@ -54,8 +53,6 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
     }
 }
 
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
-
 struct MyHostShared {
     state_ext: OnceLock<bool>,
 }
@@ -89,9 +86,10 @@ impl HostHandlers for MyHost {
 
 #[test]
 pub fn handles_drop_order() {
-    let bundle = unsafe {
-        PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
-    };
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+        c"/home/user/.clap/u-he/libdiva.so",
+    )
+    .unwrap();
     let host_info =
         HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2").unwrap();
 

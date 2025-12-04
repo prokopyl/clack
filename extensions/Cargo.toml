@@ -17,6 +17,9 @@ bitflags = { workspace = true }
 raw-window-handle_05 = { workspace = true, optional = true }
 raw-window-handle_06 = { workspace = true, optional = true }
 
+[dev-dependencies]
+clack-host = { workspace = true, features = ["clack-plugin"] }
+
 [features]
 all-extensions = [
     "audio-ports",

@@ -142,7 +142,7 @@
 //!
 //! // Step 1: Load the bundle in memory.
 //! # mod diva { include!("./bundle/diva_stub.rs"); }
-//! # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so")? };
+//! # let bundle = PluginBundle::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
 //! # /*
 //! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
 //! # */

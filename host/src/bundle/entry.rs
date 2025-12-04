@@ -1,7 +1,7 @@
 use crate::bundle::PluginBundleError;
 use clack_common::entry::EntryDescriptor;
 use clack_common::utils::ClapVersion;
-use std::ffi::CString;
+use std::ffi::CStr;
 use std::ptr::NonNull;
 
 pub struct LoadedEntry {
@@ -13,13 +13,11 @@ impl LoadedEntry {
     ///
     /// User must ensure that the provided entry is fully valid, as well as everything it exposes.
     /// User must also ensure this type *only* exists while `entry` is valid.
-    pub unsafe fn load(entry: &EntryDescriptor, path: &str) -> Result<Self, PluginBundleError> {
+    pub unsafe fn load(entry: &EntryDescriptor, path: &CStr) -> Result<Self, PluginBundleError> {
         let plugin_version = ClapVersion::from_raw(entry.clap_version);
         if !plugin_version.is_compatible() {
             return Err(PluginBundleError::IncompatibleClapVersion { plugin_version });
         }
-
-        let path = CString::new(path).map_err(PluginBundleError::InvalidNulPath)?;
 
         if let Some(init) = entry.init {
             if !init(path.as_ptr()) {

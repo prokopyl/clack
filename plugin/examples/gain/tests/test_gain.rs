@@ -3,19 +3,15 @@ use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::PluginFactory;
 use clack_host::prelude::*;
 use clack_host::utils::Cookie;
-
-use clack_plugin_gain::clap_entry;
+use clack_plugin::entry::SinglePluginEntry;
+use clack_plugin_gain::GainPlugin;
 
 #[test]
 pub fn it_works() {
-    // Initialize host
-    //let mut host = TestHost::instantiate(&clap_entry);
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    // Get plugin entry from the exported static
-    // SAFETY: only called this once here
-    let bundle = unsafe { PluginBundle::load_from_raw(&clap_entry, "") }.unwrap();
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
 
     let descriptor = bundle
         .get_factory::<PluginFactory>()

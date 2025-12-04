@@ -117,7 +117,8 @@ impl HostTimerImpl for MyHostMainThread<'_> {
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
-    let bundle = unsafe { PluginBundle::load_from_raw(&MY_PLUGIN_ENTRY, "/my/plugin") }.unwrap();
+    // SAFETY: This bundle comes from Clack
+    let bundle = unsafe { PluginBundle::load_from_raw(&MY_PLUGIN_ENTRY, c"/my/plugin") }.unwrap();
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {
             init: OnceLock::new(),
