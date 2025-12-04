@@ -17,6 +17,9 @@ This means audio effects plugins that process an incoming signal, while technica
 in this host, will only receive silence as an input. In practice, synthesizers and other
 audio-generating plugins are better suited to test this example with.
 
+Moreover, CPAL is not designed to be a realtime audio library, therefore depending on the
+platform or OS, there might be significant delay in the audio/event processing.
+
 ## Features
 
 This is just an example host, don't expect too much in terms of features. :)

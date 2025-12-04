@@ -386,7 +386,8 @@ fn find_matching_output_config(
 
     FullAudioConfig {
         output_channel_count: best_stream_config.channels() as usize,
-        min_buffer_size,
+        // Sometimes CPAL may report 0 samples as a minimum buffer size, which is invalid
+        min_buffer_size: min_buffer_size.max(1),
         max_likely_buffer_size: max_buffer_size,
         sample_rate: 44_100.clamp(
             best_stream_config.min_sample_rate().0,
