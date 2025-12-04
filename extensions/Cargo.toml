@@ -24,6 +24,7 @@ clack-host = { workspace = true, features = ["clack-plugin"] }
 all-extensions = [
     "audio-ports",
     "audio-ports-config",
+    "clap-wrapper",
     "event-registry",
     "gui",
     "latency",
@@ -41,6 +42,7 @@ all-extensions = [
 ]
 audio-ports = []
 audio-ports-config = []
+clap-wrapper = []
 event-registry = []
 gui = []
 latency = []

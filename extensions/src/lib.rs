@@ -4,6 +4,8 @@
 pub mod audio_ports;
 #[cfg(feature = "audio-ports-config")]
 pub mod audio_ports_config;
+#[cfg(feature = "clap-wrapper")]
+pub mod clap_wrapper;
 #[cfg(feature = "event-registry")]
 pub mod event_registry;
 #[cfg(feature = "gui")]
