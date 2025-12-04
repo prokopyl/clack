@@ -95,7 +95,7 @@ impl HostHandlers for MyHost {
 #[test]
 pub fn handles_instantiation_errors() {
     let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
-        "/home/user/.clap/u-he/libdiva.so",
+        c"/home/user/.clap/u-he/libdiva.so",
     )
     .unwrap();
     let host_info =
@@ -125,7 +125,7 @@ pub fn it_works_concurrently_with_static_entrypoint() {
                 .spawn_scoped(s, move || {
                     // SAFETY: This descriptor comes from clack
                     let bundle = unsafe {
-                        PluginBundle::load_from_raw(entrypoint, "/home/user/.clap/u-he/libdiva.so")
+                        PluginBundle::load_from_raw(entrypoint, c"/home/user/.clap/u-he/libdiva.so")
                     }
                     .unwrap();
 

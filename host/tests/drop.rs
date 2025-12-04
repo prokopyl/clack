@@ -126,7 +126,7 @@ impl HostHandlers for MyHost {
 
 fn instantiate() -> PluginInstance<MyHost> {
     let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
-        "/home/user/.clap/u-he/libdiva.so",
+        c"/home/user/.clap/u-he/libdiva.so",
     )
     .unwrap();
     let host_info =

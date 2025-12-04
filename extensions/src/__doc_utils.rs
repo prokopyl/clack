@@ -123,7 +123,7 @@ where
     use diva_stub::DivaPluginStub;
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
-    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>("")?;
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(c"")?;
 
     let plugin_descriptor = bundle
         .get_plugin_factory()

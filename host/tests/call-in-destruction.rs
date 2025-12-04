@@ -107,7 +107,7 @@ fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
     let bundle =
-        PluginBundle::load_from_clack::<SinglePluginEntry<MyPlugin>>("/my/plugin").unwrap();
+        PluginBundle::load_from_clack::<SinglePluginEntry<MyPlugin>>(c"/my/plugin").unwrap();
 
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {

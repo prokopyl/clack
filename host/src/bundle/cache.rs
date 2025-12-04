@@ -3,6 +3,7 @@ use crate::bundle::entry::LoadedEntry;
 use clack_common::entry::EntryDescriptor;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::ffi::CStr;
 use std::sync::{Arc, LazyLock, Mutex};
 
 #[derive(Hash, Eq, PartialEq)]
@@ -38,7 +39,7 @@ fn get_or_insert(
 #[cfg(feature = "libloading")]
 pub(crate) fn load_from_library(
     library: crate::bundle::library::PluginEntryLibrary,
-    plugin_path: &str,
+    plugin_path: &CStr,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(library.entry()), move || {
         // SAFETY: PluginEntryLibrary type guarantees the entry
@@ -55,7 +56,7 @@ pub(crate) fn load_from_library(
 /// User must ensure that the provided entry is fully valid, as well as everything it exposes.
 pub(crate) unsafe fn load_from_raw(
     entry_descriptor: &'static EntryDescriptor,
-    plugin_path: &str,
+    plugin_path: &CStr,
 ) -> Result<CachedEntry, PluginBundleError> {
     get_or_insert(EntryPointer(entry_descriptor), || {
         // SAFETY: entry_descriptor is 'static, it is always valid.

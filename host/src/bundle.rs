@@ -59,7 +59,7 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::{CString, NulError};
+use std::ffi::{CStr, CString, NulError};
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
@@ -155,11 +155,11 @@ impl PluginBundle {
         use crate::bundle::library::PluginEntryLibrary;
 
         let path = path.as_ref();
-        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+        let path_cstr = CString::new(path.as_encoded_bytes())?;
 
         let library = PluginEntryLibrary::load(path)?;
 
-        let inner = cache::load_from_library(library, path_str)?;
+        let inner = cache::load_from_library(library, &path_cstr)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
@@ -181,12 +181,9 @@ impl PluginBundle {
     ///
     #[cfg(feature = "clack-plugin")]
     pub fn load_from_clack<E: ::clack_plugin::entry::Entry>(
-        path: impl AsRef<std::ffi::OsStr>,
+        path: &CStr,
     ) -> Result<Self, PluginBundleError> {
-        let path = path.as_ref().as_encoded_bytes();
-        let path_cstr = CString::new(path).map_err(PluginBundleError::InvalidNulPath)?;
-
-        let entry = E::new(&path_cstr).map_err(|_| PluginBundleError::EntryInitFailed)?;
+        let entry = E::new(path).map_err(|_| PluginBundleError::EntryInitFailed)?;
         let inner = PluginBundleInner::FromClack(clack_plugin::ClackEntry::new(entry));
 
         Ok(Self { inner })
@@ -233,16 +230,16 @@ impl PluginBundle {
     pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
         path: P,
         library: libloading::Library,
-        symbol_name: &core::ffi::CStr,
+        symbol_name: &CStr,
     ) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
 
         let path = path.as_ref();
-        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+        let path_cstr = CString::new(path.as_encoded_bytes())?;
 
         let library = PluginEntryLibrary::load_from_symbol_in_library(library, symbol_name)?;
 
-        let inner = cache::load_from_library(library, path_str)?;
+        let inner = cache::load_from_library(library, &path_cstr)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
@@ -275,7 +272,7 @@ impl PluginBundle {
     /// let descriptor: &'static EntryDescriptor = /* ... */
     /// # descriptor;
     ///
-    /// let path = "/home/user/.clap/u-he/libdiva.so";
+    /// let path = c"/home/user/.clap/u-he/libdiva.so";
     /// let bundle = unsafe { PluginBundle::load_from_raw(descriptor, path)? };
     ///
     /// println!("Loaded bundle CLAP version: {}", bundle.version());
@@ -283,7 +280,7 @@ impl PluginBundle {
     #[inline]
     pub unsafe fn load_from_raw(
         inner: &'static EntryDescriptor,
-        plugin_path: &str,
+        plugin_path: &CStr,
     ) -> Result<Self, PluginBundleError> {
         Ok(Self {
             inner: PluginBundleInner::Cached(cache::load_from_raw(inner, plugin_path)?),
@@ -427,5 +424,12 @@ impl Display for PluginBundleError {
                 ClapVersion::CURRENT
             ),
         }
+    }
+}
+
+impl From<NulError> for PluginBundleError {
+    #[inline]
+    fn from(value: NulError) -> Self {
+        Self::InvalidNulPath(value)
     }
 }
