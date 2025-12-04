@@ -23,8 +23,8 @@ impl PluginInfoAsAUv2 {
     pub(crate) fn empty() -> PluginInfoAsAUv2 {
         Self {
             inner: clap_plugin_info_as_auv2 {
-                au_subt: [0; _],
-                au_type: [0; _],
+                au_subt: [0; 5],
+                au_type: [0; 5],
             },
         }
     }
