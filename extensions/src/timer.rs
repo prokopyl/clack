@@ -18,7 +18,7 @@ pub struct HostTimer(RawExtension<HostExtensionSide, clap_host_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTimer {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TIMER_SUPPORT];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
@@ -35,7 +35,7 @@ pub struct PluginTimer(RawExtension<PluginExtensionSide, clap_plugin_timer_suppo
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTimer {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TIMER_SUPPORT];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]

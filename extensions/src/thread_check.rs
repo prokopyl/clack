@@ -8,7 +8,7 @@ pub struct HostThreadCheck(RawExtension<HostExtensionSide, clap_host_thread_chec
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadCheck {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_CHECK];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

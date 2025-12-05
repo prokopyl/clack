@@ -32,7 +32,7 @@ pub struct PluginAudioPortsConfig(
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsConfig {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS_CONFIG];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -49,7 +49,7 @@ pub struct HostAudioPortsConfig(RawExtension<HostExtensionSide, clap_host_audio_
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPortsConfig {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS_CONFIG];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

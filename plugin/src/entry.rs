@@ -353,7 +353,7 @@ impl<'a> EntryFactories<'a> {
             return self;
         }
 
-        if F::IDENTIFIER == self.requested {
+        if F::IDENTIFIERS.contains(&self.requested) {
             self.found = Some(factory.get_raw_factory_ptr())
         }
 

@@ -70,7 +70,7 @@ pub struct HostLog(RawExtension<HostExtensionSide, clap_host_log>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLog {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LOG];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

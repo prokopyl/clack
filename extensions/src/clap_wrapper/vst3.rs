@@ -111,7 +111,7 @@ pub struct PluginAsVST3(RawExtension<PluginExtensionSide, clap_plugin_as_vst3>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAsVST3 {
-    const IDENTIFIER: &'static CStr = CLAP_PLUGIN_AS_VST3;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_AS_VST3];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]

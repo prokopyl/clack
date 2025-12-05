@@ -20,7 +20,7 @@ pub struct PluginRender(RawExtension<PluginExtensionSide, clap_plugin_render>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginRender {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_RENDER];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]

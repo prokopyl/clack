@@ -8,7 +8,7 @@ pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>)
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginLatency {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -24,7 +24,7 @@ pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLatency {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

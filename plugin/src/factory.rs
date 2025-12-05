@@ -3,7 +3,7 @@
 //! In CLAP, factories are singleton objects exposed by the plugin bundle's
 //! [entry point](crate::entry), which can in turn expose various functionalities.
 //!
-//! Each factory type has a standard, unique [identifier](Factory::IDENTIFIER), which allows hosts
+//! Each factory type has a standard, unique [identifier](Factory::IDENTIFIERS), which allows hosts
 //! to query plugins for known factory type implementations.
 //!
 //! In Clack, factory implementations are represented by the [`Factory`] trait.
@@ -33,7 +33,7 @@ pub use wrapper::FactoryWrapper;
 /// Types implementing this trait and using the default implementation of
 /// [`get_raw_factory_ptr`](Factory::get_raw_factory_ptr)
 /// **MUST** be `#[repr(C)]` and have the same C-FFI representation as the CLAP factory struct
-/// matching the factory's [`IDENTIFIER`](Factory::IDENTIFIER).
+/// matching the factory's [`IDENTIFIER`](Factory::IDENTIFIERS).
 ///
 /// Failure to do so will result in incorrect pointer casts and UB.
 ///
@@ -55,12 +55,12 @@ pub use wrapper::FactoryWrapper;
 /// pub struct MyPluginFactory(clap_plugin_factory);
 ///
 /// unsafe impl Factory for MyPluginFactory {
-///     const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
+///     const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_ID];
 /// }
 /// ```
 pub unsafe trait Factory {
     /// The standard identifier for this factory.
-    const IDENTIFIER: &'static CStr;
+    const IDENTIFIERS: &[&CStr];
 
     /// Returns this factory as a C FFI-compatible raw pointer.
     ///

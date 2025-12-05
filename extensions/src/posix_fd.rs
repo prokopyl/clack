@@ -37,7 +37,7 @@ pub struct HostPosixFd(RawExtension<HostExtensionSide, clap_host_posix_fd_suppor
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginPosixFd {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_POSIX_FD_SUPPORT];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -49,7 +49,7 @@ unsafe impl Extension for PluginPosixFd {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostPosixFd {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_POSIX_FD_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_POSIX_FD_SUPPORT];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

@@ -22,7 +22,7 @@
 //! pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
 //!
 //! unsafe impl Extension for PluginState {
-//!     const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
+//!     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_STATE];
 //!     type ExtensionSide = PluginExtensionSide;
 //!
 //!     #[inline]
@@ -122,6 +122,7 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
     }
 
     /// Adds a given extension implementation to the list of extensions this plugin supports.
+    #[inline]
     pub fn register<E: ExtensionImplementation<P, ExtensionSide = PluginExtensionSide>>(
         &mut self,
     ) -> &mut Self {
@@ -129,7 +130,7 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
             return self;
         }
 
-        if E::IDENTIFIER == self.requested {
+        if E::IDENTIFIERS.contains(&self.requested) {
             self.found = Some(E::IMPLEMENTATION.as_ptr())
         }
 

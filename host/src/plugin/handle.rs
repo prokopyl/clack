@@ -135,9 +135,9 @@ impl<'a> PluginSharedHandle<'a> {
     }
 
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
+        let identifier = const { E::IDENTIFIERS.first().unwrap() };
         // SAFETY: This type ensures the function pointers are valid
-        let ext =
-            unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), E::IDENTIFIER.as_ptr()) };
+        let ext = unsafe { self.as_raw().get_extension?(self.raw.as_ptr(), identifier.as_ptr()) };
 
         let ext = NonNull::new(ext as *mut _)?;
         // SAFETY: The CLAP spec guarantees that the extension lives as long as the instance.

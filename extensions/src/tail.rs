@@ -13,7 +13,7 @@ pub struct PluginTail(RawExtension<PluginExtensionSide, clap_plugin_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTail {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TAIL];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -30,7 +30,7 @@ pub struct HostTail(RawExtension<HostExtensionSide, clap_host_tail>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTail {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TAIL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TAIL];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
