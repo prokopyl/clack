@@ -54,6 +54,7 @@ bitflags! {
         const IS_READONLY = CLAP_PARAM_IS_READONLY;
         const IS_STEPPED = CLAP_PARAM_IS_STEPPED;
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
+        const IS_ENUM = CLAP_PARAM_IS_ENUM;
     }
 }
 
