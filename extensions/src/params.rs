@@ -84,7 +84,7 @@ pub struct PluginParams(RawExtension<PluginExtensionSide, clap_plugin_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginParams {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_PARAMS];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -100,7 +100,7 @@ pub struct HostParams(RawExtension<HostExtensionSide, clap_host_params>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostParams {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_PARAMS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_PARAMS];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

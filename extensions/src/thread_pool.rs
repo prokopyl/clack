@@ -14,7 +14,7 @@ pub struct PluginThreadPool(RawExtension<PluginExtensionSide, clap_plugin_thread
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginThreadPool {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_POOL];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -31,7 +31,7 @@ pub struct HostThreadPool(RawExtension<HostExtensionSide, clap_host_thread_pool>
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadPool {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_POOL];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

@@ -21,7 +21,7 @@ pub struct PluginVoiceInfo(RawExtension<PluginExtensionSide, clap_plugin_voice_i
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginVoiceInfo {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_VOICE_INFO];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -38,7 +38,7 @@ pub struct HostVoiceInfo(RawExtension<HostExtensionSide, clap_host_voice_info>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostVoiceInfo {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_VOICE_INFO;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_VOICE_INFO];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

@@ -69,7 +69,7 @@ impl From<NoteDialect> for NoteDialects {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNotePorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_PORTS];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -81,7 +81,7 @@ unsafe impl Extension for PluginNotePorts {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNotePorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_PORTS];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

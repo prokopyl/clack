@@ -99,7 +99,7 @@ bitflags! {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -111,7 +111,7 @@ unsafe impl Extension for PluginAudioPorts {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]

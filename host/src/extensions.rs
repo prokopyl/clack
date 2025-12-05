@@ -151,7 +151,7 @@
 //!
 //! // Mark this type as being the plugin side of an extension, and tie it to its ID
 //! unsafe impl Extension for PluginLatency {
-//!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+//!     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
 //!     type ExtensionSide = PluginExtensionSide;
 //!
 //!     #[inline]
@@ -166,7 +166,7 @@
 //!
 //! // Mark this type as being the host side of an extension, and tie it to its ID
 //! unsafe impl Extension for HostLatency {
-//!     const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+//!     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
 //!     type ExtensionSide = HostExtensionSide;
 //!
 //!     #[inline]

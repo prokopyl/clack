@@ -40,7 +40,7 @@ impl<'a, H: HostHandlers> HostExtensions<'a, H> {
             return self;
         }
 
-        if E::IDENTIFIER == self.requested {
+        if E::IDENTIFIERS.iter().any(|i| *i == self.requested) {
             self.found = Some(E::IMPLEMENTATION.as_ptr())
         }
 

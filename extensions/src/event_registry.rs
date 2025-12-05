@@ -8,7 +8,7 @@ pub struct HostEventRegistry(RawExtension<HostExtensionSide, clap_host_event_reg
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostEventRegistry {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_EVENT_REGISTRY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_EVENT_REGISTRY];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
