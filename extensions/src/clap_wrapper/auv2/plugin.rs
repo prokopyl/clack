@@ -15,7 +15,7 @@ pub struct PluginFactoryAsAUv2Wrapper<F> {
 // SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_auv2 as its first field, and matches
 // CLAP_PLUGIN_FACTORY_INFO_AUV2.
 unsafe impl<F: PluginFactoryAsAUv2Impl> Factory for PluginFactoryAsAUv2Wrapper<F> {
-    const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_INFO_AUV2;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_INFO_AUV2];
 }
 
 impl<F: PluginFactoryAsAUv2Impl> PluginFactoryAsAUv2Wrapper<F> {

@@ -101,7 +101,7 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
 // SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_factory as its first field, and matches
 // CLAP_PLUGIN_FACTORY_ID.
 unsafe impl<F> Factory for PluginFactoryWrapper<F> {
-    const IDENTIFIER: &'static CStr = CLAP_PLUGIN_FACTORY_ID;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_ID];
 }
 
 /// A Plugin Factory implementation.

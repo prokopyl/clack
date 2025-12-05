@@ -130,7 +130,7 @@ impl<'a, P: Plugin> PluginExtensions<'a, P> {
             return self;
         }
 
-        if E::IDENTIFIERS.iter().any(|i| *i == self.requested) {
+        if E::IDENTIFIERS.contains(&self.requested) {
             self.found = Some(E::IMPLEMENTATION.as_ptr())
         }
 
