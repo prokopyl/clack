@@ -52,6 +52,14 @@ impl AudioPortType<'_> {
             Some(AudioPortType(c_str))
         }
     }
+
+    /// Returns this [`AudioPortType`] as a pointer to a raw, C-FFI compatible, null-terminated string pointer.
+    ///
+    /// The string this pointer points to is at least valid for `'a`.
+    #[inline]
+    pub const fn as_raw(self) -> *const c_char {
+        self.0.as_ptr()
+    }
 }
 
 bitflags! {
