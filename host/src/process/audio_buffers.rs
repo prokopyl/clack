@@ -209,11 +209,11 @@ impl AudioPorts {
             descriptor.constant_mask = constant_mask;
 
             if is_f64 {
-                descriptor.data64 = buffers.as_ptr().cast();
-                descriptor.data32 = core::ptr::null();
+                descriptor.data64 = buffers.as_mut_ptr().cast();
+                descriptor.data32 = core::ptr::null_mut();
             } else {
-                descriptor.data64 = core::ptr::null();
-                descriptor.data32 = buffers.as_ptr() as *const *const _;
+                descriptor.data64 = core::ptr::null_mut();
+                descriptor.data32 = buffers.as_mut_ptr();
             }
         }
 
@@ -231,7 +231,7 @@ impl AudioPorts {
                 last_len += channel_count;
 
                 if descriptor.data32.is_null() {
-                    descriptor.data64 = buffers.as_ptr().cast();
+                    descriptor.data64 = buffers.as_mut_ptr().cast();
                 } else {
                     descriptor.data32 = buffers.as_mut_ptr();
                 }
