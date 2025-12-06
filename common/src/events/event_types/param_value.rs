@@ -77,7 +77,7 @@ impl ParamValueEvent {
     }
 
     impl_event_helpers!(clap_event_param_value);
-    impl_event_pckn!();
+    impl_event_pckn!(self.inner);
 
     #[inline]
     pub const fn cookie(&self) -> Cookie {
@@ -192,7 +192,7 @@ impl ParamModEvent {
     }
 
     impl_event_helpers!(clap_event_param_mod);
-    impl_event_pckn!();
+    impl_event_pckn!(self.inner);
 
     #[inline]
     pub const fn cookie(&self) -> Cookie {

@@ -110,7 +110,7 @@ impl NoteExpressionEvent {
     }
 
     impl_event_helpers!(clap_event_note_expression);
-    impl_event_pckn!();
+    impl_event_pckn!(self.inner);
 }
 
 impl PartialEq for NoteExpressionEvent {
