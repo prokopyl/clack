@@ -3,8 +3,11 @@
 //! This extension is to be used as the backing storage for both parameter values and any other
 //! non-parameter state.
 //!
+//! This is used to persist a plugin's state between project reloads, when
+//! duplicating and copying plugin instances, and for host-side preset management.
+//!
 //! Clack uses the [`InputStream`](clack_common::stream::InputStream) and
-//! [`OutputStream`](clack_common::stream::OutputStream)
+//! [`OutputStream`](clack_common::stream::OutputStream) to handle the I/O operations.
 //!
 //! Plugins can also notify the host that their state has changed compared to the last time it was
 //! saved or loaded, using the `mark_dirty` call.

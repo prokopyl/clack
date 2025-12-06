@@ -140,7 +140,7 @@ pub trait Plugin: 'static {
 
     /// Declares the extensions this plugin supports.
     ///
-    /// This Implemented by calling [`register`] on the given [`PluginExtensions`]
+    /// This is implemented by calling [`register`] on the given [`PluginExtensions`]
     /// builder for every extension type that is supported.
     ///
     /// A reference to the [`Shared`](Self::Shared) type is also given. However, it can be `None`,

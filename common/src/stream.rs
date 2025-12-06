@@ -1,4 +1,13 @@
-//! Stream utilities.
+//! CLAP I/O stream utilities.
+//!
+//! Provides `InputStream` and `OutputStream` wrappers that implement
+//! `std::io::Read` and `std::io::Write`, making CLAP streams integrate
+//! cleanly with Rust’s I/O traits.
+//!
+//! # Notes
+//! Hosts may restrict how many bytes can be read or written at once.
+//! These wrappers handle that by looping until all data is transferred,
+//! so you don’t need to worry about partial reads or writes.
 
 use crate::utils::{slice_from_external_parts, slice_from_external_parts_mut};
 use clap_sys::stream::{clap_istream, clap_ostream};

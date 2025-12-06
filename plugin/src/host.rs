@@ -36,7 +36,7 @@ impl<'a> HostInfo<'a> {
         ClapVersion::from_raw(self.as_raw().clap_version)
     }
 
-    /// A user-friendly name for the host.
+    /// A user-friendly name for the host (e.g. "Bitwig Studio").
     ///
     /// This should always be set by the host.
     pub const fn name(&self) -> Option<&'a CStr> {
@@ -47,7 +47,7 @@ impl<'a> HostInfo<'a> {
         Some(unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    /// The host's vendor.
+    /// The host's vendor (e.g. "Bitwig GmbH").
     ///
     /// This field is optional.
     pub const fn vendor(&self) -> Option<&'a CStr> {
@@ -69,7 +69,7 @@ impl<'a> HostInfo<'a> {
         Some(unsafe { CStr::from_ptr(ptr.as_ptr()) })
     }
 
-    /// A version string for the host.
+    /// A version string for the host (e.g. "4.3").
     ///
     /// This should always be set by the host.
     pub const fn version(&self) -> Option<&'a CStr> {

@@ -6,6 +6,9 @@ mod inner;
 use inner::*;
 
 /// A note key pressed event.
+///
+/// A `NoteOnEvent` with a velocity of `0.0` is valid and should not be
+/// interpreted as a `NoteOffEvent`.
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteOnEvent {
@@ -18,11 +21,19 @@ pub struct NoteOnEvent {
 pub struct NoteOffEvent {
     inner: NoteEvent<NoteOffEvent>,
 }
+
+/// An event that chokes the voice(s) of a note,
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteChokeEvent {
     inner: NoteEvent<NoteChokeEvent>,
 }
+
+/// An event sent by the plugin to the host to indicate that a note has finished playing.
+///
+/// The port, channel, key, and note_id are those given by the host in the `NoteOnEvent`.
+/// This event is useful to help the host match the plugin's voice life time, especially when
+/// using polyphonic modulations, as only the plugin knows when a voice is truly finished.
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct NoteEndEvent {

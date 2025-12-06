@@ -235,10 +235,19 @@ impl<E: for<'a> Event<EventSpace<'a> = CoreEventSpace<'a>>> Default for EventHea
 }
 
 bitflags! {
+    /// Flags for a CLAP event.
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlags: u32 {
+        /// Indicates a live user event, for example a user turning a physical
+        /// knob or playing a physical key.
         const IS_LIVE = CLAP_EVENT_IS_LIVE;
+
+        /// Indicates that the event should not be recorded.
+        ///
+        /// For example this is useful when a parameter changes because of a
+        /// MIDI CC, because if the host records both the MIDI CC automation and
+        /// the parameter automation there will be a conflict.
         const DONT_RECORD = CLAP_EVENT_DONT_RECORD;
     }
 }
