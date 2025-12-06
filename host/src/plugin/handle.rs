@@ -3,7 +3,7 @@ use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -130,6 +130,19 @@ impl<'a> InactivePluginMainThreadHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
     }
+
+    // Note: this function is pretty useless, but is needed for the Deref impl (required by DerefMut)
+    #[inline]
+    const fn as_main_thread_ref(&self) -> &PluginMainThreadHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const PluginMainThreadHandle<'a>) }
+    }
+
+    #[inline]
+    pub const fn as_main_thread(&mut self) -> &mut PluginMainThreadHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &mut *(self as *mut Self as *mut PluginMainThreadHandle<'a>) }
+    }
 }
 
 impl Debug for InactivePluginMainThreadHandle<'_> {
@@ -140,11 +153,18 @@ impl Debug for InactivePluginMainThreadHandle<'_> {
 }
 
 impl<'a> Deref for InactivePluginMainThreadHandle<'a> {
-    type Target = PluginSharedHandle<'a>;
+    type Target = PluginMainThreadHandle<'a>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.as_shared()
+        self.as_main_thread_ref()
+    }
+}
+
+impl DerefMut for InactivePluginMainThreadHandle<'_> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_main_thread()
     }
 }
 
