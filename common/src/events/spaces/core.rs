@@ -3,20 +3,56 @@ use crate::events::{Event, EventSpace, UnknownEvent};
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 
+/// Core CLAP event set.
+///
+/// This enum represents the standard events defined in the CLAP specification
+/// (e.g. [`NoteOnEvent`], [`ParamValueEvent`]).
+///
+/// It can be constructed from an [`UnknownEvent`] when the event is one of the core types.
+///
+/// # Example
+/// Converting from [`UnknownEvent`] to a [`CoreEventSpace`]:
+/// ```no_run
+/// use clack_common::events::UnknownEvent;
+/// use clack_common::events::spaces::CoreEventSpace;
+///
+/// fn handle_event(event: &UnknownEvent) {
+///     if let Some(ev) = event.as_core_event() {
+///         match ev {
+///             CoreEventSpace::NoteOn(note) => { /* handle note‑on */ }
+///             CoreEventSpace::ParamValue(param) => { /* handle param change */ }
+///             _ => {}
+///         }
+///     }
+/// }
+/// ```
 #[derive(Copy, Clone, PartialEq)]
 pub enum CoreEventSpace<'a> {
+    /// A note-on event (key press / attack)
     NoteOn(&'a NoteOnEvent),
+    /// A note-off event (key release)
     NoteOff(&'a NoteOffEvent),
+    /// A note choke (forcibly ends a note)
     NoteChoke(&'a NoteChokeEvent),
+    /// A note end (natural end of note)
     NoteEnd(&'a NoteEndEvent),
+    /// A note expression change (e.g. per-note pitch)
     NoteExpression(&'a NoteExpressionEvent),
+    /// A parameter value change
     ParamValue(&'a ParamValueEvent),
+    /// A parameter modulation change
     ParamMod(&'a ParamModEvent),
+    /// Begin of a gesture (automation touch)
     ParamGestureBegin(&'a ParamGestureBeginEvent),
+    /// End of a gesture (automation release)
     ParamGestureEnd(&'a ParamGestureEndEvent),
+    /// Transport info (playhead, tempo, etc.)
     Transport(&'a TransportEvent),
+    /// MIDI 1.0 event
     Midi(&'a MidiEvent),
+    /// MIDI 2.0 event
     Midi2(&'a Midi2Event),
+    /// MIDI SysEx event
     MidiSysEx(&'a MidiSysExEvent),
 }
 
@@ -24,6 +60,9 @@ pub enum CoreEventSpace<'a> {
 unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
     const NAME: &'static CStr = c"";
 
+    /// Attempts to reinterpret a raw [`UnknownEvent`] as one of the core event types.
+    ///
+    /// Returns `None` if the event does not belong to this event space.
     unsafe fn from_unknown(event: &'a UnknownEvent) -> Option<Self> {
         use CoreEventSpace::*;
 

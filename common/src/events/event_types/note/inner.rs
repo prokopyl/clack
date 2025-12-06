@@ -5,6 +5,34 @@ use clap_sys::events::clap_event_note;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 
+/// Generic CLAP note event.
+///
+/// Notes and voices in CLAP are addressed by a 4‑value tuple
+/// `(port, channel, key, note_id)`, called a PCKN in the CLAP headers.
+///
+/// In Clack, this concept is represented by the [`Pckn`] type, which
+/// provides a safe abstraction over raw values and wildcards via the
+/// [`Match`] enum.
+///
+/// Fields in the raw event are either `0` or greater, or `-1` to indicate
+/// a match on any value as a wildcard. When using [`Pckn`], wildcards are
+/// expressed with [`Match::All`] instead.
+///
+/// # Example
+/// Handling a note or parameter event and checking its [`Pckn`] target:
+/// ```no_run
+/// use clack_common::events::{UnknownEvent, spaces::CoreEventSpace};
+///
+/// fn handle_event(event: &UnknownEvent) {
+///     if let Some(CoreEventSpace::ParamValue(ev)) = event.as_core_event() {
+///         if ev.pckn().matches_all() {
+///             // Global modulation
+///         } else {
+///             // Per‑voice modulation
+///         }
+///     }
+/// }
+/// ```
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct NoteEvent<E> {
@@ -135,7 +163,7 @@ macro_rules! impl_note_helpers {
             self
         }
 
-        /// The note channel this event targets.
+        /// The note channel this event targets (0-15).
         ///
         /// This returns [`Match::All`] if this event targets all possible note channels.
         #[inline]
@@ -143,7 +171,7 @@ macro_rules! impl_note_helpers {
             Match::<u16>::from_raw(self.inner.inner.channel)
         }
 
-        /// Sets the note channel this event targets.
+        /// Sets the note channel this event targets (0-15).
         ///
         /// Use [`Match::All`] to target all possible channels.
         #[inline]
@@ -151,7 +179,7 @@ macro_rules! impl_note_helpers {
             self.inner.inner.channel = channel.to_raw();
         }
 
-        /// Sets the note channel this event targets.
+        /// Sets the note channel this event targets (0-15).
         ///
         /// Use [`Match::All`] to target all possible channels.
         ///
@@ -163,7 +191,7 @@ macro_rules! impl_note_helpers {
             self
         }
 
-        /// The key of the note(s) this event targets.
+        /// The key of the note(s) this event targets (0-127).
         ///
         /// This returns [`Match::All`] if this event targets all possible note keys.
         #[inline]
@@ -171,7 +199,7 @@ macro_rules! impl_note_helpers {
             Match::<u16>::from_raw(self.inner.inner.key)
         }
 
-        /// Sets the key of the note(s) this event targets.
+        /// Sets the key of the note(s) this event targets (0-127).
         ///
         /// Use [`Match::All`] to target all possible note keys.
         #[inline]
@@ -179,7 +207,7 @@ macro_rules! impl_note_helpers {
             self.inner.inner.key = key.to_raw();
         }
 
-        /// Sets the key of the note(s) this event targets.
+        /// Sets the key of the note(s) this event targets (0-127).
         ///
         /// Use [`Match::All`] to target all possible note keys.
         ///

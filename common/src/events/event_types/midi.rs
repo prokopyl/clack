@@ -8,6 +8,8 @@ use clap_sys::events::{
 };
 use std::fmt::{Debug, Formatter};
 
+/// A raw MIDI 1.0 event.
+/// This event type can be used to send raw, unprocessed MIDI 1.0 data.
 #[derive(Copy, Clone)]
 pub struct MidiEvent {
     inner: clap_event_midi,
@@ -38,32 +40,38 @@ impl MidiEvent {
         }
     }
 
+    /// The raw MIDI 1.0 data, as 3 bytes.
     #[inline]
     pub const fn data(&self) -> [u8; 3] {
         self.inner.data
     }
 
+    /// Sets the raw MIDI 1.0 data, as 3 bytes.
     #[inline]
     pub const fn set_data(&mut self, data: [u8; 3]) {
         self.inner.data = data
     }
 
+    /// Sets the raw MIDI 1.0 data, as 3 bytes.
     #[inline]
     pub const fn with_data(mut self, data: [u8; 3]) -> Self {
         self.inner.data = data;
         self
     }
 
+    /// The index of the port this event applies to.
     #[inline]
     pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
@@ -92,6 +100,14 @@ impl Debug for MidiEvent {
     }
 }
 
+/// A raw MIDI 1.0 System Exclusive (SysEx) event.
+///
+/// This event contains a pointer to a sysex data buffer. The lifetime of this
+/// buffer is only guaranteed to be valid for the duration of the `process` call
+/// (when received from the host) or the `try_push` call (when sent to the host).
+///
+/// Because of this, if you need to keep the data around for longer, you must
+/// copy it to a plugin-owned or host-owned buffer.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct MidiSysExEvent {
@@ -124,27 +140,32 @@ impl MidiSysExEvent {
         }
     }
 
+    /// The index of the port this event applies to.
     #[inline]
     pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
         self
     }
 
+    /// A raw pointer to the sysex data buffer.
     #[inline]
     pub const fn buffer_ptr(&self) -> *const u8 {
         self.inner.buffer
     }
 
+    /// The size of the sysex data buffer.
     #[inline]
     pub const fn buffer_size(&self) -> u32 {
         self.inner.size
@@ -188,6 +209,10 @@ impl Debug for MidiSysExEvent {
     }
 }
 
+/// A raw MIDI 2.0 event.
+///
+/// While it is possible to use a series of MIDI 2.0 events to send sysex data,
+/// it is recommended to use the [`MidiSysExEvent`] type instead for efficiency.
 #[derive(Copy, Clone)]
 pub struct Midi2Event {
     inner: clap_event_midi2,
@@ -218,32 +243,38 @@ impl Midi2Event {
         }
     }
 
+    /// The raw MIDI 2.0 data, as 4 `u32`s.
     #[inline]
     pub const fn data(&self) -> [u32; 4] {
         self.inner.data
     }
 
+    /// Sets the raw MIDI 2.0 data, as 4 `u32`s.
     #[inline]
     pub const fn set_data(&mut self, data: [u32; 4]) {
         self.inner.data = data
     }
 
+    /// Sets the raw MIDI 2.0 data, as 4 `u32`s.
     #[inline]
     pub const fn with_data(mut self, data: [u32; 4]) -> Self {
         self.inner.data = data;
         self
     }
 
+    /// The index of the port this event applies to.
     #[inline]
     pub const fn port_index(&self) -> u16 {
         self.inner.port_index
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn set_port_index(&mut self, port_index: u16) {
         self.inner.port_index = port_index;
     }
 
+    /// Sets the index of the port this event applies to.
     #[inline]
     pub const fn with_port_index(mut self, port_index: u16) -> Self {
         self.inner.port_index = port_index;
