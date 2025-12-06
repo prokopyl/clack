@@ -1,7 +1,9 @@
 use clack_common::extensions::*;
 use clap_sys::ext::audio_ports_activation::{
-    clap_plugin_audio_ports_activation, CLAP_EXT_AUDIO_PORTS_ACTIVATION,
+    CLAP_EXT_AUDIO_PORTS_ACTIVATION, CLAP_EXT_AUDIO_PORTS_ACTIVATION_COMPAT,
+    clap_plugin_audio_ports_activation,
 };
+use std::ffi::CStr;
 use std::fmt::Display;
 
 #[repr(u32)]
@@ -44,7 +46,10 @@ pub struct PluginAudioPortsActivation(
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsActivation {
-    const IDENTIFIER: &'static std::ffi::CStr = CLAP_EXT_AUDIO_PORTS_ACTIVATION;
+    const IDENTIFIERS: &[&CStr] = &[
+        CLAP_EXT_AUDIO_PORTS_ACTIVATION,
+        CLAP_EXT_AUDIO_PORTS_ACTIVATION_COMPAT,
+    ];
     type ExtensionSide = PluginExtensionSide;
 
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {

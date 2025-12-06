@@ -22,13 +22,10 @@ clack-host = { workspace = true, features = ["clack-plugin"] }
 
 [features]
 all-extensions = [
-    "ambisonic",
     "audio-ports",
     "audio-ports-activation",
     "audio-ports-config",
     "clap-wrapper",
-    "configurable-audio-ports",
-    "context-menu",
     "event-registry",
     "gui",
     "latency",
@@ -38,26 +35,18 @@ all-extensions = [
     "params",
     "param-indication",
     "posix-fd",
-    "preset-load",
-    "remote-controls",
     "render",
     "state",
-    "state-context",
-    "surround",
     "tail",
     "thread-check",
     "thread-pool",
     "timer",
-    "track-info",
     "voice-info"
 ]
-ambisonic = []
 audio-ports = []
 audio-ports-activation = []
 audio-ports-config = []
 clap-wrapper = []
-configurable-audio-ports = []
-context-menu = []
 event-registry = []
 gui = []
 latency = []
@@ -67,18 +56,12 @@ note-ports = []
 params = []
 param-indication = []
 posix-fd = []
-preset-load = []
-remote-controls = []
 render = []
 state = []
-# If a plugin implements state-context, it must also implement state
-state-context = ["state"]
-surround = []
 tail = []
 thread-check = []
 thread-pool = []
 timer = []
-track-info = []
 voice-info = []
 
 [lints]

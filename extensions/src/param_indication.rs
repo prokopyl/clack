@@ -56,7 +56,7 @@ pub struct PluginParamIndication(RawExtension<PluginExtensionSide, clap_plugin_p
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginParamIndication {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_PARAM_INDICATION;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_PARAM_INDICATION, CLAP_EXT_PARAM_INDICATION_COMPAT];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
