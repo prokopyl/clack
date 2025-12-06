@@ -166,6 +166,24 @@ impl<H: HostHandlers> PluginInstance<H> {
         // SAFETY: this type can only exist on the main thread.
         unsafe { PluginMainThreadHandle::new(self.inner.raw_instance().into()) }
     }
+
+    /// Returns a main-thread handle to the plugin, that can only exist while the plugin is in the 'inactive' state.
+    ///
+    /// Calling this method also prevents the plugin instance to be activated as long as the handle exists.
+    ///
+    /// If the plugin is actually activated, this returns `None`.
+    #[inline]
+    pub fn inactive_plugin_handle(&mut self) -> Option<InactivePluginMainThreadHandle<'_>> {
+        if self.inner.is_active() {
+            return None;
+        }
+
+        // SAFETY: this type can only exist on the main thread.
+        // We also checked above that the plugin isn't in the active state, and the handle keeps
+        // this instance mutably borrowed, so it is not possible to activate the plugin while the
+        // handle still exists.
+        Some(unsafe { InactivePluginMainThreadHandle::new(self.inner.raw_instance().into()) })
+    }
 }
 
 impl<H: HostHandlers> Drop for PluginInstance<H> {
