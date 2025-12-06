@@ -11,10 +11,12 @@ pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> 
     Ok(f())
 }
 
+mod color;
 mod fixed_point;
 mod id;
 mod version;
 
+pub use color::Color;
 pub use fixed_point::*;
 pub use id::ClapId;
 pub use version::ClapVersion;

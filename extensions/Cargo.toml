@@ -38,7 +38,9 @@ all-extensions = [
     "tail",
     "thread-check",
     "thread-pool",
-    "timer"
+    "timer",
+    "track-info",
+    "voice-info"
 ]
 audio-ports = []
 audio-ports-config = []
@@ -57,6 +59,7 @@ tail = []
 thread-check = []
 thread-pool = []
 timer = []
+track-info = ["audio-ports"]
 voice-info = []
 
 [lints]
