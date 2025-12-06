@@ -46,11 +46,11 @@ mod private {
 ///
 /// # Safety
 ///
-/// The [`IDENTIFIER`](Extension::IDENTIFIER) **must** match the official identifier for the given
+/// The [`IDENTIFIER`](Extension::IDENTIFIERS) **must** match the official identifier for the given
 /// extension, otherwise the extension data could be misinterpreted, leading to Undefined Behavior.
 pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
     /// The standard identifier for this extension.
-    const IDENTIFIER: &'static CStr;
+    const IDENTIFIERS: &'static [&'static CStr];
     /// Whether this is a host extension or a plugin extension
     type ExtensionSide: ExtensionSide;
 
@@ -58,7 +58,7 @@ pub unsafe trait Extension: Copy + Sized + Send + Sync + 'static {
     ///
     /// # Safety
     /// Callers must ensure the extension pointer points to the extension type that matches
-    /// [`Self::IDENTIFIER`].
+    /// [`Self::IDENTIFIERS`].
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self;
 }
 

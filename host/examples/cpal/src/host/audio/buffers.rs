@@ -79,7 +79,10 @@ impl HostAudioBuffers {
         let current_frame_count = self.cpal_buf_len_to_frame_count(cpal_buffer_size);
 
         if current_frame_count > self.actual_frame_count {
-            println!("Warn: Expected buffer of length {} at most, but CPAL provided buffer of length {}. Reallocating.", self.actual_frame_count, current_frame_count);
+            println!(
+                "Warn: Expected buffer of length {} at most, but CPAL provided buffer of length {}. Reallocating.",
+                self.actual_frame_count, current_frame_count
+            );
             self.actual_frame_count = current_frame_count;
 
             for (buf, port) in self
@@ -119,7 +122,7 @@ impl HostAudioBuffers {
     pub fn prepare_plugin_buffers(
         &mut self,
         cpal_buf_len: usize,
-    ) -> (InputAudioBuffers, OutputAudioBuffers) {
+    ) -> (InputAudioBuffers<'_>, OutputAudioBuffers<'_>) {
         let sample_count = self.cpal_buf_len_to_frame_count(cpal_buf_len);
         assert!(sample_count <= self.actual_frame_count);
 

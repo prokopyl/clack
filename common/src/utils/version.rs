@@ -5,8 +5,21 @@ use std::fmt::{Display, Formatter};
 /// A CLAP version identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct ClapVersion {
+    /// The major version number.
+    ///
+    /// A change in this number indicates an incompatible ABI or API change.
+    ///
+    /// Version `0.x.y` is the development stage, and ABI or API stability is not guaranteed.
     pub major: u32,
+
+    /// The minor version number.
+    ///
+    /// A change in this number indicates a compatible API extension.
     pub minor: u32,
+
+    /// The revision version number.
+    ///
+    /// A change in this number indicates a bug fix or other compatible change.
     pub revision: u32,
 }
 

@@ -3,8 +3,11 @@
 //! This extension is to be used as the backing storage for both parameter values and any other
 //! non-parameter state.
 //!
+//! This is used to persist a plugin's state between project reloads, when
+//! duplicating and copying plugin instances, and for host-side preset management.
+//!
 //! Clack uses the [`InputStream`](clack_common::stream::InputStream) and
-//! [`OutputStream`](clack_common::stream::OutputStream)
+//! [`OutputStream`](clack_common::stream::OutputStream) to handle the I/O operations.
 //!
 //! Plugins can also notify the host that their state has changed compared to the last time it was
 //! saved or loaded, using the `mark_dirty` call.
@@ -84,7 +87,7 @@
 //! ```
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
-use clap_sys::ext::state::{clap_host_state, clap_plugin_state, CLAP_EXT_STATE};
+use clap_sys::ext::state::{CLAP_EXT_STATE, clap_host_state, clap_plugin_state};
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -95,12 +98,13 @@ pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginState {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_STATE];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -110,12 +114,13 @@ pub struct HostState(RawExtension<HostExtensionSide, clap_host_state>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostState {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_STATE;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_STATE];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 

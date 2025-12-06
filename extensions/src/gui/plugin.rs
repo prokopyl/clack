@@ -118,7 +118,7 @@ pub trait PluginGuiImpl {
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    fn get_preferred_api(&mut self) -> Option<GuiConfiguration>;
+    fn get_preferred_api(&mut self) -> Option<GuiConfiguration<'_>>;
 
     /// Create and allocate all resources needed for the GUI
     ///
@@ -186,9 +186,9 @@ pub trait PluginGuiImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginGui
+unsafe impl<P> ExtensionImplementation<P> for PluginGui
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_plugin_gui {
@@ -211,13 +211,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn is_api_supported<P: Plugin>(
+unsafe extern "C" fn is_api_supported<P>(
     plugin: *const clap_plugin,
     api: *const c_char,
     is_floating: bool,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
@@ -232,13 +232,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_preferred_api<P: Plugin>(
+unsafe extern "C" fn get_preferred_api<P>(
     plugin: *const clap_plugin,
     api: *mut *const c_char,
     floating: *mut bool,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if api.is_null() || floating.is_null() {
@@ -262,13 +262,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn create<P: Plugin>(
+unsafe extern "C" fn create<P>(
     plugin: *const clap_plugin,
     api: *const c_char,
     is_floating: bool,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
@@ -284,9 +284,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn destroy<P: Plugin>(plugin: *const clap_plugin)
+unsafe extern "C" fn destroy<P>(plugin: *const clap_plugin)
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         plugin.main_thread().as_mut().destroy();
@@ -295,9 +295,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_scale<P: Plugin>(plugin: *const clap_plugin, scale: f64) -> bool
+unsafe extern "C" fn set_scale<P>(plugin: *const clap_plugin, scale: f64) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().set_scale(scale).is_ok())
@@ -306,13 +306,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_size<P: Plugin>(
+unsafe extern "C" fn get_size<P>(
     plugin: *const clap_plugin,
     width: *mut u32,
     height: *mut u32,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if let Some(size) = plugin.main_thread().as_mut().get_size() {
@@ -329,9 +329,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn can_resize<P: Plugin>(plugin: *const clap_plugin) -> bool
+unsafe extern "C" fn can_resize<P>(plugin: *const clap_plugin) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().can_resize())
@@ -340,12 +340,12 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_resize_hints<P: Plugin>(
+unsafe extern "C" fn get_resize_hints<P>(
     plugin: *const clap_plugin,
     hints: *mut clap_gui_resize_hints,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         if let Some(plugin_hints) = plugin.main_thread().as_mut().get_resize_hints() {
@@ -367,13 +367,13 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn adjust_size<P: Plugin>(
+unsafe extern "C" fn adjust_size<P>(
     plugin: *const clap_plugin,
     width_adj: *mut u32,
     height_adj: *mut u32,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     if width_adj.is_null() || height_adj.is_null() {
         return false;
@@ -401,13 +401,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_size<P: Plugin>(
-    plugin: *const clap_plugin,
-    width: u32,
-    height: u32,
-) -> bool
+unsafe extern "C" fn set_size<P>(plugin: *const clap_plugin, width: u32, height: u32) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = GuiSize { width, height };
@@ -417,12 +413,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_parent<P: Plugin>(
-    plugin: *const clap_plugin,
-    window: *const clap_window,
-) -> bool
+unsafe extern "C" fn set_parent<P>(plugin: *const clap_plugin, window: *const clap_window) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let window = window
@@ -439,12 +432,12 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_transient<P: Plugin>(
+unsafe extern "C" fn set_transient<P>(
     plugin: *const clap_plugin,
     window: *const clap_window,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let window = window
@@ -461,9 +454,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn suggest_title<P: Plugin>(plugin: *const clap_plugin, title: *const c_char)
+unsafe extern "C" fn suggest_title<P>(plugin: *const clap_plugin, title: *const c_char)
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let title = CStr::from_ptr(title)
@@ -477,9 +470,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn show<P: Plugin>(plugin: *const clap_plugin) -> bool
+unsafe extern "C" fn show<P>(plugin: *const clap_plugin) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().show().is_ok())
@@ -488,9 +481,9 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn hide<P: Plugin>(plugin: *const clap_plugin) -> bool
+unsafe extern "C" fn hide<P>(plugin: *const clap_plugin) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginGuiImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin.main_thread().as_mut().hide().is_ok())

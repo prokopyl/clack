@@ -49,7 +49,7 @@ pub enum NoteDialect {
 }
 
 impl NoteDialect {
-    pub fn from_raw(raw: clap_note_dialect) -> Option<Self> {
+    pub const fn from_raw(raw: clap_note_dialect) -> Option<Self> {
         match raw {
             CLAP_NOTE_DIALECT_CLAP => Some(Self::Clap),
             CLAP_NOTE_DIALECT_MIDI => Some(Self::Midi),
@@ -69,23 +69,25 @@ impl From<NoteDialect> for NoteDialects {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNotePorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_PORTS];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNotePorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_PORTS];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 

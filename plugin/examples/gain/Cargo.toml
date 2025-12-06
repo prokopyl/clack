@@ -1,7 +1,7 @@
 [package]
 name = "clack-plugin-gain"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
 
@@ -13,5 +13,5 @@ clack-plugin = { workspace = true }
 clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin"] }
 
 [dev-dependencies]
-clack-host = { workspace = true }
+clack-host = { workspace = true, features = ["clack-plugin"] }
 clack-extensions = { workspace = true, features = ["audio-ports", "params", "state", "clack-plugin", "clack-host"] }

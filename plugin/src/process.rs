@@ -211,7 +211,7 @@ impl<'a> Audio<'a> {
     /// Users must ensure all fields of the given `raw_process` are valid, and that all buffers
     /// it points to stay valid for the given lifetime.
     #[inline]
-    pub unsafe fn from_raw(raw_process: &clap_process) -> Audio {
+    pub unsafe fn from_raw(raw_process: &clap_process) -> Audio<'_> {
         Audio {
             frames_count: raw_process.frames_count,
             inputs: slice_from_external_parts(
@@ -284,7 +284,7 @@ impl<'a> Audio<'a> {
     /// See also the [`input_port_count`](Audio::input_port_count) method to know how many input
     /// ports are available, and the [`input_ports`](Audio::input_ports) method to get all input ports at once.
     #[inline]
-    pub fn input_port(&self, index: usize) -> Option<InputPort> {
+    pub fn input_port(&self, index: usize) -> Option<InputPort<'_>> {
         self.inputs
             .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct
@@ -316,7 +316,7 @@ impl<'a> Audio<'a> {
     /// See also the [`input_port`](Audio::input_port) method to retrieve a single input port by
     /// its index.
     #[inline]
-    pub fn input_ports(&self) -> InputPortsIter {
+    pub fn input_ports(&self) -> InputPortsIter<'_> {
         InputPortsIter::new(self)
     }
 
@@ -336,7 +336,7 @@ impl<'a> Audio<'a> {
     /// See also the [`output_port_count`](Audio::output_port_count) method to know how many output
     /// ports are available, and the [`output_ports`](Audio::output_ports) method to get all output ports at once.
     #[inline]
-    pub fn output_port(&mut self, index: usize) -> Option<OutputPort> {
+    pub fn output_port(&mut self, index: usize) -> Option<OutputPort<'_>> {
         self.outputs
             .get_mut(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
@@ -369,7 +369,7 @@ impl<'a> Audio<'a> {
     /// See also the [`output_port`](Audio::output_port) method to retrieve a single output port by
     /// its index.
     #[inline]
-    pub fn output_ports(&mut self) -> OutputPortsIter {
+    pub fn output_ports(&mut self) -> OutputPortsIter<'_> {
         OutputPortsIter::new(self)
     }
 
@@ -391,7 +391,7 @@ impl<'a> Audio<'a> {
     /// See also the [`port_pair_count`](Audio::port_pair_count) method to know how many port
     /// pairs are available, and the [`port_pairs`](Audio::port_pairs) method to get all port pairs at once.
     #[inline]
-    pub fn port_pair(&mut self, index: usize) -> Option<PortPair> {
+    pub fn port_pair(&mut self, index: usize) -> Option<PortPair<'_>> {
         // SAFETY: this type ensures the provided buffers are valid and frames_count is correct
         unsafe {
             PortPair::from_raw(
@@ -417,13 +417,13 @@ impl<'a> Audio<'a> {
     /// See also the [`port_pair`](Audio::port_pair) method to retrieve a single input port by
     /// its index.
     #[inline]
-    pub fn port_pairs(&mut self) -> PortPairsIter {
+    pub fn port_pairs(&mut self) -> PortPairsIter<'_> {
         PortPairsIter::new(self)
     }
 
     /// Returns a sub-range of ports as a new [`Audio`] struct, similar to a subslice of items.
     #[inline]
-    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio {
+    pub fn port_sub_range<R: RangeBounds<usize> + Clone>(&mut self, range: R) -> Audio<'_> {
         let inputs = self
             .inputs
             .get((range.start_bound().cloned(), range.end_bound().cloned()))

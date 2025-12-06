@@ -289,11 +289,7 @@ impl Match<u16> {
     /// Creates the [`Match`] that corresponds to the given raw C-FFI compatible `i16` type.
     #[inline]
     pub const fn from_raw(raw: i16) -> Self {
-        if raw < 0 {
-            All
-        } else {
-            Specific(raw as u16)
-        }
+        if raw < 0 { All } else { Specific(raw as u16) }
     }
 
     /// Returns the raw C-FFI compatible `i16` type that corresponds to this [`Match`].
@@ -313,11 +309,7 @@ impl Match<u32> {
     /// Creates the [`Match`] that corresponds to the given raw C-FFI compatible `i32` type.
     #[inline]
     pub const fn from_raw(raw: i32) -> Self {
-        if raw < 0 {
-            All
-        } else {
-            Specific(raw as u32)
-        }
+        if raw < 0 { All } else { Specific(raw as u32) }
     }
 
     /// Returns the raw C-FFI compatible `i32` type that corresponds to this [`Match`].
@@ -334,92 +326,147 @@ impl Match<u32> {
 }
 
 macro_rules! impl_event_pckn {
-    () => {
+    (self.$($raw_event:ident).*) => {
+        /// The [`Pckn`](crate::events::Pckn) tuple indicating which note(s) this note event targets.
         #[inline]
-        pub const fn pckn(&self) -> Pckn {
+        pub const fn pckn(&self) -> crate::events::Pckn {
             Pckn::from_raw(
-                self.inner.port_index,
-                self.inner.channel,
-                self.inner.key,
-                self.inner.note_id,
+                self.$($raw_event).*.port_index,
+                self.$($raw_event).*.channel,
+                self.$($raw_event).*.key,
+                self.$($raw_event).*.note_id,
             )
         }
 
+        /// Sets the [`Pckn`](crate::events::Pckn) tuple for this event.
         #[inline]
-        pub fn set_pckn(&mut self, pckn: Pckn) {
-            self.inner.port_index = pckn.raw_port_index();
-            self.inner.channel = pckn.raw_channel();
-            self.inner.key = pckn.raw_key();
-            self.inner.note_id = pckn.raw_note_id();
+        pub const fn set_pckn(&mut self, pckn: crate::events::Pckn) {
+            self.$($raw_event).*.port_index = pckn.raw_port_index();
+            self.$($raw_event).*.channel = pckn.raw_channel();
+            self.$($raw_event).*.key = pckn.raw_key();
+            self.$($raw_event).*.note_id = pckn.raw_note_id();
         }
 
+        /// Sets the [`Pckn`](crate::events::Pckn) tuple for this event.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
-        pub fn with_pckn(mut self, pckn: Pckn) -> Self {
+        pub const fn with_pckn(mut self, pckn: crate::events::Pckn) -> Self {
             self.set_pckn(pckn);
             self
         }
 
+        /// The index of the note port this event targets.
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note ports.
         #[inline]
         pub const fn port_index(&self) -> Match<u16> {
-            Match::<u16>::from_raw(self.inner.port_index)
+            Match::<u16>::from_raw(self.$($raw_event).*.port_index)
         }
 
+        /// Sets the index of the note port this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note ports.
         #[inline]
-        pub fn set_port_index(&mut self, port_index: Match<u16>) {
-            self.inner.port_index = port_index.to_raw()
+        pub const fn set_port_index(&mut self, port_index: Match<u16>) {
+            self.$($raw_event).*.port_index = port_index.to_raw()
         }
 
+        /// Sets the index of the note port this event targets.
+        ///
+        /// Use [`Match::All`] to target all possible note ports.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_port_index(mut self, port_index: Match<u16>) -> Self {
-            self.inner.port_index = port_index.to_raw();
+            self.$($raw_event).*.port_index = port_index.to_raw();
             self
         }
 
+        /// The note channel this event targets (0-15).
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note channels.
         #[inline]
         pub const fn channel(&self) -> Match<u16> {
-            Match::<u16>::from_raw(self.inner.channel)
+            Match::<u16>::from_raw(self.$($raw_event).*.channel)
         }
 
+        /// Sets the note channel this event targets (0-15).
+        ///
+        /// Use [`Match::All`] to target all possible channels.
         #[inline]
-        pub fn set_channel(&mut self, channel: Match<u16>) {
-            self.inner.channel = channel.to_raw();
+        pub const fn set_channel(&mut self, channel: Match<u16>) {
+            self.$($raw_event).*.channel = channel.to_raw();
         }
 
+        /// Sets the note channel this event targets (0-15).
+        ///
+        /// Use [`Match::All`] to target all possible channels.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_channel(mut self, channel: Match<u16>) -> Self {
-            self.inner.channel = channel.to_raw();
+            self.$($raw_event).*.channel = channel.to_raw();
             self
         }
 
+        /// The key of the note(s) this event targets (0-127).
+        ///
+        /// This returns [`Match::All`] if this event targets all possible note keys.
         #[inline]
         pub const fn key(&self) -> Match<u16> {
-            Match::<u16>::from_raw(self.inner.key)
+            Match::<u16>::from_raw(self.$($raw_event).*.key)
         }
 
+        /// Sets the key of the note(s) this event targets (0-127).
+        ///
+        /// Use [`Match::All`] to target all possible note keys.
         #[inline]
-        pub fn set_key(&mut self, key: Match<u16>) {
-            self.inner.key = key.to_raw();
+        pub const fn set_key(&mut self, key: Match<u16>) {
+            self.$($raw_event).*.key = key.to_raw();
         }
 
+        /// Sets the key of the note(s) this event targets (0-127).
+        ///
+        /// Use [`Match::All`] to target all possible note keys.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_key(mut self, key: Match<u16>) -> Self {
-            self.inner.key = key.to_raw();
+            self.$($raw_event).*.key = key.to_raw();
             self
         }
 
+        /// The specific ID of the Note this event targets.
+        ///
+        /// This returns [`Match::All`] if this event doesn't target a specific note, or doesn't
+        /// provide a Note ID.
         #[inline]
         pub const fn note_id(&self) -> Match<u32> {
-            Match::<u32>::from_raw(self.inner.note_id)
+            Match::<u32>::from_raw(self.$($raw_event).*.note_id)
         }
 
+        /// Sets the specific ID of the Note this event targets.
+        ///
+        /// Use [`Match::All`] to not target a single specific note in particular.
         #[inline]
-        pub fn set_note_id(&mut self, note_id: Match<u32>) {
-            self.inner.note_id = note_id.to_raw();
+        pub const fn set_note_id(&mut self, note_id: Match<u32>) {
+            self.$($raw_event).*.note_id = note_id.to_raw();
         }
 
+        /// Sets the specific ID of the Note this event targets.
+        ///
+        /// Use [`Match::All`] to not target a single specific note in particular.
+        ///
+        /// This method takes and returns ownership of the event, allowing it to be used in a
+        /// builder-style pattern.
         #[inline]
         pub const fn with_note_id(mut self, note_id: Match<u32>) -> Self {
-            self.inner.note_id = note_id.to_raw();
+            self.$($raw_event).*.note_id = note_id.to_raw();
             self
         }
     };

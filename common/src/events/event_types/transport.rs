@@ -3,10 +3,10 @@ use crate::events::{Event, EventHeader, UnknownEvent};
 use crate::utils::{BeatTime, SecondsTime};
 use bitflags::bitflags;
 use clap_sys::events::{
-    clap_event_transport, CLAP_EVENT_TRANSPORT, CLAP_TRANSPORT_HAS_BEATS_TIMELINE,
-    CLAP_TRANSPORT_HAS_SECONDS_TIMELINE, CLAP_TRANSPORT_HAS_TEMPO,
-    CLAP_TRANSPORT_HAS_TIME_SIGNATURE, CLAP_TRANSPORT_IS_LOOP_ACTIVE, CLAP_TRANSPORT_IS_PLAYING,
-    CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL,
+    CLAP_EVENT_TRANSPORT, CLAP_TRANSPORT_HAS_BEATS_TIMELINE, CLAP_TRANSPORT_HAS_SECONDS_TIMELINE,
+    CLAP_TRANSPORT_HAS_TEMPO, CLAP_TRANSPORT_HAS_TIME_SIGNATURE, CLAP_TRANSPORT_IS_LOOP_ACTIVE,
+    CLAP_TRANSPORT_IS_PLAYING, CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL,
+    clap_event_transport,
 };
 
 bitflags! {
@@ -45,8 +45,8 @@ pub struct TransportEvent {
     pub bar_start: BeatTime,
     pub bar_number: i32,
 
-    pub time_signature_numerator: i16,
-    pub time_signature_denominator: i16,
+    pub time_signature_numerator: u16,
+    pub time_signature_denominator: u16,
 }
 
 // SAFETY: this matches the type ID and event space
@@ -77,7 +77,7 @@ impl TransportEvent {
 
     #[inline]
     pub const fn from_raw(raw: &clap_event_transport) -> Self {
-        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+        crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
         let this = unsafe { &*(raw as *const clap_event_transport as *const Self) };
@@ -86,14 +86,14 @@ impl TransportEvent {
 
     #[inline]
     pub const fn from_raw_ref(raw: &clap_event_transport) -> &Self {
-        crate::events::ensure_event_matches_const::<Self>(&raw.header);
+        crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport
         unsafe { &*(raw as *const clap_event_transport as *const Self) }
     }
 
     #[inline]
-    pub fn from_raw_mut(raw: &mut clap_event_transport) -> &mut Self {
+    pub const fn from_raw_mut(raw: &mut clap_event_transport) -> &mut Self {
         crate::events::ensure_event_matches::<Self>(&raw.header);
 
         // SAFETY: This type is #[repr(C)]-compatible with clap_event_transport

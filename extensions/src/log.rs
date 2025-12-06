@@ -1,5 +1,5 @@
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
-use clap_sys::ext::log::{clap_host_log, clap_log_severity, CLAP_EXT_LOG};
+use clap_sys::ext::log::{CLAP_EXT_LOG, clap_host_log, clap_log_severity};
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
@@ -27,8 +27,8 @@ pub enum LogSeverity {
 
 impl LogSeverity {
     pub fn from_raw(raw: clap_log_severity) -> Option<Self> {
-        use clap_sys::ext::log::*;
         use LogSeverity::*;
+        use clap_sys::ext::log::*;
 
         match raw {
             CLAP_LOG_DEBUG => Some(Debug),
@@ -70,12 +70,13 @@ pub struct HostLog(RawExtension<HostExtensionSide, clap_host_log>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLog {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LOG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LOG];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 

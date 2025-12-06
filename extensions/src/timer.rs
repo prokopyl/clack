@@ -18,12 +18,13 @@ pub struct HostTimer(RawExtension<HostExtensionSide, clap_host_timer_support>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostTimer {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TIMER_SUPPORT];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -34,12 +35,13 @@ pub struct PluginTimer(RawExtension<PluginExtensionSide, clap_plugin_timer_suppo
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginTimer {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_TIMER_SUPPORT;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_TIMER_SUPPORT];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -149,9 +151,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginTimer
+    unsafe impl<P> ExtensionImplementation<P> for PluginTimer
     where
-        for<'a> P::MainThread<'a>: PluginTimerImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginTimerImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -161,9 +163,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn on_timer<P: Plugin>(plugin: *const clap_plugin, timer_id: u32)
+    unsafe extern "C" fn on_timer<P>(plugin: *const clap_plugin, timer_id: u32)
     where
-        for<'a> P::MainThread<'a>: PluginTimerImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginTimerImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin.main_thread().as_mut().on_timer(TimerId(timer_id));
@@ -206,9 +208,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostTimer
+    unsafe impl<H> ExtensionImplementation<H> for HostTimer
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
+        for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -219,13 +221,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn register_timer<H: HostHandlers>(
+    unsafe extern "C" fn register_timer<H>(
         host: *const clap_host,
         period_ms: u32,
         timer_id: *mut u32,
     ) -> bool
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
+        for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             match host.main_thread().as_mut().register_timer(period_ms) {
@@ -243,12 +245,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn unregister_timer<H: HostHandlers>(
-        host: *const clap_host,
-        timer_id: u32,
-    ) -> bool
+    unsafe extern "C" fn unregister_timer<H>(host: *const clap_host, timer_id: u32) -> bool
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostTimerImpl,
+        for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

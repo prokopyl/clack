@@ -1,12 +1,12 @@
-use crate::extensions::wrapper::{handle_panic, PluginWrapper, PluginWrapperError};
 use crate::extensions::PluginExtensions;
+use crate::extensions::wrapper::{PluginWrapper, PluginWrapperError, handle_panic};
 use crate::host::{HostInfo, HostMainThreadHandle, HostSharedHandle};
 use crate::plugin::instance::WrapperData::*;
 use crate::plugin::{Plugin, PluginAudioProcessor, PluginError, PluginMainThread};
 use crate::prelude::PluginDescriptor;
 use crate::process::{Audio, Events, PluginAudioConfiguration, Process};
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
-use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_ERROR};
+use clap_sys::process::{CLAP_PROCESS_ERROR, clap_process, clap_process_status};
 use core::ffi::c_void;
 use std::cell::UnsafeCell;
 use std::ffi::CStr;
@@ -177,7 +177,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
                     INITIALIZED => return Err(PluginWrapperError::AlreadyInitialized),
                     DESTROYING => return Err(PluginWrapperError::Destroying),
                     INITIALIZATION_FAILED | INITIALIZING => {
-                        return Err(PluginWrapperError::InitializationAlreadyFailed)
+                        return Err(PluginWrapperError::InitializationAlreadyFailed);
                     }
                     _ => unreachable!(),
                 },
@@ -373,10 +373,10 @@ impl<'a> PluginInstance<'a> {
         descriptor: &'a PluginDescriptor,
         shared_initializer: impl FnOnce(HostSharedHandle<'a>) -> Result<P::Shared<'a>, PluginError> + 'a,
         main_thread_initializer: impl FnOnce(
-                HostMainThreadHandle<'a>,
-                &'a P::Shared<'a>,
-            ) -> Result<P::MainThread<'a>, PluginError>
-            + 'a,
+            HostMainThreadHandle<'a>,
+            &'a P::Shared<'a>,
+        ) -> Result<P::MainThread<'a>, PluginError>
+        + 'a,
     ) -> PluginInstance<'a> {
         // SAFETY: we guarantee that no host_handle methods are called until init() is called
         let host = unsafe { host_info.to_handle() };
@@ -444,7 +444,7 @@ impl<'a> PluginInstance<'a> {
         host_info: HostInfo<'a>,
         descriptor: &'a PluginDescriptor,
         initializer: impl FnOnce(HostMainThreadHandle<'a>) -> Result<(P::Shared<'a>, FM), PluginError>
-            + 'a,
+        + 'a,
     ) -> PluginInstance<'a>
     where
         FM: 'a + FnOnce(&'a P::Shared<'a>) -> Result<P::MainThread<'a>, PluginError>,

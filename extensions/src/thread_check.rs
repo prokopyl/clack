@@ -1,5 +1,5 @@
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
-use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
+use clap_sys::ext::thread_check::{CLAP_EXT_THREAD_CHECK, clap_host_thread_check};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
@@ -8,12 +8,13 @@ pub struct HostThreadCheck(RawExtension<HostExtensionSide, clap_host_thread_chec
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadCheck {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_CHECK;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_CHECK];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -49,9 +50,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadCheck
+    unsafe impl<H> ExtensionImplementation<H> for HostThreadCheck
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_thread_check {
@@ -61,17 +62,17 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn is_main_thread<H: HostHandlers>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_main_thread<H>(host: *const clap_host) -> bool
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_main_thread())).unwrap_or(false)
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn is_audio_thread<H: HostHandlers>(host: *const clap_host) -> bool
+    unsafe extern "C" fn is_audio_thread<H>(host: *const clap_host) -> bool
     where
-        for<'a> <H as HostHandlers>::Shared<'a>: HostThreadCheckImpl,
+        for<'a> H: HostHandlers<Shared<'a>: HostThreadCheckImpl>,
     {
         HostWrapper::<H>::handle(host, |host| Ok(host.shared().is_audio_thread())).unwrap_or(false)
     }

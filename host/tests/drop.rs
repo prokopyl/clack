@@ -1,7 +1,6 @@
 use clack_plugin::prelude::*;
-use std::ffi::CStr;
 use std::thread;
-use std::thread::{current, ThreadId};
+use std::thread::{ThreadId, current};
 use std::time::Duration;
 
 use clack_host::prelude::*;
@@ -32,7 +31,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
@@ -126,9 +125,10 @@ impl HostHandlers for MyHost {
 }
 
 fn instantiate() -> PluginInstance<MyHost> {
-    let bundle = unsafe {
-        PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
-    };
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+        c"/home/user/.clap/u-he/libdiva.so",
+    )
+    .unwrap();
     let host_info =
         HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2").unwrap();
 
@@ -136,7 +136,7 @@ fn instantiate() -> PluginInstance<MyHost> {
         |_| MyHostShared,
         |_| (),
         &bundle,
-        CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
+        c"com.u-he.diva",
         &host_info,
     );
 

@@ -1,6 +1,6 @@
 use crate::host::HostHandlers;
 use clack_common::extensions::*;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -40,7 +40,7 @@ impl<'a, H: HostHandlers> HostExtensions<'a, H> {
             return self;
         }
 
-        if E::IDENTIFIER == self.requested {
+        if E::IDENTIFIERS.contains(&self.requested) {
             self.found = Some(E::IMPLEMENTATION.as_ptr())
         }
 

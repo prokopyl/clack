@@ -67,7 +67,7 @@ unsafe impl Sync for Cookie {}
 /// Same as [`core::slice::from_raw_parts`], except the provided pointer *can* be null or
 /// dangling for zero-length slices.
 #[inline]
-pub(crate) unsafe fn slice_from_external_parts<'a, T>(data: *const T, len: usize) -> &'a [T] {
+pub(crate) const unsafe fn slice_from_external_parts<'a, T>(data: *const T, len: usize) -> &'a [T] {
     if len == 0 {
         return &[];
     }
@@ -82,7 +82,10 @@ pub(crate) unsafe fn slice_from_external_parts<'a, T>(data: *const T, len: usize
 /// Same as [`core::slice::from_raw_parts_mut`], except the provided pointer *can* be null or
 /// dangling for zero-length slices.
 #[inline]
-pub(crate) unsafe fn slice_from_external_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
+pub(crate) const unsafe fn slice_from_external_parts_mut<'a, T>(
+    data: *mut T,
+    len: usize,
+) -> &'a mut [T] {
     if len == 0 {
         return &mut [];
     }

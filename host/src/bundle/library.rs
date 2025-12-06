@@ -10,8 +10,7 @@ pub(crate) struct PluginEntryLibrary {
     entry_ptr: NonNull<EntryDescriptor>,
 }
 
-// SAFETY: this has a null byte at the end
-const SYMBOL_NAME: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"clap_entry\0") };
+const SYMBOL_NAME: &CStr = c"clap_entry";
 impl PluginEntryLibrary {
     /// # Safety
     ///
@@ -53,7 +52,7 @@ impl PluginEntryLibrary {
     }
 
     #[inline]
-    pub fn entry(&self) -> &EntryDescriptor {
+    pub const fn entry(&self) -> &EntryDescriptor {
         // SAFETY: this type's only constructor guarantees this pointer is valid
         unsafe { self.entry_ptr.as_ref() }
     }

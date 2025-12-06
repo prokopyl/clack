@@ -2,7 +2,6 @@ use super::*;
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
-use std::ptr::addr_of_mut;
 
 /// Implementation of the Plugin-side of the Note Name extension.
 pub trait PluginNoteNameImpl {
@@ -17,9 +16,9 @@ pub trait PluginNoteNameImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginNoteName
+unsafe impl<P> ExtensionImplementation<P> for PluginNoteName
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     #[doc(hidden)]
     const IMPLEMENTATION: RawExtensionImplementation =
@@ -30,21 +29,21 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin) -> u32
+unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count() as u32)).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get<P: Plugin>(
+unsafe extern "C" fn get<P>(
     plugin: *const clap_plugin,
     index: u32,
     config: *mut clap_note_name,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginNoteNameImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if config.is_null() {
@@ -86,11 +85,11 @@ impl NoteNameWriter<'_> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write_to_array_buf(addr_of_mut!((*buf).name), data.name);
+            write_to_array_buf(&raw mut (*buf).name, data.name);
 
-            write(addr_of_mut!((*buf).port), data.port.to_raw());
-            write(addr_of_mut!((*buf).channel), data.channel.to_raw());
-            write(addr_of_mut!((*buf).key), data.key.to_raw());
+            write(&raw mut (*buf).port, data.port.to_raw());
+            write(&raw mut (*buf).channel, data.channel.to_raw());
+            write(&raw mut (*buf).key, data.key.to_raw());
         }
 
         self.is_set = true;

@@ -46,7 +46,7 @@ pub(crate) const fn raw_input_events<I: InputEventBuffer>(buffer: &I) -> clap_in
     }
 }
 
-pub(crate) fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
+pub(crate) const fn raw_output_events<I: OutputEventBuffer>(buffer: &mut I) -> clap_output_events {
     clap_output_events {
         ctx: buffer as *mut _ as *mut _,
         try_push: Some(try_push::<I>),
@@ -60,9 +60,31 @@ pub(crate) const fn void_output_events() -> clap_output_events {
     }
 }
 
+/// # Safety
+///
+/// The caller must guarantee that:
+///
+/// * `input_events` is valid for reads and points to a valid clap_input_events instance;
+/// * The `ctx` pointer it contains points to a value of type `I` and is created from a shared reference (`&`) to it.
+#[inline]
+unsafe fn get_input_buffer<'a, I: InputEventBuffer>(
+    input_events: *const clap_input_events,
+) -> &'a I {
+    // SAFETY: The caller must guarantee the given input_events points to a valid clap_input_events instance and must be valid for reads
+    let ctx = unsafe { (*input_events).ctx };
+    let buf_impl: *mut I = ctx.cast();
+    // SAFETY: The caller must guarantee the ctx pointer is of type I and valid for 'a
+    unsafe { &*buf_impl }
+}
+
 #[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn size<I: InputEventBuffer>(list: *const clap_input_events) -> u32 {
-    handle_panic(|| I::len(&*((*list).ctx as *const _))).unwrap_or(0)
+    handle_panic(|| {
+        // SAFETY: We only use this function in instances that we created ourselves from an instance of `I`.
+        let buf = unsafe { get_input_buffer(list) };
+        I::len(buf)
+    })
+    .unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -71,11 +93,30 @@ unsafe extern "C" fn get<I: InputEventBuffer>(
     index: u32,
 ) -> *const clap_event_header {
     handle_panic(|| {
-        I::get(&*((*list).ctx as *const _), index)
+        // SAFETY: We only use this function in instances that we created ourselves from an instance of `I`.
+        let buf = unsafe { get_input_buffer(list) };
+        I::get(buf, index)
             .map(|e| e.as_raw() as *const _)
             .unwrap_or_else(core::ptr::null)
     })
     .unwrap_or(core::ptr::null())
+}
+
+/// # Safety
+///
+/// The caller must guarantee that:
+///
+/// * `output_events` is valid for reads and points to a valid clap_input_events instance;
+/// * The `ctx` pointer it contains points to a value of type `I` and is created from an exclusive reference (`&mut`) to it.
+#[inline]
+unsafe fn get_output_buffer<'a, O: OutputEventBuffer>(
+    output_events: *const clap_output_events,
+) -> &'a mut O {
+    // SAFETY: The caller must guarantee the given output_events points to a valid clap_output_events instance and must be valid for reads
+    let ctx = unsafe { (*output_events).ctx };
+    let buf_impl: *mut O = ctx.cast();
+    // SAFETY: The caller must guarantee the ctx pointer is of type I and valid for 'a
+    unsafe { &mut *buf_impl }
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -84,11 +125,12 @@ unsafe extern "C" fn try_push<O: OutputEventBuffer>(
     event: *const clap_event_header,
 ) -> bool {
     handle_panic(|| {
-        O::try_push(
-            &mut *((*list).ctx as *const _ as *mut O),
-            UnknownEvent::from_raw(event),
-        )
-        .is_ok()
+        // SAFETY: We only use this function in instances that we created ourselves from an instance of `O`.
+        let buf = unsafe { get_output_buffer(list) };
+        // SAFETY: event is guaranteed to be valid by the CLAP spec
+        let event = unsafe { UnknownEvent::from_raw(event) };
+
+        O::try_push(buf, event).is_ok()
     })
     .unwrap_or(false)
 }

@@ -15,12 +15,13 @@ pub struct PluginNoteName(RawExtension<PluginExtensionSide, clap_plugin_note_nam
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginNoteName {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_NAME];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -31,12 +32,13 @@ pub struct HostNoteName(RawExtension<HostExtensionSide, clap_host_note_name>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostNoteName {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_NOTE_NAME;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_NOTE_NAME];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -46,10 +48,10 @@ pub struct NoteName<'a> {
     /// A user-facing display name for the note.
     pub name: &'a [u8],
 
-    /// The Port this note name applies to, or `-1` if it applies to every key.
+    /// The Port this note name applies to, or `-1` if it applies to every port.
     pub port: Match<u16>,
 
-    /// The MIDI Channel this note name applies to, or `-1` if it applies to every key.
+    /// The MIDI Channel this note name applies to, or `-1` if it applies to every channel.
     pub channel: Match<u16>,
 
     /// The Key this note name applies to, or `-1` if it applies to every key.

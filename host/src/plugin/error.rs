@@ -1,6 +1,6 @@
 use crate::host::HostHandlers;
 use crate::process::ProcessingStartError;
-use clap_sys::ext::log::{clap_log_severity, CLAP_LOG_ERROR, CLAP_LOG_PLUGIN_MISBEHAVING};
+use clap_sys::ext::log::{CLAP_LOG_ERROR, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity};
 use core::fmt;
 use core::fmt::{Debug, Display, Formatter};
 use std::error::Error;

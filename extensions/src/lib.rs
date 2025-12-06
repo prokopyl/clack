@@ -1,5 +1,4 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(clippy::undocumented_unsafe_blocks)]
 
 #[cfg(feature = "ambisonic")]
 pub mod ambisonic;
@@ -9,6 +8,8 @@ pub mod audio_ports;
 pub mod audio_ports_activation;
 #[cfg(feature = "audio-ports-config")]
 pub mod audio_ports_config;
+#[cfg(feature = "clap-wrapper")]
+pub mod clap_wrapper;
 #[cfg(feature = "configurable-audio-ports")]
 pub mod configurable_audio_ports;
 #[cfg(feature = "context-menu")]

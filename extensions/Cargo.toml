@@ -1,8 +1,8 @@
 [package]
 name = "clack-extensions"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.72.0"
+edition = "2024"
+rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,12 +17,16 @@ bitflags = { workspace = true }
 raw-window-handle_05 = { workspace = true, optional = true }
 raw-window-handle_06 = { workspace = true, optional = true }
 
+[dev-dependencies]
+clack-host = { workspace = true, features = ["clack-plugin"] }
+
 [features]
 all-extensions = [
     "ambisonic",
     "audio-ports",
     "audio-ports-activation",
     "audio-ports-config",
+    "clap-wrapper",
     "configurable-audio-ports",
     "context-menu",
     "event-registry",
@@ -51,6 +55,7 @@ ambisonic = []
 audio-ports = []
 audio-ports-activation = []
 audio-ports-config = []
+clap-wrapper = []
 configurable-audio-ports = []
 context-menu = []
 event-registry = []
@@ -75,3 +80,6 @@ thread-pool = []
 timer = []
 track-info = []
 voice-info = []
+
+[lints]
+workspace = true

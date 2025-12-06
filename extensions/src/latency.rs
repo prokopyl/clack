@@ -1,5 +1,5 @@
 use clack_common::extensions::*;
-use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
+use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
@@ -8,12 +8,13 @@ pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>)
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginLatency {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -23,12 +24,13 @@ pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostLatency {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_LATENCY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -53,9 +55,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostLatency
+    unsafe impl<H> ExtensionImplementation<H> for HostLatency
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
+        for<'a> H: HostHandlers<MainThread<'a>: HostLatencyImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_latency {
@@ -64,9 +66,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn changed<H: HostHandlers>(host: *const clap_host)
+    unsafe extern "C" fn changed<H>(host: *const clap_host)
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostLatencyImpl,
+        for<'a> H: HostHandlers<MainThread<'a>: HostLatencyImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             host.main_thread().as_mut().changed();
@@ -97,9 +99,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginLatency
+    unsafe impl<P> ExtensionImplementation<P> for PluginLatency
     where
-        for<'a> P::MainThread<'a>: PluginLatencyImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_plugin_latency {
@@ -108,9 +110,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn get<P: Plugin>(plugin: *const clap_plugin) -> u32
+    unsafe extern "C" fn get<P>(plugin: *const clap_plugin) -> u32
     where
-        for<'a> P::MainThread<'a>: PluginLatencyImpl,
+        for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().get()))
             .unwrap_or(0)

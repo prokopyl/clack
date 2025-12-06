@@ -59,7 +59,7 @@
 //! information about standard search paths and the general discovery process.
 
 use std::error::Error;
-use std::ffi::NulError;
+use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 use std::ptr::NonNull;
@@ -69,6 +69,9 @@ mod entry;
 
 #[cfg(feature = "libloading")]
 mod library;
+
+#[cfg(feature = "clack-plugin")]
+mod clack_plugin;
 
 #[cfg(test)]
 #[allow(missing_docs)]
@@ -109,7 +112,14 @@ use clack_common::utils::ClapVersion;
 /// ```
 #[derive(Clone)]
 pub struct PluginBundle {
-    inner: CachedEntry,
+    inner: PluginBundleInner,
+}
+
+#[derive(Clone)]
+enum PluginBundleInner {
+    Cached(CachedEntry),
+    #[cfg(feature = "clack-plugin")]
+    FromClack(clack_plugin::ClackEntry),
 }
 
 impl PluginBundle {
@@ -143,13 +153,39 @@ impl PluginBundle {
     #[cfg(feature = "libloading")]
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
+        use std::ffi::CString;
 
         let path = path.as_ref();
-        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+        let path_cstr = CString::new(path.as_encoded_bytes())?;
 
         let library = PluginEntryLibrary::load(path)?;
 
-        let inner = cache::load_from_library(library, path_str)?;
+        let inner = cache::load_from_library(library, &path_cstr)?;
+
+        Ok(Self {
+            inner: PluginBundleInner::Cached(inner),
+        })
+    }
+
+    /// Loads a CLAP bundle from an [`Entry`](::clack_plugin::entry::Entry) created by [`clack_plugin`](::clack_plugin).
+    ///
+    /// Note that CLAP plugins loaded this way still need a valid path, as they may perform various
+    /// filesystem operations relative to their bundle files.
+    ///
+    /// Note that unlike other methods to load [`PluginBundle`]s, this method is completely safe, as
+    /// it can rely on the safety guarantees provided by [`clack_plugin`](::clack_plugin).
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if initializing the entry fails.
+    /// See [`PluginBundleError`] for all the possible errors that may occur.
+    ///
+    #[cfg(feature = "clack-plugin")]
+    pub fn load_from_clack<E: ::clack_plugin::entry::Entry>(
+        path: &CStr,
+    ) -> Result<Self, PluginBundleError> {
+        let entry = E::new(path).map_err(|_| PluginBundleError::EntryInitFailed)?;
+        let inner = PluginBundleInner::FromClack(clack_plugin::ClackEntry::new(entry));
 
         Ok(Self { inner })
     }
@@ -184,7 +220,7 @@ impl PluginBundle {
     ///
     /// let path = "/home/user/.clap/u-he/libdiva.so";
     /// let lib = unsafe { Library::new(path) }.unwrap();
-    /// let symbol_name = CStr::from_bytes_with_nul(b"clap_entry\0").unwrap();
+    /// let symbol_name = c"clap_entry";
     ///
     /// let bundle = unsafe { PluginBundle::load_from_symbol_in_library(path, lib, symbol_name)? };
     ///
@@ -195,18 +231,21 @@ impl PluginBundle {
     pub unsafe fn load_from_symbol_in_library<P: AsRef<std::ffi::OsStr>>(
         path: P,
         library: libloading::Library,
-        symbol_name: &core::ffi::CStr,
+        symbol_name: &CStr,
     ) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::PluginEntryLibrary;
+        use std::ffi::CString;
 
         let path = path.as_ref();
-        let path_str = path.to_str().ok_or(PluginBundleError::InvalidUtf8Path)?;
+        let path_cstr = CString::new(path.as_encoded_bytes())?;
 
         let library = PluginEntryLibrary::load_from_symbol_in_library(library, symbol_name)?;
 
-        let inner = cache::load_from_library(library, path_str)?;
+        let inner = cache::load_from_library(library, &path_cstr)?;
 
-        Ok(Self { inner })
+        Ok(Self {
+            inner: PluginBundleInner::Cached(inner),
+        })
     }
 
     /// Loads a CLAP bundle from a `'static` [`EntryDescriptor`].
@@ -235,7 +274,7 @@ impl PluginBundle {
     /// let descriptor: &'static EntryDescriptor = /* ... */
     /// # descriptor;
     ///
-    /// let path = "/home/user/.clap/u-he/libdiva.so";
+    /// let path = c"/home/user/.clap/u-he/libdiva.so";
     /// let bundle = unsafe { PluginBundle::load_from_raw(descriptor, path)? };
     ///
     /// println!("Loaded bundle CLAP version: {}", bundle.version());
@@ -243,17 +282,21 @@ impl PluginBundle {
     #[inline]
     pub unsafe fn load_from_raw(
         inner: &'static EntryDescriptor,
-        plugin_path: &str,
+        plugin_path: &CStr,
     ) -> Result<Self, PluginBundleError> {
         Ok(Self {
-            inner: cache::load_from_raw(inner, plugin_path)?,
+            inner: PluginBundleInner::Cached(cache::load_from_raw(inner, plugin_path)?),
         })
     }
 
     /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
     pub fn raw_entry(&self) -> &EntryDescriptor {
-        self.inner.raw_entry()
+        match &self.inner {
+            PluginBundleInner::Cached(entry) => entry.raw_entry(),
+            #[cfg(feature = "clack-plugin")]
+            PluginBundleInner::FromClack(_) => &clack_plugin::ClackEntry::DUMMY_DESCRIPTOR,
+        }
     }
 
     /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.
@@ -278,10 +321,17 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
-        // SAFETY: this type ensures the function pointer is valid.
-        let ptr = unsafe { self.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
-        // SAFETY: pointer was created using F's own identifier.
-        NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
+        match &self.inner {
+            PluginBundleInner::Cached(entry) => {
+                // SAFETY: this type ensures the function pointer is valid.
+                let ptr =
+                    unsafe { entry.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
+                // SAFETY: pointer was created using F's own identifier.
+                NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
+            }
+            #[cfg(feature = "clack-plugin")]
+            PluginBundleInner::FromClack(clack) => clack.get_factory(),
+        }
     }
 
     /// Returns the [`PluginFactory`] exposed by this bundle, if it exists.
@@ -304,7 +354,7 @@ impl PluginBundle {
     /// # Ok(()) }
     /// ```
     #[inline]
-    pub fn get_plugin_factory(&self) -> Option<PluginFactory> {
+    pub fn get_plugin_factory(&self) -> Option<PluginFactory<'_>> {
         self.get_factory()
     }
 
@@ -319,15 +369,17 @@ impl PluginBundle {
 ///
 /// See [`PluginBundle::load`] and [`PluginBundle::load_from_raw`].
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PluginBundleError {
-    /// The path given to [`PluginBundle::load`] is not valid UTF-8.
-    InvalidUtf8Path,
     /// The dynamic library file could not be loaded.
     ///
     /// This contains the error type from the underlying
     /// [`libloading`](https://crates.io/crates/libloading) library.
     #[cfg(feature = "libloading")]
     LibraryLoadingError(libloading::Error),
+    #[cfg(feature = "libloading")]
+    /// The given path is not a valid C string.
+    InvalidNulPath(std::ffi::NulError),
     /// The entry pointer exposed by the dynamic library file is `null`.
     NullEntryPointer,
     /// The exposed entry used an incompatible CLAP version.
@@ -337,8 +389,6 @@ pub enum PluginBundleError {
         /// See [`ClapVersion::CURRENT`] to get the current clap version.
         plugin_version: ClapVersion,
     },
-    /// The given path is not a valid C string.
-    InvalidNulPath(NulError),
     /// The entry's `init` method failed.
     EntryInitFailed,
 }
@@ -346,6 +396,7 @@ pub enum PluginBundleError {
 impl Error for PluginBundleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            #[cfg(feature = "libloading")]
             PluginBundleError::InvalidNulPath(e) => Some(e),
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => Some(e),
@@ -358,15 +409,13 @@ impl Display for PluginBundleError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PluginBundleError::EntryInitFailed => f.write_str("Plugin entry initialization failed"),
+            #[cfg(feature = "libloading")]
             PluginBundleError::InvalidNulPath(e) => {
                 write!(f, "Invalid plugin descriptor path: {e}")
             }
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => {
                 write!(f, "Failed to load plugin descriptor library: {e}")
-            }
-            PluginBundleError::InvalidUtf8Path => {
-                f.write_str("Plugin descriptor path contains invalid UTF-8")
             }
             PluginBundleError::NullEntryPointer => f.write_str("Plugin entry pointer is null"),
             PluginBundleError::IncompatibleClapVersion { plugin_version } => write!(
@@ -376,5 +425,13 @@ impl Display for PluginBundleError {
                 ClapVersion::CURRENT
             ),
         }
+    }
+}
+
+#[cfg(feature = "libloading")]
+impl From<std::ffi::NulError> for PluginBundleError {
+    #[inline]
+    fn from(value: std::ffi::NulError) -> Self {
+        Self::InvalidNulPath(value)
     }
 }

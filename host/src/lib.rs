@@ -1,5 +1,4 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(clippy::undocumented_unsafe_blocks)]
 
 //!
 //! A low-level library to create [CLAP](https://github.com/free-audio/clap) audio hosts in safe Rust.
@@ -143,7 +142,7 @@
 //!
 //! // Step 1: Load the bundle in memory.
 //! # mod diva { include!("./bundle/diva_stub.rs"); }
-//! # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so")? };
+//! # let bundle = PluginBundle::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
 //! # /*
 //! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
 //! # */
@@ -277,8 +276,8 @@ pub mod prelude {
     pub use crate::{
         bundle::PluginBundle,
         events::{
-            io::{EventBuffer, InputEvents, OutputEvents},
             Event, EventHeader, Pckn, UnknownEvent,
+            io::{EventBuffer, InputEvents, OutputEvents},
         },
         host::{
             AudioProcessorHandler, HostError, HostExtensions, HostHandlers, HostInfo,
@@ -289,12 +288,12 @@ pub mod prelude {
             PluginInstance, PluginInstanceError, PluginMainThreadHandle, PluginSharedHandle,
         },
         process::{
+            AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
+            StoppedPluginAudioProcessor,
             audio_buffers::{
                 AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
                 OutputAudioBuffers,
             },
-            AudioPortProcessingInfo, PluginAudioConfiguration, ProcessStatus,
-            StoppedPluginAudioProcessor,
         },
         utils::ClapId,
     };

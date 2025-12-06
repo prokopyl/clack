@@ -1,9 +1,9 @@
+use crate::events::UnknownEvent;
 use crate::events::event_types::TransportEvent;
 use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::io::{InputEvents, OutputEvents, TryPushError};
-use crate::events::UnknownEvent;
 use clap_sys::events::clap_event_header;
-use core::mem::{size_of_val, MaybeUninit};
+use core::mem::MaybeUninit;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Index, Range};
 
@@ -54,7 +54,7 @@ pub struct EventBuffer {
 
 #[inline]
 pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
-    let type_size = core::mem::size_of::<T>();
+    let type_size = size_of::<T>();
     if type_size == 0 {
         0
     } else {
@@ -65,7 +65,7 @@ pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
 impl EventBuffer {
     /// Creates a new, empty [`EventBuffer`].
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             headers: Vec::new(),
             indexes: Vec::new(),
@@ -85,7 +85,7 @@ impl EventBuffer {
     pub fn with_capacity(events: usize) -> Self {
         Self {
             // TransportEvent is the largest standard CLAP event.
-            headers: Vec::with_capacity(events * core::mem::size_of::<TransportEvent>()),
+            headers: Vec::with_capacity(events * size_of::<TransportEvent>()),
             indexes: Vec::with_capacity(events),
         }
     }
@@ -134,7 +134,7 @@ impl EventBuffer {
 
     /// Returns an iterator of all the events contained in this buffer.
     #[inline]
-    pub fn iter(&self) -> EventBufferIter {
+    pub fn iter(&self) -> EventBufferIter<'_> {
         EventBufferIter {
             buffer: self,
             range: 0..self.len(),
@@ -145,7 +145,8 @@ impl EventBuffer {
     ///
     /// It is necessary to sort the events before passing them to a plugin.
     pub fn sort(&mut self) {
-        self.indexes.sort_by_key(|i| {
+        // this needs to be an unstable sort, as the std stable sort might allocate
+        self.indexes.sort_unstable_by_key(|i| {
             // SAFETY: Registered indexes always have actual event headers written by append_header_data
             // PANIC: We used registered indexes, this should never panic
             let event = unsafe { self.headers[*i as usize].assume_init_ref() };
@@ -185,7 +186,7 @@ impl EventBuffer {
     ///
     /// This helper method is strictly equivalent to using [`InputEvents::from_buffer`].
     #[inline]
-    pub fn as_input(&self) -> InputEvents {
+    pub fn as_input(&self) -> InputEvents<'_> {
         InputEvents::from_buffer(self)
     }
 
@@ -193,7 +194,7 @@ impl EventBuffer {
     ///
     /// This helper method is strictly equivalent to using [`OutputEvents::from_buffer`].
     #[inline]
-    pub fn as_output(&mut self) -> OutputEvents {
+    pub fn as_output(&mut self) -> OutputEvents<'_> {
         OutputEvents::from_buffer(self)
     }
 
@@ -309,9 +310,9 @@ impl<'a> Iterator for EventBufferIter<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::events::Event;
     use crate::events::event_types::MidiEvent;
     use crate::events::io::EventBuffer;
-    use crate::events::Event;
 
     #[test]
     fn it_works() {

@@ -123,7 +123,7 @@ impl MidiReceiver {
     /// Event's timestamps are interpolated to sample time between 0 and the given sample count.
     ///
     /// This returns a Clack input event buffer handle, ready to feed to the plugin.
-    pub fn receive_all_events(&mut self, sample_count: u64) -> InputEvents {
+    pub fn receive_all_events(&mut self, sample_count: u64) -> InputEvents<'_> {
         self.clap_events_buffer.clear();
 
         if !self.abandoned && self.consumer.is_abandoned() {

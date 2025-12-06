@@ -1,7 +1,5 @@
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
-use std::ffi::CStr;
 use std::sync::OnceLock;
 
 pub struct DivaPluginStubAudioProcessor;
@@ -23,7 +21,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         PluginDescriptor::new("com.u-he.diva", "Diva").with_features([SYNTHESIZER, STEREO])
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
@@ -54,8 +52,6 @@ impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginSt
         unimplemented!()
     }
 }
-
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared {
     state_ext: OnceLock<bool>,
@@ -90,9 +86,10 @@ impl HostHandlers for MyHost {
 
 #[test]
 pub fn handles_drop_order() {
-    let bundle = unsafe {
-        PluginBundle::load_from_raw(&DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap()
-    };
+    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+        c"/home/user/.clap/u-he/libdiva.so",
+    )
+    .unwrap();
     let host_info =
         HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2").unwrap();
 
@@ -102,7 +99,7 @@ pub fn handles_drop_order() {
         },
         |_| (),
         &bundle,
-        CStr::from_bytes_with_nul(b"com.u-he.diva\0").unwrap(),
+        c"com.u-he.diva",
         &host_info,
     )
     .unwrap();

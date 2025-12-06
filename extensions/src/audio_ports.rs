@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clack_common::utils::ClapId;
 use clap_sys::ext::audio_ports::*;
-use std::ffi::CStr;
+use std::ffi::{CStr, c_char};
 use std::fmt::{Debug, Formatter};
 
 #[derive(Copy, Clone)]
@@ -26,6 +26,30 @@ impl AudioPortType<'_> {
             1 => Some(Self::MONO),
             2 => Some(Self::STEREO),
             _ => None,
+        }
+    }
+
+    /// Gets an [`AudioPortType`] from a raw, C-FFI compatible, null-terminated string pointer.
+    ///
+    /// If the pointer is null, or if the string is empty (i.e. the pointer points to a nul byte),
+    /// `None` is returned instead.
+    ///
+    /// # Safety
+    ///
+    /// The caller must guarantee the string pointer is valid (see [`CStr::from_ptr`]), unless the
+    /// given pointer is null.
+    #[inline]
+    pub const unsafe fn from_raw(raw: *const c_char) -> Option<Self> {
+        if raw.is_null() {
+            return None;
+        }
+
+        // SAFETY: the caller guarantees the pointer is valid *if* it is non-null, which we checked above
+        let c_str = unsafe { CStr::from_ptr(raw) };
+        if c_str.is_empty() {
+            None
+        } else {
+            Some(AudioPortType(c_str))
         }
     }
 }
@@ -75,23 +99,25 @@ bitflags! {
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPorts {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -110,16 +136,14 @@ impl<'a> AudioPortInfo<'a> {
     /// The raw port_type pointer must be a valid C string for the 'a lifetime.
     pub unsafe fn from_raw(raw: &'a clap_audio_port_info) -> Option<Self> {
         use crate::utils::*;
-        use std::ptr::NonNull;
 
         Some(Self {
             id: ClapId::from_raw(raw.id)?,
             name: data_from_array_buf(&raw.name),
             channel_count: raw.channel_count,
             flags: AudioPortFlags::from_bits_truncate(raw.flags),
-            port_type: NonNull::new(raw.port_type as *mut _)
-                .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr())))
-                .filter(|t| !t.0.is_empty()),
+            // SAFETY: validity of the pointer is upheld by the caller
+            port_type: unsafe { AudioPortType::from_raw(raw.port_type) },
 
             in_place_pair: ClapId::from_raw(raw.in_place_pair),
         })

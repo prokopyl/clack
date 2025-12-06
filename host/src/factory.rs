@@ -21,10 +21,10 @@
 //! list plugins.
 
 use crate::plugin::PluginInstanceError;
-use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
+use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -57,7 +57,7 @@ pub unsafe trait FactoryPointer<'a>: Sized + 'a {
 /// use clack_host::prelude::PluginBundle;
 ///
 /// # mod diva { include!("./bundle/diva_stub.rs"); }
-/// # let bundle = unsafe { PluginBundle::load_from_raw(&diva::DIVA_STUB_ENTRY, "/home/user/.clap/u-he/libdiva.so").unwrap() };
+/// # let bundle = PluginBundle::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so").unwrap();
 /// # /*
 /// let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
 /// # */
@@ -190,7 +190,15 @@ impl<'a> Iterator for PluginDescriptorsIter<'a> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.count as usize, Some(self.count as usize))
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl ExactSizeIterator for PluginDescriptorsIter<'_> {
+    #[inline]
+    fn len(&self) -> usize {
+        (self.count - self.current_index) as usize
     }
 }
 

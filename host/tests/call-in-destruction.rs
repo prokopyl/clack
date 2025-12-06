@@ -1,9 +1,7 @@
 use clack_common::stream::{InputStream, OutputStream};
 use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
-use std::ffi::CStr;
 use std::io::Write;
 use std::sync::OnceLock;
 
@@ -44,7 +42,7 @@ impl DefaultPluginFactory for MyPlugin {
         PluginDescriptor::new("my.plugin", "My plugin")
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 
@@ -57,8 +55,6 @@ impl DefaultPluginFactory for MyPlugin {
         })
     }
 }
-
-static MY_PLUGIN_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<MyPlugin>);
 
 struct MyHost;
 
@@ -110,14 +106,16 @@ impl Drop for MyHostMainThread<'_> {
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
-    let bundle = unsafe { PluginBundle::load_from_raw(&MY_PLUGIN_ENTRY, "/my/plugin") }.unwrap();
+    let bundle =
+        PluginBundle::load_from_clack::<SinglePluginEntry<MyPlugin>>(c"/my/plugin").unwrap();
+
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {
             init: OnceLock::new(),
         },
         |_| MyHostMainThread { instance: None },
         &bundle,
-        CStr::from_bytes_with_nul(b"my.plugin\0").unwrap(),
+        c"my.plugin",
         &host,
     )
     .unwrap();

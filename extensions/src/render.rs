@@ -20,12 +20,13 @@ pub struct PluginRender(RawExtension<PluginExtensionSide, clap_plugin_render>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginRender {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_RENDER;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_RENDER];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 

@@ -324,14 +324,18 @@ pub fn get_config_from_ports(
         if is_input {
             return PluginAudioPortsConfig::empty();
         }
-        eprintln!("Warning: Plugin's audio port extension returned NO port at all? Using default stereo configuration instead.");
+        eprintln!(
+            "Warning: Plugin's audio port extension returned NO port at all? Using default stereo configuration instead."
+        );
         return PluginAudioPortsConfig::default();
     }
 
     let main_port_index = if let Some(main_port_index) = main_port_index {
         main_port_index
     } else {
-        eprintln!("Warning: Plugin's audio port extension defines no main port! Using the first decent port as a fallback.");
+        eprintln!(
+            "Warning: Plugin's audio port extension defines no main port! Using the first decent port as a fallback."
+        );
         if let Some(first_stereo_port) = discovered_ports
             .iter()
             .enumerate()
@@ -382,7 +386,8 @@ fn find_matching_output_config(
 
     FullAudioConfig {
         output_channel_count: best_stream_config.channels() as usize,
-        min_buffer_size,
+        // Sometimes CPAL may report 0 samples as a minimum buffer size, which is invalid
+        min_buffer_size: min_buffer_size.max(1),
         max_likely_buffer_size: max_buffer_size,
         sample_rate: 44_100.clamp(
             best_stream_config.min_sample_rate().0,

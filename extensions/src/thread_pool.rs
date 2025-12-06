@@ -14,12 +14,13 @@ pub struct PluginThreadPool(RawExtension<PluginExtensionSide, clap_plugin_thread
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginThreadPool {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_POOL];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -30,12 +31,13 @@ pub struct HostThreadPool(RawExtension<HostExtensionSide, clap_host_thread_pool>
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostThreadPool {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_THREAD_POOL;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_THREAD_POOL];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -67,9 +69,9 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginThreadPool
+    unsafe impl<P> ExtensionImplementation<P> for PluginThreadPool
     where
-        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
+        for<'a> P: Plugin<Shared<'a>: PluginThreadPoolImpl>,
     {
         #[doc(hidden)]
         const IMPLEMENTATION: RawExtensionImplementation =
@@ -79,9 +81,9 @@ mod plugin {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn exec<P: Plugin>(plugin: *const clap_plugin, task_index: u32)
+    unsafe extern "C" fn exec<P>(plugin: *const clap_plugin, task_index: u32)
     where
-        for<'a> P::Shared<'a>: PluginThreadPoolImpl,
+        for<'a> P: Plugin<Shared<'a>: PluginThreadPoolImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin.shared().exec(task_index);
@@ -148,9 +150,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostThreadPool
+    unsafe impl<H> ExtensionImplementation<H> for HostThreadPool
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> H: HostHandlers<AudioProcessor<'a>: HostThreadPoolImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_thread_pool {
@@ -159,12 +161,9 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn request_exec<H: HostHandlers>(
-        host: *const clap_host,
-        num_tasks: u32,
-    ) -> bool
+    unsafe extern "C" fn request_exec<H>(host: *const clap_host, num_tasks: u32) -> bool
     where
-        for<'a> <H as HostHandlers>::AudioProcessor<'a>: HostThreadPoolImpl,
+        for<'a> H: HostHandlers<AudioProcessor<'a>: HostThreadPoolImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host

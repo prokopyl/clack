@@ -169,7 +169,7 @@ impl AudioPorts {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
                         min_channel_buffer_length =
-                            std::cmp::min(min_channel_buffer_length, channel.buffer.len());
+                            min_channel_buffer_length.min(channel.buffer.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
@@ -185,7 +185,7 @@ impl AudioPorts {
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
                         min_channel_buffer_length =
-                            std::cmp::min(min_channel_buffer_length, channel.buffer.len());
+                            min_channel_buffer_length.min(channel.buffer.len());
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
@@ -209,11 +209,11 @@ impl AudioPorts {
             descriptor.constant_mask = constant_mask;
 
             if is_f64 {
-                descriptor.data64 = buffers.as_mut_ptr().cast();
-                descriptor.data32 = core::ptr::null_mut();
+                descriptor.data64 = buffers.as_ptr().cast();
+                descriptor.data32 = core::ptr::null();
             } else {
-                descriptor.data64 = core::ptr::null_mut();
-                descriptor.data32 = buffers.as_mut_ptr();
+                descriptor.data64 = core::ptr::null();
+                descriptor.data32 = buffers.as_ptr() as *const *const _;
             }
         }
 
@@ -231,9 +231,9 @@ impl AudioPorts {
                 last_len += channel_count;
 
                 if descriptor.data32.is_null() {
-                    descriptor.data64 = buffers.as_mut_ptr().cast();
+                    descriptor.data64 = buffers.as_ptr().cast();
                 } else {
-                    descriptor.data32 = buffers.as_mut_ptr().cast();
+                    descriptor.data32 = buffers.as_mut_ptr();
                 }
             }
         }
@@ -274,8 +274,7 @@ impl AudioPorts {
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length =
-                            std::cmp::min(min_channel_buffer_length, channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -287,8 +286,7 @@ impl AudioPorts {
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length =
-                            std::cmp::min(min_channel_buffer_length, channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -333,7 +331,7 @@ impl AudioPorts {
                 if descriptor.data32.is_null() {
                     descriptor.data64 = buffers.as_mut_ptr().cast();
                 } else {
-                    descriptor.data32 = buffers.as_mut_ptr().cast();
+                    descriptor.data32 = buffers.as_mut_ptr();
                 }
             }
         }

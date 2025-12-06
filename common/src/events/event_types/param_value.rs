@@ -1,11 +1,10 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
-use crate::events::{impl_event_pckn, Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent};
+use crate::events::{Event, EventFlags, EventHeader, Match, Pckn, UnknownEvent, impl_event_pckn};
 use crate::utils::{ClapId, Cookie};
 use clap_sys::events::{
-    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
     CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END, CLAP_EVENT_PARAM_MOD,
-    CLAP_EVENT_PARAM_VALUE,
+    CLAP_EVENT_PARAM_VALUE, clap_event_param_gesture, clap_event_param_mod, clap_event_param_value,
 };
 use std::fmt::{Debug, Formatter};
 
@@ -51,7 +50,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_param_id(&mut self, param_id: ClapId) {
+    pub const fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
@@ -67,7 +66,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_value(&mut self, value: f64) {
+    pub const fn set_value(&mut self, value: f64) {
         self.inner.value = value
     }
 
@@ -78,7 +77,7 @@ impl ParamValueEvent {
     }
 
     impl_event_helpers!(clap_event_param_value);
-    impl_event_pckn!();
+    impl_event_pckn!(self.inner);
 
     #[inline]
     pub const fn cookie(&self) -> Cookie {
@@ -86,7 +85,7 @@ impl ParamValueEvent {
     }
 
     #[inline]
-    pub fn set_cookie(&mut self, cookie: Cookie) {
+    pub const fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
@@ -193,7 +192,7 @@ impl ParamModEvent {
     }
 
     impl_event_helpers!(clap_event_param_mod);
-    impl_event_pckn!();
+    impl_event_pckn!(self.inner);
 
     #[inline]
     pub const fn cookie(&self) -> Cookie {

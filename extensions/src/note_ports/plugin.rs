@@ -2,7 +2,6 @@ use super::*;
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
-use std::ptr::addr_of_mut;
 
 pub struct NotePortInfoWriter<'a> {
     buf: &'a mut MaybeUninit<clap_note_port_info>,
@@ -30,15 +29,15 @@ impl NotePortInfoWriter<'_> {
 
         // SAFETY: all pointers come from `buf`, which is valid for writes and well-aligned
         unsafe {
-            write(addr_of_mut!((*buf).id), info.id.get());
-            write_to_array_buf(addr_of_mut!((*buf).name), info.name);
+            write(&raw mut (*buf).id, info.id.get());
+            write_to_array_buf(&raw mut (*buf).name, info.name);
 
             write(
-                addr_of_mut!((*buf).supported_dialects),
+                &raw mut (*buf).supported_dialects,
                 info.supported_dialects.bits(),
             );
             write(
-                addr_of_mut!((*buf).preferred_dialect),
+                &raw mut (*buf).preferred_dialect,
                 info.preferred_dialect.map(|d| d as u32).unwrap_or(0),
             );
         }
@@ -53,9 +52,9 @@ pub trait PluginNotePortsImpl {
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginNotePorts
+unsafe impl<P> ExtensionImplementation<P> for PluginNotePorts
 where
-    for<'a> P::MainThread<'a>: PluginNotePortsImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNotePortsImpl>,
 {
     const IMPLEMENTATION: RawExtensionImplementation =
         RawExtensionImplementation::new(&clap_plugin_note_ports {
@@ -65,23 +64,23 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn count<P: Plugin>(plugin: *const clap_plugin, is_input: bool) -> u32
+unsafe extern "C" fn count<P>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
-    for<'a> P::MainThread<'a>: PluginNotePortsImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNotePortsImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count(is_input)))
         .unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get<P: Plugin>(
+unsafe extern "C" fn get<P>(
     plugin: *const clap_plugin,
     index: u32,
     is_input: bool,
     info: *mut clap_note_port_info,
 ) -> bool
 where
-    for<'a> P::MainThread<'a>: PluginNotePortsImpl,
+    for<'a> P: Plugin<MainThread<'a>: PluginNotePortsImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         if info.is_null() {

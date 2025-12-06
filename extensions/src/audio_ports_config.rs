@@ -32,12 +32,13 @@ pub struct PluginAudioPortsConfig(
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsConfig {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS_CONFIG];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -48,12 +49,13 @@ pub struct HostAudioPortsConfig(RawExtension<HostExtensionSide, clap_host_audio_
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostAudioPortsConfig {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_AUDIO_PORTS_CONFIG;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS_CONFIG];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -129,16 +131,14 @@ impl MainPortInfo<'_> {
         channel_count: u32,
         port_type: *const std::os::raw::c_char,
     ) -> Option<Self> {
-        use core::ptr::NonNull;
-
         if !exists {
             return None;
         }
 
         Some(Self {
             channel_count,
-            port_type: NonNull::new(port_type as *mut _)
-                .map(|ptr| AudioPortType(CStr::from_ptr(ptr.as_ptr()))),
+            // SAFETY: upheld by caller
+            port_type: unsafe { AudioPortType::from_raw(port_type) },
         })
     }
 }

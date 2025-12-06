@@ -1,5 +1,5 @@
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
-use clap_sys::ext::event_registry::{clap_host_event_registry, CLAP_EXT_EVENT_REGISTRY};
+use clap_sys::ext::event_registry::{CLAP_EXT_EVENT_REGISTRY, clap_host_event_registry};
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
@@ -8,12 +8,13 @@ pub struct HostEventRegistry(RawExtension<HostExtensionSide, clap_host_event_reg
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for HostEventRegistry {
-    const IDENTIFIER: &'static CStr = CLAP_EXT_EVENT_REGISTRY;
+    const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_EVENT_REGISTRY];
     type ExtensionSide = HostExtensionSide;
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -66,9 +67,9 @@ mod host {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<H: HostHandlers> ExtensionImplementation<H> for HostEventRegistry
+    unsafe impl<H> ExtensionImplementation<H> for HostEventRegistry
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
+        H: for<'a> HostHandlers<MainThread<'a>: HostEventRegistryImpl>,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_host_event_registry {
@@ -77,13 +78,13 @@ mod host {
     }
 
     #[allow(clippy::missing_safety_doc)]
-    unsafe extern "C" fn query<H: HostHandlers>(
+    unsafe extern "C" fn query<H>(
         host: *const clap_host,
         space_name: *const c_char,
         space_id: *mut u16,
     ) -> bool
     where
-        for<'a> <H as HostHandlers>::MainThread<'a>: HostEventRegistryImpl,
+        H: for<'a> HostHandlers<MainThread<'a>: HostEventRegistryImpl>,
     {
         let result = HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);
