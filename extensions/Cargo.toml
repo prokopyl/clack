@@ -38,7 +38,8 @@ all-extensions = [
     "tail",
     "thread-check",
     "thread-pool",
-    "timer"
+    "timer",
+    "voice-info"
 ]
 audio-ports = []
 audio-ports-config = []
