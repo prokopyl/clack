@@ -225,7 +225,10 @@ pub mod prelude {
             RawExtension, RawExtensionImplementation,
         },
         host::{HostError, HostHandlers},
-        plugin::{PluginAudioProcessorHandle, PluginMainThreadHandle, PluginSharedHandle},
+        plugin::{
+            InactivePluginMainThreadHandle, PluginAudioProcessorHandle, PluginMainThreadHandle,
+            PluginSharedHandle,
+        },
         utils::ClapId,
     };
     pub use clap_sys::host::clap_host;
