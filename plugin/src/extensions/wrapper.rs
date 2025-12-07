@@ -286,6 +286,7 @@ unsafe impl<P: Plugin> Sync for PluginWrapper<'_, P> {}
 
 /// Errors raised by a [`PluginWrapper`].
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PluginWrapperError {
     /// The `clap_plugin` raw pointer was null.
     NullPluginInstance,
@@ -328,6 +329,8 @@ pub enum PluginWrapperError {
     InvalidCString(std::ffi::NulError),
     /// A generic or custom error of a given severity.
     Error(clap_log_severity, Box<dyn Error>),
+    /// A constant string message to be displayed.
+    Message(clap_log_severity, &'static str),
 }
 
 impl PluginWrapperError {
@@ -349,6 +352,7 @@ impl PluginWrapperError {
             PluginWrapperError::Plugin(_) => CLAP_LOG_ERROR,
             PluginWrapperError::Panic => CLAP_LOG_PLUGIN_MISBEHAVING,
             PluginWrapperError::Error(s, _) => *s,
+            PluginWrapperError::Message(s, _) => *s,
             _ => CLAP_LOG_HOST_MISBEHAVING,
         }
     }
@@ -433,6 +437,7 @@ impl Display for PluginWrapperError {
             }
             PluginWrapperError::Plugin(e) => std::fmt::Display::fmt(&e, f),
             PluginWrapperError::Error(_, e) => std::fmt::Display::fmt(e, f),
+            PluginWrapperError::Message(_, msg) => f.write_str(msg),
             PluginWrapperError::Panic => f.write_str("Plugin panicked"),
         }
     }

@@ -3,7 +3,7 @@ use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -73,6 +73,98 @@ impl<'a> Deref for PluginMainThreadHandle<'a> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_shared()
+    }
+}
+
+/// A main-thread handle to the plugin, that can only exist while the plugin is in the 'inactive' state.
+///
+/// This is used by some extensions that e.g. require a function to be called on the main thread only
+/// if the plugin is inactive, and on the audio thread if it is active.
+#[derive(Eq, PartialEq)]
+#[repr(transparent)]
+pub struct InactivePluginMainThreadHandle<'a> {
+    raw: NonNull<clap_plugin>,
+    lifetime: PhantomData<&'a clap_plugin>,
+}
+
+impl<'a> InactivePluginMainThreadHandle<'a> {
+    /// # Safety
+    /// The user must ensure the provided plugin pointer is valid.
+    /// This can only be called on the main thread, and the plugin instance must be inactive for `'a`.
+    pub(crate) const unsafe fn new(raw: NonNull<clap_plugin>) -> Self {
+        Self {
+            raw,
+            lifetime: PhantomData,
+        }
+    }
+
+    /// Returns a shared reference to the raw, C-FFI compatible plugin instance struct.
+    ///
+    /// This type enforces that the reference is valid for the lifetime of the instance (`'a`).
+    ///
+    /// If you need to access the raw pointer without dereferencing it first, use
+    /// [`as_raw_ptr`](Self::as_raw_ptr) instead.
+    #[inline]
+    pub const fn as_raw(&self) -> &'a clap_plugin {
+        // SAFETY: this type enforces that the clap_plugin instance is valid for 'a.
+        unsafe { self.raw.as_ref() }
+    }
+
+    /// Returns a raw pointer to the raw, C-FFI compatible plugin instance struct, without dereferencing it.
+    ///
+    /// If you need to safely access the plugin instance struct through a shared reference,
+    /// use [`as_raw`](Self::as_raw) instead.
+    #[inline]
+    pub const fn as_raw_ptr(&self) -> *const clap_plugin {
+        self.raw.as_ptr()
+    }
+
+    #[inline]
+    pub const fn shared(&self) -> PluginSharedHandle<'a> {
+        // SAFETY: This type ensures the provided pointer is valid for 'a
+        unsafe { PluginSharedHandle::new(self.raw) }
+    }
+
+    #[inline]
+    pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const PluginSharedHandle<'a>) }
+    }
+
+    // Note: this function is pretty useless, but is needed for the Deref impl (required by DerefMut)
+    #[inline]
+    const fn as_main_thread_ref(&self) -> &PluginMainThreadHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &*(self as *const Self as *const PluginMainThreadHandle<'a>) }
+    }
+
+    #[inline]
+    pub const fn as_main_thread(&mut self) -> &mut PluginMainThreadHandle<'a> {
+        // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
+        unsafe { &mut *(self as *mut Self as *mut PluginMainThreadHandle<'a>) }
+    }
+}
+
+impl Debug for InactivePluginMainThreadHandle<'_> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InactivePluginMainThreadHandle ({:p})", self.raw)
+    }
+}
+
+impl<'a> Deref for InactivePluginMainThreadHandle<'a> {
+    type Target = PluginMainThreadHandle<'a>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_main_thread_ref()
+    }
+}
+
+impl DerefMut for InactivePluginMainThreadHandle<'_> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_main_thread()
     }
 }
 

@@ -122,7 +122,7 @@ impl PluginParams {
 
     pub fn flush(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &mut InactivePluginMainThreadHandle,
         input_parameter_changes: &InputEvents,
         output_parameter_changes: &mut OutputEvents,
     ) {

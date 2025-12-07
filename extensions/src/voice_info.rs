@@ -73,8 +73,9 @@ pub struct VoiceInfo {
 }
 
 impl VoiceInfo {
+    /// Gets a [`VoiceInfo`] from its raw, C-FFI compatible representation.
     #[inline]
-    const fn from_raw(raw: &clap_voice_info) -> Self {
+    pub const fn from_raw(raw: &clap_voice_info) -> Self {
         Self {
             voice_count: raw.voice_count,
             voice_capacity: raw.voice_capacity,
@@ -82,8 +83,9 @@ impl VoiceInfo {
         }
     }
 
+    /// Returns the raw, C-FFI compatible representation of this [`VoiceInfo`].
     #[inline]
-    const fn to_raw(&self) -> clap_voice_info {
+    pub const fn to_raw(&self) -> clap_voice_info {
         clap_voice_info {
             voice_count: self.voice_count,
             voice_capacity: self.voice_capacity,
