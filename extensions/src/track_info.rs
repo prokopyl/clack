@@ -1,9 +1,14 @@
-//#![deny(warnings)]
+#![warn(missing_docs)]
+
+//! Allows a plugin to query the host for information about the track it's in.
+//!
+//! See the [`TrackInfo`] type's documentation for a list of all the info a plugin can get about
+//! the track it is currently in.
 
 use crate::audio_ports::AudioPortType;
 use bitflags::bitflags;
 use clack_common::extensions::*;
-use clack_common::utils::Color;
+use clack_common::utils::{Color, TRANSPARENT_COLOR};
 use clap_sys::ext::track_info::*;
 use std::ffi::CStr;
 
@@ -46,16 +51,61 @@ bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct TrackInfoFlags: u64 {
+        /// Whether the [`name`](TrackInfo::name) field of a [`TrackInfo`] is set.
+        ///
+        /// The [`TrackInfo`] type sets, checks and manages this flag automatically. Most users
+        /// of the [`TrackInfo`] type should not need to use this flag directly.
         const HAS_TRACK_NAME = CLAP_TRACK_INFO_HAS_TRACK_NAME;
+        /// Whether the [`color`](TrackInfo::color) field of a [`TrackInfo`] is set.
+        ///
+        /// The [`TrackInfo`] type sets, checks and manages this flag automatically. Most users
+        /// of the [`TrackInfo`] type should not need to use this flag directly.
         const HAS_TRACK_COLOR = CLAP_TRACK_INFO_HAS_TRACK_COLOR;
+        /// Whether the [`audio_port_type`](TrackInfo::audio_port_type) and [`audio_channel_count`](TrackInfo::audio_channel_count) fields of a [`TrackInfo`] are set.
+        ///
+        /// The [`TrackInfo`] type sets, checks and manages this flag automatically. Most users
+        /// of the [`TrackInfo`] type should not need to use this flag directly.
         const HAS_AUDIO_CHANNEL = CLAP_TRACK_INFO_HAS_AUDIO_CHANNEL;
 
+        /// Whether the plugin is located on a return track (sometimes referred to as Send or FX track).
+        ///
+        /// Plugins may initialize with settings appropriate for send/parallel processing, e.g. being
+        /// set with 100% wet.
         const IS_FOR_RETURN_TRACK = CLAP_TRACK_INFO_IS_FOR_RETURN_TRACK;
+        /// Whether the plugin is located on a bus track.
+        ///
+        /// Plugins may initialize with settings appropriate for bus processing.
         const IS_FOR_BUS = CLAP_TRACK_INFO_IS_FOR_BUS;
+
+        /// Whether the plugin is located on the master track.
+        ///
+        /// Plugins may initialize with settings appropriate for channel processing.
         const IS_FOR_MASTER = CLAP_TRACK_INFO_IS_FOR_MASTER;
     }
 }
 
+/// Information about a track the plugin is on.
+///
+/// This structure provides the following information:
+///
+/// * The [`name`](TrackInfo::name) of the track;
+/// * The [`color`](TrackInfo::color) of the track;
+/// * The audio configuration of the track, i.e. its [`audio_port_type`](TrackInfo::audio_port_type)
+///   and its [`audio_channel_count`](TrackInfo::audio_channel_count);
+/// * [Flags](TrackInfo::flags) which indicate whether the track is a
+///   [return track](TrackInfoFlags::IS_FOR_RETURN_TRACK), [bus track](TrackInfoFlags::IS_FOR_BUS),
+///   or [master track](TrackInfoFlags::IS_FOR_MASTER).
+///
+/// Each of those fields can be set either with accessors (e.g. [`set_name`](TrackInfo::set_name)) or with
+/// builder-pattern-style helpers (e.g. [`with_name`](TrackInfo::with_name)).
+///
+/// All the information mentioned above is optional, and may or may not be provided by the host
+/// depending on context. The [`TrackInfo::new`] constructor creates an info structure with none of
+/// the fields set.
+///
+/// This type is generic over two different lifetimes:
+/// * The reference to the [`AudioPortType`] identifier string `'a`;
+/// * The reference to the [`name`](TrackInfo::name) string buffer provided by the host `'n`.
 pub struct TrackInfo<'a, 'n> {
     flags: TrackInfoFlags,
     name: Option<&'n [u8]>,
@@ -65,24 +115,32 @@ pub struct TrackInfo<'a, 'n> {
 }
 
 impl<'a, 'n> TrackInfo<'a, 'n> {
+    /// Creates a new track information struct with none of the fields set.
     #[inline]
     pub const fn new() -> Self {
         Self {
             flags: TrackInfoFlags::empty(),
             name: None,
-            color: Color::TRANSPARENT,
+            color: TRANSPARENT_COLOR,
             audio_channel_count: 0,
             audio_port_type: None,
         }
     }
 
+    /// Reads the track information from a raw, C-FFI compatible CLAP track info struct.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the `audio_port_type` pointer is either NULL, or points to a valid
+    /// NULL-terminated C string and remains valid for the lifetime `'a`.
     #[inline]
     pub unsafe fn from_raw(raw: &'n clap_track_info) -> Self {
         let flags = TrackInfoFlags::from_bits_truncate(raw.flags);
 
         let (port_type, channel_count) = if flags.contains(TrackInfoFlags::HAS_AUDIO_CHANNEL) {
             (
-                AudioPortType::from_raw(raw.audio_port_type),
+                // SAFETY: upheld by caller
+                unsafe { AudioPortType::from_raw(raw.audio_port_type) },
                 raw.audio_channel_count,
             )
         } else {
@@ -90,9 +148,9 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         };
 
         let color = if flags.contains(TrackInfoFlags::HAS_TRACK_COLOR) {
-            Color::from_raw(&raw.color)
+            raw.color
         } else {
-            Color::TRANSPARENT
+            TRANSPARENT_COLOR
         };
 
         Self {
@@ -102,26 +160,39 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
                 .then(|| data_from_array_buf(&raw.name)),
             color,
             audio_port_type: port_type,
-            audio_channel_count: channel_count as u32, // TODO
+            audio_channel_count: u32::try_from(channel_count).unwrap_or(0),
         }
     }
 
+    /// Returns the set of flags applied to this track information.
+    ///
+    /// See the [`TrackInfoFlags`] type's documentation for a list of flags and their meanings.
     #[inline]
     pub const fn flags(&self) -> TrackInfoFlags {
         self.flags
     }
 
+    /// Sets and replaces the flags applied to this track information.
+    ///
+    /// See the [`TrackInfoFlags`] type's documentation for a list of flags and their meanings.
     #[inline]
     pub const fn set_flags(&mut self, flags: TrackInfoFlags) {
         self.flags = flags;
     }
 
+    /// Sets and replaces the flags applied to this track information.
+    ///
+    /// See the [`TrackInfoFlags`] type's documentation for a list of flags and their meanings.
     #[inline]
     pub const fn with_flags(mut self, flags: TrackInfoFlags) -> Self {
         self.flags = flags;
         self
     }
 
+    /// Returns the name of the track the plugin is on.
+    ///
+    /// If the [`HAS_TRACK_NAME`](TrackInfoFlags::HAS_TRACK_NAME) [flag](Self::flags) is unset,
+    /// then this will always return `None`.
     #[inline]
     pub const fn name(&self) -> Option<&'n [u8]> {
         if !self.flags.contains(TrackInfoFlags::HAS_TRACK_NAME) {
@@ -131,18 +202,28 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         self.name
     }
 
+    /// Sets (or unsets) the name of the track the plugin is on.
+    ///
+    /// This method automatically updates the [`HAS_TRACK_NAME`](TrackInfoFlags::HAS_TRACK_NAME) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn set_name(&mut self, name: Option<&'n [u8]>) {
         self.set_flag(TrackInfoFlags::HAS_TRACK_NAME, name.is_some());
         self.name = name;
     }
 
+    /// Sets (or unsets) the name of the track the plugin is on.
+    ///
+    /// This method automatically updates the [`HAS_TRACK_NAME`](TrackInfoFlags::HAS_TRACK_NAME) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn with_name(mut self, name: Option<&'n [u8]>) -> Self {
         self.set_name(name);
         self
     }
 
+    /// Returns the color of the track the plugin is on.
+    ///
+    /// If the [`HAS_TRACK_COLOR`](TrackInfoFlags::HAS_TRACK_COLOR) [flag](Self::flags) is unset,
+    /// then this will always return `None`.
     #[inline]
     pub const fn color(&self) -> Option<Color> {
         if !self.flags.contains(TrackInfoFlags::HAS_TRACK_COLOR) {
@@ -152,22 +233,32 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         Some(self.color)
     }
 
+    /// Sets (or unsets) the color of the track the plugin is on.
+    ///
+    /// This method automatically updates the [`HAS_TRACK_COLOR`](TrackInfoFlags::HAS_TRACK_COLOR) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn set_color(&mut self, color: Option<Color>) {
         self.set_flag(TrackInfoFlags::HAS_TRACK_COLOR, color.is_some());
 
         self.color = match color {
             Some(color) => color,
-            None => Color::TRANSPARENT,
+            None => TRANSPARENT_COLOR,
         };
     }
 
+    /// Sets (or unsets) the color of the track the plugin is on.
+    ///
+    /// This method automatically updates the [`HAS_TRACK_COLOR`](TrackInfoFlags::HAS_TRACK_COLOR) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn with_color(mut self, color: Option<Color>) -> Self {
         self.set_color(color);
         self
     }
 
+    /// Returns the number of audio channels of the track the plugin is on.
+    ///
+    /// If the [`HAS_AUDIO_CHANNEL`](TrackInfoFlags::HAS_AUDIO_CHANNEL) [flag](Self::flags) is unset,
+    /// then this will always return `None`.
     #[inline]
     pub const fn audio_channel_count(&self) -> Option<u32> {
         if !self.flags.contains(TrackInfoFlags::HAS_AUDIO_CHANNEL) {
@@ -177,6 +268,10 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         Some(self.audio_channel_count)
     }
 
+    /// Returns the port layout of the track the plugin is on, as an [`AudioPortType`].
+    ///
+    /// If the [`HAS_AUDIO_CHANNEL`](TrackInfoFlags::HAS_AUDIO_CHANNEL) [flag](Self::flags) is unset,
+    /// then this will always return `None`.
     #[inline]
     pub const fn audio_port_type(&self) -> Option<AudioPortType<'a>> {
         if !self.flags.contains(TrackInfoFlags::HAS_AUDIO_CHANNEL) {
@@ -186,6 +281,11 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         self.audio_port_type
     }
 
+    /// Sets (or unsets) the audio channel layout and count of the track the plugin is on.
+    ///
+    /// If the given `audio_port_type` is `None`, then the `channel_count` parameter is completely ignored.
+    ///
+    /// This method automatically updates the [`HAS_AUDIO_CHANNEL`](TrackInfoFlags::HAS_AUDIO_CHANNEL) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn set_audio_channels(
         &mut self,
@@ -203,6 +303,11 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
         self.audio_port_type = audio_port_type;
     }
 
+    /// Sets (or unsets) the audio channel layout and count of the track the plugin is on.
+    ///
+    /// If the given `audio_port_type` is `None`, then the `channel_count` parameter is completely ignored.
+    ///
+    /// This method automatically updates the [`HAS_AUDIO_CHANNEL`](TrackInfoFlags::HAS_AUDIO_CHANNEL) [flag](Self::flags) accordingly.
     #[inline]
     pub const fn with_audio_channels(
         mut self,
@@ -224,6 +329,7 @@ impl<'a, 'n> TrackInfo<'a, 'n> {
 }
 
 impl Default for TrackInfo<'_, '_> {
+    /// Creates a new track information struct with none of the fields set.
     #[inline]
     fn default() -> Self {
         Self::new()
@@ -236,6 +342,7 @@ mod host {
     use crate::utils::write_to_array_buf;
     use clack_host::extensions::prelude::*;
     use std::marker::PhantomData;
+    use std::mem::MaybeUninit;
 
     impl PluginTrackInfo {
         /// Notifies the plugin that its current track's info has changed.
@@ -256,8 +363,13 @@ mod host {
     }
 
     impl<'port_type> TrackInfoWriter<'_, 'port_type> {
+        pub const fn from_buf(buf: &mut MaybeUninit<clap_track_info>) -> Self {
+            // SAFETY: TODO
+            unsafe { Self::from_raw(buf.as_mut_ptr()) }
+        }
+
         #[inline]
-        unsafe fn from_raw(ptr: *mut clap_track_info) -> Self {
+        pub const unsafe fn from_raw(ptr: *mut clap_track_info) -> Self {
             Self {
                 buffer: ptr,
                 _buffer: PhantomData,
@@ -283,11 +395,15 @@ mod host {
                 );
                 write(
                     &raw mut (*buf).color,
-                    track_info.color().unwrap_or(Color::TRANSPARENT).to_raw(),
+                    track_info.color().unwrap_or(TRANSPARENT_COLOR),
                 );
                 write(
                     &raw mut (*buf).audio_channel_count,
-                    track_info.audio_channel_count().unwrap_or(0) as i32, // TODO: i32 cast
+                    track_info
+                        .audio_channel_count()
+                        .unwrap_or(0)
+                        .try_into()
+                        .unwrap_or(i32::MAX),
                 );
                 write_to_array_buf(&raw mut (*buf).name, track_info.name().unwrap_or(b""))
             }
@@ -389,7 +505,7 @@ mod plugin {
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
-    unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginTrackInfo
+    unsafe impl<P> ExtensionImplementation<P> for PluginTrackInfo
     where
         for<'a> P: Plugin<MainThread<'a>: PluginTrackInfoImpl>,
     {
