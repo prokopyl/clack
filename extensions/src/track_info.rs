@@ -355,6 +355,11 @@ mod host {
         }
     }
 
+    /// A helper type that allows to safely write a [`TrackInfo`] to an uninitialized host-provided
+    /// buffer.
+    ///
+    /// This type wraps a pointer to a host-provided, potentially uninitialized track info buffer,
+    /// and exposes the [`set`](TrackInfoWriter::set) method to safely write into it.
     pub struct TrackInfoWriter<'buf, 'port_type> {
         buffer: *mut clap_track_info,
         _buffer: PhantomData<&'buf mut clap_track_info>,
@@ -362,12 +367,19 @@ mod host {
         is_set: bool,
     }
 
-    impl<'port_type> TrackInfoWriter<'_, 'port_type> {
-        pub const fn from_buf(buf: &mut MaybeUninit<clap_track_info>) -> Self {
-            // SAFETY: TODO
+    impl<'buf, 'port_type> TrackInfoWriter<'buf, 'port_type> {
+        /// Wraps a given mutable reference to a potentially initialized C-FFI compatible buffer.
+        pub const fn from_raw_buf(buf: &'buf mut MaybeUninit<clap_track_info>) -> Self {
+            // SAFETY: Coming from a &mut guarantees the pointer is valid for writes, non-null and aligned.
             unsafe { Self::from_raw(buf.as_mut_ptr()) }
         }
 
+        /// Wraps a given pointer to a C-FFI compatible buffer.
+        ///
+        /// # Safety
+        ///
+        /// Callers must ensure the pointer must be valid for writes for the lifetime of `'buf`. It
+        /// must also be non-null and well-aligned.
         #[inline]
         pub const unsafe fn from_raw(ptr: *mut clap_track_info) -> Self {
             Self {
@@ -378,6 +390,7 @@ mod host {
             }
         }
 
+        /// Writes the given `track_info` into the buffer this type wraps.
         pub fn set(&mut self, track_info: &TrackInfo<'_, 'port_type>) {
             use core::ptr::write;
 
@@ -452,6 +465,10 @@ mod plugin {
     use clack_plugin::extensions::prelude::*;
     use std::mem::MaybeUninit;
 
+    /// A buffer for hosts to write track information into.
+    ///
+    /// This is to be passed the [`HostTrackInfo::get`] method, which allows the host to write into
+    /// it and to then retrieve a valid [`TrackInfo`] from it.
     #[derive(Clone)]
     pub struct TrackInfoBuffer {
         inner: MaybeUninit<clap_track_info>,
@@ -465,6 +482,7 @@ mod plugin {
     }
 
     impl TrackInfoBuffer {
+        /// Creates a new, empty track info buffer.
         #[inline]
         pub const fn new() -> Self {
             Self {
@@ -475,7 +493,7 @@ mod plugin {
 
     impl HostTrackInfo {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
-        /// it by calling [`get`](PluginVoiceInfoImpl::get) again.
+        /// it by calling [`get`](PluginTrackInfo::get) again.
         pub fn get<'host, 'buffer>(
             &self,
             host: &'host mut HostMainThreadHandle,
