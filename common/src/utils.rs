@@ -19,6 +19,18 @@ pub use fixed_point::*;
 pub use id::ClapId;
 pub use version::ClapVersion;
 
+/// A color, in the ARGB format.
+pub type Color = clap_color;
+
+/// The transparent color. It is also fully black.
+pub const TRANSPARENT_COLOR: Color = Color {
+    alpha: 0,
+    red: 0,
+    green: 0,
+    blue: 0,
+};
+
+use clap_sys::color::clap_color;
 use std::ffi::c_void;
 
 /// An opaque pointer for use in e.g. parameter definitions and parameter-related events.

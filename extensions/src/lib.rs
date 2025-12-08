@@ -34,6 +34,8 @@ pub mod thread_check;
 pub mod thread_pool;
 #[cfg(feature = "timer")]
 pub mod timer;
+#[cfg(feature = "track-info")]
+pub mod track_info;
 #[cfg(feature = "voice-info")]
 pub mod voice_info;
 
