@@ -22,6 +22,8 @@ pub mod note_ports;
 pub mod params;
 #[cfg(all(unix, feature = "posix-fd"))]
 pub mod posix_fd;
+#[cfg(feature = "remote-controls")]
+pub mod remote_controls;
 #[cfg(feature = "render")]
 pub mod render;
 #[cfg(feature = "state")]

@@ -379,6 +379,9 @@ mod host {
     ///
     /// This type wraps a pointer to a plugin-provided, potentially uninitialized track info buffer,
     /// and exposes the [`set`](TrackInfoWriter::set) method to safely write into it.
+    ///
+    /// This type also tracks whether anything was written into the buffer at all, so it can report
+    /// success back to the plugin.
     pub struct TrackInfoWriter<'buf, 'port_type> {
         buffer: *mut clap_track_info,
         _buffer: PhantomData<&'buf mut clap_track_info>,
