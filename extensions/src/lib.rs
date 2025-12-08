@@ -28,6 +28,8 @@ pub mod remote_controls;
 pub mod render;
 #[cfg(feature = "state")]
 pub mod state;
+#[cfg(feature = "state-context")]
+pub mod state_context;
 #[cfg(feature = "tail")]
 pub mod tail;
 #[cfg(feature = "thread-check")]
