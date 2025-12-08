@@ -33,6 +33,7 @@ all-extensions = [
     "note-ports",
     "params",
     "posix-fd",
+    "remote-controls",
     "render",
     "state",
     "tail",
@@ -53,6 +54,7 @@ note-name = []
 note-ports = []
 params = []
 posix-fd = []
+remote-controls = []
 render = []
 state = []
 tail = []
