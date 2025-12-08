@@ -30,6 +30,25 @@ unsafe impl Extension for PluginTrackInfo {
 }
 
 /// Host-side of the Track Info extension.
+///
+/// # Example
+///
+/// ```
+/// use clack_extensions::track_info::{HostTrackInfo, TrackInfo, TrackInfoBuffer};
+/// use clack_plugin::prelude::*;
+///
+/// # fn test(host_track_info: HostTrackInfo, host_main_thread_handle: HostMainThreadHandle) {
+/// let host_track_info: HostTrackInfo = /* ... */
+/// # host_track_info;
+/// let mut host_handle: HostMainThreadHandle = /* ... */
+/// # host_main_thread_handle;
+///
+/// let mut buffer = TrackInfoBuffer::new();
+/// let info: Option<TrackInfo> = host_track_info.get(&mut host_handle, &mut buffer);
+///
+/// println!("{:?}", info.unwrap().name())
+/// # }
+/// ```
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostTrackInfo(RawExtension<HostExtensionSide, clap_host_track_info>);
@@ -355,10 +374,10 @@ mod host {
         }
     }
 
-    /// A helper type that allows to safely write a [`TrackInfo`] to an uninitialized host-provided
+    /// A helper type that allows to safely write a [`TrackInfo`] to an uninitialized plugin-provided
     /// buffer.
     ///
-    /// This type wraps a pointer to a host-provided, potentially uninitialized track info buffer,
+    /// This type wraps a pointer to a plugin-provided, potentially uninitialized track info buffer,
     /// and exposes the [`set`](TrackInfoWriter::set) method to safely write into it.
     pub struct TrackInfoWriter<'buf, 'port_type> {
         buffer: *mut clap_track_info,
@@ -369,9 +388,9 @@ mod host {
 
     impl<'buf, 'port_type> TrackInfoWriter<'buf, 'port_type> {
         /// Wraps a given mutable reference to a potentially initialized C-FFI compatible buffer.
-        pub const fn from_raw_buf(buf: &'buf mut MaybeUninit<clap_track_info>) -> Self {
+        pub const fn from_raw_buf(buffer: &'buf mut MaybeUninit<clap_track_info>) -> Self {
             // SAFETY: Coming from a &mut guarantees the pointer is valid for writes, non-null and aligned.
-            unsafe { Self::from_raw(buf.as_mut_ptr()) }
+            unsafe { Self::from_raw(buffer.as_mut_ptr()) }
         }
 
         /// Wraps a given pointer to a C-FFI compatible buffer.
@@ -492,17 +511,19 @@ mod plugin {
     }
 
     impl HostTrackInfo {
-        /// Indicates the plugin has changed its voice configuration, and the host needs to update
-        /// it by calling [`get`](PluginTrackInfo::get) again.
+        /// Request the host to write the current track information into the given buffer.
+        ///
+        /// If successful, a valid [`TrackInfo`] (referencing the given buffer) is returned.
+        /// Otherwise, [`None`] is returned.
         pub fn get<'host, 'buffer>(
             &self,
             host: &'host mut HostMainThreadHandle,
-            buf: &'buffer mut TrackInfoBuffer,
+            buffer: &'buffer mut TrackInfoBuffer,
         ) -> Option<TrackInfo<'host, 'buffer>> {
             let get = host.use_extension(&self.0).get?;
 
             // SAFETY: This type ensures the function pointer is valid.
-            let success = unsafe { get(host.as_raw(), buf.inner.as_mut_ptr()) };
+            let success = unsafe { get(host.as_raw(), buffer.inner.as_mut_ptr()) };
             if !success {
                 return None;
             }
@@ -510,7 +531,7 @@ mod plugin {
             // SAFETY: Per the CLAP spec, success being set guarantees that the buffer is initialized.
             // Worst case, the host didn't actually initialize some (or all) of these, and everything is
             // zeroed, which is a valid bit pattern for all fields of the struct.
-            let raw = unsafe { buf.inner.assume_init_ref() };
+            let raw = unsafe { buffer.inner.assume_init_ref() };
             // SAFETY: Per the CLAP spec, a non-null audio_port_type is valid for read until the next call at least.
             unsafe { Some(TrackInfo::from_raw(raw)) }
         }
