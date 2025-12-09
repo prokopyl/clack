@@ -36,6 +36,7 @@ all-extensions = [
     "remote-controls",
     "render",
     "state",
+    "state-context",
     "tail",
     "thread-check",
     "thread-pool",
@@ -57,6 +58,7 @@ posix-fd = []
 remote-controls = []
 render = []
 state = []
+state-context = ["state"]
 tail = []
 thread-check = []
 thread-pool = []

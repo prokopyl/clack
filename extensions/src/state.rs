@@ -133,6 +133,7 @@ impl StateError {
     /// Returns a [`StateError`] that was triggered while loading state.
     ///
     /// This information is used in the error's message.
+    #[inline]
     pub const fn loading() -> Self {
         Self { saving: false }
     }
@@ -140,6 +141,7 @@ impl StateError {
     /// Returns a [`StateError`] that was triggered while saving state.
     ///
     /// This information is used in the error's message.
+    #[inline]
     pub const fn saving() -> Self {
         Self { saving: true }
     }
