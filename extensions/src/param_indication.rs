@@ -61,14 +61,12 @@ unsafe impl Extension for PluginParamIndication {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        Self(unsafe { raw.cast() })
     }
 }
 
 #[cfg(feature = "clack-host")]
 mod host {
-    use std::ffi::CString;
-
     use super::*;
     use clack_host::extensions::prelude::*;
     use clap_sys::color::clap_color;
@@ -81,12 +79,10 @@ mod host {
             param_id: ClapId,
             has_mapping: bool,
             color: clap_color,
-            label: &str,
-            description: &str,
+            label: &CStr,
+            description: &CStr,
         ) {
             if let Some(set_mapping) = plugin.use_extension(&self.0).set_mapping {
-                let label = CString::new(label).unwrap();
-                let description = CString::new(description).unwrap();
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe {
                     set_mapping(
@@ -171,18 +167,20 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
         let param_id = ClapId::new(param_id);
-        let color = *color;
-        PluginWrapper::<P>::handle(plugin, |plugin| {
-            plugin.main_thread().as_mut().set_mapping(
-                param_id,
-                has_mapping,
-                color,
-                CStr::from_ptr(label),
-                CStr::from_ptr(description),
-            );
+        unsafe {
+            let color = *color;
+            PluginWrapper::<P>::handle(plugin, |plugin| {
+                plugin.main_thread().as_mut().set_mapping(
+                    param_id,
+                    has_mapping,
+                    color,
+                    CStr::from_ptr(label),
+                    CStr::from_ptr(description),
+                );
 
-            Ok(())
-        });
+                Ok(())
+            });
+        }
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -195,15 +193,18 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
         let param_id = ClapId::new(param_id);
-        let automation_state = ParamIndicationAutomation::from_raw(automation_state).unwrap();
-        let color = *color;
-        PluginWrapper::<P>::handle(plugin, |plugin| {
-            plugin
-                .main_thread()
-                .as_mut()
-                .set_automation(param_id, automation_state, color);
-            Ok(())
-        });
+        unsafe {
+            let color = *color;
+            PluginWrapper::<P>::handle(plugin, |plugin| {
+                let automation_state =
+                    ParamIndicationAutomation::from_raw(automation_state).unwrap();
+                plugin
+                    .main_thread()
+                    .as_mut()
+                    .set_automation(param_id, automation_state, color);
+                Ok(())
+            });
+        }
     }
 }
 #[cfg(feature = "clack-plugin")]
