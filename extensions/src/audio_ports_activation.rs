@@ -53,7 +53,7 @@ unsafe impl Extension for PluginAudioPortsActivation {
     type ExtensionSide = PluginExtensionSide;
 
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        Self(raw.cast())
+        Self(unsafe { raw.cast() })
     }
 }
 
@@ -81,7 +81,7 @@ mod host {
             is_input: bool,
             port_index: u32,
             is_active: bool,
-            sample_size: u32,
+            sample_size: SampleSize,
         ) -> bool {
             match plugin.use_extension(&self.0).set_active {
                 None => false,
@@ -93,7 +93,7 @@ mod host {
                             is_input,
                             port_index,
                             is_active,
-                            sample_size,
+                            sample_size as u32,
                         )
                     }
                 }
