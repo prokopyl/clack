@@ -53,6 +53,7 @@ unsafe impl Extension for PluginAudioPortsActivation {
     type ExtensionSide = PluginExtensionSide;
 
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        // SAFETY: This type is expected to contain a type that is ABI-compatible with the matching extension type.
         Self(unsafe { raw.cast() })
     }
 }
@@ -170,6 +171,7 @@ mod plugin {
     where
         for<'a> P::MainThread<'a>: PluginAudioPortsActivationImpl,
     {
+        // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
                 Ok(plugin
@@ -193,6 +195,7 @@ mod plugin {
         for<'a> P::AudioProcessor<'a>: PluginAudioPortsActivationSetImpl,
         for<'a> P::MainThread<'a>: PluginAudioPortsActivationSetImpl,
     {
+        // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
                 let sample_size = SampleSize::from_raw(sample_size).unwrap();

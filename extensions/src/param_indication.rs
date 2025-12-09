@@ -61,6 +61,7 @@ unsafe impl Extension for PluginParamIndication {
 
     #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        // SAFETY: This type is expected to contain a type that is ABI-compatible with the matching extension type.
         Self(unsafe { raw.cast() })
     }
 }
@@ -167,7 +168,9 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
         let param_id = ClapId::new(param_id);
+        // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
+            // SAFETY: This type is repr(C) and expected to be ABI-compatible
             let color = *color;
             PluginWrapper::<P>::handle(plugin, |plugin| {
                 plugin.main_thread().as_mut().set_mapping(
@@ -193,7 +196,9 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
         let param_id = ClapId::new(param_id);
+        // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
+            // SAFETY: This type is repr(C) and expected to be ABI-compatible
             let color = *color;
             PluginWrapper::<P>::handle(plugin, |plugin| {
                 let automation_state =
