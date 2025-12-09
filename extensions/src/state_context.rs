@@ -3,6 +3,7 @@ use clap_sys::ext::state_context::*;
 use std::ffi::CStr;
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct PluginStateContext(RawExtension<PluginExtensionSide, clap_plugin_state_context>);
 
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
