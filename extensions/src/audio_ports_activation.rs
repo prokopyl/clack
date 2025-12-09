@@ -75,9 +75,35 @@ mod host {
         }
 
         #[inline]
-        pub fn set_active(
+        pub fn set_active_audio_inactive(
             &self,
-            plugin: &mut PluginSharedHandle,
+            plugin: &mut InactivePluginMainThreadHandle,
+            is_input: bool,
+            port_index: u32,
+            is_active: bool,
+            sample_size: SampleSize,
+        ) -> bool {
+            match plugin.use_extension(&self.0).set_active {
+                None => false,
+                Some(set_active) => {
+                    // SAFETY: This type ensures the function pointer is valid.
+                    unsafe {
+                        set_active(
+                            plugin.as_raw(),
+                            is_input,
+                            port_index,
+                            is_active,
+                            sample_size as u32,
+                        )
+                    }
+                }
+            }
+        }
+
+        #[inline]
+        pub fn set_active_audio_active(
+            &self,
+            plugin: &mut PluginAudioProcessorHandle,
             is_input: bool,
             port_index: u32,
             is_active: bool,
@@ -113,7 +139,7 @@ mod plugin {
 
     // NOTE: we have this trait split b/c if `PluginAudioPortsActivationImpl::can_activate_while_processing` is true,
     // then `set_active` is called from the audio thread (otherwise it is called from the main thread).
-    pub trait PluginAudioPortsActivationSharedImpl {
+    pub trait PluginAudioPortsActivationSetImpl {
         fn set_active(
             &self,
             is_input: bool,
@@ -126,8 +152,9 @@ mod plugin {
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
     unsafe impl<P: Plugin> ExtensionImplementation<P> for PluginAudioPortsActivation
     where
-        for<'a> P::Shared<'a>: PluginAudioPortsActivationSharedImpl,
-        for<'a> P::MainThread<'a>: PluginAudioPortsActivationImpl,
+        for<'a> P::AudioProcessor<'a>: PluginAudioPortsActivationSetImpl,
+        for<'a> P::MainThread<'a>:
+            PluginAudioPortsActivationImpl + PluginAudioPortsActivationSetImpl,
     {
         const IMPLEMENTATION: RawExtensionImplementation =
             RawExtensionImplementation::new(&clap_plugin_audio_ports_activation {
@@ -163,14 +190,34 @@ mod plugin {
         sample_size: u32,
     ) -> bool
     where
-        for<'a> P::Shared<'a>: PluginAudioPortsActivationSharedImpl,
+        for<'a> P::AudioProcessor<'a>: PluginAudioPortsActivationSetImpl,
+        for<'a> P::MainThread<'a>: PluginAudioPortsActivationSetImpl,
     {
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
                 let sample_size = SampleSize::from_raw(sample_size).unwrap();
-                Ok(plugin
-                    .shared()
-                    .set_active(is_input, port_index, is_active, sample_size))
+                // Handle forwarding to the correct implementation
+                match plugin.audio_processor() {
+                    Ok(audio) => {
+                        // audio is active, so this must be done on the audio thread
+                        Ok(audio
+                            .as_ref()
+                            .set_active(is_input, port_index, is_active, sample_size))
+                    }
+                    Err(PluginWrapperError::DeactivatedPlugin) => {
+                        // audio thread is *not* active, so this is to be done on the main thread
+                        Ok(plugin.main_thread().as_ref().set_active(
+                            is_input,
+                            port_index,
+                            is_active,
+                            sample_size,
+                        ))
+                    }
+                    Err(e) => {
+                        // forward any other error
+                        Err(e)
+                    }
+                }
             })
             .unwrap_or(false)
         }
