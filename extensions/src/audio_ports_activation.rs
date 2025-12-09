@@ -143,13 +143,15 @@ mod plugin {
     where
         for<'a> P::MainThread<'a>: PluginAudioPortsActivationImpl,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| {
-            Ok(plugin
-                .main_thread()
-                .as_mut()
-                .can_activate_while_processing())
-        })
-        .unwrap_or(false)
+        unsafe {
+            PluginWrapper::<P>::handle(plugin, |plugin| {
+                Ok(plugin
+                    .main_thread()
+                    .as_mut()
+                    .can_activate_while_processing())
+            })
+            .unwrap_or(false)
+        }
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -163,13 +165,15 @@ mod plugin {
     where
         for<'a> P::Shared<'a>: PluginAudioPortsActivationSharedImpl,
     {
-        let sample_size = SampleSize::from_raw(sample_size).unwrap();
-        PluginWrapper::<P>::handle(plugin, |plugin| {
-            Ok(plugin
-                .shared()
-                .set_active(is_input, port_index, is_active, sample_size))
-        })
-        .unwrap_or(false)
+        unsafe {
+            PluginWrapper::<P>::handle(plugin, |plugin| {
+                let sample_size = SampleSize::from_raw(sample_size).unwrap();
+                Ok(plugin
+                    .shared()
+                    .set_active(is_input, port_index, is_active, sample_size))
+            })
+            .unwrap_or(false)
+        }
     }
 }
 #[cfg(feature = "clack-plugin")]
