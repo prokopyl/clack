@@ -1,12 +1,11 @@
-use crate::context_menu::entry::{Item, ItemKind};
+use super::*;
 use crate::utils::handle_panic;
-use clap_sys::ext::context_menu::{clap_context_menu_builder, clap_context_menu_item_kind};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 
 pub trait ContextMenuBuilderImpl: Sized {
-    fn add_item(&mut self, item: Item) -> Result<(), ()>;
+    fn add_item(&mut self, item: Item) -> Result<(), ContextMenuError>;
     fn supports(&mut self, item_type: ItemKind) -> bool;
 }
 
@@ -29,6 +28,24 @@ impl<'a> ContextMenuBuilder<'a> {
         }
     }
 
+    #[inline]
+    pub fn as_raw_mut(&mut self) -> &mut clap_context_menu_builder {
+        &mut self.raw
+    }
+
+    /// # Safety
+    ///
+    /// The given `raw` pointer must be valid for reads, and both the context pointer `ctx` and all
+    /// function pointers in the pointed `clap_context_menu_builder` must be and remain valid for `'a`.
+    #[inline]
+    pub unsafe fn from_raw(raw: *const clap_context_menu_builder) -> Self {
+        Self {
+            // SAFETY: The caller ensures the pointer is valid for reads.
+            raw: unsafe { raw.read() },
+            _ctx: PhantomData,
+        }
+    }
+
     pub fn supports(&mut self, item_kind: ItemKind) -> bool {
         let Some(supports) = self.raw.supports else {
             return false;
@@ -38,9 +55,9 @@ impl<'a> ContextMenuBuilder<'a> {
         unsafe { supports(&self.raw, item_kind.to_raw()) }
     }
 
-    pub fn add_item(&mut self, item: &Item) -> Result<(), ()> {
+    pub fn add_item(&mut self, item: &Item) -> Result<(), ContextMenuError> {
         let Some(add_item) = self.raw.add_item else {
-            return Err(());
+            return Err(ContextMenuError::Builder);
         };
 
         let raw_item = item.raw_item();
@@ -55,10 +72,15 @@ impl<'a> ContextMenuBuilder<'a> {
         // SAFETY: TODO
         let success = unsafe { add_item(&self.raw, item_kind.to_raw(), raw_item_ptr) };
 
-        if success { Ok(()) } else { Err(()) }
+        if success {
+            Ok(())
+        } else {
+            Err(ContextMenuError::Builder)
+        }
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn supports<I: ContextMenuBuilderImpl>(
     builder: *const clap_context_menu_builder,
     item_kind: clap_context_menu_item_kind,
@@ -70,6 +92,7 @@ unsafe extern "C" fn supports<I: ContextMenuBuilderImpl>(
     .unwrap_or(false)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn add_item<I: ContextMenuBuilderImpl>(
     builder: *const clap_context_menu_builder,
     item_kind: clap_context_menu_item_kind,
@@ -82,6 +105,7 @@ unsafe extern "C" fn add_item<I: ContextMenuBuilderImpl>(
     .is_some()
 }
 
+#[allow(clippy::missing_safety_doc)]
 #[inline]
 unsafe fn handle<I: ContextMenuBuilderImpl, T>(
     builder: *const clap_context_menu_builder,

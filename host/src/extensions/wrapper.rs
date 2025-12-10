@@ -287,6 +287,7 @@ impl<H: HostHandlers> HostWrapper<H> {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum HostWrapperError {
     /// An invalid parameter value was encountered.
     ///
@@ -299,6 +300,10 @@ pub enum HostWrapperError {
     Host(HostError),
     /// Encountered an error while trying to format another [`HostWrapperError`]
     ErrorFormatError(std::io::Error),
+    /// A generic, type-erased error.
+    Error(Box<dyn Error + 'static>),
+    /// A constant string message to be displayed.
+    Message(&'static str),
 }
 
 impl HostWrapperError {
@@ -311,6 +316,7 @@ impl HostWrapperError {
             HostWrapperError::DeactivatedPlugin => CLAP_LOG_PLUGIN_MISBEHAVING,
             HostWrapperError::Host(_) => CLAP_LOG_ERROR,
             HostWrapperError::ErrorFormatError(_) => CLAP_LOG_HOST_MISBEHAVING,
+            _ => CLAP_LOG_ERROR,
         }
     }
 
@@ -364,6 +370,16 @@ impl Display for HostWrapperError {
             ErrorFormatError(e) => {
                 write!(f, "Error while formatting host error: '{e}'")
             }
+        }
+    }
+}
+
+impl From<HostError> for HostWrapperError {
+    #[inline]
+    fn from(value: HostError) -> Self {
+        match value {
+            HostError::Error(e) => Self::Error(e),
+            HostError::Message(e) => Self::Message(e),
         }
     }
 }
