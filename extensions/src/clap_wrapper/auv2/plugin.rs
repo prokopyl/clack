@@ -1,6 +1,7 @@
-use super::PluginInfoAsAUv2;
 use super::sys::*;
-use clack_plugin::factory::{Factory, FactoryWrapper};
+use super::{PluginAsAuv2Factory, PluginInfoAsAUv2};
+use clack_common::factory::RawFactoryPointer;
+use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
 
 pub trait PluginFactoryAsAUv2Impl {
@@ -10,12 +11,6 @@ pub trait PluginFactoryAsAUv2Impl {
 #[repr(C)]
 pub struct PluginFactoryAsAUv2Wrapper<F> {
     inner: FactoryWrapper<clap_plugin_factory_as_auv2, F>,
-}
-
-// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_auv2 as its first field, and matches
-// CLAP_PLUGIN_FACTORY_INFO_AUV2.
-unsafe impl<F: PluginFactoryAsAUv2Impl> Factory for PluginFactoryAsAUv2Wrapper<F> {
-    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_INFO_AUV2];
 }
 
 impl<F: PluginFactoryAsAUv2Impl> PluginFactoryAsAUv2Wrapper<F> {
@@ -52,5 +47,17 @@ impl<F: PluginFactoryAsAUv2Impl> PluginFactoryAsAUv2Wrapper<F> {
             }
         })
         .unwrap_or(false)
+    }
+}
+
+impl<F> FactoryImplementation for PluginFactoryAsAUv2Wrapper<F> {
+    type Factory<'a>
+        = PluginAsAuv2Factory<'a>
+    where
+        Self: 'a;
+
+    #[inline]
+    fn get_raw(&self) -> RawFactoryPointer<'_, clap_plugin_factory_as_auv2> {
+        self.inner.as_raw()
     }
 }

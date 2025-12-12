@@ -77,7 +77,7 @@ struct SinglePluginFactory<P> {
     _plugin: PhantomData<fn() -> P>,
 }
 
-impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
+impl<P: DefaultPluginFactory> PluginFactoryImpl for SinglePluginFactory<P> {
     #[inline]
     fn plugin_count(&self) -> u32 {
         1

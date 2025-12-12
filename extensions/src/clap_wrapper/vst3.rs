@@ -16,6 +16,7 @@ pub use plugin::*;
 
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
+use clack_common::factory::{Factory, RawFactoryPointer};
 use core::ffi::CStr;
 use core::marker::PhantomData;
 
@@ -131,5 +132,21 @@ bitflags! {
         const AS_VST3_NOTE_EXPRESSION_EXPRESSION = 1 << 4;
         const AS_VST3_NOTE_EXPRESSION_BRIGHTNESS = 1 << 5;
         const AS_VST3_NOTE_EXPRESSION_PRESSURE = 1 << 6;
+    }
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub struct PluginAsVst3Factory<'a>(RawFactoryPointer<'a, clap_plugin_factory_as_vst3>);
+
+// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_vst3 as its first field, and matches
+// CLAP_PLUGIN_FACTORY_INFO_VST3.
+unsafe impl<'a> Factory<'a> for PluginAsVst3Factory<'a> {
+    const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_INFO_VST3];
+    type Raw = clap_plugin_factory_as_vst3;
+
+    #[inline]
+    fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
+        Self(raw)
     }
 }

@@ -26,3 +26,8 @@ pub struct clap_plugin_factory_as_auv2 {
         ) -> bool,
     >,
 }
+
+// SAFETY: everything here is read-only
+unsafe impl Send for clap_plugin_factory_as_auv2 {}
+// SAFETY: everything here is read-only
+unsafe impl Sync for clap_plugin_factory_as_auv2 {}
