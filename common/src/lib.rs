@@ -9,6 +9,7 @@
 pub mod entry;
 pub mod events;
 pub mod extensions;
+pub mod factory;
 pub mod plugin;
 pub mod process;
 pub mod stream;

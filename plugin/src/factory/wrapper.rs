@@ -2,7 +2,9 @@
 
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::error::FactoryWrapperError;
+use clack_common::factory::RawFactoryPointer;
 use std::panic::AssertUnwindSafe;
+use std::ptr::NonNull;
 
 /// A wrapper around a `clack` factory of a given `F` type, as well as its `Raw` CLAP representation.
 ///
@@ -22,10 +24,22 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
         Self { raw, inner }
     }
 
-    /// Returns a shared reference to the `Raw` CLAP type instance.
+    /// Returns a raw factory pointer compatible with this wrapper's `Raw` CLAP representation
     #[inline]
-    pub const fn as_raw(&self) -> &Raw {
-        &self.raw
+    pub fn as_raw(&self) -> RawFactoryPointer<'_, Raw> {
+        // Note that we borrow all of `Self` here, not just the raw field.
+        // This keeps the borrow alive and valid for the whole lifetime of the resulting factory pointer,
+        // which means that when casting back to `Self` we can still soundly access all of `F` as well.
+        let self_ptr: NonNull<Self> = self.into();
+
+        // SAFETY: TODO
+        unsafe { RawFactoryPointer::from_raw(self_ptr.cast()) }
+    }
+
+    /// TODO
+    #[inline]
+    pub fn as_raw_ptr(&self) -> *const Raw {
+        self.as_raw().as_raw().as_ptr()
     }
 
     /// Returns a shared reference to the `F` factory instance.
@@ -69,15 +83,15 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
     ///
     /// # Example
     ///
-    /// This is the implementation of the [`plugin_count`](crate::factory::plugin::PluginFactory::plugin_count)
+    /// This is the implementation of the [`plugin_count`](crate::factory::plugin::PluginFactoryImpl::plugin_count)
     /// callback's C wrapper.
     ///
     /// ```
     /// use clap_sys::factory::plugin_factory::clap_plugin_factory;
     /// use clack_plugin::plugin::{Plugin, PluginMainThread};
-    /// use clack_plugin::factory::{FactoryWrapper, plugin::PluginFactory};
+    /// use clack_plugin::factory::{FactoryWrapper, plugin::PluginFactoryImpl};
     ///
-    /// unsafe extern "C" fn get_plugin_count<F: PluginFactory>(factory: *const clap_plugin_factory) -> u32 {
+    /// unsafe extern "C" fn get_plugin_count<F: PluginFactoryImpl>(factory: *const clap_plugin_factory) -> u32 {
     ///    FactoryWrapper::<clap_plugin_factory, F>::handle(factory, |factory| {
     ///        Ok(factory.plugin_count())
     ///    })

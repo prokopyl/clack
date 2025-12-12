@@ -30,6 +30,11 @@ pub struct clap_plugin_factory_as_vst3 {
     >,
 }
 
+// SAFETY: everything here is read-only
+unsafe impl Send for clap_plugin_factory_as_vst3 {}
+// SAFETY: everything here is read-only
+unsafe impl Sync for clap_plugin_factory_as_vst3 {}
+
 pub const CLAP_PLUGIN_AS_VST3: &CStr = c"clap.plugin-info-as-vst3/0";
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

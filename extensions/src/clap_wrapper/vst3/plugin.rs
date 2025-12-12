@@ -1,7 +1,8 @@
 use super::sys::*;
-use super::{PluginAsVST3, PluginInfoAsVST3, SupportedNoteExpressions};
+use super::{PluginAsVST3, PluginAsVst3Factory, PluginInfoAsVST3, SupportedNoteExpressions};
+use clack_common::factory::RawFactoryPointer;
 use clack_plugin::extensions::prelude::*;
-use clack_plugin::factory::{Factory, FactoryWrapper};
+use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
 
 pub trait PluginFactoryAsVST3Impl {
@@ -11,12 +12,6 @@ pub trait PluginFactoryAsVST3Impl {
 #[repr(C)]
 pub struct PluginFactoryAsVST3Wrapper<F> {
     inner: FactoryWrapper<clap_plugin_factory_as_vst3, F>,
-}
-
-// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_vst3 as its first field, and matches
-// CLAP_PLUGIN_FACTORY_INFO_VST3.
-unsafe impl<F: PluginFactoryAsVST3Impl> Factory for PluginFactoryAsVST3Wrapper<F> {
-    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_INFO_VST3];
 }
 
 impl<F: PluginFactoryAsVST3Impl> PluginFactoryAsVST3Wrapper<F> {
@@ -103,4 +98,16 @@ where
             .bits())
     })
     .unwrap_or(0)
+}
+
+impl<F> FactoryImplementation for PluginFactoryAsVST3Wrapper<F> {
+    type Factory<'a>
+        = PluginAsVst3Factory<'a>
+    where
+        Self: 'a;
+
+    #[inline]
+    fn get_raw(&self) -> RawFactoryPointer<'_, clap_plugin_factory_as_vst3> {
+        self.inner.as_raw()
+    }
 }

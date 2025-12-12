@@ -7,7 +7,7 @@
 //!
 //! A bundle's [`Entry`] is the only exposed symbol in the library. Once
 //! [initialized](Entry::new), its role is to expose a number of [factories](Factory), which are
-//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactory),
+//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactoryImpl),
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
 //!
@@ -19,7 +19,7 @@
 //! expose a single plugin type to the host.
 
 use crate::extensions::wrapper::handle_panic;
-use crate::factory::Factory;
+use crate::factory::{Factory, FactoryImplementation};
 use std::error::Error;
 use std::ffi::{CStr, c_void};
 use std::fmt::{Display, Formatter};
@@ -33,13 +33,13 @@ mod single;
 
 pub use single::{DefaultPluginFactory, SinglePluginEntry};
 
-/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
+/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactoryImpl) types.
 pub mod prelude {
     pub use crate::{
         entry::{Entry, EntryDescriptor, EntryFactories, EntryLoadError, SinglePluginEntry},
         factory::{
             Factory,
-            plugin::{PluginFactory, PluginFactoryWrapper},
+            plugin::{PluginFactoryImpl, PluginFactoryWrapper},
         },
         host::HostInfo,
         plugin::{PluginDescriptor, PluginInstance},
@@ -113,7 +113,7 @@ pub mod prelude {
 ///     }
 /// }
 ///
-/// impl PluginFactory for MyPluginFactory {
+/// impl PluginFactoryImpl for MyPluginFactory {
 ///     fn plugin_count(&self) -> u32 {
 ///         2 // We have 2 plugins to expose to the host
 ///     }
@@ -348,13 +348,13 @@ impl<'a> EntryFactories<'a> {
     /// usage pattern.
     ///
     /// See [`Entry`]'s documentation for an example.
-    pub fn register_factory<F: Factory>(&mut self, factory: &'a F) -> &mut Self {
+    pub fn register_factory<F: FactoryImplementation>(&mut self, factory: &'a F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }
 
-        if F::IDENTIFIERS.contains(&self.requested) {
-            self.found = Some(factory.get_raw_factory_ptr())
+        if F::Factory::IDENTIFIERS.contains(&self.requested) {
+            self.found = Some(factory.get_raw().as_raw().cast())
         }
 
         self
