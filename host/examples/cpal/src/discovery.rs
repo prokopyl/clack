@@ -100,7 +100,22 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 ///
 /// CLAP bundles are files that end with the `.clap` extension.
 fn is_clap_bundle(dir_entry: &DirEntry) -> bool {
-    dir_entry.file_type().is_file() && dir_entry.file_name().to_string_lossy().ends_with(".clap")
+    is_bundle(dir_entry)
+        && dir_entry
+            .path()
+            .extension()
+            .is_some_and(|ext| ext == "clap")
+}
+
+/// Returns `true` if the given entry could refer to a bundle.
+///
+/// CLAP bundles are directories on MacOS and files everywhere else.
+fn is_bundle(dir_entry: &DirEntry) -> bool {
+    if cfg!(target_os = "macos") {
+        dir_entry.file_type().is_dir()
+    } else {
+        dir_entry.file_type().is_file()
+    }
 }
 
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
