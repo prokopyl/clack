@@ -5,7 +5,6 @@ use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::error::Error;
-use std::ffi::{OsStr, OsString};
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
@@ -70,27 +69,8 @@ fn standard_clap_paths() -> Vec<PathBuf> {
         paths.push("/usr/lib/clap".into())
     }
 
-    /// Splits a PATH-like variable
-    #[cfg(target_family = "unix")]
-    fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
-        use std::os::unix::ffi::OsStrExt;
-        path.as_bytes()
-            .split(|c| *c == b':')
-            .map(|bytes| OsStr::from_bytes(bytes).to_os_string())
-    }
-
-    /// Splits a PATH-like variable
-    #[cfg(target_os = "windows")]
-    fn split_path(path: &OsStr) -> impl IntoIterator<Item = OsString> + '_ {
-        use std::os::windows::ffi::*;
-        let buf: Vec<u16> = path.encode_wide().collect();
-        buf.split(|c| *c == b';'.into())
-            .map(OsString::from_wide)
-            .collect::<Vec<_>>()
-    }
-
     if let Some(env_var) = std::env::var_os("CLAP_PATH") {
-        paths.extend(split_path(&env_var).into_iter().map(PathBuf::from))
+        paths.extend(std::env::split_paths(&env_var))
     }
 
     paths
