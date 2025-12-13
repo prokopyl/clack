@@ -167,12 +167,11 @@ mod plugin {
     ) where
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
-        let param_id = ClapId::new(param_id);
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
-            // SAFETY: This type is repr(C) and expected to be ABI-compatible
-            let color = *color;
             PluginWrapper::<P>::handle(plugin, |plugin| {
+                let param_id = ClapId::new(param_id);
+                let color = *color;
                 plugin.main_thread().as_mut().set_mapping(
                     param_id,
                     has_mapping,
@@ -195,12 +194,11 @@ mod plugin {
     ) where
         for<'a> P::MainThread<'a>: PluginParamIndicationImpl,
     {
-        let param_id = ClapId::new(param_id);
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
-            // SAFETY: This type is repr(C) and expected to be ABI-compatible
-            let color = *color;
             PluginWrapper::<P>::handle(plugin, |plugin| {
+                let param_id = ClapId::new(param_id);
+                let color = *color;
                 let automation_state =
                     ParamIndicationAutomation::from_raw(automation_state).unwrap();
                 plugin
