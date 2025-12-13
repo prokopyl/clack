@@ -393,12 +393,12 @@ impl OwnedCString {
         unsafe { Self::deallocate(old_ptr) };
 
         // If the string is not empty, we overwrite our EMPTY pointer with an owned one
-        if let Some(new) = new
-            && !new.is_empty()
-        {
-            // Note: this allocates, which implies it may panic. In that case we're good, because
-            // our previous inner value of EMPTY is completely valid.
-            self.0 = new.into_raw();
+        if let Some(new) = new {
+            if !new.is_empty() {
+                // Note: this allocates, which implies it may panic. In that case we're good, because
+                // our previous inner value of EMPTY is completely valid.
+                self.0 = new.into_raw();
+            }
         }
 
         // If the string is empty, then we are already set to EMPTY, so we have nothing to do.
