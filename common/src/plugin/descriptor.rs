@@ -17,6 +17,10 @@ use std::os::raw::c_char;
 /// Note that all the read accessors of this type are exposed as the CLAP-native [`CStr`], as they are not
 /// required by the CLAP spec to be UTF-8 compliant, only exposing byte slices. Hosts are left to
 /// interpret non-UTF-8 data best they can.
+///
+/// The write accessors on this type take [string](str) references for convenience reasons, but they
+/// will still internally convert them into null-terminated C strings, and panic if that conversion fails.
+///
 /// See the documentation each accessor method to learn about the available metadata.
 ///
 /// # Example
@@ -84,23 +88,29 @@ impl PluginDescriptor {
     ///
     /// # Safety
     ///
-    /// The pointer must be non-null and valid for reads for the duration of `'a`.
-    ///
-    /// Moreover, all fields must either be null, or point to a valid for reads, null-terminated C
+    /// All fields must either be null, or point to a valid for reads, null-terminated C
     /// string (or for `features`, a null-terminated array of null-terminated C strings), which all
-    /// must also be valid for reads for the duration of `'a`.
-    pub const unsafe fn from_raw<'a>(raw: *const clap_plugin_descriptor) -> &'a Self {
+    /// must also be valid for reads for the lifetime of the resulting [`PluginDescriptor`] reference.
+    pub const unsafe fn from_raw(raw: &clap_plugin_descriptor) -> &Self {
         // SAFETY: WARNING WARNING WARNING!!!
         // Even when the caller abides to the above safety rules, we MUST be CERTAIN that neither
         // `set` or `Drop` can be called on any of the transmuted fields, as that would be instant UB.
-        // Returning a shared reference here is sound, as both of those operations require mutable references.
-        unsafe { &*(raw as *const Self) }
+        // Returning a shared reference here is what makes this sound, as both of those operations
+        // require mutable references.
+        unsafe { &*(raw as *const clap_plugin_descriptor as *const Self) }
+    }
+
+    /// Returns the plugin descriptor as a reference to the C-FFI compatible CLAP struct.
+    #[inline]
+    pub fn as_raw(&self) -> &clap_plugin_descriptor {
+        // SAFETY: This type is ABI-compatible with clap_plugin_descriptor
+        unsafe { &*(self as *const Self as *const clap_plugin_descriptor) }
     }
 
     /// The unique identifier of a plugin.
     ///
     /// This field is **mandatory**, and should not be blank.
-    /// If it is found to be [`None`], it is acceptable for the host to
+    /// If it is found to be [`None`], it is acceptable for the host to refuse to load this plugin.
     ///
     /// This identifier should be as globally-unique as possible to any users that might load this
     /// plugin, as this is the key hosts will use to differentiate between different plugins.
@@ -133,7 +143,10 @@ impl PluginDescriptor {
         self
     }
 
-    /// The user-facing display name of this plugin. This field is **mandatory**, and should not be blank.
+    /// The user-facing display name of this plugin.
+    ///
+    /// This field is **mandatory**, and should not be blank.
+    /// If it is found to be [`None`], it is acceptable for the host to refuse to load this plugin.
     ///
     /// This name will be displayed in plugin lists and selectors, and will be the main way users
     /// will find and differentiate the plugin.
@@ -342,13 +355,6 @@ impl PluginDescriptor {
         self.features.set(features);
 
         self
-    }
-
-    /// Returns the plugin descriptor as a reference to the C-FFI compatible CLAP struct.
-    #[inline]
-    pub fn as_raw(&self) -> &clap_plugin_descriptor {
-        // SAFETY: This type is ABI-compatible with clap_plugin_descriptor
-        unsafe { &*(self as *const Self as *const clap_plugin_descriptor) }
     }
 }
 
