@@ -1,14 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
-    "common",
-    "host",
-    "plugin",
-    "extensions",
-    # Examples
-    "host/examples/cpal",
-    "plugin/examples/gain",
-    "plugin/examples/polysynth",
+  "common",
+  "host",
+  "plugin",
+  "extensions",
+  # Examples
+  "host/examples/cpal",
+  "plugin/examples/gain",
+  "plugin/examples/gain-gui",
+  "plugin/examples/polysynth",
 ]
 
 [workspace.dependencies]
