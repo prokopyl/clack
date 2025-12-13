@@ -1,5 +1,5 @@
-use crate::factory::PluginDescriptor;
 use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
+use clack_common::plugin::PluginDescriptor;
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -195,7 +195,7 @@ impl<'a> PluginSharedHandle<'a> {
     ///
     /// This may return `None` if the underlying plugin implementation didn't properly populate
     /// the descriptor pointer.
-    pub const fn descriptor(&self) -> Option<PluginDescriptor<'a>> {
+    pub const fn descriptor(&self) -> Option<&'a PluginDescriptor> {
         // SAFETY: the desc pointer is guaranteed to be valid (if present) by the CLAP spec.
         let Some(descriptor) = (unsafe { self.as_raw().desc.as_ref() }) else {
             return None;

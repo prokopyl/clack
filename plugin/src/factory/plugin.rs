@@ -140,7 +140,7 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///     }
 ///
 ///     fn create_plugin<'a>(&'a self, host_info: HostInfo<'a>, plugin_id: &CStr) -> Option<PluginInstance<'a>> {
-///         if plugin_id == self.plugin_descriptor.id() {
+///         if plugin_id == self.plugin_descriptor.id().unwrap_or_default() {
 ///             Some(PluginInstance::new::<MyPlugin>(
 ///                 host_info,
 ///                 &self.plugin_descriptor,

@@ -5,21 +5,27 @@ use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::os::raw::c_char;
 
-/// Represents a type that can provide metadata about a given Plugin, such as its ID, name, version,
-/// and more.
+/// Provides metadata about a given Plugin, such as its ID, name, version, and more.
 ///
-/// Note only the [`id`](PluginDescriptor::id) and [`name`](PluginDescriptor::name) fields are
-/// mandatory, and should not be blank. All the other fields are optional.
+/// All fields of this type as exposed as optional, however the CLAP specification requires the
+/// [`id`](PluginDescriptor::id) and [`name`](PluginDescriptor::name) fields to be present. It is
+/// acceptable for a host to refuse loading a plugin that returns [`None`] for these fields.
 ///
+/// As such, when constructing this type, the  [`id`](PluginDescriptor::id) and [`name`](PluginDescriptor::name) fields are
+/// mandatory, and should not be blank. All the other fields are completely optional.
+///
+/// Note that all the read accessors of this type are exposed as the CLAP-native [`CStr`], as they are not
+/// required by the CLAP spec to be UTF-8 compliant, only exposing byte slices. Hosts are left to
+/// interpret non-UTF-8 data best they can.
 /// See the documentation each accessor method to learn about the available metadata.
 ///
 /// # Example
 ///
 /// ```
-/// use clack_plugin::prelude::PluginDescriptor;
+/// use clack_common::plugin::PluginDescriptor;
 ///
 /// fn get_descriptor() -> PluginDescriptor {
-///   use clack_plugin::plugin::features::*;
+///   use clack_common::plugin::features::*;
 ///
 ///   PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
 ///     .with_description("A simple gain plugin example!")
@@ -73,15 +79,38 @@ impl PluginDescriptor {
         .with_name(name)
     }
 
-    /// The unique identifier of a plugin. This field is **mandatory**, and should not be blank.
+    /// Creates a [`PluginDescriptor`] reference from a pointer to a raw, C-FFI compatible CLAP
+    /// descriptor structure.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be non-null and valid for reads for the duration of `'a`.
+    ///
+    /// Moreover, all fields must either be null, or point to a valid for reads, null-terminated C
+    /// string (or for `features`, a null-terminated array of null-terminated C strings), which all
+    /// must also be valid for reads for the duration of `'a`.
+    pub const unsafe fn from_raw<'a>(raw: *const clap_plugin_descriptor) -> &'a Self {
+        // SAFETY: WARNING WARNING WARNING!!!
+        // Even when the caller abides to the above safety rules, we MUST be CERTAIN that neither
+        // `set` or `Drop` can be called on any of the transmuted fields, as that would be instant UB.
+        // Returning a shared reference here is sound, as both of those operations require mutable references.
+        unsafe { &*(raw as *const Self) }
+    }
+
+    /// The unique identifier of a plugin.
+    ///
+    /// This field is **mandatory**, and should not be blank.
+    /// If it is found to be [`None`], it is acceptable for the host to
     ///
     /// This identifier should be as globally-unique as possible to any users that might load this
     /// plugin, as this is the key hosts will use to differentiate between different plugins.
     ///
     /// Example: `com.u-he.diva`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
-    pub fn id(&self) -> &CStr {
-        self.id.get().unwrap_or(EMPTY)
+    pub fn id(&self) -> Option<&CStr> {
+        self.id.get()
     }
 
     /// Sets the plugin's unique ID.
@@ -110,9 +139,11 @@ impl PluginDescriptor {
     /// will find and differentiate the plugin.
     ///
     /// Example: `Diva`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
-    pub fn name(&self) -> &CStr {
-        self.name.get().unwrap_or(EMPTY)
+    pub fn name(&self) -> Option<&CStr> {
+        self.name.get()
     }
 
     /// Sets the plugin's name.
@@ -138,6 +169,8 @@ impl PluginDescriptor {
     /// The vendor of the plugin.
     ///
     /// Example: `u-he`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn vendor(&self) -> Option<&CStr> {
         self.vendor.get()
@@ -162,6 +195,8 @@ impl PluginDescriptor {
     /// The URL of this plugin's homepage.
     ///
     /// Example: `https://u-he.com/products/diva/`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn url(&self) -> Option<&CStr> {
         self.url.get()
@@ -186,6 +221,8 @@ impl PluginDescriptor {
     /// The URL of this plugin's user's manual.
     ///
     /// Example: `https://dl.u-he.com/manuals/plugins/diva/Diva-user-guide.pdf`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn manual_url(&self) -> Option<&CStr> {
         self.manual_url.get()
@@ -210,6 +247,8 @@ impl PluginDescriptor {
     /// The URL of this plugin's support page.
     ///
     /// Example: `https://u-he.com/support/`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn support_url(&self) -> Option<&CStr> {
         self.support_url.get()
@@ -237,6 +276,8 @@ impl PluginDescriptor {
     /// string.
     ///
     /// Example: `1.4.4`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn version(&self) -> Option<&CStr> {
         self.version.get()
@@ -261,6 +302,8 @@ impl PluginDescriptor {
     /// A short description of this plugin.
     ///
     /// Example: `The spirit of analogue`.
+    ///
+    /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
     pub fn description(&self) -> Option<&CStr> {
         self.description.get()

@@ -21,15 +21,13 @@
 //! list plugins.
 
 use crate::plugin::PluginInstanceError;
+use clack_common::plugin::PluginDescriptor;
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::{CStr, c_void};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
-
-mod plugin_descriptor;
-pub use plugin_descriptor::*;
 
 /// A custom factory pointer type.
 ///
@@ -115,7 +113,7 @@ impl<'a> PluginFactory<'a> {
     /// See also the [`plugin_descriptors`](PluginFactory::plugin_descriptors) method for a
     /// convenient iterator of all the plugin descriptors exposed by this factory.
     #[inline]
-    pub fn plugin_descriptor(&self, index: u32) -> Option<PluginDescriptor<'a>> {
+    pub fn plugin_descriptor(&self, index: u32) -> Option<&'a PluginDescriptor> {
         // SAFETY: descriptor is guaranteed not to outlive the entry
         unsafe { (*self.inner).get_plugin_descriptor?(self.inner, index).as_ref() }
             // SAFETY: this descriptor is guaranteed to be valid by the spec
@@ -170,7 +168,7 @@ pub struct PluginDescriptorsIter<'a> {
 }
 
 impl<'a> Iterator for PluginDescriptorsIter<'a> {
-    type Item = PluginDescriptor<'a>;
+    type Item = &'a PluginDescriptor;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -205,7 +203,7 @@ impl ExactSizeIterator for PluginDescriptorsIter<'_> {
 /// Returns an iterator of all the [`PluginDescriptor`s](PluginDescriptor) exposed by this plugin
 /// factory.
 impl<'a> IntoIterator for PluginFactory<'a> {
-    type Item = PluginDescriptor<'a>;
+    type Item = &'a PluginDescriptor;
     type IntoIter = PluginDescriptorsIter<'a>;
 
     #[inline]

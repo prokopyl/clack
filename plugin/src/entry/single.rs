@@ -97,7 +97,7 @@ impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
     ) -> Option<PluginInstance<'a>> {
-        if plugin_id == self.descriptor.id() {
+        if plugin_id == self.descriptor.id().unwrap_or_default() {
             Some(PluginInstance::new::<P>(
                 host_info,
                 &self.descriptor,

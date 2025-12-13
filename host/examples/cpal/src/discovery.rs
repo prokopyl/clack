@@ -166,7 +166,7 @@ impl PluginDescriptor {
     /// Reads the description from a given plugin descriptor.
     ///
     /// If the plugin somehow doesn't have a valid ID, this returns `None`.
-    pub fn try_from(p: clack_host::factory::PluginDescriptor) -> Option<Self> {
+    pub fn try_from(p: &clack_host::plugin::PluginDescriptor) -> Option<Self> {
         Some(PluginDescriptor {
             id: p.id()?.to_str().ok()?.to_string(),
             version: p

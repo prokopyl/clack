@@ -50,12 +50,10 @@ use crate::extensions::PluginExtensions;
 use crate::host::HostAudioProcessorHandle;
 use crate::process::{Audio, Events, PluginAudioConfiguration, Process, ProcessStatus};
 
-mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 
-pub use descriptor::*;
 pub use error::PluginError;
 pub use instance::*;
 
