@@ -1,8 +1,9 @@
 use clap_sys::plugin::clap_plugin_descriptor;
-use clap_sys::version::CLAP_VERSION;
+use clap_sys::version::{CLAP_VERSION, clap_version};
 use std::ffi::{CStr, CString};
+use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
 use std::os::raw::c_char;
-use std::pin::Pin;
 
 /// Represents a type that can provide metadata about a given Plugin, such as its ID, name, version,
 /// and more.
@@ -26,31 +27,20 @@ use std::pin::Pin;
 ///     .with_features([AUDIO_EFFECT, STEREO])
 /// }
 /// ```
+#[repr(C)]
+#[derive(Clone)]
 pub struct PluginDescriptor {
-    id: Pin<Box<CStr>>,
-    name: Pin<Box<CStr>>,
-
-    vendor: Option<Pin<Box<CStr>>>,
-    url: Option<Pin<Box<CStr>>>,
-    manual_url: Option<Pin<Box<CStr>>>,
-    support_url: Option<Pin<Box<CStr>>>,
-    version: Option<Pin<Box<CStr>>>,
-    description: Option<Pin<Box<CStr>>>,
-
-    features: Vec<Box<CStr>>,
-    features_array: Vec<*const c_char>,
-
-    raw_descriptor: clap_plugin_descriptor,
+    clap_version: clap_version,
+    id: OwnedCString,
+    name: OwnedCString,
+    vendor: OwnedCString,
+    url: OwnedCString,
+    manual_url: OwnedCString,
+    support_url: OwnedCString,
+    version: OwnedCString,
+    description: OwnedCString,
+    features: OwnedCStringArray,
 }
-
-// SAFETY: PluginDescriptor is fully self-contained, the pointers refer to data owned by it.
-unsafe impl Send for PluginDescriptor {}
-
-// SAFETY: PluginDescriptor does not have any interior mutability.
-unsafe impl Sync for PluginDescriptor {}
-
-const EMPTY: &CStr = c"";
-const EMPTY_FEATURES: &[*const c_char] = &[core::ptr::null()];
 
 impl PluginDescriptor {
     /// Creates a new plugin descriptor, initializing it with the given Plugin ID and name.
@@ -65,54 +55,22 @@ impl PluginDescriptor {
     ///
     /// This function will also panic if either the given ID or name contain invalid NULL-byte
     /// characters, which are invalid.
+    #[inline]
     pub fn new(id: &str, name: &str) -> Self {
-        if id.is_empty() {
-            panic!("Plugin ID must not be blank!");
-        }
-
-        if name.is_empty() {
-            panic!("Plugin Name must not be blank!");
-        }
-
-        let id = Pin::new(
-            CString::new(id)
-                .expect("Invalid Plugin ID")
-                .into_boxed_c_str(),
-        );
-
-        let name = Pin::new(
-            CString::new(name)
-                .expect("Invalid Plugin Name")
-                .into_boxed_c_str(),
-        );
-
         Self {
-            raw_descriptor: clap_plugin_descriptor {
-                clap_version: CLAP_VERSION,
-                id: id.as_ptr(),
-                name: name.as_ptr(),
-                vendor: EMPTY.as_ptr(),
-                url: EMPTY.as_ptr(),
-                manual_url: EMPTY.as_ptr(),
-                support_url: EMPTY.as_ptr(),
-                version: EMPTY.as_ptr(),
-                description: EMPTY.as_ptr(),
-                features: EMPTY_FEATURES.as_ptr(),
-            },
-
-            id,
-            name,
-
-            vendor: None,
-            url: None,
-            manual_url: None,
-            support_url: None,
-            version: None,
-            description: None,
-
-            features: vec![],
-            features_array: vec![],
+            clap_version: CLAP_VERSION,
+            id: OwnedCString::empty(),
+            name: OwnedCString::empty(),
+            vendor: OwnedCString::empty(),
+            url: OwnedCString::empty(),
+            manual_url: OwnedCString::empty(),
+            support_url: OwnedCString::empty(),
+            version: OwnedCString::empty(),
+            description: OwnedCString::empty(),
+            features: OwnedCStringArray::empty(),
         }
+        .with_id(id)
+        .with_name(name)
     }
 
     /// The unique identifier of a plugin. This field is **mandatory**, and should not be blank.
@@ -123,7 +81,7 @@ impl PluginDescriptor {
     /// Example: `com.u-he.diva`.
     #[inline]
     pub fn id(&self) -> &CStr {
-        &self.id
+        self.id.get().unwrap_or(EMPTY)
     }
 
     /// Sets the plugin's unique ID.
@@ -140,14 +98,8 @@ impl PluginDescriptor {
             panic!("Plugin ID must not be blank!");
         }
 
-        let id = Pin::new(
-            CString::new(id)
-                .expect("Invalid Plugin ID")
-                .into_boxed_c_str(),
-        );
-
-        self.raw_descriptor.id = id.as_ptr();
-        self.id = id;
+        let id = CString::new(id).expect("Invalid Plugin ID");
+        self.id.set(Some(id));
 
         self
     }
@@ -160,7 +112,7 @@ impl PluginDescriptor {
     /// Example: `Diva`.
     #[inline]
     pub fn name(&self) -> &CStr {
-        &self.name
+        self.name.get().unwrap_or(EMPTY)
     }
 
     /// Sets the plugin's name.
@@ -177,14 +129,8 @@ impl PluginDescriptor {
             panic!("Plugin name must not be blank!");
         }
 
-        let name = Pin::new(
-            CString::new(name)
-                .expect("Invalid Plugin name")
-                .into_boxed_c_str(),
-        );
-
-        self.raw_descriptor.name = name.as_ptr();
-        self.name = name;
+        let name = CString::new(name).expect("Invalid Plugin name");
+        self.name.set(Some(name));
 
         self
     }
@@ -194,7 +140,7 @@ impl PluginDescriptor {
     /// Example: `u-he`.
     #[inline]
     pub fn vendor(&self) -> Option<&CStr> {
-        self.vendor.as_deref()
+        self.vendor.get()
     }
 
     /// Sets the plugin's vendor name.
@@ -209,20 +155,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given vendor name contains NULL-byte characters,
     /// which are invalid.
     pub fn with_vendor(mut self, vendor: &str) -> Self {
-        if vendor.is_empty() {
-            self.raw_descriptor.vendor = EMPTY.as_ptr();
-            self.vendor = None;
-        } else {
-            let vendor = Pin::new(
-                CString::new(vendor)
-                    .expect("Invalid Plugin vendor")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.vendor = vendor.as_ptr();
-            self.vendor = Some(vendor);
-        }
-
+        self.vendor.set_str(vendor);
         self
     }
 
@@ -231,7 +164,7 @@ impl PluginDescriptor {
     /// Example: `https://u-he.com/products/diva/`.
     #[inline]
     pub fn url(&self) -> Option<&CStr> {
-        self.url.as_deref()
+        self.url.get()
     }
 
     /// Sets the plugin's homepage's URL.
@@ -246,20 +179,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given URL contains NULL-byte characters,
     /// which are invalid.
     pub fn with_url(mut self, url: &str) -> Self {
-        if url.is_empty() {
-            self.raw_descriptor.url = EMPTY.as_ptr();
-            self.url = None;
-        } else {
-            let url = Pin::new(
-                CString::new(url)
-                    .expect("Invalid Plugin URL")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.url = url.as_ptr();
-            self.url = Some(url);
-        }
-
+        self.url.set_str(url);
         self
     }
 
@@ -268,7 +188,7 @@ impl PluginDescriptor {
     /// Example: `https://dl.u-he.com/manuals/plugins/diva/Diva-user-guide.pdf`.
     #[inline]
     pub fn manual_url(&self) -> Option<&CStr> {
-        self.manual_url.as_deref()
+        self.manual_url.get()
     }
 
     /// Sets the plugin's manual's URL.
@@ -283,20 +203,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given URL contains NULL-byte characters,
     /// which are invalid.
     pub fn with_manual_url(mut self, manual_url: &str) -> Self {
-        if manual_url.is_empty() {
-            self.raw_descriptor.manual_url = EMPTY.as_ptr();
-            self.manual_url = None;
-        } else {
-            let manual_url = Pin::new(
-                CString::new(manual_url)
-                    .expect("Invalid Plugin Manual URL")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.manual_url = manual_url.as_ptr();
-            self.manual_url = Some(manual_url);
-        }
-
+        self.manual_url.set_str(manual_url);
         self
     }
 
@@ -305,7 +212,7 @@ impl PluginDescriptor {
     /// Example: `https://u-he.com/support/`.
     #[inline]
     pub fn support_url(&self) -> Option<&CStr> {
-        self.support_url.as_deref()
+        self.support_url.get()
     }
 
     /// Sets the plugin's support URL.
@@ -320,20 +227,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given URL contains NULL-byte characters,
     /// which are invalid.
     pub fn with_support_url(mut self, support_url: &str) -> Self {
-        if support_url.is_empty() {
-            self.raw_descriptor.support_url = EMPTY.as_ptr();
-            self.support_url = None;
-        } else {
-            let support_url = Pin::new(
-                CString::new(support_url)
-                    .expect("Invalid Plugin Support URL")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.support_url = support_url.as_ptr();
-            self.support_url = Some(support_url);
-        }
-
+        self.support_url.set_str(support_url);
         self
     }
 
@@ -345,7 +239,7 @@ impl PluginDescriptor {
     /// Example: `1.4.4`.
     #[inline]
     pub fn version(&self) -> Option<&CStr> {
-        self.version.as_deref()
+        self.version.get()
     }
 
     /// Sets the plugin's version string.
@@ -360,20 +254,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given version string contains NULL-byte characters,
     /// which are invalid.
     pub fn with_version(mut self, version: &str) -> Self {
-        if version.is_empty() {
-            self.raw_descriptor.version = EMPTY.as_ptr();
-            self.version = None;
-        } else {
-            let version = Pin::new(
-                CString::new(version)
-                    .expect("Invalid Plugin version")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.version = version.as_ptr();
-            self.version = Some(version);
-        }
-
+        self.version.set_str(version);
         self
     }
 
@@ -382,7 +263,7 @@ impl PluginDescriptor {
     /// Example: `The spirit of analogue`.
     #[inline]
     pub fn description(&self) -> Option<&CStr> {
-        self.description.as_deref()
+        self.description.get()
     }
 
     /// Sets the plugin's description.
@@ -397,20 +278,7 @@ impl PluginDescriptor {
     /// This function will also panic if the given description contains NULL-byte characters,
     /// which are invalid.
     pub fn with_description(mut self, description: &str) -> Self {
-        if description.is_empty() {
-            self.raw_descriptor.description = EMPTY.as_ptr();
-            self.description = None;
-        } else {
-            let description = Pin::new(
-                CString::new(description)
-                    .expect("Invalid Plugin description")
-                    .into_boxed_c_str(),
-            );
-
-            self.raw_descriptor.description = description.as_ptr();
-            self.description = Some(description);
-        }
-
+        self.description.set_str(description);
         self
     }
 
@@ -420,23 +288,15 @@ impl PluginDescriptor {
     ///
     /// Example: `"instrument", "synthesizer", "stereo"`.
     #[inline]
-    pub fn features(&self) -> &[Box<CStr>] {
-        &self.features
+    pub fn features(&self) -> FeaturesIter<'_> {
+        self.features.get()
     }
 
     /// Sets the plugin's feature list.
     ///
     /// See the [`features`](PluginDescriptor::features) method documentation for more information.
     pub fn with_features<'a>(mut self, features: impl IntoIterator<Item = &'a CStr>) -> Self {
-        self.features = features
-            .into_iter()
-            .map(|s| CString::from(s).into_boxed_c_str())
-            .collect();
-
-        self.features_array = self.features.iter().map(|f| f.as_ptr()).collect();
-        self.features_array.push(core::ptr::null());
-
-        self.raw_descriptor.features = self.features_array.as_ptr();
+        self.features.set(features);
 
         self
     }
@@ -444,61 +304,311 @@ impl PluginDescriptor {
     /// Returns the plugin descriptor as a reference to the C-FFI compatible CLAP struct.
     #[inline]
     pub fn as_raw(&self) -> &clap_plugin_descriptor {
-        &self.raw_descriptor
+        // SAFETY: This type is ABI-compatible with clap_plugin_descriptor
+        unsafe { &*(self as *const Self as *const clap_plugin_descriptor) }
     }
 }
 
-impl Clone for PluginDescriptor {
+const _: () = {
+    assert!(align_of::<clap_plugin_descriptor>() == align_of::<PluginDescriptor>());
+    assert!(size_of::<clap_plugin_descriptor>() == size_of::<PluginDescriptor>());
+};
+
+static EMPTY: &CStr = c"";
+
+/// # Safety Invariants
+///
+/// This type's inner pointer can either be :
+///
+/// * null;
+/// * pointing to `EMPTY`;
+/// * pointing to a string created by CString::into_raw.
+///
+/// This type alone cannot set its pointer to any other kind of value.
+///
+/// # Transmuting
+/// This type is `#[repr(C)]` and so *can* be transmuted from a raw `*const c_char`, in which case
+/// it may hold an arbitrary pointer.
+///
+/// In this case, you **MUST NOT** drop it, or to call `set`, which would cause immediate UB.
+///
+/// `get` may be called, but **only** if the pointer points to a valid C String (nul-terminated), and
+/// the pointer's value is not changed for the lifetime of this type.
+///
+/// In any case, this type can always safely be transmuted *to* a raw `*const c_char`.
+#[repr(C)]
+struct OwnedCString(*const c_char);
+
+// SAFETY: OwnedCString is fully self-contained, the pointers refer to data owned by it.
+unsafe impl Send for OwnedCString {}
+
+// SAFETY: OwnedCString does not have any interior mutability.
+unsafe impl Sync for OwnedCString {}
+
+impl OwnedCString {
+    #[inline]
+    pub fn new(string: Option<CString>) -> Self {
+        let mut new = Self::empty();
+        new.set(string);
+        new
+    }
+
+    #[inline]
+    fn into_raw(self) -> *const c_char {
+        let s = ManuallyDrop::new(self);
+        s.0
+    }
+
+    /// # Safety
+    ///
+    /// This pointer MUST follow this type's safety invariants.
+    ///
+    /// See [`OwnedCString`].
+    #[inline]
+    unsafe fn from_raw(ptr: *const c_char) -> Self {
+        Self(ptr)
+    }
+
+    #[inline]
+    pub const fn empty() -> Self {
+        Self(EMPTY.as_ptr())
+    }
+
+    #[inline]
+    pub fn get(&self) -> Option<&CStr> {
+        if Self::is_allocated(self.0) {
+            // SAFETY: From our own invariants
+            Some(unsafe { CStr::from_ptr(self.0) })
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn set(&mut self, new: Option<CString>) {
+        // We do this just in case *something* panics, in which case this instance remains valid and worst case we just leak some memory.
+        let old_ptr = core::mem::replace(&mut self.0, EMPTY.as_ptr());
+
+        // SAFETY: per our own invariants, this pointer is either null, EMPTY, or from to_raw.
+        unsafe { Self::deallocate(old_ptr) };
+
+        // If the string is not empty, we overwrite our EMPTY pointer with an owned one
+        if let Some(new) = new
+            && !new.is_empty()
+        {
+            // Note: this allocates, which implies it may panic. In that case we're good, because
+            // our previous inner value of EMPTY is completely valid.
+            self.0 = new.into_raw();
+        }
+
+        // If the string is empty, then we are already set to EMPTY, so we have nothing to do.
+    }
+
+    #[inline]
+    pub fn set_str(&mut self, string: &str) {
+        if string.is_empty() {
+            self.set(None);
+            return;
+        }
+
+        let string = CString::new(string).expect("Invalid plugin descriptor string.");
+        self.set(Some(string));
+    }
+
+    #[inline]
+    fn is_allocated(ptr: *const c_char) -> bool {
+        !ptr.is_null() && ptr != EMPTY.as_ptr()
+    }
+
+    /// # Safety
+    ///
+    /// This must ONLY be called on pointers that are either null, EMPTY, or from [`Self::allocate`].
+    #[inline]
+    unsafe fn deallocate(old_ptr: *const c_char) {
+        if Self::is_allocated(old_ptr) {
+            // SAFETY: From our own invariants, if it's not null or EMPTY, then it's from into_raw.
+            let _ = unsafe { CString::from_raw(old_ptr.cast_mut()) };
+        }
+    }
+}
+
+impl Clone for OwnedCString {
+    #[inline]
     fn clone(&self) -> Self {
-        let id = self.id.clone();
-        let name = self.name.clone();
+        Self::new(self.get().map(|s| s.to_owned()))
+    }
+}
 
-        let vendor = self.vendor.clone();
-        let url = self.url.clone();
-        let manual_url = self.manual_url.clone();
-        let support_url = self.support_url.clone();
-        let version = self.version.clone();
-        let description = self.description.clone();
+impl Drop for OwnedCString {
+    #[inline]
+    fn drop(&mut self) {
+        // Just in case.
+        let old_ptr = core::mem::replace(&mut self.0, EMPTY.as_ptr());
 
-        let features = self.features.clone();
-        let mut features_array: Vec<_> = features.iter().map(|f| f.as_ptr()).collect();
+        // SAFETY: per our own invariants, this pointer is either null, EMPTY, or from to_raw.
+        unsafe { Self::deallocate(old_ptr) };
+    }
+}
 
-        if !features_array.is_empty() {
-            features_array.push(core::ptr::null())
+/// The same invariants as for [`OwnedCString`], but for an array.
+#[repr(C)]
+struct OwnedCStringArray(*const *const c_char);
+
+// SAFETY: OwnedCStringArray is fully self-contained, the pointers refer to data owned by it.
+unsafe impl Send for OwnedCStringArray {}
+
+// SAFETY: OwnedCStringArray does not have any interior mutability.
+unsafe impl Sync for OwnedCStringArray {}
+
+// Technically this doesn't need to be OwnedCString, it just needs to be (ABI-compatible with)
+// any NULL pointer that's Send + Sync.
+// I could have made a dedicated wrapper but OwnedCString::empty() fits the bill just as well :)
+static EMPTY_FEATURES: &[OwnedCString; 1] = &[OwnedCString::empty()];
+
+impl OwnedCStringArray {
+    #[inline]
+    fn is_allocated(ptr: *const *const c_char) -> bool {
+        !ptr.is_null() && ptr != empty_features()
+    }
+
+    #[inline]
+    pub const fn empty() -> Self {
+        Self(empty_features())
+    }
+
+    #[inline]
+    pub const fn get(&self) -> FeaturesIter<'_> {
+        FeaturesIter {
+            ptr: CArrayIter(self.0),
+            _marker: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn set<'a>(&mut self, features: impl IntoIterator<Item = &'a CStr>) {
+        // We do this just in case *something* panics, in which case this instance remains valid and worst case we just leak some memory.
+        let old_ptr = core::mem::replace(&mut self.0, empty_features());
+
+        // SAFETY: per our own invariants, this pointer is either null, EMPTY, or from to_raw.
+        unsafe { Self::deallocate(old_ptr) };
+
+        // It is safe to transmute OwnedCString to *const c_char.
+        self.0 = Self::allocate(features).cast::<*const c_char>();
+    }
+
+    fn allocate<'a>(features: impl IntoIterator<Item = &'a CStr>) -> *const OwnedCString {
+        let mut strings = Vec::with_capacity(1);
+
+        for feature in features {
+            strings.push(OwnedCString::new(Some(feature.to_owned())).into_raw());
         }
 
-        Self {
-            raw_descriptor: clap_plugin_descriptor {
-                clap_version: CLAP_VERSION,
-                id: id.as_ptr(),
-                name: name.as_ptr(),
-
-                vendor: vendor.as_deref().unwrap_or(EMPTY).as_ptr(),
-                url: url.as_deref().unwrap_or(EMPTY).as_ptr(),
-                manual_url: manual_url.as_deref().unwrap_or(EMPTY).as_ptr(),
-                support_url: support_url.as_deref().unwrap_or(EMPTY).as_ptr(),
-                version: version.as_deref().unwrap_or(EMPTY).as_ptr(),
-                description: description.as_deref().unwrap_or(EMPTY).as_ptr(),
-
-                features: if features.is_empty() {
-                    EMPTY_FEATURES.as_ptr()
-                } else {
-                    features_array.as_ptr()
-                },
-            },
-
-            id,
-            name,
-
-            vendor,
-            url,
-            manual_url,
-            support_url,
-            version,
-            description,
-
-            features,
-            features_array,
+        if strings.is_empty() {
+            return EMPTY_FEATURES.as_ptr().cast_mut();
         }
+
+        strings.push(core::ptr::null());
+
+        let strings = strings.into_boxed_slice();
+        let strings = Box::into_raw(strings);
+
+        strings.cast()
+    }
+
+    /// # Safety
+    ///
+    /// This must ONLY be called on pointers that are either null, EMPTY_FEATURES, or from [`Self::allocate`].
+    unsafe fn deallocate(ptr: *const *const c_char) {
+        if !Self::is_allocated(ptr) {
+            return;
+        }
+
+        // First: deallocate *everything* in here, while tracking the length of the array.
+        let mut len = 1; // Include the null terminator.
+
+        // Note: if any of these calls panics, then we simply leak the vec.
+        // SAFETY: per our own invariants, this is a null-terminated array that we own (see allocate).
+        for str in unsafe { CArrayIter::new(ptr) } {
+            // SAFETY: made by OwnedCString::into_raw
+            let _ = unsafe { OwnedCString::from_raw(str) };
+            len += 1;
+        }
+
+        // Then, reconstruct the Boxed slice and deallocate that.
+        // SAFETY: this was made from Box::into_raw in allocate.
+        let _ = unsafe { Box::from_raw(core::ptr::slice_from_raw_parts_mut(ptr.cast_mut(), len)) };
+    }
+}
+
+impl Clone for OwnedCStringArray {
+    fn clone(&self) -> Self {
+        let mut new = Self::empty();
+        new.set(self.get());
+        new
+    }
+}
+
+impl Drop for OwnedCStringArray {
+    #[inline]
+    fn drop(&mut self) {
+        // Just in case.
+        let old_ptr = core::mem::replace(&mut self.0, empty_features());
+
+        // SAFETY: per our own invariants, this pointer is either null, EMPTY, or from to_raw.
+        unsafe { Self::deallocate(old_ptr) };
+    }
+}
+
+const fn empty_features() -> *const *const c_char {
+    EMPTY_FEATURES.as_ptr().cast()
+}
+
+pub struct FeaturesIter<'a> {
+    ptr: CArrayIter,
+    _marker: PhantomData<&'a OwnedCStringArray>,
+}
+
+impl<'a> Iterator for FeaturesIter<'a> {
+    type Item = &'a CStr;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.ptr.next()?;
+
+        if next.is_null() {
+            return None;
+        }
+
+        // SAFETY: upheld by caller to be a valid C string for 'a
+        Some(unsafe { CStr::from_ptr(next) })
+    }
+}
+
+struct CArrayIter(*const *const c_char);
+
+impl CArrayIter {
+    /// # Safety
+    ///
+    /// This must either be NULL, point to a null-terminated C array
+    #[inline]
+    unsafe fn new(ptr: *const *const c_char) -> Self {
+        Self(ptr)
+    }
+}
+
+impl Iterator for CArrayIter {
+    type Item = *const c_char;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: Upheld by caller that the array this points to is null-terminated
+        let current = *unsafe { self.0.as_ref() }?;
+
+        if current.is_null() {
+            return None;
+        }
+
+        self.0 = self.0.wrapping_add(1);
+        Some(current)
     }
 }
