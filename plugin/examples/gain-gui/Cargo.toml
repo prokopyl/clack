@@ -1,0 +1,35 @@
+[package]
+name = "clack-plugin-gain-gui"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+clack-plugin = { workspace = true }
+clack-extensions = { workspace = true, features = [
+  "audio-ports",
+  "clack-plugin",
+  "gui",
+  "note-ports",
+  "params",
+  "raw-window-handle_05",
+  "state",
+] }
+
+baseview = { git = "https://github.com/RustAudio/baseview.git", rev = "237d323c729f3aa99476ba3efa50129c5e86cad3", version = "0.1.0" }
+egui-baseview = { git = "https://codeberg.org/BillyDM/egui-baseview.git", version = "0.7.0" }
+raw-window-handle = "0.5.2"
+
+[dev-dependencies]
+clack-host = { workspace = true, features = ["clack-plugin"] }
+clack-extensions = { workspace = true, features = [
+  "audio-ports",
+  "params",
+  "state",
+  "clack-plugin",
+  "clack-host",
+] }
