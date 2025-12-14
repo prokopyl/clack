@@ -353,7 +353,7 @@ impl<'a> EntryFactories<'a> {
 
         for requested in self.requested {
             if F::Factory::IDENTIFIERS.contains(requested) {
-                self.found = Some(factory.get_raw().as_raw().cast());
+                self.found = Some(factory.wrapper().as_raw().as_raw().cast());
                 break;
             }
         }

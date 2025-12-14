@@ -29,6 +29,7 @@ pub trait FactoryImplementation {
     type Factory<'a>: Factory<'a>
     where
         Self: 'a;
+    type Wrapped;
 
-    fn get_raw(&self) -> RawFactoryPointer<'_, <Self::Factory<'_> as Factory<'_>>::Raw>;
+    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory<'_> as Factory<'_>>::Raw, Self::Wrapped>;
 }

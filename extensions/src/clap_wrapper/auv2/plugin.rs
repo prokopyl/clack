@@ -1,6 +1,5 @@
 use super::sys::*;
 use super::{PluginAsAuv2Factory, PluginInfoAsAUv2};
-use clack_common::factory::RawFactoryPointer;
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
 
@@ -55,9 +54,10 @@ impl<F> FactoryImplementation for PluginFactoryAsAUv2Wrapper<F> {
         = PluginAsAuv2Factory<'a>
     where
         Self: 'a;
+    type Wrapped = F;
 
     #[inline]
-    fn get_raw(&self) -> RawFactoryPointer<'_, clap_plugin_factory_as_auv2> {
-        self.inner.as_raw()
+    fn wrapper(&self) -> &FactoryWrapper<clap_plugin_factory_as_auv2, F> {
+        &self.inner
     }
 }

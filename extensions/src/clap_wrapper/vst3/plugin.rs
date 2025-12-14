@@ -1,6 +1,5 @@
 use super::sys::*;
 use super::{PluginAsVST3, PluginFactoryAsVST3, PluginInfoAsVST3, SupportedNoteExpressions};
-use clack_common::factory::RawFactoryPointer;
 use clack_plugin::extensions::prelude::*;
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
@@ -105,9 +104,10 @@ impl<F> FactoryImplementation for PluginFactoryAsVST3Wrapper<F> {
         = PluginFactoryAsVST3<'a>
     where
         Self: 'a;
+    type Wrapped = F;
 
     #[inline]
-    fn get_raw(&self) -> RawFactoryPointer<'_, clap_plugin_factory_as_vst3> {
-        self.inner.as_raw()
+    fn wrapper(&self) -> &FactoryWrapper<clap_plugin_factory_as_vst3, Self::Wrapped> {
+        &self.inner
     }
 }

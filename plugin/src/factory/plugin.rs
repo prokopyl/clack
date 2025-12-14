@@ -9,7 +9,7 @@
 use super::*;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
-use clack_common::factory::{RawFactoryPointer, plugin::PluginFactory};
+use clack_common::factory::plugin::PluginFactory;
 use clap_sys::factory::plugin_factory::clap_plugin_factory;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
@@ -99,10 +99,11 @@ impl<F: PluginFactoryImpl> FactoryImplementation for PluginFactoryWrapper<F> {
         = PluginFactory<'a>
     where
         Self: 'a;
+    type Wrapped = F;
 
     #[inline]
-    fn get_raw(&self) -> RawFactoryPointer<'_, clap_plugin_factory> {
-        self.inner.as_raw()
+    fn wrapper(&self) -> &FactoryWrapper<clap_plugin_factory, F> {
+        &self.inner
     }
 }
 
