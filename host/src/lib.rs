@@ -30,7 +30,7 @@
 //!
 //!    See the [`factory`] module documentation to learn more about factories.
 //! 3. The [`PluginFactory`](factory::PluginFactory) can be used to list
-//!    [`PluginDescriptor`s](factory::PluginDescriptor), each of which contains various information
+//!    [`PluginDescriptor`s](plugin::PluginDescriptor), each of which contains various information
 //!    (displayed name, author, etc.) about the plugins included in this bundle, including their
 //!    unique IDs. These can be displayed in a list for the user to chose from.
 //! 4. The selected plugin's ID can now be used to create a new

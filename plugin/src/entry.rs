@@ -136,7 +136,7 @@ pub mod prelude {
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,
 ///     ) -> Option<PluginInstance<'a>> {
-///         if plugin_id == self.first_plugin.id() {
+///         if plugin_id == self.first_plugin.id().unwrap_or_default() {
 ///             // We can use the PluginInstance type to easily make a new instance of a given
 ///             // plugin type.
 ///             Some(PluginInstance::new::<MyFirstPlugin>(
@@ -145,7 +145,7 @@ pub mod prelude {
 ///                 |_host| Ok(()) /* Create the shared struct */,
 ///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
 ///             ))
-///         } else if plugin_id == self.second_plugin.id() {
+///         } else if plugin_id == self.second_plugin.id().unwrap_or_default() {
 ///             Some(PluginInstance::new::<MySecondPlugin>(
 ///                 host_info,
 ///                 &self.second_plugin,
