@@ -58,6 +58,18 @@ pub mod plugin;
 ///     }
 /// }
 ///
+/// impl<'a> PluginFactory<'a> {
+///     pub fn plugin_count(&self) -> u32 {
+///         let Some(get_plugin_count) = self.0.get().get_plugin_count else {
+///             return 0;
+///         }
+///
+///         // SAFETY: this type can only get constructed from a plugin-provided pointer, so the
+///         // CLAP spec enforces that this function pointer is actually valid to call.
+///         unsafe { get_plugin_count(self.0.as_ptr()) }
+///     }
+/// }
+///
 /// ```
 pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync {
     /// The standard identifier for this extension.
@@ -65,5 +77,10 @@ pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync {
     type Raw: Copy + Sized + Send + Sync + 'static;
 
     /// Returns an instance of the extension from a given extension pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that not only is the factory structure the `raw` pointer points
+    /// to is valid, but also
     unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self;
 }

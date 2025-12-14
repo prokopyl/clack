@@ -1,6 +1,5 @@
 #![allow(non_camel_case_types)]
 
-#[cfg(any(feature = "clack-host", feature = "clack-plugin"))]
 pub const CLAP_PLUGIN_FACTORY_INFO_AUV2: &core::ffi::CStr =
     c"clap.plugin-factory-info-as-auv2.draft0";
 

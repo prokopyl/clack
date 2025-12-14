@@ -3,7 +3,6 @@
 use clap_sys::plugin::clap_plugin;
 use core::ffi::{CStr, c_char};
 
-#[cfg(any(feature = "clack-host", feature = "clack-plugin"))]
 pub const CLAP_PLUGIN_FACTORY_INFO_VST3: &CStr = c"clap.plugin-factory-info-as-vst3/0";
 
 #[repr(C)]
