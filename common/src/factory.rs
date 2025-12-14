@@ -62,7 +62,7 @@ pub mod plugin;
 ///     pub fn plugin_count(&self) -> u32 {
 ///         let Some(get_plugin_count) = self.0.get().get_plugin_count else {
 ///             return 0;
-///         }
+///         };
 ///
 ///         // SAFETY: this type can only get constructed from a plugin-provided pointer, so the
 ///         // CLAP spec enforces that this function pointer is actually valid to call.

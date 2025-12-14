@@ -261,7 +261,6 @@
 
 pub mod bundle;
 pub mod extensions;
-//pub mod factory;
 pub use clack_common::factory;
 pub mod host;
 pub mod plugin;
