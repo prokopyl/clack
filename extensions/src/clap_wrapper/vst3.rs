@@ -137,11 +137,11 @@ bitflags! {
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
-pub struct PluginAsVst3Factory<'a>(RawFactoryPointer<'a, clap_plugin_factory_as_vst3>);
+pub struct PluginFactoryAsVST3<'a>(RawFactoryPointer<'a, clap_plugin_factory_as_vst3>);
 
 // SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_vst3 as its first field, and matches
 // CLAP_PLUGIN_FACTORY_INFO_VST3.
-unsafe impl<'a> Factory<'a> for PluginAsVst3Factory<'a> {
+unsafe impl<'a> Factory<'a> for PluginFactoryAsVST3<'a> {
     const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_INFO_VST3];
     type Raw = clap_plugin_factory_as_vst3;
 

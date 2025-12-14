@@ -1,6 +1,8 @@
 use crate::extensions::wrapper::HostWrapper;
 use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::prelude::*;
+use clack_common::factory::PluginFactory;
+use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;
 use std::pin::Pin;
@@ -56,7 +58,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             // SAFETY: the host pointer comes from a valid allocation that is pinned for the
             // lifetime of the instance
             let plugin_instance_ptr =
-                unsafe { plugin_factory.create_plugin(plugin_id, raw_descriptor)? };
+                unsafe { create_plugin(plugin_factory, raw_descriptor, plugin_id)? };
 
             // SAFETY: The pointer comes from the plugin factory
             unsafe {
@@ -251,3 +253,24 @@ impl<H: HostHandlers> Drop for PluginInstanceInner<H> {
 unsafe impl<H: HostHandlers> Send for PluginInstanceInner<H> {}
 // SAFETY: The only non-thread-safe methods on this type are unsafe
 unsafe impl<H: HostHandlers> Sync for PluginInstanceInner<H> {}
+
+/// # Safety
+///
+/// User must pass a valid clap_host pointer, which has to stay valid for the lifetime of the
+/// plugin.
+pub(crate) unsafe fn create_plugin(
+    plugin_factory: PluginFactory<'_>,
+    host: *const clap_host,
+    plugin_id: &CStr,
+) -> Result<NonNull<clap_plugin>, PluginInstanceError> {
+    let Some(create_plugin) = plugin_factory.raw().get().create_plugin else {
+        return Err(PluginInstanceError::NullFactoryCreatePluginFunction);
+    };
+
+    // SAFETY: the host pointer comes from a valid allocation that is pinned for the
+    // lifetime of the instance
+    let plugin_instance_ptr =
+        unsafe { create_plugin(plugin_factory.raw().as_ptr(), host, plugin_id.as_ptr()) };
+
+    NonNull::new(plugin_instance_ptr.cast_mut()).ok_or(PluginInstanceError::PluginNotFound)
+}

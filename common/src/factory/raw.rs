@@ -35,7 +35,7 @@ impl<'a, T> RawFactoryPointer<'a, T> {
     }
 
     #[inline]
-    pub const fn as_ptr(&self) -> *const T {
+    pub const fn as_ptr(&self) -> *mut T {
         self.inner.as_ptr()
     }
 }

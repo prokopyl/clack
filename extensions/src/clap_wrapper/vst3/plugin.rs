@@ -1,5 +1,5 @@
 use super::sys::*;
-use super::{PluginAsVST3, PluginAsVst3Factory, PluginInfoAsVST3, SupportedNoteExpressions};
+use super::{PluginAsVST3, PluginFactoryAsVST3, PluginInfoAsVST3, SupportedNoteExpressions};
 use clack_common::factory::RawFactoryPointer;
 use clack_plugin::extensions::prelude::*;
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
@@ -102,7 +102,7 @@ where
 
 impl<F> FactoryImplementation for PluginFactoryAsVST3Wrapper<F> {
     type Factory<'a>
-        = PluginAsVst3Factory<'a>
+        = PluginFactoryAsVST3<'a>
     where
         Self: 'a;
 

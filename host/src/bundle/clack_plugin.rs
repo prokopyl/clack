@@ -1,8 +1,7 @@
-use crate::factory::FactoryPointer;
 use clack_common::entry::EntryDescriptor;
+use clack_common::factory::{Factory, RawFactoryPointer};
 use clack_common::utils::ClapVersion;
 use clack_plugin::entry::{Entry, EntryFactories};
-use std::ptr::NonNull;
 use std::sync::Arc;
 
 trait DynEntry: Send + Sync + 'static {
@@ -36,11 +35,13 @@ impl ClackEntry {
         }
     }
 
-    pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
-        let mut builder = EntryFactories::new(F::IDENTIFIER);
+    pub fn get_factory<'a, F: Factory<'a>>(&'a self) -> Option<F> {
+        let mut builder = EntryFactories::new(F::IDENTIFIERS);
         self.inner.declare_factories(&mut builder);
-        // SAFETY: The EntryFactories type ensures we have a pointer that matches the given
-        // identifier, which comes from `F`. It also ensures the pointer is valid.
-        Some(unsafe { F::from_raw(NonNull::new(builder.found().cast_mut())?) })
+
+        let found = builder.found()?;
+
+        // SAFETY: The Clack APIs guarantee this pointer is valid and match the given type
+        unsafe { Some(F::from_raw(RawFactoryPointer::from_raw(found.cast()))) }
     }
 }
