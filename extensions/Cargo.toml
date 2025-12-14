@@ -23,6 +23,7 @@ clack-host = { workspace = true, features = ["clack-plugin"] }
 [features]
 all-extensions = [
     "audio-ports",
+    "audio-ports-activation",
     "audio-ports-config",
     "clap-wrapper",
     "event-registry",
@@ -32,6 +33,7 @@ all-extensions = [
     "note-name",
     "note-ports",
     "params",
+    "param-indication",
     "posix-fd",
     "remote-controls",
     "render",
@@ -45,6 +47,7 @@ all-extensions = [
     "voice-info"
 ]
 audio-ports = []
+audio-ports-activation = []
 audio-ports-config = []
 clap-wrapper = []
 event-registry = []
@@ -54,6 +57,7 @@ log = []
 note-name = []
 note-ports = []
 params = []
+param-indication = []
 posix-fd = []
 remote-controls = []
 render = []
