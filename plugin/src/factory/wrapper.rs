@@ -32,7 +32,7 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
         // which means that when casting back to `Self` we can still soundly access all of `F` as well.
         let self_ptr: NonNull<Self> = self.into();
 
-        // SAFETY: TODO
+        // SAFETY: This pointer comes from a reference, so it is always valid for the matching lifetime
         unsafe { RawFactoryPointer::from_raw(self_ptr.cast()) }
     }
 
@@ -103,7 +103,7 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
         raw: *const Raw,
         handler: impl FnOnce(&F) -> Result<T, FactoryWrapperError>,
     ) -> Option<T> {
-        // SAFETY: TODO
+        // SAFETY: The caller ensures this pointer comes from the reference in as_raw
         let factory = unsafe { raw.cast::<Self>().as_ref() };
         let result = factory.ok_or(FactoryWrapperError::NullFactoryInstance);
 
