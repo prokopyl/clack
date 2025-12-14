@@ -12,7 +12,6 @@ pub struct clap_plugin_info_as_auv2 {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[cfg(any(feature = "clack-host", feature = "clack-plugin"))]
 pub struct clap_plugin_factory_as_auv2 {
     pub manufacturer_code: *const core::ffi::c_char,
     pub manufacturer_name: *const core::ffi::c_char,

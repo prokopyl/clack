@@ -15,7 +15,6 @@ pub struct clap_plugin_info_as_vst3 {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[cfg(any(feature = "clack-host", feature = "clack-plugin"))]
 pub struct clap_plugin_factory_as_vst3 {
     pub vendor: *const c_char,
     pub vendor_url: *const c_char,
