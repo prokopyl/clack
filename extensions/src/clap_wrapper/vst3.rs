@@ -146,7 +146,7 @@ unsafe impl<'a> Factory<'a> for PluginAsVst3Factory<'a> {
     type Raw = clap_plugin_factory_as_vst3;
 
     #[inline]
-    fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
+    unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
         Self(raw)
     }
 }

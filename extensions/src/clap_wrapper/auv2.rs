@@ -90,7 +90,7 @@ unsafe impl<'a> Factory<'a> for PluginAsAuv2Factory<'a> {
     type Raw = clap_plugin_factory_as_auv2;
 
     #[inline]
-    fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
+    unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
         Self(raw)
     }
 }

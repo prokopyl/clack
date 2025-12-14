@@ -33,6 +33,11 @@ impl<'a, T> RawFactoryPointer<'a, T> {
     pub const fn as_raw(&self) -> NonNull<T> {
         self.inner
     }
+
+    #[inline]
+    pub const fn as_ptr(&self) -> *const T {
+        self.inner.as_ptr()
+    }
 }
 
 impl<T: Copy> RawFactoryPointer<'_, T> {

@@ -13,22 +13,23 @@ pub use plugin::PluginFactory;
 
 /// A type representing a CLAP factory pointer.
 ///
-/// The role of this trait is to tie a raw type to a standard CLAP factory identifier.
+/// The role of this trait is to tie a Rust type to a standard CLAP factory identifier and its
+/// matching raw C ABI type.
 /// This is then used by the Clack APIs to always match the correct extension type from its
 /// identifier.
 ///
-/// This trait also defines how an extension pointer should be transformed to a reference to the
-/// extension type.
+/// This trait also defines how a factory pointer should be transformed to a reference to the
+/// factory type.
 ///
 /// # Safety
 ///
-/// The [`IDENTIFIER`](Extension::IDENTIFIERS) **must** match the official identifier for the given
-/// extension, otherwise the extension data could be misinterpreted, leading to Undefined Behavior.
+/// The [`IDENTIFIER`](Factory::IDENTIFIERS) **must** match the official identifier for the given
+/// factory, otherwise the factory data could be misinterpreted, leading to Undefined Behavior.
 pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync {
     /// The standard identifier for this extension.
     const IDENTIFIERS: &'static [&'static CStr];
     type Raw: Copy + Sized + Send + Sync + 'static;
 
     /// Returns an instance of the extension from a given extension pointer.
-    fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self;
+    unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self;
 }
