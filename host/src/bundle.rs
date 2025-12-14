@@ -7,7 +7,7 @@
 //! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
 //! point for the host to read into the bundle.
 //!
-//! CLAP plugin bundles expose implementations of various standard [factories](FactoryPointer), which are
+//! CLAP plugin bundles expose implementations of various standard [factories](Factory), which are
 //! singletons implementing various functionalities. The most relevant is the [`PluginFactory`],
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
@@ -78,7 +78,7 @@ mod clack_plugin;
 pub mod diva_stub;
 
 use crate::bundle::cache::CachedEntry;
-use crate::factory::{Factory, PluginFactory};
+use crate::factory::{Factory, plugin::PluginFactory};
 pub use clack_common::entry::*;
 use clack_common::factory::RawFactoryPointer;
 use clack_common::utils::ClapVersion;
@@ -300,7 +300,7 @@ impl PluginBundle {
         }
     }
 
-    /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.
+    /// Returns the [`Factory`] of type `F` exposed by this bundle, if it exists.
     ///
     /// If this bundle does not expose a factory of the requested type, [`None`] is returned.
     ///
@@ -312,7 +312,7 @@ impl PluginBundle {
     ///
     /// ```no_run
     /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use clack_host::factory::PluginFactory;
+    /// use clack_host::factory::plugin::PluginFactory;
     /// use clack_host::prelude::PluginBundle;
     ///
     /// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };

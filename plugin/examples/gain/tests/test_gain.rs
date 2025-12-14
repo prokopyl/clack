@@ -1,6 +1,6 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_host::events::event_types::ParamValueEvent;
-use clack_host::factory::PluginFactory;
+use clack_host::factory::plugin::PluginFactory;
 use clack_host::prelude::*;
 use clack_host::utils::Cookie;
 use clack_plugin::entry::SinglePluginEntry;

@@ -1,7 +1,7 @@
 use crate::extensions::wrapper::HostWrapper;
 use crate::extensions::wrapper::descriptor::RawHostDescriptor;
 use crate::prelude::*;
-use clack_common::factory::PluginFactory;
+use clack_common::factory::plugin::PluginFactory;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::ffi::CStr;

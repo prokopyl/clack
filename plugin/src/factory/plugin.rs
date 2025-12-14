@@ -9,7 +9,7 @@
 use super::*;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
-use clack_common::factory::{PluginFactory, RawFactoryPointer};
+use clack_common::factory::{RawFactoryPointer, plugin::PluginFactory};
 use clap_sys::factory::plugin_factory::clap_plugin_factory;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};

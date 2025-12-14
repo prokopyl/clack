@@ -1,17 +1,25 @@
-//! Traits and associated utilities to handle and implement CLAP factories.
+//! Factory types and associated utilities.
 //!
-//! See the documentation of the `factory` module in the `clack-plugin` and `clack-host` crates
-//! for implementation examples.
+//! In CLAP, factories are singleton objects exposed by the plugin bundle's
+//! [entry point](crate::entry), which can in turn expose various functionalities.
+//!
+//! Each factory type has a standard, unique [identifier](Factory::IDENTIFIERS), which allows hosts
+//! to query plugins for known factory type implementations.
+//!
+//! In Clack, factory implementations are represented by the [`Factory`] trait.
+//!
+//! The main factory type is the [`PluginFactory`](plugin::PluginFactory), which enables hosts to
+//! list all the plugin implementations present in a bundle, and then instantiate on of them.
+//!
 
 use core::ffi::CStr;
 
 mod raw;
 pub use raw::RawFactoryPointer;
 
-mod plugin;
-pub use plugin::PluginFactory;
+pub mod plugin;
 
-/// A type representing a CLAP factory pointer.
+/// A CLAP factory pointer.
 ///
 /// The role of this trait is to tie a Rust type to a standard CLAP factory identifier and its
 /// matching raw C ABI type.
@@ -25,6 +33,32 @@ pub use plugin::PluginFactory;
 ///
 /// The [`IDENTIFIER`](Factory::IDENTIFIERS) **must** match the official identifier for the given
 /// factory, otherwise the factory data could be misinterpreted, leading to Undefined Behavior.
+///
+/// # Example
+///
+/// This example is a shortened snippet of the implementation of the [`PluginFactory`](plugin::PluginFactory) type.
+///
+/// ```
+/// use clack_common::factory::{Factory, RawFactoryPointer};
+/// use clap_sys::factory::plugin_factory::{clap_plugin_factory, CLAP_PLUGIN_FACTORY_ID};
+/// use core::ffi::CStr;
+///
+/// #[derive(Copy, Clone)]
+/// pub struct PluginFactory<'a>(RawFactoryPointer<'a, clap_plugin_factory>);
+///
+/// // SAFETY: We have checked and ensured that CLAP_PLUGIN_FACTORY_ID is indeed the standard
+/// // identifier for the clap_plugin_factory type.
+/// unsafe impl<'a> Factory<'a> for PluginFactory<'a> {
+///     const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_ID];
+///     type Raw = clap_plugin_factory;
+///
+///     #[inline]
+///     unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
+///         Self(raw)
+///     }
+/// }
+///
+/// ```
 pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync {
     /// The standard identifier for this extension.
     const IDENTIFIERS: &'static [&'static CStr];
