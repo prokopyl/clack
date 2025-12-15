@@ -137,7 +137,7 @@ bitflags! {
 #[allow(dead_code)]
 pub struct PluginFactoryAsVST3<'a>(RawFactoryPointer<'a, clap_plugin_factory_as_vst3>);
 
-// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_plugin_factory_as_vst3 as its first field, and matches
+// SAFETY: PluginFactoryAsVST3 is #[repr(C)] with clap_plugin_factory_as_vst3 as its first field, and matches
 // CLAP_PLUGIN_FACTORY_INFO_VST3.
 unsafe impl<'a> Factory<'a> for PluginFactoryAsVST3<'a> {
     const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_INFO_VST3];

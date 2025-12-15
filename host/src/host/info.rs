@@ -92,6 +92,30 @@ impl HostInfo {
         )
     }
 
+    /// Returns the name of the host.
+    #[inline]
+    pub fn name(&self) -> &CStr {
+        &self.inner.name
+    }
+
+    /// Returns the software vendor of the host.
+    #[inline]
+    pub fn vendor(&self) -> &CStr {
+        &self.inner.vendor
+    }
+
+    /// Returns the host's web homepage's URL.
+    #[inline]
+    pub fn url(&self) -> &CStr {
+        &self.inner.url
+    }
+
+    /// Returns the version string of the host
+    #[inline]
+    pub fn version(&self) -> &CStr {
+        &self.inner.version
+    }
+
     pub(crate) fn write_to_raw(&self, host: &mut clap_host) {
         host.name = self.inner.name.as_ptr();
         host.vendor = self.inner.vendor.as_ptr();

@@ -26,6 +26,8 @@ pub mod param_indication;
 pub mod params;
 #[cfg(all(unix, feature = "posix-fd"))]
 pub mod posix_fd;
+#[cfg(feature = "preset-discovery")]
+pub mod preset_discovery;
 #[cfg(feature = "remote-controls")]
 pub mod remote_controls;
 #[cfg(feature = "render")]
