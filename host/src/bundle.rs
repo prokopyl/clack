@@ -7,7 +7,7 @@
 //! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
 //! point for the host to read into the bundle.
 //!
-//! CLAP plugin bundles expose implementations of various standard [factories](FactoryPointer), which are
+//! CLAP plugin bundles expose implementations of various standard [factories](Factory), which are
 //! singletons implementing various functionalities. The most relevant is the [`PluginFactory`],
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
@@ -78,13 +78,14 @@ mod clack_plugin;
 pub mod diva_stub;
 
 use crate::bundle::cache::CachedEntry;
-use crate::factory::{FactoryPointer, PluginFactory};
+use crate::factory::{Factory, plugin::PluginFactory};
 pub use clack_common::entry::*;
+use clack_common::factory::RawFactoryPointer;
 use clack_common::utils::ClapVersion;
 
 /// A handle to a loaded CLAP plugin bundle file.
 ///
-/// This allows getting all the [factories](FactoryPointer) exposed by the bundle, mainly the
+/// This allows getting all the [factories](Factory) exposed by the bundle, mainly the
 /// [`PluginFactory`] which allows to list plugin instances.
 ///
 /// This is only a lightweight handle: plugin bundles are only loaded once, and the [`Clone`]
@@ -299,7 +300,7 @@ impl PluginBundle {
         }
     }
 
-    /// Returns the [`FactoryPointer`] of type `F` exposed by this bundle, if it exists.
+    /// Returns the [`Factory`] of type `F` exposed by this bundle, if it exists.
     ///
     /// If this bundle does not expose a factory of the requested type, [`None`] is returned.
     ///
@@ -311,7 +312,7 @@ impl PluginBundle {
     ///
     /// ```no_run
     /// # pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use clack_host::factory::PluginFactory;
+    /// use clack_host::factory::plugin::PluginFactory;
     /// use clack_host::prelude::PluginBundle;
     ///
     /// let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
@@ -320,14 +321,18 @@ impl PluginBundle {
     /// println!("Found {} plugins.", plugin_factory.plugin_count());
     /// # Ok(()) }
     /// ```
-    pub fn get_factory<'a, F: FactoryPointer<'a>>(&'a self) -> Option<F> {
+    pub fn get_factory<'a, F: Factory<'a>>(&'a self) -> Option<F> {
+        let identifier = const { *F::IDENTIFIERS.first().unwrap() };
         match &self.inner {
             PluginBundleInner::Cached(entry) => {
                 // SAFETY: this type ensures the function pointer is valid.
-                let ptr =
-                    unsafe { entry.raw_entry().get_factory?(F::IDENTIFIER.as_ptr()) } as *mut _;
+                let ptr = unsafe { entry.raw_entry().get_factory?(identifier.as_ptr()) };
+                let ptr = NonNull::new(ptr.cast_mut())?;
+                // SAFETY: Per the CLAP spec, if this pointer is non-null it has to be valid for reads
+                let ptr = unsafe { RawFactoryPointer::from_raw(ptr.cast()) };
+
                 // SAFETY: pointer was created using F's own identifier.
-                NonNull::new(ptr).map(|p| unsafe { F::from_raw(p) })
+                Some(unsafe { F::from_raw(ptr) })
             }
             #[cfg(feature = "clack-plugin")]
             PluginBundleInner::FromClack(clack) => clack.get_factory(),

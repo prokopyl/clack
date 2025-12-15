@@ -22,14 +22,14 @@
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
 //!    of multiple plugins. They can be loaded with the [`PluginBundle::load`](bundle::PluginBundle::load)
 //!    method. See the [`bundle`] module documentation for more information.
-//! 2. Bundles' entry points can expose multiple [factories](factory::FactoryPointer). These are singleton
+//! 2. Bundles' entry points can expose multiple [factories](factory::Factory). These are singleton
 //!    objects that can provide various functionality. The one of main interest is the
-//!    [`PluginFactory`](factory::PluginFactory), which exposes methods to list and instantiate plugins.
+//!    [`PluginFactory`](factory::plugin::PluginFactory), which exposes methods to list and instantiate plugins.
 //!    It can be retrieved from a [`PluginBundle`](bundle::PluginBundle) using the
 //!    [`PluginBundle::get_plugin_factory`](bundle::PluginBundle::get_plugin_factory) method.
 //!
 //!    See the [`factory`] module documentation to learn more about factories.
-//! 3. The [`PluginFactory`](factory::PluginFactory) can be used to list
+//! 3. The [`PluginFactory`](factory::plugin::PluginFactory) can be used to list
 //!    [`PluginDescriptor`s](plugin::PluginDescriptor), each of which contains various information
 //!    (displayed name, author, etc.) about the plugins included in this bundle, including their
 //!    unique IDs. These can be displayed in a list for the user to chose from.
@@ -261,7 +261,7 @@
 
 pub mod bundle;
 pub mod extensions;
-pub mod factory;
+pub use clack_common::factory;
 pub mod host;
 pub mod plugin;
 pub mod process;

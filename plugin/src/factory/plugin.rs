@@ -6,50 +6,48 @@
 //!
 //! See the [`factory` module documentation](crate::factory) to learn more about factories.
 
-use crate::factory::Factory;
-use crate::factory::error::FactoryWrapperError;
-use crate::factory::wrapper::FactoryWrapper;
+use super::*;
 use crate::host::HostInfo;
 use crate::plugin::{PluginDescriptor, PluginInstance};
-use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
+use clack_common::factory::plugin::PluginFactory;
+use clap_sys::factory::plugin_factory::clap_plugin_factory;
 use clap_sys::host::clap_host;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use std::ffi::CStr;
 use std::ptr::NonNull;
 
-/// A wrapper around a given [`PluginFactory`] implementation.
+/// A wrapper around a given [`PluginFactoryImpl`] implementation.
 ///
 /// This wrapper is required in order to expose a C FFI-compatible factory to the host, and is what
 /// needs to be exposed by an [`Entry`](crate::entry::Entry).
-#[repr(C)]
 pub struct PluginFactoryWrapper<F> {
     inner: FactoryWrapper<clap_plugin_factory, F>,
 }
 
-impl<F: PluginFactory> PluginFactoryWrapper<F> {
+impl<F: PluginFactoryImpl> PluginFactoryWrapper<F> {
     const RAW: clap_plugin_factory = clap_plugin_factory {
         get_plugin_count: Some(Self::get_plugin_count),
         get_plugin_descriptor: Some(Self::get_plugin_descriptor),
         create_plugin: Some(Self::create_plugin),
     };
 
-    /// Wraps a given [`PluginFactory`] instance.
+    /// Wraps a given [`PluginFactoryImpl`] instance.
     pub const fn new(factory: F) -> Self {
         Self {
             inner: FactoryWrapper::new(Self::RAW, factory),
         }
     }
 
-    /// Returns a shared reference to the wrapped [`PluginFactory`].
+    /// Returns a shared reference to the wrapped [`PluginFactoryImpl`].
     #[inline]
-    pub fn factory(&self) -> &F {
+    pub const fn factory(&self) -> &F {
         self.inner.factory()
     }
 
     /// Returns a raw CLAP plugin factory pointer, ready to be used by the host.
     #[inline]
     pub fn as_raw_ptr(&self) -> *const clap_plugin_factory {
-        self.inner.as_raw()
+        self.inner.as_raw_ptr()
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -96,10 +94,17 @@ impl<F: PluginFactory> PluginFactoryWrapper<F> {
     }
 }
 
-// SAFETY: PluginFactoryWrapper is #[repr(C)] with clap_factory as its first field, and matches
-// CLAP_PLUGIN_FACTORY_ID.
-unsafe impl<F> Factory for PluginFactoryWrapper<F> {
-    const IDENTIFIERS: &[&CStr] = &[CLAP_PLUGIN_FACTORY_ID];
+impl<F: PluginFactoryImpl> FactoryImplementation for PluginFactoryWrapper<F> {
+    type Factory<'a>
+        = PluginFactory<'a>
+    where
+        Self: 'a;
+    type Wrapped = F;
+
+    #[inline]
+    fn wrapper(&self) -> &FactoryWrapper<clap_plugin_factory, F> {
+        &self.inner
+    }
 }
 
 /// A Plugin Factory implementation.
@@ -127,7 +132,7 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///     plugin_descriptor: PluginDescriptor
 /// }
 ///
-/// impl PluginFactory for MyPluginFactory {
+/// impl PluginFactoryImpl for MyPluginFactory {
 ///     fn plugin_count(&self) -> u32 {
 ///         1 // We only have a single plugin
 ///     }
@@ -153,14 +158,14 @@ unsafe impl<F> Factory for PluginFactoryWrapper<F> {
 ///     }
 /// }
 /// ```
-pub trait PluginFactory: Send + Sync {
+pub trait PluginFactoryImpl: Send + Sync {
     /// Returns the number of plugins exposed by this factory.
     fn plugin_count(&self) -> u32;
 
     /// Returns the [`PluginDescriptor`] of the plugin that is assigned the given index.
     ///
     /// Hosts will usually call this method repeatedly with every index from 0 to the total returned
-    /// by [`plugin_count`](PluginFactory::plugin_count), in order to discover all the plugins
+    /// by [`plugin_count`](PluginFactoryImpl::plugin_count), in order to discover all the plugins
     /// exposed by this factory.
     ///
     /// If the given index is out of bounds, or in general does not match any given plugin, this

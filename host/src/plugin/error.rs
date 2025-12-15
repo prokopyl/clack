@@ -21,7 +21,7 @@ pub enum PluginInstanceError {
     ActivationFailed,
     /// No plugin with a matching ID was found during instantiation.
     PluginNotFound,
-    /// Tried to instantiate a plugin from a bundle which lacks a [`PluginFactory`](crate::factory::PluginFactory).
+    /// Tried to instantiate a plugin from a bundle which lacks a [`PluginFactory`](crate::factory::plugin::PluginFactory).
     ///
     /// This is a sign of a misbehaving plugin implementation.
     MissingPluginFactory,

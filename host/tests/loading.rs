@@ -1,5 +1,5 @@
 use clack_host::bundle::PluginBundle;
-use clack_host::factory::PluginFactory;
+use clack_host::factory::plugin::PluginFactory;
 
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
