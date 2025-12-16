@@ -1,0 +1,15 @@
+[package]
+name = "clack-discover"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+clack-host = { workspace = true, features = ["default"] }
+clack-extensions = { workspace = true, features = ["clack-host", "preset-discovery"] }
+clap = { version = "=4.4", features = ["derive"] } # 4.4.x is latest for MSRV 1.70
+dirs = "6.0.0"
+midir = "0.10.0"
+rayon = "1.7.0"
+walkdir = "2.3.3"

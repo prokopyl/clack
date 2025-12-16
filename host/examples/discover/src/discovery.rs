@@ -1,10 +1,10 @@
-// Discovering plugins means loading them, which is unsafe
-#![allow(unsafe_code)]
-
+use crate::preset_discovery::get_presets;
+use clack_extensions::preset_discovery::{PresetDiscoveryFactory, Provider, ProviderDescriptor};
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::error::Error;
+use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
@@ -13,30 +13,15 @@ use walkdir::{DirEntry, WalkDir};
 /// as its path.
 pub struct FoundBundlePlugin {
     /// The plugin's descriptor.
-    pub plugin: PluginDescriptor,
+    pub plugins: Vec<PluginDescriptor>,
     /// The bundle the descriptor was loaded from.
     pub bundle: PluginBundle,
     /// The path of the bundle's file.
     pub path: PathBuf,
 }
 
-/// Scans the CLAP standard paths for all the plugin descriptors that match the given ID.
-pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
-    let standard_paths = standard_clap_paths();
-
-    println!("Scanning the following directories for CLAP plugin with ID {id}:");
-    for path in &standard_paths {
-        println!("\t - {}", path.display())
-    }
-
-    let found_bundles = search_for_potential_bundles(&standard_paths);
-    println!("\t * Found {} potential CLAP bundles.", found_bundles.len());
-
-    scan_plugins(&found_bundles, id)
-}
-
 /// Returns a list of all the standard CLAP search paths, per the CLAP specification.
-fn standard_clap_paths() -> Vec<PathBuf> {
+pub fn standard_clap_paths() -> Vec<PathBuf> {
     let mut paths = vec![];
 
     if let Some(home_dir) = dirs::home_dir() {
@@ -66,7 +51,8 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 
     #[cfg(target_family = "unix")]
     {
-        paths.push("/usr/lib/clap".into())
+        paths.push("/usr/lib/clap".into());
+        paths.push("/usr/lib64/clap".into());
     }
 
     if let Some(env_var) = std::env::var_os("CLAP_PATH") {
@@ -80,27 +66,12 @@ fn standard_clap_paths() -> Vec<PathBuf> {
 ///
 /// CLAP bundles are files that end with the `.clap` extension.
 fn is_clap_bundle(dir_entry: &DirEntry) -> bool {
-    is_bundle(dir_entry)
-        && dir_entry
-            .path()
-            .extension()
-            .is_some_and(|ext| ext == "clap")
-}
-
-/// Returns `true` if the given entry could refer to a bundle.
-///
-/// CLAP bundles are directories on MacOS and files everywhere else.
-fn is_bundle(dir_entry: &DirEntry) -> bool {
-    if cfg!(target_os = "macos") {
-        dir_entry.file_type().is_dir()
-    } else {
-        dir_entry.file_type().is_file()
-    }
+    dir_entry.file_type().is_file() && dir_entry.file_name().to_string_lossy().ends_with(".clap")
 }
 
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
 /// bundles.
-fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
+pub fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
     search_dirs
         .iter()
         .flat_map(|path| {
@@ -114,34 +85,41 @@ fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugin> {
+pub fn scan_bundles(bundles: &[DirEntry]) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
-        .filter_map(|p| scan_plugin(p.path(), searched_id))
+        .filter_map(|p| scan_plugin(p.path()))
         .collect()
 }
 
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
+fn scan_plugin(path: &Path) -> Option<FoundBundlePlugin> {
     let Ok(bundle) = (unsafe { PluginBundle::load(path) }) else {
         return None;
     };
-    for plugin in bundle.get_plugin_factory()?.plugin_descriptors() {
-        let Some(plugin) = PluginDescriptor::try_from(plugin) else {
-            continue;
+
+    let host_info = HostInfo::new("", "", "", "").unwrap();
+
+    let provider_descriptors =
+        if let Some(discovery) = bundle.get_factory::<PresetDiscoveryFactory>() {
+            discovery
+                .provider_descriptors()
+                .filter_map(|d| get_presets(&bundle, d, host_info.clone()))
+                .collect()
+        } else {
+            vec![]
         };
 
-        if plugin.id == searched_id {
-            return Some(FoundBundlePlugin {
-                plugin,
-                bundle,
-                path: path.to_path_buf(),
-            });
-        }
-    }
-
-    None
+    Some(FoundBundlePlugin {
+        plugins: bundle
+            .get_plugin_factory()?
+            .plugin_descriptors()
+            .filter_map(PluginDescriptor::try_from)
+            .collect(),
+        bundle,
+        path: path.to_path_buf(),
+    })
 }
 
 /// Simple description of a plugin.
@@ -183,26 +161,6 @@ impl Display for PluginDescriptor {
     }
 }
 
-/// Lists all plugins in a given bundle.
-pub fn list_plugins_in_bundle(
-    bundle_path: &Path,
-) -> Result<Vec<FoundBundlePlugin>, DiscoveryError> {
-    let bundle = unsafe { PluginBundle::load(bundle_path)? };
-    let Some(plugin_factory) = bundle.get_plugin_factory() else {
-        return Err(DiscoveryError::MissingPluginFactory);
-    };
-
-    Ok(plugin_factory
-        .plugin_descriptors()
-        .filter_map(PluginDescriptor::try_from)
-        .map(|plugin| FoundBundlePlugin {
-            bundle: bundle.clone(),
-            path: bundle_path.to_path_buf(),
-            plugin,
-        })
-        .collect())
-}
-
 /// Errors that happened during discovery.
 #[derive(Debug)]
 pub enum DiscoveryError {
@@ -228,24 +186,3 @@ impl Display for DiscoveryError {
 }
 
 impl Error for DiscoveryError {}
-
-/// Loads a specific ID from a specific bundle's path.
-pub fn load_plugin_id_from_path(
-    bundle_path: &Path,
-    id: &str,
-) -> Result<Option<FoundBundlePlugin>, DiscoveryError> {
-    let bundle = unsafe { PluginBundle::load(bundle_path)? };
-    let Some(plugin_factory) = bundle.get_plugin_factory() else {
-        return Err(DiscoveryError::MissingPluginFactory);
-    };
-
-    Ok(plugin_factory
-        .plugin_descriptors()
-        .filter_map(PluginDescriptor::try_from)
-        .find(|p| p.id == id)
-        .map(|plugin| FoundBundlePlugin {
-            plugin,
-            bundle,
-            path: bundle_path.to_path_buf(),
-        }))
-}

@@ -47,6 +47,9 @@ impl<I: Indexer> Provider<I> {
             _no_send: PhantomData,
         })
     }
+
+    // TODO: get_extension
+    // TODO: get_metadata
 }
 
 impl<I> Drop for Provider<I> {

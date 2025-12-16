@@ -20,6 +20,14 @@ unsafe impl<'a> Factory<'a> for PresetDiscoveryFactory<'a> {
     }
 }
 
+impl<'a> PresetDiscoveryFactory<'a> {
+    /// Returns this factory as a raw pointer to its C-FFI compatible raw CLAP structure
+    #[inline]
+    pub const fn raw(&self) -> RawFactoryPointer<'a, clap_preset_discovery_factory> {
+        self.0
+    }
+}
+
 #[cfg(feature = "clack-host")]
 mod host;
 
@@ -31,3 +39,9 @@ mod plugin;
 
 #[cfg(feature = "clack-plugin")]
 pub use plugin::*;
+
+mod data;
+mod descriptor;
+
+pub use data::*;
+pub use descriptor::*;
