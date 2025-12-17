@@ -22,7 +22,7 @@
 //!   functionality "CLAP plugin support" implies for most hosts.
 //!
 //! * From a static [`EntryDescriptor`] reference, using [`PluginBundle::load_from_raw`].
-//!   
+//!
 //!   This is a more advanced usage, and it allows to load plugins that have been statically built
 //!   into the host's binary (i.e. built-in plugins) without having to distribute them in separate
 //!   files, or to perform any filesystem access or plugin discovery.
@@ -156,12 +156,26 @@ impl PluginBundle {
         use crate::bundle::library::PluginEntryLibrary;
         use std::ffi::CString;
 
-        let path = path.as_ref();
-        let path_cstr = CString::new(path.as_encoded_bytes())?;
+        let bundle_path = std::path::Path::new(path.as_ref());
+        let bundle_path_cstr = CString::new(bundle_path.as_os_str().as_encoded_bytes())?;
 
-        let library = PluginEntryLibrary::load(path)?;
+        let library_path = if cfg!(target_os = "macos")
+            && std::fs::metadata(bundle_path)
+                .map(|metadata| metadata.is_dir())
+                .unwrap_or_default()
+        {
+            if let Some(file_stem) = bundle_path.file_stem() {
+                &*bundle_path.join("Contents/MacOS").join(file_stem)
+            } else {
+                bundle_path
+            }
+        } else {
+            bundle_path
+        };
 
-        let inner = cache::load_from_library(library, &path_cstr)?;
+        let library = PluginEntryLibrary::load(library_path.as_ref())?;
+
+        let inner = cache::load_from_library(library, &bundle_path_cstr)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
