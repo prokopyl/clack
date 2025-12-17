@@ -22,7 +22,7 @@
 //!   functionality "CLAP plugin support" implies for most hosts.
 //!
 //! * From a static [`EntryDescriptor`] reference, using [`PluginBundle::load_from_raw`].
-//!   
+//!
 //!   This is a more advanced usage, and it allows to load plugins that have been statically built
 //!   into the host's binary (i.e. built-in plugins) without having to distribute them in separate
 //!   files, or to perform any filesystem access or plugin discovery.
@@ -158,14 +158,19 @@ impl PluginBundle {
         let bundle_path = std::path::Path::new(path.as_ref());
         let bundle_path_cstr = CString::new(bundle_path.as_os_str().as_encoded_bytes())?;
 
-        #[cfg(target_os = "macos")]
-        let library_path = &*bundle_path.join("Contents/MacOS").join(
+        let library_path = if cfg!(target_os = "macos")
+            && std::fs::metadata(bundle_path)
+                .map(|metadata| metadata.is_dir())
+                .unwrap_or_default()
+        {
+            if let Some(file_stem) = bundle_path.file_stem() {
+                &*bundle_path.join("Contents/MacOS").join(file_stem)
+            } else {
+                bundle_path
+            }
+        } else {
             bundle_path
-                .file_stem()
-                .ok_or(PluginBundleError::NoFileStem)?,
-        );
-        #[cfg(not(target_os = "macos"))]
-        let library_path = bundle_path;
+        };
 
         let library = PluginEntryLibrary::load(library_path.as_ref())?;
 
@@ -389,9 +394,6 @@ pub enum PluginBundleError {
     #[cfg(feature = "libloading")]
     /// The given path is not a valid C string.
     InvalidNulPath(std::ffi::NulError),
-    #[cfg(target_os = "macos")]
-    /// The given path does not have a file stem, and is therefore not a valid CLAP bundle.
-    NoFileStem,
     /// The entry pointer exposed by the dynamic library file is `null`.
     NullEntryPointer,
     /// The exposed entry used an incompatible CLAP version.
@@ -424,13 +426,6 @@ impl Display for PluginBundleError {
             #[cfg(feature = "libloading")]
             PluginBundleError::InvalidNulPath(e) => {
                 write!(f, "Invalid plugin descriptor path: {e}")
-            }
-            #[cfg(target_os = "macos")]
-            PluginBundleError::NoFileStem => {
-                write!(
-                    f,
-                    "Invalid plugin descriptor path: no file stem found in provided data"
-                )
             }
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => {
