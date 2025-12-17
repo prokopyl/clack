@@ -1,8 +1,11 @@
 use super::*;
+use crate::utils::handle_panic;
 use std::ffi::c_void;
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
+use std::ptr::NonNull;
 
 #[repr(C)]
 pub struct IndexerWrapper<I> {
@@ -25,5 +28,61 @@ impl<I> IndexerWrapper<I> {
         let s = unsafe { self.get_unchecked_mut() };
 
         s as *mut Self as *mut c_void
+    }
+
+    unsafe fn from_raw<'a>(
+        indexer: *const clap_preset_discovery_indexer,
+    ) -> Result<&'a mut I, IndexerWrapperError> {
+        let indexer =
+            NonNull::new(indexer.cast_mut()).ok_or(IndexerWrapperError::NullIndexerPointer)?;
+
+        // SAFETY: TODO
+        let indexer = unsafe { indexer.read() };
+
+        // SAFETY: TODO
+        let wrapper = unsafe { indexer.indexer_data.cast::<Self>().as_mut() }
+            .ok_or(IndexerWrapperError::NullIndexerDataPointer)?;
+
+        Ok(&mut wrapper.inner)
+    }
+
+    #[inline]
+    pub unsafe fn handle<T>(
+        indexer: *const clap_preset_discovery_indexer,
+        handler: impl FnOnce(&mut I) -> Result<T, IndexerWrapperError>,
+    ) -> Option<T> {
+        match Self::from_raw(indexer).and_then(|p| Self::handle_panic(p, handler)) {
+            Ok(value) => Some(value),
+            Err(e) => {
+                eprintln!("{e}");
+
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn handle_panic<Pa, T, F>(parameter: Pa, handler: F) -> Result<T, IndexerWrapperError>
+    where
+        F: FnOnce(Pa) -> Result<T, IndexerWrapperError>,
+    {
+        handle_panic(AssertUnwindSafe(|| handler(parameter)))
+            .map_err(|_| IndexerWrapperError::Panic)?
+    }
+}
+
+pub enum IndexerWrapperError {
+    NullIndexerPointer,
+    NullIndexerDataPointer,
+    Panic,
+    /// An invalid parameter value was encountered.
+    ///
+    /// The given string may contain more information about which parameter was found to be invalid.
+    InvalidParameter(&'static str),
+}
+
+impl Display for IndexerWrapperError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }

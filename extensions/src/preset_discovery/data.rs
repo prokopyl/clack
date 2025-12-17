@@ -145,6 +145,29 @@ impl Soundpack<'_> {
             release_timestamp: Timestamp::optional_to_raw(self.release_timestamp),
         }
     }
+
+    pub unsafe fn from_raw(raw: *const clap_preset_discovery_soundpack) -> Option<Self> {
+        if raw.is_null() {
+            return None;
+        }
+
+        // SAFETY: TODO
+        let raw = unsafe { raw.read() };
+
+        // SAFETY: TODO
+        unsafe {
+            Some(Self {
+                flags: Flags::from_bits_truncate(raw.flags),
+                id: str_from_raw(raw.id)?,
+                name: str_from_raw(raw.name)?,
+                description: str_from_raw(raw.description),
+                homepage_url: str_from_raw(raw.homepage_url),
+                vendor: str_from_raw(raw.vendor),
+                image_path: str_from_raw(raw.image_path),
+                release_timestamp: Timestamp::from_raw(raw.release_timestamp),
+            })
+        }
+    }
 }
 
 #[inline]

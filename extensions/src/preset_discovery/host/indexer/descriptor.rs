@@ -1,4 +1,5 @@
-use crate::preset_discovery::indexer::{Indexer, IndexerWrapper};
+use crate::preset_discovery::indexer::{Indexer, IndexerWrapper, IndexerWrapperError};
+use crate::preset_discovery::{FileType, Location, LocationData, Soundpack};
 use clack_common::utils::ClapVersion;
 use clack_host::prelude::HostInfo;
 use clap_sys::factory::preset_discovery::{
@@ -55,7 +56,14 @@ unsafe extern "C" fn declare_filetype<I: Indexer>(
     indexer: *const clap_preset_discovery_indexer,
     filetype: *const clap_preset_discovery_filetype,
 ) -> bool {
-    todo!()
+    IndexerWrapper::<I>::handle(indexer, |indexer| {
+        let filetype = FileType::from_raw(filetype)
+            .ok_or(IndexerWrapperError::InvalidParameter("Invalid FileType"))?;
+
+        indexer.declare_filetype(filetype);
+        Ok(())
+    })
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -63,7 +71,14 @@ unsafe extern "C" fn declare_location<I: Indexer>(
     indexer: *const clap_preset_discovery_indexer,
     location: *const clap_preset_discovery_location,
 ) -> bool {
-    todo!()
+    IndexerWrapper::<I>::handle(indexer, |indexer| {
+        let location = LocationData::from_raw(location)
+            .ok_or(IndexerWrapperError::InvalidParameter("Invalid Location"))?;
+
+        indexer.declare_location(location);
+        Ok(())
+    })
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -71,5 +86,12 @@ unsafe extern "C" fn declare_soundpack<I: Indexer>(
     indexer: *const clap_preset_discovery_indexer,
     soundpack: *const clap_preset_discovery_soundpack,
 ) -> bool {
-    todo!()
+    IndexerWrapper::<I>::handle(indexer, |indexer| {
+        let filetype = Soundpack::from_raw(soundpack)
+            .ok_or(IndexerWrapperError::InvalidParameter("Invalid Soundpack"))?;
+
+        indexer.declare_soundpack(filetype);
+        Ok(())
+    })
+    .is_some()
 }
