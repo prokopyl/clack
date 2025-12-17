@@ -111,7 +111,7 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-      - run: sudo apt-get install libasound2-dev
+      - run: sudo apt-get install libasound2-dev libgl1-mesa-dev libx11-xcb-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
