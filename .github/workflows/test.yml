@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install libasound2-dev
+        run: sudo apt-get install libasound2-dev libgl1-mesa-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
