@@ -1,6 +1,5 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_host::events::event_types::ParamValueEvent;
-use clack_host::factory::PluginFactory;
 use clack_host::prelude::*;
 use clack_host::utils::Cookie;
 use clack_plugin::entry::SinglePluginEntry;
@@ -14,7 +13,7 @@ pub fn it_works() {
     let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
 
     let descriptor = bundle
-        .get_factory::<PluginFactory>()
+        .get_plugin_factory()
         .unwrap()
         .plugin_descriptor(0)
         .unwrap();
