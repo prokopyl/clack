@@ -25,8 +25,9 @@ multiple-versions = "deny"
 wildcards = "deny"
 
 skip-tree = [
-    # This is just an example, it doesn't matter if there are duplicate dependencies in the build.
+    # These are just an examples, it doesn't matter if there are duplicate dependencies in the build.
     { name = "clack-host-cpal" },
+    { name = "clack-plugin-gain-gui" },
 ]
 
 [sources]

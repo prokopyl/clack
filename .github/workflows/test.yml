@@ -39,7 +39,11 @@ jobs:
       - name: Check Host Without default features
         run: cargo check -p clack-host --no-default-features
       - name: Run tests
+        if: matrix.toolchain != '1.85.1'
         run: cargo test --all --verbose
+      - name: Run tests (except CPAL & GUI examples)
+        if: matrix.toolchain == '1.85.1'
+        run: cargo test --all --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
 
   clippy:
     runs-on: ubuntu-latest
