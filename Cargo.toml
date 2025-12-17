@@ -8,6 +8,7 @@ members = [
     # Examples
     "host/examples/cpal",
     "plugin/examples/gain",
+    "plugin/examples/gain-gui",
     "plugin/examples/polysynth",
 ]
 
@@ -19,7 +20,7 @@ clack-extensions = { path = "./extensions", version = "0.1.0" }
 
 clap-sys = "0.5.0"
 
-bitflags = "2.4.2"
+bitflags = "2.10.0"
 libloading = "0.8.1"
 raw-window-handle_05 = { package = "raw-window-handle", version = "0.5.2" }
 raw-window-handle_06 = { package = "raw-window-handle", version = "0.6.0" }

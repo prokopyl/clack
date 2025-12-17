@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install libasound2-dev
+        run: sudo apt-get install libasound2-dev libgl1-mesa-dev libx11-xcb-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
@@ -27,9 +27,9 @@ jobs:
         if: matrix.toolchain != '1.85.1'
         run: cargo build --all --all-features --verbose
         # We already check this example works with latest rust, we don't need to check it with MSRV
-      - name: Build (except CPAL example)
+      - name: Build (except CPAL & GUI examples)
         if: matrix.toolchain == '1.85.1'
-        run: cargo build --all --all-features --verbose --exclude clack-host-cpal
+        run: cargo build --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
       - name: Check Plugin-only Extensions
         run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-plugin" --no-default-features
       - name: Check Host-only Extensions
@@ -39,13 +39,17 @@ jobs:
       - name: Check Host Without default features
         run: cargo check -p clack-host --no-default-features
       - name: Run tests
+        if: matrix.toolchain != '1.85.1'
         run: cargo test --all --verbose
+      - name: Run tests (except CPAL & GUI examples)
+        if: matrix.toolchain == '1.85.1'
+        run: cargo test --all --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
 
   clippy:
     runs-on: ubuntu-latest
 
     steps:
-      - run: sudo apt-get install libasound2-dev
+      - run: sudo apt-get install libasound2-dev libgl1-mesa-dev libx11-xcb-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
@@ -100,14 +104,14 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: miri
-          args: test --all --all-features --verbose --exclude clack-host-cpal
+          args: test --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
 
   rustdoc:
     runs-on: ubuntu-latest
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-      - run: sudo apt-get install libasound2-dev
+      - run: sudo apt-get install libasound2-dev libgl1-mesa-dev libx11-xcb-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:

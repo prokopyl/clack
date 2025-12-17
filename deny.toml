@@ -12,12 +12,17 @@ allow = [
     "Apache-2.0",
     "BSD-3-Clause",
     "ISC",
-    "Unicode-3.0"
+    "Unicode-3.0",
+    "Zlib"
 ]
 
 exceptions = [
-    # Only used in clack-host-cpal example, the executable is not distrubuted
-    { allow = ["MPL-2.0"], name = "option-ext" }
+    # Only used in clack-host-cpal example, the executable is not distributed
+    { allow = ["MPL-2.0"], name = "option-ext" },
+    # Only used in clack-plugin-gui example, the executable is not distributed
+    { allow = ["BSL-1.0"], name = "error-code" },
+    { allow = ["BSL-1.0"], name = "clipboard-win" },
+    { allow = ["OFL-1.1", "Ubuntu-font-1.0"], name = "epaint_default_fonts" }
 ]
 
 [bans]
@@ -25,13 +30,19 @@ multiple-versions = "deny"
 wildcards = "deny"
 
 skip-tree = [
-    # This is just an example, it doesn't matter if there are duplicate dependencies in the build.
+    # These are just an examples, it doesn't matter if there are duplicate dependencies in the build.
     { name = "clack-host-cpal" },
+    { name = "clack-plugin-gain-gui" },
 ]
 
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+
+allow-git = [
+    "https://github.com/RustAudio/baseview.git",
+    "https://codeberg.org/BillyDM/egui-baseview.git"
+]
 
 [graph]
 all-features = true
