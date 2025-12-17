@@ -2,6 +2,8 @@
 
 #[cfg(feature = "audio-ports")]
 pub mod audio_ports;
+#[cfg(feature = "audio-ports-activation")]
+pub mod audio_ports_activation;
 #[cfg(feature = "audio-ports-config")]
 pub mod audio_ports_config;
 #[cfg(feature = "clap-wrapper")]
@@ -18,6 +20,8 @@ pub mod log;
 pub mod note_name;
 #[cfg(feature = "note-ports")]
 pub mod note_ports;
+#[cfg(feature = "param-indication")]
+pub mod param_indication;
 #[cfg(feature = "params")]
 pub mod params;
 #[cfg(all(unix, feature = "posix-fd"))]

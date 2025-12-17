@@ -7,7 +7,7 @@
 //!
 //! A bundle's [`Entry`] is the only exposed symbol in the library. Once
 //! [initialized](Entry::new), its role is to expose a number of [factories](Factory), which are
-//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactory),
+//! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactoryImpl),
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
 //!
@@ -19,7 +19,7 @@
 //! expose a single plugin type to the host.
 
 use crate::extensions::wrapper::handle_panic;
-use crate::factory::Factory;
+use crate::factory::{Factory, FactoryImplementation};
 use std::error::Error;
 use std::ffi::{CStr, c_void};
 use std::fmt::{Display, Formatter};
@@ -33,13 +33,13 @@ mod single;
 
 pub use single::{DefaultPluginFactory, SinglePluginEntry};
 
-/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactory) types.
+/// A prelude that's helpful for implementing custom [`Entry`] and [`PluginFactory`](crate::factory::plugin::PluginFactoryImpl) types.
 pub mod prelude {
     pub use crate::{
         entry::{Entry, EntryDescriptor, EntryFactories, EntryLoadError, SinglePluginEntry},
         factory::{
             Factory,
-            plugin::{PluginFactory, PluginFactoryWrapper},
+            plugin::{PluginFactoryImpl, PluginFactoryWrapper},
         },
         host::HostInfo,
         plugin::{PluginDescriptor, PluginInstance},
@@ -113,7 +113,7 @@ pub mod prelude {
 ///     }
 /// }
 ///
-/// impl PluginFactory for MyPluginFactory {
+/// impl PluginFactoryImpl for MyPluginFactory {
 ///     fn plugin_count(&self) -> u32 {
 ///         2 // We have 2 plugins to expose to the host
 ///     }
@@ -136,7 +136,7 @@ pub mod prelude {
 ///         host_info: HostInfo<'a>,
 ///         plugin_id: &CStr,
 ///     ) -> Option<PluginInstance<'a>> {
-///         if plugin_id == self.first_plugin.id() {
+///         if plugin_id == self.first_plugin.id().unwrap_or_default() {
 ///             // We can use the PluginInstance type to easily make a new instance of a given
 ///             // plugin type.
 ///             Some(PluginInstance::new::<MyFirstPlugin>(
@@ -145,7 +145,7 @@ pub mod prelude {
 ///                 |_host| Ok(()) /* Create the shared struct */,
 ///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
 ///             ))
-///         } else if plugin_id == self.second_plugin.id() {
+///         } else if plugin_id == self.second_plugin.id().unwrap_or_default() {
 ///             Some(PluginInstance::new::<MySecondPlugin>(
 ///                 host_info,
 ///                 &self.second_plugin,
@@ -321,13 +321,13 @@ macro_rules! clack_entry {
 /// the [`register_factory`](EntryFactories::register_factory) method.
 pub struct EntryFactories<'a> {
     found: Option<NonNull<c_void>>,
-    requested: &'a CStr,
+    requested: &'a [&'a CStr],
 }
 
 impl<'a> EntryFactories<'a> {
     #[doc(hidden)]
     #[inline]
-    pub fn new(requested: &'a CStr) -> Self {
+    pub fn new(requested: &'a [&'a CStr]) -> Self {
         Self {
             found: None,
             requested,
@@ -336,10 +336,8 @@ impl<'a> EntryFactories<'a> {
 
     #[doc(hidden)]
     #[inline]
-    pub fn found(&self) -> *const c_void {
+    pub fn found(&self) -> Option<NonNull<c_void>> {
         self.found
-            .map(|p| p.as_ptr())
-            .unwrap_or(core::ptr::null_mut())
     }
 
     /// Adds a given factory implementation to the list of factories this bundle entry supports.
@@ -348,13 +346,16 @@ impl<'a> EntryFactories<'a> {
     /// usage pattern.
     ///
     /// See [`Entry`]'s documentation for an example.
-    pub fn register_factory<F: Factory>(&mut self, factory: &'a F) -> &mut Self {
+    pub fn register_factory<F: FactoryImplementation>(&mut self, factory: &'a F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }
 
-        if F::IDENTIFIERS.contains(&self.requested) {
-            self.found = Some(factory.get_raw_factory_ptr())
+        for requested in self.requested {
+            if F::Factory::IDENTIFIERS.contains(requested) {
+                self.found = Some(factory.wrapper().as_raw().as_raw().cast());
+                break;
+            }
         }
 
         self
@@ -469,11 +470,16 @@ impl<E: Entry> EntryHolder<E> {
 
         let identifier = CStr::from_ptr(identifier);
 
-        handle_panic(AssertUnwindSafe(|| {
-            let mut builder = EntryFactories::new(identifier);
+        let result = handle_panic(AssertUnwindSafe(|| {
+            let identifiers = &[identifier];
+            let mut builder = EntryFactories::new(identifiers);
             entry.declare_factories(&mut builder);
             builder.found()
-        }))
-        .unwrap_or(core::ptr::null())
+        }));
+
+        match result {
+            Ok(Some(found)) => found.as_ptr(),
+            _ => core::ptr::null(),
+        }
     }
 }

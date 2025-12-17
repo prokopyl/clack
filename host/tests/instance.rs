@@ -1,5 +1,5 @@
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
-use clack_host::factory::PluginFactory;
+use clack_host::factory::plugin::PluginFactory;
 use clack_plugin::prelude::*;
 
 use clack_host::prelude::*;

@@ -77,7 +77,7 @@ struct SinglePluginFactory<P> {
     _plugin: PhantomData<fn() -> P>,
 }
 
-impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
+impl<P: DefaultPluginFactory> PluginFactoryImpl for SinglePluginFactory<P> {
     #[inline]
     fn plugin_count(&self) -> u32 {
         1
@@ -97,7 +97,7 @@ impl<P: DefaultPluginFactory> PluginFactory for SinglePluginFactory<P> {
         host_info: HostInfo<'a>,
         plugin_id: &CStr,
     ) -> Option<PluginInstance<'a>> {
-        if plugin_id == self.descriptor.id() {
+        if plugin_id == self.descriptor.id().unwrap_or_default() {
             Some(PluginInstance::new::<P>(
                 host_info,
                 &self.descriptor,

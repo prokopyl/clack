@@ -2,12 +2,13 @@
 //! Using these extensions, we can tell the wrapper how to advertise our CLAP plugins as AUv2.
 
 mod sys;
+
+use clack_common::factory::{Factory, RawFactoryPointer};
+use std::ffi::CStr;
 use sys::*;
 
 #[cfg(feature = "clack-host")]
 mod host;
-#[cfg(feature = "clack-host")]
-pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
 mod plugin;
@@ -74,5 +75,20 @@ impl PluginInfoAsAUv2 {
     #[inline]
     pub const fn as_raw_mut(&mut self) -> &mut clap_plugin_info_as_auv2 {
         &mut self.inner
+    }
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub struct PluginAsAuv2Factory<'a>(RawFactoryPointer<'a, clap_plugin_factory_as_auv2>);
+
+// SAFETY: clap_plugin_factory_as_auv2 is the type matching the CLAP_PLUGIN_FACTORY_INFO_AUV2 factory ID.
+unsafe impl<'a> Factory<'a> for PluginAsAuv2Factory<'a> {
+    const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_INFO_AUV2];
+    type Raw = clap_plugin_factory_as_auv2;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self {
+        Self(raw)
     }
 }

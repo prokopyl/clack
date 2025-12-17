@@ -50,12 +50,10 @@ use crate::extensions::PluginExtensions;
 use crate::host::HostAudioProcessorHandle;
 use crate::process::{Audio, Events, PluginAudioConfiguration, Process, ProcessStatus};
 
-mod descriptor;
 mod error;
 mod instance;
 pub(crate) mod logging;
 
-pub use descriptor::*;
 pub use error::PluginError;
 pub use instance::*;
 
@@ -113,8 +111,8 @@ impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {}
 ///
 /// [`Shared`]: Self::Shared
 /// [`MainThread`]: Self::MainThread
-/// [`PluginFactory`]: crate::factory::plugin::PluginFactory
-/// [`PluginFactory::create_plugin`]: crate::factory::plugin::PluginFactory::create_plugin
+/// [`PluginFactory`]: crate::factory::plugin::PluginFactoryImpl
+/// [`PluginFactory::create_plugin`]: crate::factory::plugin::PluginFactoryImpl::create_plugin
 /// [`Entry`]: crate::entry::Entry
 /// [`SinglePluginEntry`]: crate::entry::SinglePluginEntry
 /// [`DefaultPluginFactory`]: crate::entry::DefaultPluginFactory
