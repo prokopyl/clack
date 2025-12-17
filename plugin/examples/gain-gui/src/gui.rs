@@ -1,10 +1,10 @@
 //! Contains all types and implementations related to Gui window managementb
-use crate::{params::GainParams, GainPluginShared};
+use crate::{GainPluginShared, params::GainParams};
 use baseview::{Size, WindowHandle, WindowOpenOptions, WindowScalePolicy};
 use clack_plugin::plugin::PluginError;
 use egui_baseview::{
-    egui::{self, Context, Slider},
     EguiWindow, GraphicsConfig, Queue,
+    egui::{self, Context, Slider},
 };
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::sync::Arc;

@@ -4,7 +4,7 @@ use clack_host::factory::PluginFactory;
 use clack_host::prelude::*;
 use clack_host::utils::Cookie;
 use clack_plugin::entry::SinglePluginEntry;
-use clack_plugin_gain::GainPlugin;
+use clack_plugin_gain_gui::GainPlugin;
 
 #[test]
 pub fn it_works() {
