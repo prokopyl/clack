@@ -39,7 +39,7 @@ impl CpalHostMainThread<'_> {}
 pub struct Gui {
     /// The plugin's GUI extension.
     plugin_gui: PluginGui,
-    /// The negociated GUI configuration, or None if no compatible setup could be found.
+    /// The negotiated GUI configuration, or None if no compatible setup could be found.
     pub configuration: Option<GuiConfiguration<'static>>,
     /// Whether the GUI is currently open.
     is_open: bool,

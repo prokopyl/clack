@@ -9,7 +9,7 @@ use std::error::Error;
 
 /// Handling of audio buffers.
 mod buffers;
-/// Negociation for audio stream and port configuration.
+/// Negotiation for audio stream and port configuration.
 mod config;
 /// MIDI handling.
 mod midi;
@@ -28,7 +28,7 @@ pub fn activate_to_stream(
     let output_device = cpal_host.default_output_device().unwrap();
 
     let config = FullAudioConfig::find_best_from(&output_device, instance)?;
-    println!("Using negociated audio output settings: {config}");
+    println!("Using negotiated audio output settings: {config}");
 
     let midi = MidiReceiver::new(44_100, instance)?;
 
