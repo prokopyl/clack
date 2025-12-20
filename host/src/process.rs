@@ -33,6 +33,8 @@ pub use clack_common::process::*;
 #[allow(missing_docs)] // TODO: doc this
 pub mod audio_buffers;
 
+pub mod audio_buffers_v2;
+
 /// A handle to a plugin's audio processor that can be in either its `started` or `stopped` state.
 ///
 /// This is a convenience type that can be used where the type-states [`StartedPluginAudioProcessor`] and

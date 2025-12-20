@@ -99,3 +99,9 @@ impl HostInfo {
         host.version = self.inner.version.as_ptr();
     }
 }
+
+impl Default for HostInfo {
+    fn default() -> Self {
+        Self::new_from_cstring(c"".into(), c"".into(), c"".into(), c"".into())
+    }
+}
