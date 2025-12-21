@@ -7,7 +7,8 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 
 mod error;
-use crate::preset_discovery::PresetDiscoveryFactory;
+use crate::preset_discovery::host::metadata_receiver::MetadataReceiver;
+use crate::preset_discovery::{Location, PresetDiscoveryFactory};
 pub use error::*;
 
 pub struct Provider<I> {
@@ -48,6 +49,11 @@ impl<I: Indexer> Provider<I> {
         })
     }
 
+    pub fn get_metadata(&mut self, location: Location, receiver: impl MetadataReceiver) {
+        todo!()
+    }
+
+    // TODO: access_indexer
     // TODO: get_extension
     // TODO: get_metadata
 }

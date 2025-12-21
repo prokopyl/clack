@@ -1,10 +1,9 @@
 use crate::preset_discovery::get_presets;
-use clack_extensions::preset_discovery::{PresetDiscoveryFactory, Provider, ProviderDescriptor};
+use clack_extensions::preset_discovery::PresetDiscoveryFactory;
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::error::Error;
-use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
@@ -84,7 +83,7 @@ pub fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
         .collect()
 }
 
-/// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
+/// Loads all the given bundles, and returns a list of all the plugins in them.
 pub fn scan_bundles(bundles: &[DirEntry]) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
@@ -92,24 +91,21 @@ pub fn scan_bundles(bundles: &[DirEntry]) -> Vec<FoundBundlePlugin> {
         .collect()
 }
 
+/// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
+pub fn scan_bundles_matching(bundles: &[DirEntry], plugin_id: &str) -> Vec<FoundBundlePlugin> {
+    bundles
+        .par_iter()
+        .filter_map(|p| scan_plugin(p.path()))
+        .filter(|p| p.plugins.iter().any(|p| p.id == plugin_id))
+        .collect()
+}
+
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-fn scan_plugin(path: &Path) -> Option<FoundBundlePlugin> {
+pub fn scan_plugin(path: &Path) -> Option<FoundBundlePlugin> {
     let Ok(bundle) = (unsafe { PluginBundle::load(path) }) else {
         return None;
     };
-
-    let host_info = HostInfo::new("", "", "", "").unwrap();
-
-    let provider_descriptors =
-        if let Some(discovery) = bundle.get_factory::<PresetDiscoveryFactory>() {
-            discovery
-                .provider_descriptors()
-                .filter_map(|d| get_presets(&bundle, d, host_info.clone()))
-                .collect()
-        } else {
-            vec![]
-        };
 
     Some(FoundBundlePlugin {
         plugins: bundle

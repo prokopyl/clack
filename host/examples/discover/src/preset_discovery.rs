@@ -1,13 +1,27 @@
 use clack_extensions::preset_discovery::indexer::Indexer;
 use clack_extensions::preset_discovery::{
-    FileType, LocationData, Provider, ProviderDescriptor, Soundpack,
+    FileType, LocationData, PresetDiscoveryFactory, Provider, ProviderDescriptor, Soundpack,
 };
 use clack_host::prelude::{HostInfo, PluginBundle};
 use std::ffi::CStr;
 
 pub struct PresetDiscoveryData {}
 
-pub fn get_presets(
+pub fn get_presets(bundle: &PluginBundle) {
+    let host_info = HostInfo::new("", "", "", "").unwrap();
+
+    let provider_descriptors =
+        if let Some(discovery) = bundle.get_factory::<PresetDiscoveryFactory>() {
+            discovery
+                .provider_descriptors()
+                .filter_map(|d| scan_provider(bundle, d, host_info.clone()))
+                .collect()
+        } else {
+            vec![]
+        };
+}
+
+pub fn scan_provider(
     bundle: &PluginBundle,
     descriptor: &ProviderDescriptor,
     host_info: HostInfo,

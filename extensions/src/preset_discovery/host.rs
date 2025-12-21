@@ -4,6 +4,8 @@ pub(crate) mod provider;
 pub use provider::{Provider, ProviderInstanceError};
 use std::iter::FusedIterator;
 
+mod metadata_receiver;
+
 use super::*;
 
 impl<'a> PresetDiscoveryFactory<'a> {
