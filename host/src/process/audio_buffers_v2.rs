@@ -3,7 +3,6 @@
 
 use crate::prelude::InputAudioBuffers;
 use clap_sys::audio_buffer::clap_audio_buffer;
-use std::marker::PhantomData;
 
 pub struct AudioPortBuffers {
     port_buffers: Vec<clap_audio_buffer>,
@@ -26,14 +25,8 @@ pub struct InputAudioPort<T> {
 }
 
 pub unsafe trait IntoPorts<'a> {
+    const X: bool;
     fn sample_count(&self) -> u32;
-}
-
-unsafe impl<'a, P: BorrowAudioPort<'a>> IntoPorts<'a> for P {
-    #[inline(always)]
-    fn sample_count(&self) -> u32 {
-        P::sample_count(self)
-    }
 }
 
 pub unsafe trait BorrowAudioPort<'a> {
@@ -83,6 +76,42 @@ unsafe impl<'a, const N: usize> BorrowAudioChannel<'a> for &'a mut [f32; N] {
     }
 }
 
+unsafe impl<'a, const N: usize, const M: usize> BorrowAudioPort<'a> for &'a mut [[f32; N]; M] {
+    const IS_F64: bool = false;
+    const WRITABLE: bool = true;
+
+    #[inline(always)]
+    fn sample_count(&self) -> u32 {
+        N as u32
+    }
+
+    fn channel_count(&self) -> u32 {
+        M as u32
+    }
+
+    fn into_channel_ptrs(self, buf: &mut Vec<*mut f32>) {
+        buf.extend(self.iter_mut().map(|x| x.as_mut_ptr()));
+    }
+}
+
+unsafe impl<'a, const N: usize, const M: usize> BorrowAudioPort<'a> for &'a [[f32; N]; M] {
+    const IS_F64: bool = false;
+    const WRITABLE: bool = false;
+
+    #[inline(always)]
+    fn sample_count(&self) -> u32 {
+        N as u32
+    }
+
+    fn channel_count(&self) -> u32 {
+        M as u32
+    }
+
+    fn into_channel_ptrs(self, buf: &mut Vec<*mut f32>) {
+        buf.extend(self.iter().map(|x| x.as_ptr().cast_mut()));
+    }
+}
+
 unsafe impl<'a, C: BorrowAudioChannel<'a>> BorrowAudioPort<'a> for C {
     const IS_F64: bool = C::IS_F64;
     const WRITABLE: bool = C::WRITABLE;
@@ -123,6 +152,63 @@ unsafe impl<'a, C: BorrowAudioChannel<'a>, const N: usize> BorrowAudioPort<'a> f
     }
 }
 
+unsafe impl<'a, C: BorrowAudioChannel<'a> + Copy, const N: usize> BorrowAudioPort<'a> for &[C; N] {
+    const IS_F64: bool = C::IS_F64;
+    const WRITABLE: bool = C::WRITABLE;
+
+    #[inline(always)]
+    fn sample_count(&self) -> u32 {
+        self.iter().map(|x| x.sample_count()).min().unwrap_or(0)
+    }
+
+    #[inline(always)]
+    fn channel_count(&self) -> u32 {
+        N as u32
+    }
+
+    #[inline(always)]
+    fn into_channel_ptrs(self, buf: &mut Vec<*mut f32>) {
+        buf.extend(self.iter().map(|b| b.into_ptr()))
+    }
+}
+
+unsafe impl<'a, C: BorrowAudioChannel<'a> + Copy> BorrowAudioPort<'a> for &[C] {
+    const IS_F64: bool = C::IS_F64;
+    const WRITABLE: bool = C::WRITABLE;
+
+    #[inline(always)]
+    fn sample_count(&self) -> u32 {
+        self.iter().map(|x| x.sample_count()).min().unwrap_or(0)
+    }
+
+    #[inline(always)]
+    fn channel_count(&self) -> u32 {
+        self.len() as u32
+    }
+
+    #[inline(always)]
+    fn into_channel_ptrs(self, buf: &mut Vec<*mut f32>) {
+        buf.extend(self.iter().map(|b| b.into_ptr()))
+    }
+}
+
+unsafe impl<'a, P: BorrowAudioPort<'a>> IntoPorts<'a> for P {
+    const X: bool = false;
+
+    #[inline(always)]
+    fn sample_count(&self) -> u32 {
+        P::sample_count(self)
+    }
+}
+
+unsafe impl<'a, P: BorrowAudioPort<'a>, const N: usize> IntoPorts<'a> for [P; N] {
+    const X: bool = false;
+
+    fn sample_count(&self) -> u32 {
+        todo!()
+    }
+}
+
 #[inline]
 fn to_raw_buffer<'a, P: BorrowAudioPort<'a>>(port: &P) -> clap_audio_buffer {
     todo!()
@@ -140,5 +226,17 @@ mod tests {
         let _ = ports.with_inputs(&buf);
         let _ = ports.with_inputs(&mut buf);
         let _ = ports.with_inputs([&buf]);
+        let _ = ports.with_inputs(&[&buf][..]);
+    }
+
+    #[test]
+    fn stereo() {
+        let mut buf = [[0.; 4]; 2];
+        let mut ports = AudioPortBuffers::new();
+
+        let _ = ports.with_inputs(&buf);
+        let _ = ports.with_inputs(&mut buf);
+        let _ = ports.with_inputs([&buf]);
+        let _ = ports.with_inputs(&[&buf][..]);
     }
 }
