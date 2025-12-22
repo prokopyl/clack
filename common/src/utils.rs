@@ -14,11 +14,13 @@ pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> 
 mod fixed_point;
 mod id;
 mod timestamp;
+mod universal_plugin_id;
 mod version;
 
 pub use fixed_point::*;
 pub use id::ClapId;
 pub use timestamp::Timestamp;
+pub use universal_plugin_id::UniversalPluginID;
 pub use version::ClapVersion;
 
 /// A color, in the ARGB format.

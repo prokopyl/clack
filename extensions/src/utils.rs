@@ -1,6 +1,20 @@
 #![allow(dead_code)] // Those utilities are only used in *some* extensions.
 
 use core::ffi::c_char;
+use std::ffi::CStr;
+
+/// # Safety
+///
+/// Same as [`CStr::from_ptr`], except `ptr` *can* be NULL.
+#[inline]
+pub(crate) unsafe fn cstr_from_nullable_ptr<'a>(ptr: *const c_char) -> Option<&'a CStr> {
+    if ptr.is_null() {
+        None
+    } else {
+        // SAFETY: Upheld by caller
+        unsafe { Some(CStr::from_ptr(ptr)) }
+    }
+}
 
 pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe

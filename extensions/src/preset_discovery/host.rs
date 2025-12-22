@@ -5,6 +5,7 @@ pub use provider::{Provider, ProviderInstanceError};
 use std::iter::FusedIterator;
 
 mod metadata_receiver;
+pub use metadata_receiver::MetadataReceiver;
 
 use super::*;
 

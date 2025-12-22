@@ -1,8 +1,10 @@
 use clack_extensions::preset_discovery::indexer::Indexer;
 use clack_extensions::preset_discovery::{
-    FileType, LocationData, PresetDiscoveryFactory, Provider, ProviderDescriptor, Soundpack,
+    FileType, Flags, Location, LocationData, MetadataReceiver, PresetDiscoveryFactory, Provider,
+    ProviderDescriptor, Soundpack,
 };
 use clack_host::prelude::{HostInfo, PluginBundle};
+use clack_host::utils::{Timestamp, UniversalPluginID};
 use std::ffi::CStr;
 
 pub struct PresetDiscoveryData {}
@@ -26,13 +28,19 @@ pub fn scan_provider(
     descriptor: &ProviderDescriptor,
     host_info: HostInfo,
 ) -> Option<PresetDiscoveryData> {
-    let provider = Provider::instantiate(
+    let mut provider = Provider::instantiate(
         PresetIndexer::new,
         bundle,
         descriptor.id().unwrap(),
         host_info,
     )
     .unwrap();
+
+    let location = Location::File {
+        path: c"/usr/share/surge-xt/patches_factory/Basses/Smoothie.fxp",
+    };
+    let mut receiver = MyMetadataReceiver {};
+    provider.get_metadata(location, &mut receiver);
 
     Some(PresetDiscoveryData {})
 }
@@ -56,5 +64,53 @@ impl Indexer for PresetIndexer {
 
     fn declare_soundpack(&mut self, soundpack: Soundpack) {
         println!("{:?}", soundpack);
+    }
+}
+
+struct MyMetadataReceiver {}
+
+impl MetadataReceiver for MyMetadataReceiver {
+    fn on_error(&mut self, error_code: i32, error_message: Option<&CStr>) {
+        eprintln!("error code {}, {:?}", error_code, error_message);
+    }
+
+    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
+        dbg!(name, load_key);
+    }
+
+    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
+        dbg!(plugin_id);
+    }
+
+    fn set_soundpack_id(&mut self, soundpack_id: &CStr) {
+        dbg!(soundpack_id);
+    }
+
+    fn set_flags(&mut self, flags: Flags) {
+        dbg!(flags);
+    }
+
+    fn add_creator(&mut self, creator: &CStr) {
+        dbg!(creator);
+    }
+
+    fn set_description(&mut self, description: &CStr) {
+        dbg!(description);
+    }
+
+    fn set_timestamps(
+        &mut self,
+        creation_time: Option<Timestamp>,
+        modification_time: Option<Timestamp>,
+    ) {
+        dbg!(creation_time, modification_time);
+    }
+
+    fn add_feature(&mut self, feature: &CStr) {
+        dbg!(feature);
+    }
+
+    fn add_extra_info(&mut self, key: &CStr, value: &CStr) {
+        dbg!(key, value);
     }
 }
