@@ -85,8 +85,9 @@ pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode
             eprintln!("No plugins found matching the given filters");
             return Err(ExitCode::FAILURE);
         }
-        [single_result] => {
-            let presets = get_presets(&single_result.bundle);
+        [bundle] => {
+            println!("  > At {}", bundle.path.to_string_lossy());
+            let presets = get_presets(&bundle.bundle);
         }
         bundles => {
             for bundle in bundles {

@@ -5,9 +5,11 @@ use clack_extensions::preset_discovery::{
 };
 use clack_host::prelude::{HostInfo, PluginBundle};
 use clack_host::utils::{Timestamp, UniversalPluginID};
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 
 pub struct PresetDiscoveryData {}
+
+mod metadata;
 
 pub fn get_presets(bundle: &PluginBundle) {
     let host_info = HostInfo::new("", "", "", "").unwrap();
@@ -39,8 +41,9 @@ pub fn scan_provider(
     let location = Location::File {
         path: c"/usr/share/surge-xt/patches_factory/Basses/Smoothie.fxp",
     };
-    let mut receiver = MyMetadataReceiver {};
-    provider.get_metadata(location, &mut receiver);
+
+    let metadata = metadata::get_metadata(&mut provider, location).unwrap();
+    dbg!(&metadata);
 
     Some(PresetDiscoveryData {})
 }
@@ -64,53 +67,5 @@ impl Indexer for PresetIndexer {
 
     fn declare_soundpack(&mut self, soundpack: Soundpack) {
         println!("{:?}", soundpack);
-    }
-}
-
-struct MyMetadataReceiver {}
-
-impl MetadataReceiver for MyMetadataReceiver {
-    fn on_error(&mut self, error_code: i32, error_message: Option<&CStr>) {
-        eprintln!("error code {}, {:?}", error_code, error_message);
-    }
-
-    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
-        dbg!(name, load_key);
-    }
-
-    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
-        dbg!(plugin_id);
-    }
-
-    fn set_soundpack_id(&mut self, soundpack_id: &CStr) {
-        dbg!(soundpack_id);
-    }
-
-    fn set_flags(&mut self, flags: Flags) {
-        dbg!(flags);
-    }
-
-    fn add_creator(&mut self, creator: &CStr) {
-        dbg!(creator);
-    }
-
-    fn set_description(&mut self, description: &CStr) {
-        dbg!(description);
-    }
-
-    fn set_timestamps(
-        &mut self,
-        creation_time: Option<Timestamp>,
-        modification_time: Option<Timestamp>,
-    ) {
-        dbg!(creation_time, modification_time);
-    }
-
-    fn add_feature(&mut self, feature: &CStr) {
-        dbg!(feature);
-    }
-
-    fn add_extra_info(&mut self, key: &CStr, value: &CStr) {
-        dbg!(key, value);
     }
 }

@@ -89,6 +89,13 @@ bitflags! {
     }
 }
 
+impl Default for Flags {
+    #[inline]
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub enum Location<'a> {
     Plugin,
