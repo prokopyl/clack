@@ -213,18 +213,17 @@ const _: () = {
 };
 
 #[cfg(feature = "raw-window-handle_06")]
-#[allow(deprecated)]
 const _: () = {
     use raw_window_handle_06::{
-        AppKitWindowHandle, HandleError, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
-        XlibWindowHandle,
+        AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, Win32WindowHandle,
+        WindowHandle, XlibWindowHandle,
     };
     use std::num::NonZeroIsize;
     use std::ptr::NonNull;
 
     // SAFETY: The host ensures the underlying window handles are still valid
-    unsafe impl HasRawWindowHandle for Window<'_> {
-        fn raw_window_handle(&self) -> Result<RawWindowHandle, HandleError> {
+    impl HasWindowHandle for Window<'_> {
+        fn window_handle(&self) -> Result<WindowHandle<'_>, raw_window_handle_06::HandleError> {
             let api_type = self.api_type();
 
             let raw = if api_type == GuiApiType::WIN32 {
@@ -244,24 +243,26 @@ const _: () = {
                 return Err(HandleError::NotSupported);
             };
 
-            Ok(raw)
+            // SAFETY: the handle is valid because the `Window` guarantees that the underlying window is valid
+            unsafe { Ok(WindowHandle::borrow_raw(raw)) }
         }
     }
 
-    impl Window<'static> {
-        /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
+    impl<'a> Window<'a> {
+        /// Creates a [`Window`] from any window object implementing [`HasWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
-            Self::from_window_handle(window.raw_window_handle().ok()?)
+        pub fn from_window<W: HasWindowHandle>(window: &'a W) -> Option<Self> {
+            // SAFETY: we know the handle is valid because of the guarantees made by HasWindowHandle trait
+            unsafe { Self::from_window_handle(window.window_handle().ok()?.as_raw()) }
         }
 
         /// Creates a [`Window`] from a [`RawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window_handle(handle: RawWindowHandle) -> Option<Self> {
+        pub unsafe fn from_window_handle(handle: RawWindowHandle) -> Option<Self> {
             match handle {
                 RawWindowHandle::Win32(handle) => {
                     Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
