@@ -10,6 +10,7 @@ members = [
     "host/examples/discover",
     "plugin/examples/gain",
     "plugin/examples/gain-gui",
+    "plugin/examples/gain-presets",
     "plugin/examples/polysynth",
 ]
 

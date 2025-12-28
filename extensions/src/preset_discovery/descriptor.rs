@@ -27,12 +27,7 @@ use std::os::raw::c_char;
 /// use clack_extensions::preset_discovery::ProviderDescriptor;
 ///
 /// fn get_descriptor() -> ProviderDescriptor {
-///   use clack_common::plugin::features::*;
-///
-///   PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
-///     .with_description("A simple gain plugin example!")
-///     .with_version("0.1.0")
-///     .with_features([AUDIO_EFFECT, STEREO])
+///   ProviderDescriptor::new("org.rust-audio.clack.gain-presets", "Clack Gain Example Presets")
 /// }
 /// ```
 #[repr(C)]
