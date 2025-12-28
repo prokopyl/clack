@@ -58,6 +58,7 @@ pub struct FileType {
     pub extension: Option<Box<Path>>,
 }
 
+#[derive(Debug)]
 pub struct Location {
     pub flags: Flags,
     pub name: Box<CStr>,
