@@ -9,7 +9,7 @@ use std::ptr::NonNull;
 
 #[repr(C)]
 pub struct IndexerWrapper<I> {
-    inner: I,
+    pub(crate) inner: I,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -28,6 +28,15 @@ impl<I> IndexerWrapper<I> {
         let s = unsafe { self.get_unchecked_mut() };
 
         s as *mut Self as *mut c_void
+    }
+
+    pub(crate) fn inner(&self) -> &I {
+        &self.inner
+    }
+
+    pub(crate) fn inner_mut(self: Pin<&mut Self>) -> &mut I {
+        // SAFETY: inner does not need to be pinned at all, only this struct needs to have a stable address.
+        &mut unsafe { self.get_unchecked_mut() }.inner
     }
 
     unsafe fn from_raw<'a>(

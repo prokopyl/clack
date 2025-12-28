@@ -13,9 +13,10 @@ pub use error::*;
 
 pub struct Provider<I> {
     indexer_wrapper: Pin<Box<IndexerWrapper<I>>>,
-    indexer_descriptor: Pin<Box<RawIndexerDescriptor>>,
     provider_ptr: NonNull<clap_preset_discovery_provider>,
 
+    // This is only here to be kept alive
+    _indexer_descriptor: Pin<Box<RawIndexerDescriptor>>,
     _plugin_bundle: PluginBundle,
     _no_send: PhantomData<*const ()>,
 }
@@ -42,7 +43,7 @@ impl<I: Indexer> Provider<I> {
 
         Ok(Self {
             indexer_wrapper,
-            indexer_descriptor,
+            _indexer_descriptor: indexer_descriptor,
             provider_ptr,
             _plugin_bundle: plugin_bundle.clone(),
             _no_send: PhantomData,
@@ -66,6 +67,16 @@ impl<I: Indexer> Provider<I> {
                 )
             };
         }
+    }
+
+    #[inline]
+    pub fn indexer(&self) -> &I {
+        self.indexer_wrapper.inner()
+    }
+
+    #[inline]
+    pub fn indexer_mut(&mut self) -> &mut I {
+        self.indexer_wrapper.as_mut().inner_mut()
     }
 
     // TODO: access_indexer

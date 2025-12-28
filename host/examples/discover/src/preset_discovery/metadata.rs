@@ -35,6 +35,17 @@ pub struct PresetData {
     extra_infos: Vec<(Box<CStr>, Box<CStr>)>,
 }
 
+impl Display for PresetData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        if let Some(name) = &self.name {
+            write!(f, "{name:?}")?;
+        }
+
+        Ok(())
+        //todo!()
+    }
+}
+
 struct MyMetadataReceiver {
     presets: Vec<PresetData>,
     current_preset: Option<PresetData>,

@@ -102,7 +102,7 @@ pub enum Location<'a> {
     File { path: &'a CStr },
 }
 
-impl Location<'_> {
+impl<'a> Location<'a> {
     #[inline]
     pub fn to_raw(self) -> (clap_preset_discovery_location_kind, *const c_char) {
         match self {
@@ -123,6 +123,14 @@ impl Location<'_> {
                 path: unsafe { CStr::from_ptr(path) },
             }),
             _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn file_path(&self) -> Option<&'a CStr> {
+        match self {
+            Location::Plugin => None,
+            Location::File { path } => Some(*path),
         }
     }
 }
