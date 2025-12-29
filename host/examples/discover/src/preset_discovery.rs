@@ -1,7 +1,7 @@
 use crate::preset_discovery::data::{PresetDiscoveryData, PresetsAtLocation, PresetsInFile};
 use crate::preset_discovery::indexer::{FileType, Location, PresetIndexer};
 use clack_extensions::preset_discovery::{
-    self, PresetDiscoveryFactory, Provider, ProviderDescriptor,
+    self, PresetDiscoveryFactory, ProviderDescriptor, host::Provider,
 };
 use clack_host::prelude::{HostInfo, PluginBundle};
 use std::ffi::CString;

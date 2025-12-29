@@ -29,13 +29,13 @@ impl<'a> PresetDiscoveryFactory<'a> {
 }
 
 #[cfg(feature = "clack-host")]
-mod host;
+pub mod host;
 
 #[cfg(feature = "clack-host")]
 pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
-mod plugin;
+pub mod plugin;
 
 #[cfg(feature = "clack-plugin")]
 pub use plugin::*;

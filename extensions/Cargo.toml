@@ -19,6 +19,7 @@ raw-window-handle_06 = { workspace = true, optional = true }
 
 [dev-dependencies]
 clack-host = { workspace = true, features = ["clack-plugin"] }
+static_assertions = "1.1.0"
 
 [features]
 all-extensions = [

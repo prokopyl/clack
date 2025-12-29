@@ -1,11 +1,15 @@
 use crate::preset_discovery::{PresetDiscoveryFactory, ProviderDescriptor};
 use clack_common::factory::Factory;
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
-use clack_plugin::host::HostInfo;
 use clap_sys::factory::preset_discovery::clap_preset_discovery_factory;
 use std::ffi::CStr;
 
+mod indexer;
+mod metadata_receiver;
 mod provider;
+
+pub use indexer::{Indexer, IndexerInfo};
+pub use provider::{Provider, ProviderInstance};
 
 pub struct PresetDiscoveryFactoryWrapper<F> {
     inner: FactoryWrapper<clap_preset_discovery_factory, F>,
@@ -70,7 +74,7 @@ pub trait PresetDiscoveryFactoryImpl: Send + Sync {
     /// returns [`None`].
     fn create_provider<'a>(
         &'a self,
-        host_info: HostInfo<'a>,
-        plugin_id: &CStr,
-    ) -> Option<PluginInstance<'a>>;
+        host_info: IndexerInfo<'a>,
+        provider_id: &CStr,
+    ) -> Option<ProviderInstance<'a>>;
 }

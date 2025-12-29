@@ -16,6 +16,14 @@ pub(crate) unsafe fn cstr_from_nullable_ptr<'a>(ptr: *const c_char) -> Option<&'
     }
 }
 
+#[inline]
+pub(crate) fn cstr_to_nullable_ptr(str: Option<&CStr>) -> *const c_char {
+    match str {
+        Some(s) => s.as_ptr(),
+        None => core::ptr::null(),
+    }
+}
+
 pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe
     let data = unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
