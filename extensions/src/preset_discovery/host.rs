@@ -1,3 +1,4 @@
+mod extension;
 pub mod indexer;
 pub(crate) mod provider;
 
@@ -5,6 +6,7 @@ pub use provider::{Provider, ProviderInstanceError};
 use std::iter::FusedIterator;
 
 mod metadata_receiver;
+pub use extension::*;
 pub use metadata_receiver::MetadataReceiver;
 
 use super::*;

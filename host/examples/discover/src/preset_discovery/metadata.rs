@@ -1,5 +1,5 @@
 use clack_extensions::preset_discovery::indexer::Indexer;
-use clack_extensions::preset_discovery::{Flags, Location, MetadataReceiver, host::Provider};
+use clack_extensions::preset_discovery::{Flags, Location, host::MetadataReceiver, host::Provider};
 use clack_host::utils::{Timestamp, UniversalPluginID};
 use core::ffi::CStr;
 use std::fmt::{Display, Formatter};

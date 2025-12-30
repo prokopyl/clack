@@ -182,8 +182,8 @@ impl Entry for GainPluginEntry {
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(GainPluginFactory {
                 descriptor: PluginDescriptor::new(
-                    "org.rust-audio.clack.gain",
-                    "Clack Gain Example",
+                    "org.rust-audio.clack.gain-presets",
+                    "Clack Gain Presets Example",
                 )
                 .with_features([AUDIO_EFFECT, STEREO]),
             }),

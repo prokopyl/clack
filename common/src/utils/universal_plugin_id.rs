@@ -8,7 +8,7 @@ pub struct UniversalPluginID<'a> {
 }
 
 impl<'a> UniversalPluginID<'a> {
-    pub unsafe fn from_raw_ptr(ptr: *const clap_universal_plugin_id) -> Option<Self> {
+    pub const unsafe fn from_raw_ptr(ptr: *const clap_universal_plugin_id) -> Option<Self> {
         if ptr.is_null() {
             return None;
         }
@@ -18,7 +18,7 @@ impl<'a> UniversalPluginID<'a> {
         Self::from_raw(plugin_id)
     }
 
-    pub unsafe fn from_raw(raw: clap_universal_plugin_id) -> Option<Self> {
+    pub const unsafe fn from_raw(raw: clap_universal_plugin_id) -> Option<Self> {
         Some(Self {
             abi: if raw.abi.is_null() {
                 return None;
@@ -33,5 +33,18 @@ impl<'a> UniversalPluginID<'a> {
                 unsafe { CStr::from_ptr(raw.id) }
             },
         })
+    }
+
+    #[inline]
+    pub const fn clap(id: &'a CStr) -> Self {
+        Self { abi: c"clap", id }
+    }
+
+    #[inline]
+    pub const fn to_raw(&self) -> clap_universal_plugin_id {
+        clap_universal_plugin_id {
+            id: self.id.as_ptr(),
+            abi: self.abi.as_ptr(),
+        }
     }
 }

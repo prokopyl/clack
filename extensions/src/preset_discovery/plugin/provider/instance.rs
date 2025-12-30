@@ -18,7 +18,7 @@ impl<'a> ProviderInstance<'a> {
     pub fn new<P: Provider<'a>>(
         indexer: IndexerInfo<'a>,
         descriptor: &'a ProviderDescriptor,
-        initializer: impl Initializer<'a, P>,
+        initializer: impl FnOnce(Indexer<'a>) -> P + 'a,
     ) -> Self {
         Self {
             lifetime: PhantomData,
@@ -43,7 +43,7 @@ impl Drop for ProviderInstance<'_> {
 }
 
 struct ProviderInstanceData<'a, P> {
-    indexer: Indexer<'a>,
+    indexer_info: IndexerInfo<'a>,
     state: ProviderInstanceState<'a, P>,
 }
 
@@ -57,7 +57,7 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
             desc: descriptor.as_raw(),
             provider_data: Box::into_raw(Box::new(ProviderInstanceData {
                 // SAFETY: TODO
-                indexer: unsafe { indexer_info.to_indexer() },
+                indexer_info: indexer_info,
                 state: ProviderInstanceState::Uninitialized(Box::new(initializer)),
             }))
             .cast(),
@@ -80,7 +80,7 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
                 unreachable!()
             };
 
-            let provider = initializer.init(instance.indexer);
+            let provider = initializer.init(instance.indexer_info.to_indexer());
 
             instance.state =
                 ProviderInstanceState::Initialized(ProviderWrapper { inner: provider });
@@ -114,7 +114,7 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
                 return;
             }
 
-            handle_panic(AssertUnwindSafe(|| {
+            let _ = handle_panic(AssertUnwindSafe(|| {
                 let _ = Box::from_raw(provider_data);
             }));
         }
@@ -123,7 +123,7 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
             return;
         }
 
-        handle_panic(AssertUnwindSafe(|| {
+        let _ = handle_panic(AssertUnwindSafe(|| {
             let _ = Box::from_raw(provider.cast_mut());
         }));
     }
@@ -150,4 +150,14 @@ enum ProviderInstanceState<'a, P> {
 
 trait Initializer<'a, P>: 'a {
     fn init(self: Box<Self>, indexer: Indexer<'a>) -> P;
+}
+
+impl<'a, F: 'a, P> Initializer<'a, P> for F
+where
+    F: FnOnce(Indexer<'a>) -> P,
+{
+    #[inline]
+    fn init(self: Box<Self>, indexer: Indexer<'a>) -> P {
+        self(indexer)
+    }
 }

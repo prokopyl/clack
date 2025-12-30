@@ -1,4 +1,6 @@
+use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clack_common::factory::{Factory, RawFactoryPointer};
+use clap_sys::ext::preset_load::*;
 use clap_sys::factory::preset_discovery::*;
 use std::ffi::CStr;
 
@@ -25,6 +27,38 @@ impl<'a> PresetDiscoveryFactory<'a> {
     #[inline]
     pub const fn raw(&self) -> RawFactoryPointer<'a, clap_preset_discovery_factory> {
         self.0
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
+pub struct PluginPresetLoad(RawExtension<PluginExtensionSide, clap_plugin_preset_load>);
+
+// SAFETY: TODO
+unsafe impl Extension for PluginPresetLoad {
+    const IDENTIFIERS: &'static [&'static CStr] =
+        &[CLAP_EXT_PRESET_LOAD, CLAP_EXT_PRESET_LOAD_COMPAT];
+    type ExtensionSide = PluginExtensionSide;
+
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        // SAFETY: TODO
+        unsafe { Self(raw.cast()) }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
+pub struct HostPresetLoad(RawExtension<HostExtensionSide, clap_host_preset_load>);
+
+// SAFETY: TODO
+unsafe impl Extension for HostPresetLoad {
+    const IDENTIFIERS: &'static [&'static CStr] =
+        &[CLAP_EXT_PRESET_LOAD, CLAP_EXT_PRESET_LOAD_COMPAT];
+    type ExtensionSide = HostExtensionSide;
+
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        // SAFETY: TODO
+        unsafe { Self(raw.cast()) }
     }
 }
 

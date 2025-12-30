@@ -1,8 +1,28 @@
+use crate::GainPluginMainThread;
 use clack_extensions::preset_discovery::{
-    IndexerInfo, PresetDiscoveryFactoryImpl, ProviderDescriptor, ProviderInstance, plugin::Provider,
+    Flags, IndexerInfo, Location, LocationData, PluginPresetLoadImpl, PresetDiscoveryFactoryImpl,
+    ProviderDescriptor, ProviderInstance, plugin::MetadataReceiver, plugin::Provider,
 };
-use clack_plugin::host::HostInfo;
-use std::ffi::CStr;
+use clack_plugin::plugin::PluginError;
+use clack_plugin::utils::UniversalPluginID;
+use std::ffi::{CStr, CString};
+use std::str::FromStr;
+
+struct Preset {
+    name: &'static CStr,
+    volume: f32,
+}
+
+const PRESETS: &[Preset] = &[
+    Preset {
+        name: c"Unity",
+        volume: 1.0,
+    },
+    Preset {
+        name: c"Quieter",
+        volume: 0.5,
+    },
+];
 
 pub struct GainPresetDiscoveryFactory {
     desc: ProviderDescriptor,
@@ -37,11 +57,66 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
             return None;
         }
 
-        ProviderInstance::new(indexer_info, &self.desc, |indexer| GainPresetProvider);
-        todo!()
+        Some(ProviderInstance::new(
+            indexer_info,
+            &self.desc,
+            |mut indexer| {
+                indexer.declare_location(LocationData {
+                    name: c"",
+                    flags: Flags::IS_FACTORY_CONTENT,
+                    location: Location::Plugin,
+                });
+
+                GainPresetProvider
+            },
+        ))
     }
 }
 
 pub struct GainPresetProvider;
 
-impl<'a> Provider<'a> for GainPresetProvider {}
+impl<'a> Provider<'a> for GainPresetProvider {
+    fn get_metadata(&mut self, mut receiver: MetadataReceiver<'_>) {
+        for (i, preset) in PRESETS.iter().enumerate() {
+            let load_key = CString::new(i.to_string()).unwrap();
+            receiver.begin_preset(Some(preset.name), Some(&load_key));
+            receiver.add_plugin_id(UniversalPluginID::clap(
+                c"org.rust-audio.clack.gain-presets",
+            ));
+            receiver.add_creator(c"Me!");
+        }
+    }
+}
+
+impl PluginPresetLoadImpl for GainPluginMainThread<'_> {
+    // TODO: fully support errors?
+    fn load_from_location(
+        &mut self,
+        location: Location,
+        load_key: Option<&CStr>,
+    ) -> Result<(), PluginError> {
+        let Location::Plugin = location else {
+            return Err(PluginError::Message("Unsupported plugin location"));
+        };
+
+        let Some(load_key) = load_key else {
+            return Err(PluginError::Message("Missing load key"));
+        };
+
+        let Ok(load_key) = load_key.to_str() else {
+            return Err(PluginError::Message("Invalid load key"));
+        };
+
+        let Ok(load_key) = usize::from_str(load_key) else {
+            return Err(PluginError::Message("Invalid load key"));
+        };
+
+        let Some(preset) = PRESETS.get(load_key) else {
+            return Err(PluginError::Message("Invalid load key"));
+        };
+
+        self.shared.params.set_volume(preset.volume);
+
+        Ok(())
+    }
+}

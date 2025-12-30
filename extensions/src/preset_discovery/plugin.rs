@@ -4,11 +4,14 @@ use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_factory;
 use std::ffi::CStr;
 
+mod extension;
 mod indexer;
 mod metadata_receiver;
 mod provider;
 
+pub use extension::*;
 pub use indexer::{Indexer, IndexerInfo};
+pub use metadata_receiver::MetadataReceiver;
 pub use provider::{Provider, ProviderInstance};
 
 pub struct PresetDiscoveryFactoryWrapper<F> {
