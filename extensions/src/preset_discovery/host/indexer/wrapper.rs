@@ -92,6 +92,15 @@ pub enum IndexerWrapperError {
 
 impl Display for IndexerWrapperError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        match self {
+            IndexerWrapperError::NullIndexerPointer => f.write_str("Indexer pointer is null"),
+            IndexerWrapperError::NullIndexerDataPointer => {
+                f.write_str("Indexer data pointer is null")
+            }
+            IndexerWrapperError::Panic => f.write_str("Indexer panicked"),
+            IndexerWrapperError::InvalidParameter(e) => {
+                write!(f, "Invalid parameter to indexer function: {}", e)
+            }
+        }
     }
 }

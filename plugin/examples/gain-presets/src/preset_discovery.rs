@@ -1,7 +1,7 @@
 use crate::GainPluginMainThread;
 use clack_extensions::preset_discovery::{
     Flags, IndexerInfo, Location, LocationData, PluginPresetLoadImpl, PresetDiscoveryFactoryImpl,
-    ProviderDescriptor, ProviderInstance, plugin::MetadataReceiver, plugin::Provider,
+    ProviderDescriptor, ProviderInstance, plugin::MetadataReceiver, plugin::ProviderImpl,
 };
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::UniversalPluginID;
@@ -75,8 +75,8 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
 
 pub struct GainPresetProvider;
 
-impl<'a> Provider<'a> for GainPresetProvider {
-    fn get_metadata(&mut self, mut receiver: MetadataReceiver<'_>) {
+impl<'a> ProviderImpl<'a> for GainPresetProvider {
+    fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) {
         for (i, preset) in PRESETS.iter().enumerate() {
             let load_key = CString::new(i.to_string()).unwrap();
             receiver.begin_preset(Some(preset.name), Some(&load_key));

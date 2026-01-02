@@ -1,5 +1,5 @@
 use crate::preset_discovery::indexer::{Indexer, IndexerWrapper, IndexerWrapperError};
-use crate::preset_discovery::{FileType, Location, LocationData, Soundpack};
+use crate::preset_discovery::{FileType, LocationData, Soundpack};
 use clack_common::utils::ClapVersion;
 use clack_host::prelude::HostInfo;
 use clap_sys::factory::preset_discovery::{

@@ -1,17 +1,22 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
+use clack_extensions::preset_discovery::indexer::Indexer;
+use clack_extensions::preset_discovery::{
+    FileType, Flags, Location, LocationData, PresetDiscoveryFactory, Provider, ProviderImpl,
+    Soundpack, host::MetadataReceiver,
+};
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
 use clack_host::prelude::*;
-use clack_host::utils::Cookie;
-use clack_plugin::entry::SinglePluginEntry;
-use clack_plugin_gain_presets::GainPlugin;
+use clack_host::utils::{Cookie, Timestamp, UniversalPluginID};
+use clack_plugin_gain_presets::GainPluginEntry;
+use std::ffi::{CStr, CString};
 
 #[test]
 pub fn it_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
+    let bundle = PluginBundle::load_from_clack::<GainPluginEntry>(c"").unwrap();
 
     let descriptor = bundle
         .get_factory::<PluginFactory>()
@@ -134,6 +139,47 @@ pub fn it_works() {
     plugin.deactivate(processor.stop_processing());
 }
 
+#[test]
+fn preset_listing_works() {
+    // Initialize host with basic info
+    let info = HostInfo::new("test", "", "", "").unwrap();
+
+    let bundle = PluginBundle::load_from_clack::<GainPluginEntry>(c"").unwrap();
+    let factory = bundle.get_factory::<PresetDiscoveryFactory>().unwrap();
+    let providers: Vec<_> = factory.provider_descriptors().collect();
+    assert_eq!(providers.len(), 1);
+    let provider = providers[0];
+    assert_eq!(
+        provider.id().unwrap(),
+        c"org.rust-audio.clack.gain-presets-provider"
+    );
+
+    let provider_id = provider.id().unwrap();
+    let mut provider = Provider::instantiate(
+        || TestIndexer { declared: false },
+        &bundle,
+        provider_id,
+        info,
+    )
+    .unwrap();
+
+    assert!(provider.indexer().declared);
+
+    let mut receiver = TestReceiver {
+        presets: Vec::new(),
+    };
+
+    provider.get_metadata(Location::Plugin, &mut receiver);
+
+    assert_eq!(
+        &receiver.presets,
+        &[
+            (c"Unity".to_owned(), c"0".to_owned()),
+            (c"Quieter".to_owned(), c"1".to_owned())
+        ]
+    );
+}
+
 struct TestHostMainThread;
 struct TestHostShared;
 struct TestHostAudioProcessor;
@@ -161,4 +207,78 @@ impl HostHandlers for TestHostHandlers {
     type Shared<'a> = TestHostShared;
     type MainThread<'a> = TestHostMainThread;
     type AudioProcessor<'a> = TestHostAudioProcessor;
+}
+
+struct TestIndexer {
+    declared: bool,
+}
+
+impl Indexer for TestIndexer {
+    fn declare_filetype(&mut self, _file_type: FileType) {
+        unreachable!()
+    }
+
+    fn declare_location(&mut self, location: LocationData) {
+        assert!(!self.declared);
+        assert_eq!(location.location, Location::Plugin);
+        self.declared = true;
+    }
+
+    fn declare_soundpack(&mut self, _soundpack: Soundpack) {
+        unreachable!()
+    }
+}
+
+struct TestReceiver {
+    presets: Vec<(CString, CString)>,
+}
+
+impl MetadataReceiver for TestReceiver {
+    fn on_error(&mut self, _error_code: i32, _error_message: Option<&CStr>) {
+        unreachable!()
+    }
+
+    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
+        self.presets
+            .push((name.unwrap().to_owned(), load_key.unwrap().to_owned()));
+    }
+
+    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
+        assert_eq!(
+            plugin_id,
+            UniversalPluginID::clap(c"org.rust-audio.clack.gain-presets")
+        )
+    }
+
+    fn set_soundpack_id(&mut self, _soundpack_id: &CStr) {
+        unreachable!()
+    }
+
+    fn set_flags(&mut self, _flags: Flags) {
+        unreachable!()
+    }
+
+    fn add_creator(&mut self, creator: &CStr) {
+        assert_eq!(creator, c"Me!")
+    }
+
+    fn set_description(&mut self, _description: &CStr) {
+        unreachable!()
+    }
+
+    fn set_timestamps(
+        &mut self,
+        _creation_time: Option<Timestamp>,
+        _modification_time: Option<Timestamp>,
+    ) {
+        unreachable!()
+    }
+
+    fn add_feature(&mut self, _feature: &CStr) {
+        unreachable!()
+    }
+
+    fn add_extra_info(&mut self, _key: &CStr, _value: &CStr) {
+        unreachable!()
+    }
 }

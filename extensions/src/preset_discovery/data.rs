@@ -39,7 +39,7 @@ impl FileType<'_> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct LocationData<'a> {
     pub name: &'a CStr,
     pub flags: Flags,
@@ -70,7 +70,7 @@ impl LocationData<'_> {
         // SAFETY: TODO
         unsafe {
             Some(Self {
-                name: str_from_raw(raw.name)?,
+                name: str_from_raw(raw.name).unwrap_or(c""),
                 flags: Flags::from_bits_truncate(raw.flags),
                 location: Location::from_raw(raw.kind, raw.location)?,
             })
@@ -96,7 +96,7 @@ impl Default for Flags {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Location<'a> {
     Plugin,
     File { path: &'a CStr },

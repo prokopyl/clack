@@ -14,7 +14,7 @@ pub struct MetadataReceiver<'a> {
 
 impl MetadataReceiver<'_> {
     pub(crate) unsafe fn from_raw<'a>(
-        raw: *mut clap_preset_discovery_metadata_receiver,
+        raw: *const clap_preset_discovery_metadata_receiver,
     ) -> &'a mut Self {
         // SAFETY: This is safe to transmute as it's repr(C) and has the same memory representation
         // Other safety invariants are upheld by the caller

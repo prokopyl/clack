@@ -12,6 +12,14 @@ pub struct IndexerInfo<'a> {
 
 impl<'a> IndexerInfo<'a> {
     #[inline]
+    pub unsafe fn from_raw(inner: *const clap_preset_discovery_indexer) -> Option<Self> {
+        Some(Self {
+            inner: NonNull::new(inner.cast_mut())?,
+            _lifetime: PhantomData,
+        })
+    }
+
+    #[inline]
     pub(crate) unsafe fn to_indexer(&self) -> Indexer<'a> {
         Indexer {
             inner: self.inner,

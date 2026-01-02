@@ -1,28 +1,29 @@
 use crate::preset_discovery::{PresetDiscoveryFactory, ProviderDescriptor};
 use clack_common::factory::Factory;
-use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
-use clap_sys::factory::preset_discovery::clap_preset_discovery_factory;
-use std::ffi::CStr;
+use clack_plugin::factory::{FactoryImplementation, FactoryWrapper, FactoryWrapperError};
+use clap_sys::factory::preset_discovery::*;
+use std::ffi::{CStr, c_char};
 
 mod extension;
 mod indexer;
 mod metadata_receiver;
 mod provider;
 
+use crate::utils::cstr_from_nullable_ptr;
 pub use extension::*;
 pub use indexer::{Indexer, IndexerInfo};
 pub use metadata_receiver::MetadataReceiver;
-pub use provider::{Provider, ProviderInstance};
+pub use provider::{ProviderImpl, ProviderInstance};
 
 pub struct PresetDiscoveryFactoryWrapper<F> {
     inner: FactoryWrapper<clap_preset_discovery_factory, F>,
 }
 
-impl<F> PresetDiscoveryFactoryWrapper<F> {
+impl<F: PresetDiscoveryFactoryImpl> PresetDiscoveryFactoryWrapper<F> {
     const RAW: clap_preset_discovery_factory = clap_preset_discovery_factory {
-        count: None,
-        get_descriptor: None,
-        create: None,
+        count: Some(count::<F>),
+        get_descriptor: Some(get_descriptor::<F>),
+        create: Some(create::<F>),
     };
 
     pub fn new(inner: F) -> Self {
@@ -33,7 +34,7 @@ impl<F> PresetDiscoveryFactoryWrapper<F> {
 }
 
 // TODO: make this impl unsafe
-impl<F> FactoryImplementation for PresetDiscoveryFactoryWrapper<F> {
+impl<F: PresetDiscoveryFactoryImpl> FactoryImplementation for PresetDiscoveryFactoryWrapper<F> {
     type Factory<'a>
         = PresetDiscoveryFactory<'a>
     where
@@ -47,10 +48,45 @@ impl<F> FactoryImplementation for PresetDiscoveryFactoryWrapper<F> {
     }
 }
 
-unsafe extern "C" fn count<F>(
-    clap_preset_discovery_factory: *const clap_preset_discovery_factory,
+unsafe extern "C" fn count<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
 ) -> u32 {
-    todo!()
+    FactoryWrapper::<_, F>::handle(factory, |factory| Ok(factory.provider_count())).unwrap_or(0)
+}
+
+unsafe extern "C" fn get_descriptor<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
+    index: u32,
+) -> *const clap_preset_discovery_provider_descriptor {
+    FactoryWrapper::<_, F>::handle(factory, |factory| {
+        match factory.provider_descriptor(index) {
+            Some(descriptor) => Ok(descriptor.as_raw() as *const _),
+            None => Ok(core::ptr::null()),
+        }
+    })
+    .unwrap_or(core::ptr::null())
+}
+
+unsafe extern "C" fn create<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
+    indexer: *const clap_preset_discovery_indexer,
+    id: *const c_char,
+) -> *const clap_preset_discovery_provider {
+    FactoryWrapper::<_, F>::handle(factory, |factory| {
+        let indexer = IndexerInfo::from_raw(indexer)
+            .ok_or(FactoryWrapperError::NulPtr("Invalid indexer pointer"))?;
+
+        let id =
+            cstr_from_nullable_ptr(id).ok_or(FactoryWrapperError::NulPtr("Invalid id string"))?;
+
+        let provider = factory.create_provider(indexer, id);
+
+        match provider {
+            Some(instance) => Ok(instance.into_raw()),
+            None => Ok(core::ptr::null_mut()),
+        }
+    })
+    .unwrap_or(core::ptr::null_mut())
 }
 
 pub trait PresetDiscoveryFactoryImpl: Send + Sync {

@@ -1,9 +1,10 @@
 mod instance;
+use crate::preset_discovery::Location;
 use crate::preset_discovery::plugin::metadata_receiver::MetadataReceiver;
 pub use instance::ProviderInstance;
 
 mod wrapper;
 
-pub trait Provider<'a>: 'a {
-    fn get_metadata(&mut self, receiver: MetadataReceiver<'_>);
+pub trait ProviderImpl<'a>: 'a {
+    fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver);
 }

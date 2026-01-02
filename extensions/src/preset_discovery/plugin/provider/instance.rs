@@ -1,12 +1,17 @@
 use crate::preset_discovery::plugin::indexer::Indexer;
-use crate::preset_discovery::plugin::provider::Provider;
+use crate::preset_discovery::plugin::provider::ProviderImpl;
 use crate::preset_discovery::plugin::provider::wrapper::ProviderWrapper;
-use crate::preset_discovery::{IndexerInfo, ProviderDescriptor};
+use crate::preset_discovery::{
+    IndexerInfo, Location, ProviderDescriptor, ProviderInstanceError, plugin::MetadataReceiver,
+};
 use crate::utils::handle_panic;
 use clap_sys::factory::preset_discovery::{
+    clap_preset_discovery_location_kind, clap_preset_discovery_metadata_receiver,
     clap_preset_discovery_provider, clap_preset_discovery_provider_descriptor,
 };
+use std::ffi::c_char;
 use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
 use std::panic::AssertUnwindSafe;
 
 pub struct ProviderInstance<'a> {
@@ -15,7 +20,7 @@ pub struct ProviderInstance<'a> {
 }
 
 impl<'a> ProviderInstance<'a> {
-    pub fn new<P: Provider<'a>>(
+    pub fn new<P: ProviderImpl<'a>>(
         indexer: IndexerInfo<'a>,
         descriptor: &'a ProviderDescriptor,
         initializer: impl FnOnce(Indexer<'a>) -> P + 'a,
@@ -28,6 +33,11 @@ impl<'a> ProviderInstance<'a> {
                 initializer,
             )),
         }
+    }
+
+    #[inline]
+    pub(crate) fn into_raw(self) -> *mut clap_preset_discovery_provider {
+        ManuallyDrop::new(self).inner.as_mut()
     }
 }
 
@@ -47,7 +57,7 @@ struct ProviderInstanceData<'a, P> {
     state: ProviderInstanceState<'a, P>,
 }
 
-impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
+impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
     fn new_raw(
         descriptor: &'a ProviderDescriptor,
         indexer_info: IndexerInfo<'a>,
@@ -57,12 +67,12 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
             desc: descriptor.as_raw(),
             provider_data: Box::into_raw(Box::new(ProviderInstanceData {
                 // SAFETY: TODO
-                indexer_info: indexer_info,
+                indexer_info,
                 state: ProviderInstanceState::Uninitialized(Box::new(initializer)),
             }))
             .cast(),
             init: Some(Self::init),
-            get_metadata: None,
+            get_metadata: Some(Self::get_metadata),
             destroy: Some(Self::destroy),
             get_extension: None,
         }
@@ -84,6 +94,28 @@ impl<'a, P: Provider<'a>> ProviderInstanceData<'a, P> {
 
             instance.state =
                 ProviderInstanceState::Initialized(ProviderWrapper { inner: provider });
+
+            Some(())
+        })
+        .is_some()
+    }
+
+    unsafe extern "C" fn get_metadata(
+        provider: *const clap_preset_discovery_provider,
+        location_kind: clap_preset_discovery_location_kind,
+        location_path: *const c_char,
+        clap_preset_discovery_metadata_receiver: *const clap_preset_discovery_metadata_receiver,
+    ) -> bool {
+        Self::handle(provider, |instance| {
+            let ProviderInstanceState::Initialized(wrapper) = &mut instance.state else {
+                return None;
+            };
+
+            let location = Location::from_raw(location_kind, location_path)?;
+
+            let receiver = MetadataReceiver::from_raw(clap_preset_discovery_metadata_receiver);
+
+            wrapper.inner.get_metadata(location, receiver);
 
             Some(())
         })
