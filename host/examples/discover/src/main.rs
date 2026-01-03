@@ -87,7 +87,11 @@ pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode
         }
         [bundle] => {
             println!("  > At {}", bundle.path.to_string_lossy());
-            let presets = get_presets(&bundle.bundle);
+            for preset in get_presets(&bundle.bundle) {
+                for preset in preset.presets_per_location {
+                    println!("{preset}")
+                }
+            }
         }
         bundles => {
             for bundle in bundles {

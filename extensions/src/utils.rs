@@ -7,7 +7,7 @@ use std::ffi::CStr;
 ///
 /// Same as [`CStr::from_ptr`], except `ptr` *can* be NULL.
 #[inline]
-pub(crate) unsafe fn cstr_from_nullable_ptr<'a>(ptr: *const c_char) -> Option<&'a CStr> {
+pub(crate) const unsafe fn cstr_from_nullable_ptr<'a>(ptr: *const c_char) -> Option<&'a CStr> {
     if ptr.is_null() {
         None
     } else {
@@ -17,7 +17,7 @@ pub(crate) unsafe fn cstr_from_nullable_ptr<'a>(ptr: *const c_char) -> Option<&'
 }
 
 #[inline]
-pub(crate) fn cstr_to_nullable_ptr(str: Option<&CStr>) -> *const c_char {
+pub(crate) const fn cstr_to_nullable_ptr(str: Option<&CStr>) -> *const c_char {
     match str {
         Some(s) => s.as_ptr(),
         None => core::ptr::null(),

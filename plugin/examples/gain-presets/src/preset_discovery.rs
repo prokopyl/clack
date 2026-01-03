@@ -1,7 +1,8 @@
 use crate::GainPluginMainThread;
 use clack_extensions::preset_discovery::{
-    Flags, IndexerInfo, Location, LocationData, PluginPresetLoadImpl, PresetDiscoveryFactoryImpl,
-    ProviderDescriptor, ProviderInstance, plugin::MetadataReceiver, plugin::ProviderImpl,
+    FileType, Flags, IndexerInfo, Location, LocationData, PluginPresetLoadImpl,
+    PresetDiscoveryFactoryImpl, ProviderDescriptor, ProviderInstance, plugin::MetadataReceiver,
+    plugin::ProviderImpl,
 };
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::UniversalPluginID;
@@ -61,8 +62,15 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
             indexer_info,
             &self.desc,
             |mut indexer| {
+                dbg!(&indexer);
+
+                indexer.declare_filetype(FileType {
+                    name: c"Internal",
+                    description: None,
+                    file_extension: None,
+                });
                 indexer.declare_location(LocationData {
-                    name: c"",
+                    name: c"Default",
                     flags: Flags::IS_FACTORY_CONTENT,
                     location: Location::Plugin,
                 });
@@ -77,6 +85,7 @@ pub struct GainPresetProvider;
 
 impl<'a> ProviderImpl<'a> for GainPresetProvider {
     fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) {
+        dbg!(location);
         for (i, preset) in PRESETS.iter().enumerate() {
             let load_key = CString::new(i.to_string()).unwrap();
             receiver.begin_preset(Some(preset.name), Some(&load_key));

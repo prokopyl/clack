@@ -1,8 +1,8 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_extensions::preset_discovery::indexer::Indexer;
 use clack_extensions::preset_discovery::{
-    FileType, Flags, Location, LocationData, PresetDiscoveryFactory, Provider, ProviderImpl,
-    Soundpack, host::MetadataReceiver,
+    FileType, Flags, Location, LocationData, PresetDiscoveryFactory, Provider, Soundpack,
+    host::MetadataReceiver,
 };
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
@@ -174,8 +174,16 @@ fn preset_listing_works() {
     assert_eq!(
         &receiver.presets,
         &[
-            (c"Unity".to_owned(), c"0".to_owned()),
-            (c"Quieter".to_owned(), c"1".to_owned())
+            Preset {
+                name: c"Unity".to_owned(),
+                load_key: c"0".to_owned(),
+                plugin_ids: vec![c"org.rust-audio.clack.gain-presets".to_owned()],
+            },
+            Preset {
+                name: c"Quieter".to_owned(),
+                load_key: c"1".to_owned(),
+                plugin_ids: vec![c"org.rust-audio.clack.gain-presets".to_owned()],
+            },
         ]
     );
 }
@@ -230,7 +238,14 @@ impl Indexer for TestIndexer {
 }
 
 struct TestReceiver {
-    presets: Vec<(CString, CString)>,
+    presets: Vec<Preset>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct Preset {
+    name: CString,
+    load_key: CString,
+    plugin_ids: Vec<CString>,
 }
 
 impl MetadataReceiver for TestReceiver {
@@ -239,15 +254,24 @@ impl MetadataReceiver for TestReceiver {
     }
 
     fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
-        self.presets
-            .push((name.unwrap().to_owned(), load_key.unwrap().to_owned()));
+        self.presets.push(Preset {
+            name: name.unwrap().to_owned(),
+            load_key: load_key.unwrap().to_owned(),
+            plugin_ids: Vec::new(),
+        });
     }
 
     fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
         assert_eq!(
             plugin_id,
             UniversalPluginID::clap(c"org.rust-audio.clack.gain-presets")
-        )
+        );
+
+        self.presets
+            .last_mut()
+            .unwrap()
+            .plugin_ids
+            .push(plugin_id.id.to_owned());
     }
 
     fn set_soundpack_id(&mut self, _soundpack_id: &CStr) {
