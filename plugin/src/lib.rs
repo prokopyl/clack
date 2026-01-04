@@ -42,3 +42,22 @@ pub mod prelude {
 
 #[doc = include_str!("../../README.md")]
 const _MAIN_README_TEST: () = {};
+
+use std::ptr::null_mut;
+use std::alloc::Layout;
+
+#[cfg(target_arch="wasm32")]
+#[allow(unsafe_code)]
+#[unsafe(no_mangle)]
+pub extern "C" fn malloc(size: usize) -> *mut u8 {
+    if size == 0 {
+        return null_mut();
+    }
+
+    let Ok(layout) = Layout::from_size_align(size, 1) else {
+        return null_mut();
+    };
+
+    // SAFETY: we just checked above that size is non-zero
+    unsafe { std::alloc::alloc_zeroed(layout) }
+}
