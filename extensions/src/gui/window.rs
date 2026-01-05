@@ -261,6 +261,10 @@ const _: () = {
         /// Creates a [`Window`] from a [`RawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+        ///
+        /// # Safety
+        ///
+        /// The raw window handle must be valid for the lifetime `'a`.
         #[inline]
         pub unsafe fn from_window_handle(handle: RawWindowHandle) -> Option<Self> {
             match handle {
