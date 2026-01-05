@@ -1,8 +1,8 @@
+use std::fmt::{Debug, Display, Formatter};
 use std::num::NonZeroU64;
 use std::time::Duration;
 
-// TODO: Debug impl
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Timestamp(NonZeroU64);
 
 impl Timestamp {
@@ -27,5 +27,12 @@ impl Timestamp {
             None => 0,
             Some(t) => t.0.get(),
         }
+    }
+}
+
+impl Debug for Timestamp {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0.get(), f)
     }
 }

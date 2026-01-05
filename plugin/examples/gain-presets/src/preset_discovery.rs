@@ -5,7 +5,7 @@ use clack_extensions::preset_discovery::{
     plugin::ProviderImpl,
 };
 use clack_plugin::plugin::PluginError;
-use clack_plugin::utils::UniversalPluginID;
+use clack_plugin::utils::UniversalPluginId;
 use std::ffi::{CStr, CString};
 use std::str::FromStr;
 
@@ -89,7 +89,7 @@ impl<'a> ProviderImpl<'a> for GainPresetProvider {
         for (i, preset) in PRESETS.iter().enumerate() {
             let load_key = CString::new(i.to_string()).unwrap();
             receiver.begin_preset(Some(preset.name), Some(&load_key));
-            receiver.add_plugin_id(UniversalPluginID::clap(
+            receiver.add_plugin_id(UniversalPluginId::clap(
                 c"org.rust-audio.clack.gain-presets",
             ));
             receiver.add_creator(c"Me!");

@@ -1,6 +1,6 @@
 use crate::preset_discovery::Flags;
 use crate::utils::cstr_to_nullable_ptr;
-use clack_common::utils::{Timestamp, UniversalPluginID};
+use clack_common::utils::{Timestamp, UniversalPluginId};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_metadata_receiver;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -45,7 +45,7 @@ impl MetadataReceiver<'_> {
     }
 
     #[inline]
-    pub fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
+    pub fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {
         if let Some(add_plugin_id) = self.inner.add_plugin_id {
             let plugin_id = plugin_id.to_raw();
             // SAFETY: TODO

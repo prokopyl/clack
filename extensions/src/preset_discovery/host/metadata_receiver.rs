@@ -1,6 +1,6 @@
 use crate::preset_discovery::Flags;
 use crate::utils::{cstr_from_nullable_ptr, handle_panic};
-use clack_common::utils::{Timestamp, UniversalPluginID};
+use clack_common::utils::{Timestamp, UniversalPluginId};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_metadata_receiver;
 use clap_sys::timestamp::clap_timestamp;
 use clap_sys::universal_plugin_id::clap_universal_plugin_id;
@@ -11,7 +11,7 @@ pub trait MetadataReceiver: Sized {
     fn on_error(&mut self, error_code: i32, error_message: Option<&CStr>);
     // TODO: handle errors?
     fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>);
-    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID);
+    fn add_plugin_id(&mut self, plugin_id: UniversalPluginId);
     fn set_soundpack_id(&mut self, soundpack_id: &CStr);
     fn set_flags(&mut self, flags: Flags);
     fn add_creator(&mut self, creator: &CStr);
@@ -85,7 +85,7 @@ unsafe extern "C" fn add_plugin_id<M: MetadataReceiver>(
     handle::<M>(receiver, |receiver| {
         // SAFETY: TODO
         let plugin_id =
-            unsafe { UniversalPluginID::from_raw_ptr(plugin_id) }.ok_or(ReceiverError)?;
+            unsafe { UniversalPluginId::from_raw_ptr(plugin_id) }.ok_or(ReceiverError)?;
 
         receiver.add_plugin_id(plugin_id);
 

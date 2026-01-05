@@ -7,7 +7,7 @@ use clack_extensions::preset_discovery::{
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
 use clack_host::prelude::*;
-use clack_host::utils::{Cookie, Timestamp, UniversalPluginID};
+use clack_host::utils::{Cookie, Timestamp, UniversalPluginId};
 use clack_plugin_gain_presets::GainPluginEntry;
 use std::ffi::{CStr, CString};
 
@@ -261,10 +261,10 @@ impl MetadataReceiver for TestReceiver {
         });
     }
 
-    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
+    fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {
         assert_eq!(
             plugin_id,
-            UniversalPluginID::clap(c"org.rust-audio.clack.gain-presets")
+            UniversalPluginId::clap(c"org.rust-audio.clack.gain-presets")
         );
 
         self.presets

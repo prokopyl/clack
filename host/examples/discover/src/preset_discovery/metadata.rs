@@ -1,6 +1,6 @@
 use clack_extensions::preset_discovery::indexer::Indexer;
 use clack_extensions::preset_discovery::{Flags, Location, host::MetadataReceiver, host::Provider};
-use clack_host::utils::{Timestamp, UniversalPluginID};
+use clack_host::utils::{Timestamp, UniversalPluginId};
 use core::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
@@ -94,7 +94,7 @@ impl MetadataReceiver for MyMetadataReceiver {
         })
     }
 
-    fn add_plugin_id(&mut self, plugin_id: UniversalPluginID) {
+    fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {
         self.current_preset
             .get_or_insert_default()
             .plugin_ids
