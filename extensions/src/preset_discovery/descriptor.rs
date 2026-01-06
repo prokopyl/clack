@@ -40,7 +40,7 @@ pub struct ProviderDescriptor {
 }
 
 impl ProviderDescriptor {
-    /// Creates a new plugin descriptor, initializing it with the given Plugin ID and name.
+    /// Creates a new provider descriptor, initializing it with the given Provider ID and name.
     ///
     /// See the documentation of the [`id`](ProviderDescriptor::id) and
     /// [`name`](ProviderDescriptor::name) methods for more information about the `id` and `name`
@@ -80,22 +80,17 @@ impl ProviderDescriptor {
         unsafe { &*(raw as *const clap_preset_discovery_provider_descriptor as *const Self) }
     }
 
-    /// Returns the plugin descriptor as a reference to the C-FFI compatible CLAP struct.
+    /// Returns the provider descriptor as a reference to the C-FFI compatible CLAP struct.
     #[inline]
     pub fn as_raw(&self) -> &clap_preset_discovery_provider_descriptor {
         // SAFETY: This type is ABI-compatible with clap_preset_discovery_provider_descriptor
         unsafe { &*(self as *const Self as *const clap_preset_discovery_provider_descriptor) }
     }
 
-    /// The unique identifier of a plugin.
+    /// The unique identifier of a provider.
     ///
     /// This field is **mandatory**, and should not be blank.
     /// If it is found to be [`None`], it is acceptable for the host to refuse to load this plugin.
-    ///
-    /// This identifier should be as globally-unique as possible to any users that might load this
-    /// plugin, as this is the key hosts will use to differentiate between different plugins.
-    ///
-    /// Example: `com.u-he.diva`.
     ///
     /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
@@ -103,7 +98,7 @@ impl ProviderDescriptor {
         self.id.get()
     }
 
-    /// Sets the plugin's unique ID.
+    /// Sets the provider's unique ID.
     ///
     /// See the [`id`](ProviderDescriptor::id) method documentation for more information.
     ///
@@ -114,24 +109,19 @@ impl ProviderDescriptor {
     /// This function will also panic if the given ID contains NULL-byte characters, which are invalid.
     pub fn with_id(mut self, id: &str) -> Self {
         if id.is_empty() {
-            panic!("Plugin ID must not be blank!");
+            panic!("Provider ID must not be blank!");
         }
 
-        let id = CString::new(id).expect("Invalid Plugin ID");
+        let id = CString::new(id).expect("Invalid Provider ID");
         self.id.set(Some(id));
 
         self
     }
 
-    /// The user-facing display name of this plugin.
+    /// The display name of this provider.
     ///
     /// This field is **mandatory**, and should not be blank.
     /// If it is found to be [`None`], it is acceptable for the host to refuse to load this plugin.
-    ///
-    /// This name will be displayed in plugin lists and selectors, and will be the main way users
-    /// will find and differentiate the plugin.
-    ///
-    /// Example: `Diva`.
     ///
     /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
@@ -139,7 +129,7 @@ impl ProviderDescriptor {
         self.name.get()
     }
 
-    /// Sets the plugin's name.
+    /// Sets the provider's name.
     ///
     /// See the [`name`](ProviderDescriptor::name) method documentation for more information.
     ///
@@ -150,18 +140,16 @@ impl ProviderDescriptor {
     /// This function will also panic if the given name contains NULL-byte characters, which are invalid.
     pub fn with_name(mut self, name: &str) -> Self {
         if name.is_empty() {
-            panic!("Plugin name must not be blank!");
+            panic!("Provider name must not be blank!");
         }
 
-        let name = CString::new(name).expect("Invalid Plugin name");
+        let name = CString::new(name).expect("Invalid Provider name");
         self.name.set(Some(name));
 
         self
     }
 
-    /// The vendor of the plugin.
-    ///
-    /// Example: `u-he`.
+    /// The vendor of the provider.
     ///
     /// This method will return [`None`] if this is either missing or a blank (i.e. empty) string.
     #[inline]
@@ -169,7 +157,7 @@ impl ProviderDescriptor {
         self.vendor.get()
     }
 
-    /// Sets the plugin's vendor name.
+    /// Sets the provider's vendor name.
     ///
     /// See the [`vendor`](ProviderDescriptor::vendor) method documentation for more information.
     ///
@@ -211,7 +199,7 @@ static EMPTY: &CStr = c"";
 /// This type is `#[repr(C)]` and so *can* be transmuted from a raw `*const c_char`, in which case
 /// it may hold an arbitrary pointer.
 ///
-/// In this case, you **MUST NOT** drop it, or to call `set`, which would cause immediate UB.
+/// In this case, you **MUST NOT** drop it, or call `set`, which would cause immediate UB.
 ///
 /// `get` may be called, but **only** if the pointer points to a valid C String (nul-terminated), and
 /// the pointer's value is not changed for the lifetime of this type.
@@ -276,7 +264,7 @@ impl OwnedCString {
             return;
         }
 
-        let string = CString::new(string).expect("Invalid plugin descriptor string.");
+        let string = CString::new(string).expect("Invalid provider descriptor string.");
         self.set(Some(string));
     }
 

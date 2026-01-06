@@ -6,7 +6,7 @@ pub use provider::{Provider, ProviderInstanceError};
 use std::iter::FusedIterator;
 
 mod metadata_receiver;
-pub use metadata_receiver::MetadataReceiver;
+pub use metadata_receiver::MetadataReceiverImpl;
 
 use super::*;
 
@@ -44,10 +44,10 @@ impl<'a> PresetDiscoveryFactory<'a> {
     }
 }
 
-/// An [`Iterator`] over all the [`PluginDescriptor`s](PluginDescriptor) exposed by a
+/// An [`Iterator`] over all the [`ProviderDescriptor`s](ProviderDescriptor) exposed by a
 /// plugin factory.
 ///
-/// See the [`PluginFactory::plugin_descriptors`] method that produces this iterator.
+/// See the [`PresetDiscoveryFactory::provider_descriptors`] method that produces this iterator.
 pub struct PluginDescriptorsIter<'a> {
     factory: PresetDiscoveryFactory<'a>,
     range: core::ops::Range<u32>,

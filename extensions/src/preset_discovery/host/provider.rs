@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 
 mod error;
-use crate::preset_discovery::host::metadata_receiver::{MetadataReceiver, to_raw};
+use crate::preset_discovery::host::metadata_receiver::{MetadataReceiverImpl, to_raw};
 use crate::preset_discovery::{Location, PresetDiscoveryFactory};
 pub use error::*;
 
@@ -50,7 +50,7 @@ impl<I: Indexer> Provider<I> {
         })
     }
 
-    pub fn get_metadata(&mut self, location: Location, receiver: &mut impl MetadataReceiver) {
+    pub fn get_metadata(&mut self, location: Location, receiver: &mut impl MetadataReceiverImpl) {
         let receiver = to_raw(receiver);
         let (location_kind, location_path) = location.to_raw();
 

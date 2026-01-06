@@ -2,7 +2,7 @@ use crate::preset_discovery::plugin::indexer::Indexer;
 use crate::preset_discovery::plugin::provider::ProviderImpl;
 use crate::preset_discovery::plugin::provider::wrapper::ProviderWrapper;
 use crate::preset_discovery::{
-    IndexerInfo, Location, ProviderDescriptor, ProviderInstanceError, plugin::MetadataReceiver,
+    IndexerInfo, Location, ProviderDescriptor, plugin::MetadataReceiver,
 };
 use crate::utils::handle_panic;
 use clap_sys::factory::preset_discovery::{

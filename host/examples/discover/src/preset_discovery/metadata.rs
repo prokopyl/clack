@@ -1,5 +1,5 @@
 use clack_extensions::preset_discovery::indexer::Indexer;
-use clack_extensions::preset_discovery::{Flags, Location, host::MetadataReceiver, host::Provider};
+use clack_extensions::preset_discovery::{Flags, Location, MetadataReceiverImpl, Provider};
 use clack_host::utils::{Timestamp, UniversalPluginId};
 use core::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -74,7 +74,7 @@ impl MyMetadataReceiver {
     }
 }
 
-impl MetadataReceiver for MyMetadataReceiver {
+impl MetadataReceiverImpl for MyMetadataReceiver {
     fn on_error(&mut self, error_code: i32, error_message: Option<&CStr>) {
         self.error = Some(MetadataError {
             code: error_code,

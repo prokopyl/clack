@@ -1,8 +1,8 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_extensions::preset_discovery::indexer::Indexer;
 use clack_extensions::preset_discovery::{
-    FileType, Flags, Location, LocationData, PresetDiscoveryFactory, Provider, Soundpack,
-    host::MetadataReceiver,
+    FileType, Flags, Location, LocationData, MetadataReceiverImpl, PresetDiscoveryFactory,
+    Provider, Soundpack,
 };
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
@@ -248,7 +248,7 @@ struct Preset {
     plugin_ids: Vec<CString>,
 }
 
-impl MetadataReceiver for TestReceiver {
+impl MetadataReceiverImpl for TestReceiver {
     fn on_error(&mut self, _error_code: i32, _error_message: Option<&CStr>) {
         unreachable!()
     }

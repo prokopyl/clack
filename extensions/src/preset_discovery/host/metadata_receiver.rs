@@ -7,7 +7,7 @@ use clap_sys::universal_plugin_id::clap_universal_plugin_id;
 use std::ffi::{CStr, c_char};
 use std::panic::AssertUnwindSafe;
 
-pub trait MetadataReceiver: Sized {
+pub trait MetadataReceiverImpl: Sized {
     fn on_error(&mut self, error_code: i32, error_message: Option<&CStr>);
     // TODO: handle errors?
     fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>);
@@ -25,7 +25,7 @@ pub trait MetadataReceiver: Sized {
     fn add_extra_info(&mut self, key: &CStr, value: &CStr);
 }
 
-pub(crate) fn to_raw<M: MetadataReceiver>(
+pub(crate) fn to_raw<M: MetadataReceiverImpl>(
     receiver: &mut M,
 ) -> clap_preset_discovery_metadata_receiver {
     clap_preset_discovery_metadata_receiver {
@@ -44,7 +44,7 @@ pub(crate) fn to_raw<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn on_error<M: MetadataReceiver>(
+unsafe extern "C" fn on_error<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     error_code: i32,
     message: *const c_char,
@@ -60,7 +60,7 @@ unsafe extern "C" fn on_error<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn begin_preset<M: MetadataReceiver>(
+unsafe extern "C" fn begin_preset<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     name: *const c_char,
     load_key: *const c_char,
@@ -78,7 +78,7 @@ unsafe extern "C" fn begin_preset<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn add_plugin_id<M: MetadataReceiver>(
+unsafe extern "C" fn add_plugin_id<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     plugin_id: *const clap_universal_plugin_id,
 ) {
@@ -94,7 +94,7 @@ unsafe extern "C" fn add_plugin_id<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_soundpack_id<M: MetadataReceiver>(
+unsafe extern "C" fn set_soundpack_id<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     soundpack_id: *const c_char,
 ) {
@@ -109,7 +109,7 @@ unsafe extern "C" fn set_soundpack_id<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_flags<M: MetadataReceiver>(
+unsafe extern "C" fn set_flags<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     flags: u32,
 ) {
@@ -123,7 +123,7 @@ unsafe extern "C" fn set_flags<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn add_creator<M: MetadataReceiver>(
+unsafe extern "C" fn add_creator<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     soundpack_id: *const c_char,
 ) {
@@ -138,7 +138,7 @@ unsafe extern "C" fn add_creator<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_description<M: MetadataReceiver>(
+unsafe extern "C" fn set_description<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     soundpack_id: *const c_char,
 ) {
@@ -153,7 +153,7 @@ unsafe extern "C" fn set_description<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn set_timestamps<M: MetadataReceiver>(
+unsafe extern "C" fn set_timestamps<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     creation_time: clap_timestamp,
     modification_time: clap_timestamp,
@@ -169,7 +169,7 @@ unsafe extern "C" fn set_timestamps<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn add_feature<M: MetadataReceiver>(
+unsafe extern "C" fn add_feature<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     soundpack_id: *const c_char,
 ) {
@@ -184,7 +184,7 @@ unsafe extern "C" fn add_feature<M: MetadataReceiver>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn add_extra_info<M: MetadataReceiver>(
+unsafe extern "C" fn add_extra_info<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     key: *const c_char,
     value: *const c_char,
@@ -202,7 +202,7 @@ unsafe extern "C" fn add_extra_info<M: MetadataReceiver>(
 }
 
 #[inline]
-unsafe fn handle<M: MetadataReceiver>(
+unsafe fn handle<M: MetadataReceiverImpl>(
     receiver: *const clap_preset_discovery_metadata_receiver,
     handler: impl FnOnce(&mut M) -> Result<(), ReceiverError>,
 ) -> bool {

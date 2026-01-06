@@ -93,10 +93,10 @@ pub trait PresetDiscoveryFactoryImpl: Send + Sync {
     /// Returns the number of plugins exposed by this factory.
     fn provider_count(&self) -> u32;
 
-    /// Returns the [`PluginDescriptor`] of the plugin that is assigned the given index.
+    /// Returns the [`ProviderDescriptor`] of the plugin that is assigned the given index.
     ///
     /// Hosts will usually call this method repeatedly with every index from 0 to the total returned
-    /// by [`plugin_count`](PluginFactoryImpl::plugin_count), in order to discover all the plugins
+    /// by [`plugin_count`](Self::provider_count), in order to discover all the plugins
     /// exposed by this factory.
     ///
     /// If the given index is out of bounds, or in general does not match any given plugin, this
@@ -106,7 +106,7 @@ pub trait PresetDiscoveryFactoryImpl: Send + Sync {
     /// Creates a new plugin instance for the plugin type matching the given `plugin_id`.
     ///
     /// If the given `plugin_id` matches against one of the plugin this factory manages,
-    /// implementors of this trait then use the [`PluginInstance::new`] method to instantiate the
+    /// implementors of this trait then use the [`ProviderInstance::new`] method to instantiate the
     /// corresponding plugin implementation.
     ///
     /// If the given `plugin_id` does not match any known plugins to this factory, this method

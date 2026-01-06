@@ -63,13 +63,13 @@ unsafe impl Extension for HostPresetLoad {
 }
 
 #[cfg(feature = "clack-host")]
-pub mod host;
+mod host;
 
 #[cfg(feature = "clack-host")]
 pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
-pub mod plugin;
+mod plugin;
 
 #[cfg(feature = "clack-plugin")]
 pub use plugin::*;
