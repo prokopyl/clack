@@ -1,4 +1,4 @@
-use crate::preset_discovery::{FileType, LocationData, Soundpack};
+use crate::preset_discovery::preset_data::*;
 use crate::utils::cstr_from_nullable_ptr;
 use clap_sys::factory::preset_discovery::clap_preset_discovery_indexer;
 use std::ffi::CStr;

@@ -1,9 +1,7 @@
-use crate::preset_discovery::data::{PresetDiscoveryData, PresetsAtLocation, PresetsInFile};
-use crate::preset_discovery::indexer::{FileType, Location, PresetIndexer};
-use clack_extensions::preset_discovery::{
-    self, PresetDiscoveryFactory, Provider, ProviderDescriptor,
-};
+use clack_extensions::preset_discovery::{self, prelude::*};
 use clack_host::prelude::{HostInfo, PluginBundle};
+use data::{PresetDiscoveryData, PresetsAtLocation, PresetsInFile};
+use indexer::{FileType, Location, PresetIndexer};
 use std::ffi::CString;
 use walkdir::{DirEntry, WalkDir};
 
@@ -53,7 +51,11 @@ fn scan_location(
     let Some(file_path) = &location.file_path else {
         return PresetsAtLocation::Plugin {
             location,
-            presets: metadata::get_metadata(provider, preset_discovery::Location::Plugin).unwrap(),
+            presets: metadata::get_metadata(
+                provider,
+                preset_discovery::preset_data::Location::Plugin,
+            )
+            .unwrap(),
         };
     };
 
@@ -68,7 +70,7 @@ fn scan_location(
             Some(PresetsInFile {
                 presets: metadata::get_metadata(
                     provider,
-                    preset_discovery::Location::File { path: &path_c_str },
+                    preset_discovery::preset_data::Location::File { path: &path_c_str },
                 )
                 .ok()?,
                 path: e.into_path().into_boxed_path(),

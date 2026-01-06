@@ -1,19 +1,8 @@
-use crate::preset_discovery::{PresetDiscoveryFactory, ProviderDescriptor};
-use clack_common::factory::Factory;
-use clack_plugin::factory::{FactoryImplementation, FactoryWrapper, FactoryWrapperError};
-use clap_sys::factory::preset_discovery::*;
-use std::ffi::{CStr, c_char};
-
-mod extension;
-mod indexer;
-mod metadata_receiver;
-mod provider;
-
+use super::*;
+use crate::preset_discovery::prelude::*;
 use crate::utils::cstr_from_nullable_ptr;
-pub use extension::*;
-pub use indexer::{Indexer, IndexerInfo};
-pub use metadata_receiver::MetadataReceiver;
-pub use provider::{ProviderImpl, ProviderInstance};
+use clack_plugin::factory::*;
+use std::ffi::c_char;
 
 pub struct PresetDiscoveryFactoryWrapper<F> {
     inner: FactoryWrapper<clap_preset_discovery_factory, F>,

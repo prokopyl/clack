@@ -1,11 +1,10 @@
-use clack_extensions::preset_discovery::indexer::Indexer;
-use clack_extensions::preset_discovery::{Flags, Location, MetadataReceiverImpl, Provider};
+use clack_extensions::preset_discovery::prelude::*;
 use clack_host::utils::{Timestamp, UniversalPluginId};
 use core::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
 pub fn get_metadata(
-    provider: &mut Provider<impl Indexer>,
+    provider: &mut Provider<impl IndexerImpl>,
     location: Location,
 ) -> Result<Vec<PresetData>, MetadataError> {
     let mut receiver = MyMetadataReceiver::new();

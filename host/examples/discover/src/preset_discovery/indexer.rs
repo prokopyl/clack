@@ -1,5 +1,4 @@
-use clack_extensions::preset_discovery::indexer::Indexer;
-use clack_extensions::preset_discovery::{self, Flags};
+use clack_extensions::preset_discovery::{self, prelude::*};
 use std::borrow::Cow;
 use std::ffi::CStr;
 use std::path::{Path, PathBuf};
@@ -24,8 +23,8 @@ impl PresetIndexer {
     }
 }
 
-impl Indexer for PresetIndexer {
-    fn declare_filetype(&mut self, file_type: preset_discovery::FileType) {
+impl IndexerImpl for PresetIndexer {
+    fn declare_filetype(&mut self, file_type: preset_discovery::preset_data::FileType) {
         self.file_types.push(FileType {
             name: file_type.name.to_owned().into_boxed_c_str(),
             description: file_type
@@ -35,7 +34,7 @@ impl Indexer for PresetIndexer {
         })
     }
 
-    fn declare_location(&mut self, location: preset_discovery::LocationData) {
+    fn declare_location(&mut self, location: preset_discovery::preset_data::LocationData) {
         self.locations.push(Location {
             flags: location.flags,
             name: location.name.to_owned().into_boxed_c_str(),
@@ -43,7 +42,7 @@ impl Indexer for PresetIndexer {
         });
     }
 
-    fn declare_soundpack(&mut self, soundpack: preset_discovery::Soundpack) {
+    fn declare_soundpack(&mut self, soundpack: preset_discovery::preset_data::Soundpack) {
         self.soundpacks.push(Soundpack {
             flags: soundpack.flags,
             id: soundpack.id.to_owned().into_boxed_c_str(),

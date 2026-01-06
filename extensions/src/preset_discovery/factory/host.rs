@@ -1,14 +1,6 @@
-mod extension;
-pub mod indexer;
-pub(crate) mod provider;
-
-pub use provider::{Provider, ProviderInstanceError};
-use std::iter::FusedIterator;
-
-mod metadata_receiver;
-pub use metadata_receiver::MetadataReceiverImpl;
-
 use super::*;
+use crate::preset_discovery::prelude::*;
+use std::iter::FusedIterator;
 
 impl<'a> PresetDiscoveryFactory<'a> {
     pub fn provider_count(&self) -> u32 {

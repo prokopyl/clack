@@ -1,4 +1,4 @@
-use super::*;
+use clap_sys::factory::preset_discovery::*;
 use clap_sys::version::{CLAP_VERSION, clap_version};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;

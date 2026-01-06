@@ -1,4 +1,4 @@
-use crate::preset_discovery::{HostPresetLoad, Location, PluginPresetLoad};
+use crate::preset_discovery::{HostPresetLoad, PluginPresetLoad, preset_data::Location};
 use crate::utils::{cstr_from_nullable_ptr, cstr_to_nullable_ptr};
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::preset_load::*;

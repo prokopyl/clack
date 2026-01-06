@@ -1,9 +1,5 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
-use clack_extensions::preset_discovery::indexer::Indexer;
-use clack_extensions::preset_discovery::{
-    FileType, Flags, Location, LocationData, MetadataReceiverImpl, PresetDiscoveryFactory,
-    Provider, Soundpack,
-};
+use clack_extensions::preset_discovery::prelude::*;
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
 use clack_host::prelude::*;
@@ -26,7 +22,7 @@ pub fn it_works() {
 
     assert_eq!(
         descriptor.id().unwrap().to_bytes(),
-        b"org.rust-audio.clack.gain"
+        b"org.rust-audio.clack.gain-presets"
     );
     assert_eq!(descriptor.name().unwrap().to_bytes(), b"Clack Gain Example");
 
@@ -221,7 +217,7 @@ struct TestIndexer {
     declared: bool,
 }
 
-impl Indexer for TestIndexer {
+impl IndexerImpl for TestIndexer {
     fn declare_filetype(&mut self, _file_type: FileType) {
         unreachable!()
     }

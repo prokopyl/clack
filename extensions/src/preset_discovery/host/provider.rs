@@ -1,4 +1,4 @@
-use crate::preset_discovery::indexer::{Indexer, IndexerWrapper, RawIndexerDescriptor};
+use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper, RawIndexerDescriptor};
 use clack_host::prelude::{HostInfo, PluginBundle};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_provider;
 use std::ffi::CStr;
@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 
 mod error;
 use crate::preset_discovery::host::metadata_receiver::{MetadataReceiverImpl, to_raw};
-use crate::preset_discovery::{Location, PresetDiscoveryFactory};
+use crate::preset_discovery::prelude::*;
 pub use error::*;
 
 pub struct Provider<I> {
@@ -21,7 +21,7 @@ pub struct Provider<I> {
     _no_send: PhantomData<*const ()>,
 }
 
-impl<I: Indexer> Provider<I> {
+impl<I: IndexerImpl> Provider<I> {
     pub fn instantiate(
         indexer: impl FnOnce() -> I,
         plugin_bundle: &PluginBundle,
@@ -100,14 +100,14 @@ fn create_provider(
     descriptor: Pin<&mut RawIndexerDescriptor>,
     identifier: &CStr,
 ) -> Result<NonNull<clap_preset_discovery_provider>, ProviderInstanceError> {
-    let Some(create) = factory.0.get().create else {
+    let Some(create) = factory.raw().get().create else {
         return Err(ProviderInstanceError::NullFactoryCreateFunction);
     };
 
     // SAFETY: TODO
     let provider_ptr = unsafe {
         create(
-            factory.0.as_ptr(),
+            factory.raw().as_ptr(),
             descriptor.as_raw_mut(),
             identifier.as_ptr(),
         )

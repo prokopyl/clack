@@ -1,5 +1,5 @@
-use crate::preset_discovery::indexer::{Indexer, IndexerWrapper, IndexerWrapperError};
-use crate::preset_discovery::{FileType, LocationData, Soundpack};
+use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper, IndexerWrapperError};
+use crate::preset_discovery::preset_data::{FileType, LocationData, Soundpack};
 use clack_common::utils::ClapVersion;
 use clack_host::prelude::HostInfo;
 use clap_sys::factory::preset_discovery::{
@@ -15,7 +15,7 @@ pub struct RawIndexerDescriptor {
 }
 
 impl RawIndexerDescriptor {
-    pub fn new<I: Indexer>(
+    pub fn new<I: IndexerImpl>(
         host_info: HostInfo,
         wrapper: Pin<&mut IndexerWrapper<I>>,
     ) -> Pin<Box<Self>> {
@@ -44,7 +44,7 @@ impl RawIndexerDescriptor {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_extension<I: Indexer>(
+unsafe extern "C" fn get_extension<I: IndexerImpl>(
     indexer: *const clap_preset_discovery_indexer,
     identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
@@ -52,7 +52,7 @@ unsafe extern "C" fn get_extension<I: Indexer>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn declare_filetype<I: Indexer>(
+unsafe extern "C" fn declare_filetype<I: IndexerImpl>(
     indexer: *const clap_preset_discovery_indexer,
     filetype: *const clap_preset_discovery_filetype,
 ) -> bool {
@@ -67,7 +67,7 @@ unsafe extern "C" fn declare_filetype<I: Indexer>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn declare_location<I: Indexer>(
+unsafe extern "C" fn declare_location<I: IndexerImpl>(
     indexer: *const clap_preset_discovery_indexer,
     location: *const clap_preset_discovery_location,
 ) -> bool {
@@ -82,7 +82,7 @@ unsafe extern "C" fn declare_location<I: Indexer>(
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn declare_soundpack<I: Indexer>(
+unsafe extern "C" fn declare_soundpack<I: IndexerImpl>(
     indexer: *const clap_preset_discovery_indexer,
     soundpack: *const clap_preset_discovery_soundpack,
 ) -> bool {

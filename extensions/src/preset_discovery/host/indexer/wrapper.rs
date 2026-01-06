@@ -1,5 +1,5 @@
-use super::*;
 use crate::utils::handle_panic;
+use clap_sys::factory::preset_discovery::*;
 use std::ffi::c_void;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;

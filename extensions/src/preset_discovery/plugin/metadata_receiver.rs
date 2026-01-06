@@ -1,4 +1,4 @@
-use crate::preset_discovery::Flags;
+use crate::preset_discovery::preset_data::Flags;
 use crate::utils::cstr_to_nullable_ptr;
 use clack_common::utils::{Timestamp, UniversalPluginId};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_metadata_receiver;

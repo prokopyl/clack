@@ -1,8 +1,5 @@
 use crate::GainPluginMainThread;
-use clack_extensions::preset_discovery::{
-    FileType, Flags, IndexerInfo, Location, LocationData, MetadataReceiver, PluginPresetLoadImpl,
-    PresetDiscoveryFactoryImpl, ProviderDescriptor, ProviderImpl, ProviderInstance,
-};
+use clack_extensions::preset_discovery::prelude::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::UniversalPluginId;
 use std::ffi::{CStr, CString};

@@ -1,5 +1,3 @@
-use crate::preset_discovery::get_presets;
-use clack_extensions::preset_discovery::PresetDiscoveryFactory;
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;

@@ -4,9 +4,8 @@
 
 use crate::params::GainParams;
 use crate::preset_discovery::GainPresetDiscoveryFactory;
-use clack_extensions::preset_discovery::PresetDiscoveryFactoryWrapper;
 use clack_extensions::state::PluginState;
-use clack_extensions::{audio_ports::*, params::*};
+use clack_extensions::{audio_ports::*, params::*, preset_discovery::prelude::*};
 use clack_plugin::entry::prelude::*;
 use clack_plugin::prelude::*;
 use std::ffi::CStr;

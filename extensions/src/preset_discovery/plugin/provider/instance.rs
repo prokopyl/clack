@@ -1,14 +1,7 @@
-use crate::preset_discovery::plugin::indexer::Indexer;
-use crate::preset_discovery::plugin::provider::ProviderImpl;
 use crate::preset_discovery::plugin::provider::wrapper::ProviderWrapper;
-use crate::preset_discovery::{
-    IndexerInfo, Location, ProviderDescriptor, plugin::MetadataReceiver,
-};
+use crate::preset_discovery::prelude::*;
 use crate::utils::handle_panic;
-use clap_sys::factory::preset_discovery::{
-    clap_preset_discovery_location_kind, clap_preset_discovery_metadata_receiver,
-    clap_preset_discovery_provider, clap_preset_discovery_provider_descriptor,
-};
+use clap_sys::factory::preset_discovery::*;
 use std::ffi::c_char;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
