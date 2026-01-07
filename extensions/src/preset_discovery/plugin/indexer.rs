@@ -96,7 +96,7 @@ impl<'a> Indexer<'a> {
     }
 
     #[inline]
-    pub fn declare_location(&mut self, location: LocationData) {
+    pub fn declare_location(&mut self, location: LocationInfo) {
         if let Some(declare_location) = self.get().declare_location {
             let location = location.to_raw();
             // SAFETY: TODO

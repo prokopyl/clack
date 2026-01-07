@@ -7,12 +7,15 @@ pub struct Timestamp(NonZeroU64);
 
 impl Timestamp {
     #[inline]
-    pub fn from_raw(raw: u64) -> Option<Self> {
-        NonZeroU64::new(raw).map(Self)
+    pub const fn from_raw(raw: u64) -> Option<Self> {
+        match NonZeroU64::new(raw) {
+            Some(raw) => Some(Self(raw)),
+            None => None,
+        }
     }
 
     #[inline]
-    pub fn seconds_since_epoch(self) -> u64 {
+    pub const fn seconds_since_epoch(self) -> u64 {
         self.0.get()
     }
 

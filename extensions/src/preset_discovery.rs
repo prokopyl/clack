@@ -39,11 +39,7 @@ mod host {
     pub(crate) mod indexer;
     pub(crate) mod metadata_receiver;
     pub(crate) mod provider;
-    pub use metadata_receiver::MetadataReceiverImpl;
 }
-
-#[cfg(feature = "clack-host")]
-pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
 mod plugin {
@@ -51,14 +47,10 @@ mod plugin {
     pub(crate) mod indexer;
     pub(crate) mod metadata_receiver;
     pub(crate) mod provider;
-
-    pub use extension::*;
-    pub use metadata_receiver::MetadataReceiver;
-    pub use provider::{ProviderImpl, ProviderInstance};
 }
 
 #[cfg(feature = "clack-plugin")]
-pub use plugin::*;
+pub use plugin::extension::PluginPresetLoadImpl;
 
 mod descriptor;
 pub mod preset_data;
@@ -81,6 +73,13 @@ pub mod provider {
     pub use super::plugin::provider::*;
 }
 
+mod metadata_receiver {
+    #[cfg(feature = "clack-host")]
+    pub use super::host::metadata_receiver::*;
+    #[cfg(feature = "clack-plugin")]
+    pub use super::plugin::metadata_receiver::*;
+}
+
 pub mod prelude {
     pub use super::preset_data::*;
     pub use super::{
@@ -89,11 +88,15 @@ pub mod prelude {
 
     #[cfg(feature = "clack-plugin")]
     pub use super::{
-        MetadataReceiver, PluginPresetLoadImpl, ProviderImpl, ProviderInstance,
+        PluginPresetLoadImpl,
         factory::{PresetDiscoveryFactoryImpl, PresetDiscoveryFactoryWrapper},
         indexer::{Indexer, IndexerInfo},
+        metadata_receiver::MetadataReceiver,
+        provider::{ProviderImpl, ProviderInstance, ProviderInstanceError},
     };
 
     #[cfg(feature = "clack-host")]
-    pub use super::{MetadataReceiverImpl, indexer::IndexerImpl, provider::Provider};
+    pub use super::{
+        indexer::IndexerImpl, metadata_receiver::MetadataReceiverImpl, provider::Provider,
+    };
 }

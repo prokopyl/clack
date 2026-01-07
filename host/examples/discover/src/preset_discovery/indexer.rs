@@ -34,7 +34,7 @@ impl IndexerImpl for PresetIndexer {
         })
     }
 
-    fn declare_location(&mut self, location: preset_discovery::preset_data::LocationData) {
+    fn declare_location(&mut self, location: preset_discovery::preset_data::LocationInfo) {
         self.locations.push(Location {
             flags: location.flags,
             name: location.name.to_owned().into_boxed_c_str(),

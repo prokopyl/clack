@@ -99,7 +99,9 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         location_path: *const c_char,
         clap_preset_discovery_metadata_receiver: *const clap_preset_discovery_metadata_receiver,
     ) -> bool {
+        dbg!("Foo!");
         Self::handle(provider, |instance| {
+            dbg!(location_kind, location_path);
             let ProviderInstanceState::Initialized(wrapper) = &mut instance.state else {
                 return None;
             };

@@ -1,5 +1,5 @@
 use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper, IndexerWrapperError};
-use crate::preset_discovery::preset_data::{FileType, LocationData, Soundpack};
+use crate::preset_discovery::preset_data::{FileType, LocationInfo, Soundpack};
 use clack_common::utils::ClapVersion;
 use clack_host::prelude::HostInfo;
 use clap_sys::factory::preset_discovery::{
@@ -57,7 +57,7 @@ unsafe extern "C" fn declare_filetype<I: IndexerImpl>(
     filetype: *const clap_preset_discovery_filetype,
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
-        let filetype = FileType::from_raw(filetype)
+        let filetype = FileType::from_raw_ptr(filetype)
             .ok_or(IndexerWrapperError::InvalidParameter("Invalid FileType"))?;
 
         indexer.declare_filetype(filetype);
@@ -72,7 +72,7 @@ unsafe extern "C" fn declare_location<I: IndexerImpl>(
     location: *const clap_preset_discovery_location,
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
-        let location = LocationData::from_raw(location)
+        let location = LocationInfo::from_raw_ptr(location)
             .ok_or(IndexerWrapperError::InvalidParameter("Invalid Location"))?;
 
         indexer.declare_location(location);
@@ -87,7 +87,7 @@ unsafe extern "C" fn declare_soundpack<I: IndexerImpl>(
     soundpack: *const clap_preset_discovery_soundpack,
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
-        let filetype = Soundpack::from_raw(soundpack)
+        let filetype = Soundpack::from_raw_ptr(soundpack)
             .ok_or(IndexerWrapperError::InvalidParameter("Invalid Soundpack"))?;
 
         indexer.declare_soundpack(filetype);

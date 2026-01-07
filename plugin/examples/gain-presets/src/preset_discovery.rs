@@ -3,6 +3,7 @@ use clack_extensions::preset_discovery::prelude::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::UniversalPluginId;
 use std::ffi::{CStr, CString};
+use std::path::Path;
 use std::str::FromStr;
 
 struct Preset {
@@ -60,15 +61,24 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
             |mut indexer| {
                 dbg!(&indexer);
 
-                indexer.declare_filetype(FileType {
-                    name: c"Internal",
-                    description: None,
-                    file_extension: None,
-                });
-                indexer.declare_location(LocationData {
+                indexer.declare_location(LocationInfo {
                     name: c"Default",
                     flags: Flags::IS_FACTORY_CONTENT,
                     location: Location::Plugin,
+                });
+
+                indexer.declare_filetype(FileType {
+                    name: c"Test",
+                    file_extension: Some(c"txt"),
+                    description: None,
+                });
+
+                indexer.declare_location(LocationInfo {
+                    name: c"Test",
+                    flags: Flags::IS_FACTORY_CONTENT,
+                    location: Location::File {
+                        path: c"/home/adrien/Temp/test_clap/",
+                    },
                 });
 
                 GainPresetProvider
@@ -82,13 +92,25 @@ pub struct GainPresetProvider;
 impl<'a> ProviderImpl<'a> for GainPresetProvider {
     fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) {
         dbg!(location);
-        for (i, preset) in PRESETS.iter().enumerate() {
-            let load_key = CString::new(i.to_string()).unwrap();
-            receiver.begin_preset(Some(preset.name), Some(&load_key));
+        if let Location::File { path } = location {
+            let path = Path::new(path.to_str().unwrap());
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+            let load_key = CString::new(file_name.to_string()).unwrap();
+
+            receiver.begin_preset(Some(&load_key), Some(&load_key));
             receiver.add_plugin_id(UniversalPluginId::clap(
                 c"org.rust-audio.clack.gain-presets",
             ));
             receiver.add_creator(c"Me!");
+        } else {
+            for (i, preset) in PRESETS.iter().enumerate() {
+                let load_key = CString::new(i.to_string()).unwrap();
+                receiver.begin_preset(Some(preset.name), Some(&load_key));
+                receiver.add_plugin_id(UniversalPluginId::clap(
+                    c"org.rust-audio.clack.gain-presets",
+                ));
+                receiver.add_creator(c"Me!");
+            }
         }
     }
 }

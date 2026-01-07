@@ -222,7 +222,7 @@ impl IndexerImpl for TestIndexer {
         unreachable!()
     }
 
-    fn declare_location(&mut self, location: LocationData) {
+    fn declare_location(&mut self, location: LocationInfo) {
         assert!(!self.declared);
         assert_eq!(location.location, Location::Plugin);
         self.declared = true;
