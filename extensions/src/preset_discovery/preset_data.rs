@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! Various data types that can are used to locate or categorize presets.
 
 use bitflags::bitflags;
@@ -34,7 +35,7 @@ impl FileType<'_> {
     /// See the documentation of [`CStr::from_ptr`] for the exhaustive list of safety requirements
     /// for each of those pointers.
     pub const unsafe fn from_raw(raw: clap_preset_discovery_filetype) -> Option<Self> {
-        // SAFETY: TODO
+        // SAFETY: All C strings are either NULL or valid as upheld by the caller
         unsafe {
             Some(Self {
                 name: match str_from_raw(raw.name) {
@@ -57,7 +58,7 @@ impl FileType<'_> {
     ///
     /// # Safety
     ///
-    /// The given `ptr` must be well-aligned and valid for that.
+    /// The given `ptr` must be well-aligned and valid for reads.
     /// On top of that, the [`clap_preset_discovery_filetype`] value it points to must also satisfy the
     /// safety requirements of the [`from_raw`](Self::from_raw) method.
     #[inline]
@@ -99,6 +100,9 @@ pub struct LocationInfo<'a> {
 }
 
 impl LocationInfo<'_> {
+    /// Returns the raw, C-FFI compatible representation of this Location information.
+    ///
+    /// The pointers contained in this struct are valid for the `'a` lifetime.
     #[inline]
     pub fn to_raw(self) -> clap_preset_discovery_location {
         let (kind, location) = self.location.to_raw();
@@ -111,20 +115,23 @@ impl LocationInfo<'_> {
         }
     }
 
-    pub const unsafe fn from_raw_ptr(raw: *const clap_preset_discovery_location) -> Option<Self> {
-        if raw.is_null() {
-            return None;
-        }
-
-        // SAFETY: TODO
-        let raw = unsafe { raw.read() };
-
-        // SAFETY: TODO
-        unsafe { Self::from_raw(raw) }
-    }
-
+    /// Creates a [`LocationInfo`] from its raw, C-FFI compatible representation.
+    ///
+    /// If the `location` pointer is `NULL` when the `kind` is `CLAP_PRESET_DISCOVERY_LOCATION_FILE`,
+    /// then this returns [`None`].
+    ///
+    /// # Safety
+    ///
+    /// Either of the contained pointers can be `NULL`, in which case the following requirements do
+    /// not apply.
+    ///
+    /// Unless they are NULL, all the contained string pointers must point to valid C strings, and
+    /// remain valid for the duration of the `'a` lifetime.
+    ///
+    /// See the documentation of [`CStr::from_ptr`] for the exhaustive list of safety requirements
+    /// for each of those pointers.
     pub const unsafe fn from_raw(raw: clap_preset_discovery_location) -> Option<Self> {
-        // SAFETY: TODO
+        // SAFETY: All C strings are either NULL or valid as upheld by the caller
         unsafe {
             Some(Self {
                 name: match str_from_raw(raw.name) {
@@ -138,6 +145,32 @@ impl LocationInfo<'_> {
                 },
             })
         }
+    }
+
+    /// Creates a [`FileType`] from a pointer to its raw, C-FFI compatible representation.
+    ///
+    /// If either the given `ptr` is `NULL`, or if the `location` pointer is `NULL` when the `kind`
+    /// is `CLAP_PRESET_DISCOVERY_LOCATION_FILE`, then this returns [`None`].
+    ///
+    /// This function is an alternative to the [`from_raw`](Self::from_raw) method, except it allows to read
+    /// directly from a raw pointer without actually borrowing it, which may be slightly safer in
+    /// some cases.
+    ///
+    /// # Safety
+    ///
+    /// The given `ptr` must be well-aligned and valid for reads.
+    /// On top of that, the `clap_preset_discovery_location` value it points to must also satisfy the
+    /// safety requirements of the [`from_raw`](Self::from_raw) method.
+    pub const unsafe fn from_raw_ptr(raw: *const clap_preset_discovery_location) -> Option<Self> {
+        if raw.is_null() {
+            return None;
+        }
+
+        // SAFETY: pointer is guaranteed to be valid for reads by caller
+        let raw = unsafe { raw.read() };
+
+        // SAFETY: invariants are upheld by callers
+        unsafe { Self::from_raw(raw) }
     }
 }
 
@@ -183,6 +216,11 @@ pub enum Location<'a> {
 }
 
 impl<'a> Location<'a> {
+    /// Returns this location as a `location_kind` tag along with an optional file path string.
+    ///
+    /// If this is [`Location::Plugin`], then the returned pointer is `NULL`.
+    /// If this is [`Location::File`], then the returned pointer contains the file path and is
+    /// valid for `'a`.
     #[inline]
     pub const fn to_raw(self) -> (clap_preset_discovery_location_kind, *const c_char) {
         match self {
@@ -191,6 +229,23 @@ impl<'a> Location<'a> {
         }
     }
 
+    /// Creates a [`Location`] from its raw, C-FFI compatible representation, consisting of a
+    /// `location_kind` tag along its optional `path`.
+    ///
+    /// This function returns [`None`] if the given `kind` is unknown, or if it is
+    /// `CLAP_PRESET_DISCOVERY_LOCATION_FILE` while the given `path` is `NULL`.
+    ///
+    /// # Safety
+    ///
+    /// If the given `kind` is `CLAP_PRESET_DISCOVERY_LOCATION_FILE`, then the given `path` must
+    /// be either `NULL` or point to a valid, null-terminated C string, and remain valid for the
+    /// `'a` lifetime.
+    ///
+    /// See the documentation of [`CStr::from_ptr`] for the exhaustive list of safety requirements
+    /// for the `path` pointer.
+    ///
+    /// For any other value of `kind` (including unknown ones), this function is always safe to
+    /// call, as the `path` pointer is simply discarded.
     #[inline]
     pub const unsafe fn from_raw(
         kind: clap_preset_discovery_location_kind,
@@ -199,7 +254,8 @@ impl<'a> Location<'a> {
         match kind {
             CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN => Some(Location::Plugin),
             CLAP_PRESET_DISCOVERY_LOCATION_FILE if !path.is_null() => Some(Location::File {
-                // SAFETY: TODO
+                // SAFETY: Strings are either NULL or valid as upheld by the caller.
+                // We just checked above that the pointer is not NULL.
                 path: unsafe { CStr::from_ptr(path) },
             }),
             _ => None,
@@ -218,19 +274,33 @@ impl<'a> Location<'a> {
     }
 }
 
+/// Information about an installed Sound Pack.
 #[derive(Copy, Clone, Debug)]
 pub struct Soundpack<'a> {
+    /// Flags describing extra information about the presets in this soundpack.
     pub flags: Flags,
+    /// The unique identifier of this sound pack.
+    ///
+    /// This will be used by presets to indicate which sound pack(s) they belong to.
     pub id: &'a CStr,
+    /// The display name for this sound pack.
     pub name: &'a CStr,
+    /// An extended description about this sound pack. Optional.
     pub description: Option<&'a CStr>,
+    /// The URL of this sound pack's homepage, if it has one. Optional.
     pub homepage_url: Option<&'a CStr>,
+    /// The vendor of this sound pack. Optional.
     pub vendor: Option<&'a CStr>,
+    /// The on-disk path of an illustration image of this sound pack. Optional.
     pub image_path: Option<&'a CStr>,
+    /// The time at which this sound pack was released. This can be [`None`] if unavailable.
     pub release_timestamp: Option<Timestamp>,
 }
 
-impl Soundpack<'_> {
+impl<'a> Soundpack<'a> {
+    /// Returns the raw, C-FFI compatible representation of this Location information.
+    ///
+    /// The pointers contained in this struct are valid for the `'a` lifetime.
     pub fn to_raw(self) -> clap_preset_discovery_soundpack {
         clap_preset_discovery_soundpack {
             flags: self.flags.bits(),
@@ -244,18 +314,22 @@ impl Soundpack<'_> {
         }
     }
 
-    pub const unsafe fn from_raw_ptr(raw: *const clap_preset_discovery_soundpack) -> Option<Self> {
-        if raw.is_null() {
-            return None;
-        }
-
-        // SAFETY: TODO
-        let raw = unsafe { raw.read() };
-        Self::from_raw(raw)
-    }
-
+    /// Creates a [`Soundpack`] from its raw, C-FFI compatible representation.
+    ///
+    /// If any of the non-optional pointers are `NULL`, then this returns [`None`].
+    ///
+    /// # Safety
+    ///
+    /// Any of the contained pointers can be `NULL`, in which case the following requirements do
+    /// not apply.
+    ///
+    /// Unless they are NULL, all the contained string pointers must point to valid C strings, and
+    /// remain valid for the duration of the `'a` lifetime.
+    ///
+    /// See the documentation of [`CStr::from_ptr`] for the exhaustive list of safety requirements
+    /// for each of those pointers.
     pub const unsafe fn from_raw(raw: clap_preset_discovery_soundpack) -> Option<Self> {
-        // SAFETY: TODO
+        // SAFETY: All C strings are either NULL or valid as upheld by the caller
         unsafe {
             Some(Self {
                 flags: Flags::from_bits_truncate(raw.flags),
@@ -274,6 +348,32 @@ impl Soundpack<'_> {
                 release_timestamp: Timestamp::from_raw(raw.release_timestamp),
             })
         }
+    }
+
+    /// Creates a [`Soundpack`] from a pointer to its raw, C-FFI compatible representation.
+    ///
+    /// If either the given `ptr` is `NULL`, or if any of the non-optional pointers are `NULL`,
+    /// then this returns [`None`].
+    ///
+    /// This function is an alternative to the [`from_raw`](Self::from_raw) method, except it allows to read
+    /// directly from a raw pointer without actually borrowing it, which may be slightly safer in
+    /// some cases.
+    ///
+    /// # Safety
+    ///
+    /// The given `ptr` must be well-aligned and valid for reads.
+    /// On top of that, the `clap_preset_discovery_soundpack` value it points to must also satisfy the
+    /// safety requirements of the [`from_raw`](Self::from_raw) method.
+    pub const unsafe fn from_raw_ptr(raw: *const clap_preset_discovery_soundpack) -> Option<Self> {
+        if raw.is_null() {
+            return None;
+        }
+
+        // SAFETY: pointer is guaranteed to be valid for reads by caller
+        let raw = unsafe { raw.read() };
+
+        // SAFETY: invariants are upheld by callers
+        unsafe { Self::from_raw(raw) }
     }
 }
 
