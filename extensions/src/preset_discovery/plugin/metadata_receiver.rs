@@ -30,7 +30,7 @@ impl MetadataReceiver<'_> {
     }
 
     #[inline]
-    pub fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
+    pub fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) -> &mut Self {
         if let Some(begin_preset) = self.inner.begin_preset {
             // SAFETY: TODO
             // TODO: error
@@ -42,47 +42,54 @@ impl MetadataReceiver<'_> {
                 )
             };
         }
+
+        self
     }
 
     #[inline]
-    pub fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {
+    pub fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) -> &mut Self {
         if let Some(add_plugin_id) = self.inner.add_plugin_id {
             let plugin_id = plugin_id.to_raw();
             // SAFETY: TODO
             unsafe { add_plugin_id(&self.inner, &plugin_id) }
         }
+        self
     }
 
     #[inline]
-    pub fn set_soundpack_id(&mut self, soundpack_id: &CStr) {
+    pub fn set_soundpack_id(&mut self, soundpack_id: &CStr) -> &mut Self {
         if let Some(set_soundpack_id) = self.inner.set_soundpack_id {
             // SAFETY: TODO
             unsafe { set_soundpack_id(&self.inner, soundpack_id.as_ptr()) }
         }
+        self
     }
 
     #[inline]
-    pub fn set_flags(&mut self, flags: Flags) {
+    pub fn set_flags(&mut self, flags: Flags) -> &mut Self {
         if let Some(set_flags) = self.inner.set_flags {
             // SAFETY: TODO
             unsafe { set_flags(&self.inner, flags.bits()) }
         }
+        self
     }
 
     #[inline]
-    pub fn add_creator(&mut self, creator: &CStr) {
+    pub fn add_creator(&mut self, creator: &CStr) -> &mut Self {
         if let Some(add_creator) = self.inner.add_creator {
             // SAFETY: TODO
             unsafe { add_creator(&self.inner, creator.as_ptr()) }
         }
+        self
     }
 
     #[inline]
-    pub fn set_description(&mut self, description: &CStr) {
+    pub fn set_description(&mut self, description: &CStr) -> &mut Self {
         if let Some(set_description) = self.inner.set_description {
             // SAFETY: TODO
             unsafe { set_description(&self.inner, description.as_ptr()) }
         }
+        self
     }
 
     #[inline]
@@ -90,7 +97,7 @@ impl MetadataReceiver<'_> {
         &mut self,
         creation_time: Option<Timestamp>,
         modified_time: Option<Timestamp>,
-    ) {
+    ) -> &mut Self {
         if let Some(set_timestamps) = self.inner.set_timestamps {
             // SAFETY: TODO
             unsafe {
@@ -101,22 +108,25 @@ impl MetadataReceiver<'_> {
                 )
             }
         }
+        self
     }
 
     #[inline]
-    pub fn add_feature(&mut self, feature: &CStr) {
+    pub fn add_feature(&mut self, feature: &CStr) -> &mut Self {
         if let Some(add_feature) = self.inner.add_feature {
             // SAFETY: TODO
             unsafe { add_feature(&self.inner, feature.as_ptr()) }
         }
+        self
     }
 
     #[inline]
-    pub fn add_extra_info(&mut self, key: &CStr, value: &CStr) {
+    pub fn add_extra_info(&mut self, key: &CStr, value: &CStr) -> &mut Self {
         if let Some(add_extra_info) = self.inner.add_extra_info {
             // SAFETY: TODO
             unsafe { add_extra_info(&self.inner, key.as_ptr(), value.as_ptr()) }
         }
+        self
     }
 }
 

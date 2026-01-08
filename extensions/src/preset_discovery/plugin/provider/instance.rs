@@ -7,12 +7,23 @@ use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::panic::AssertUnwindSafe;
 
+/// A provider instance that is ready to be used by the host.
+///
+/// This is the type to be returned by [`PresetDiscoveryFactoryImpl::create_provider`].
+///
+/// See the [`ProviderInstance::new`] function for more information on how to create this type.
 pub struct ProviderInstance<'a> {
     inner: Box<clap_preset_discovery_provider>,
     lifetime: PhantomData<&'a clap_preset_discovery_provider_descriptor>,
 }
 
 impl<'a> ProviderInstance<'a> {
+    /// Creates a new [`ProviderInstance`] from a given [provider implementation](ProviderImpl).
+    ///
+    /// This also needs a reference to the associated [`ProviderDescriptor`], as well as the
+    /// [`IndexerInfo`] handle that was passed to [`PresetDiscoveryFactoryImpl::create_provider`].
+    ///
+    /// See the [`PresetDiscoveryFactoryImpl::create_provider`] documentation for a usage example.
     pub fn new<P: ProviderImpl<'a>>(
         indexer: IndexerInfo<'a>,
         descriptor: &'a ProviderDescriptor,
@@ -45,6 +56,7 @@ impl Drop for ProviderInstance<'_> {
     }
 }
 
+/// The actual data type that is behind the clap_preset_discovery_provider.provider_data pointer.
 struct ProviderInstanceData<'a, P> {
     indexer_info: IndexerInfo<'a>,
     state: ProviderInstanceState<'a, P>,
@@ -59,7 +71,6 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         clap_preset_discovery_provider {
             desc: descriptor.as_raw(),
             provider_data: Box::into_raw(Box::new(ProviderInstanceData {
-                // SAFETY: TODO
                 indexer_info,
                 state: ProviderInstanceState::Uninitialized(Box::new(initializer)),
             }))
@@ -71,6 +82,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         }
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn init(provider: *const clap_preset_discovery_provider) -> bool {
         Self::handle(provider, |instance| {
             let ProviderInstanceState::Uninitialized(_) = &instance.state else {
@@ -93,6 +105,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         .is_some()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn get_metadata(
         provider: *const clap_preset_discovery_provider,
         location_kind: clap_preset_discovery_location_kind,
@@ -117,6 +130,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         .is_some()
     }
 
+    #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn destroy(provider: *const clap_preset_discovery_provider) {
         let destroyable = Self::handle(provider, |instance| {
             instance.state = ProviderInstanceState::Destroying;

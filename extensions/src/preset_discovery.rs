@@ -59,6 +59,12 @@ pub mod factory;
 
 pub use descriptor::*;
 
+/// Allows plugins to provide information on how their presets can be indexed by the host.
+///
+/// This interface allows a [preset provider](provider) to describe global information that
+/// relates to multiple or all of the presets it handles.
+///
+/// It must be passed to the preset provider at instantiation time.
 pub mod indexer {
     #[cfg(feature = "clack-host")]
     pub use super::host::indexer::*;
@@ -66,6 +72,7 @@ pub mod indexer {
     pub use super::plugin::indexer::*;
 }
 
+/// A plugin-owned interface that provides a list of presets to the host.
 pub mod provider {
     #[cfg(feature = "clack-host")]
     pub use super::host::provider::*;
