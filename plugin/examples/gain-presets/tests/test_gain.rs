@@ -24,7 +24,8 @@ pub fn it_works() {
         descriptor.id().unwrap().to_bytes(),
         b"org.rust-audio.clack.gain-presets"
     );
-    assert_eq!(descriptor.name().unwrap().to_bytes(), b"Clack Gain Example");
+
+    assert_eq!(descriptor.name().unwrap(), c"Clack Gain Presets Example");
 
     assert!(descriptor.vendor().is_none());
     assert!(descriptor.url().is_none());
@@ -151,13 +152,9 @@ fn preset_listing_works() {
     );
 
     let provider_id = provider.id().unwrap();
-    let mut provider = Provider::instantiate(
-        || TestIndexer { declared: false },
-        &bundle,
-        provider_id,
-        info,
-    )
-    .unwrap();
+    let mut provider =
+        Provider::instantiate(TestIndexer { declared: false }, &bundle, provider_id, &info)
+            .unwrap();
 
     assert!(provider.indexer().declared);
 

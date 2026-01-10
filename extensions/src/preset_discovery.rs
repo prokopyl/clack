@@ -92,6 +92,7 @@ pub mod prelude {
     pub use super::{
         HostPresetLoad, PluginPresetLoad, ProviderDescriptor, factory::PresetDiscoveryFactory,
     };
+    pub use clack_common::utils::{Timestamp, UniversalPluginId};
 
     #[cfg(feature = "clack-plugin")]
     pub use super::{

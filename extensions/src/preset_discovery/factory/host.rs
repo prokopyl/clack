@@ -8,31 +8,54 @@ impl<'a> PresetDiscoveryFactory<'a> {
             return 0;
         };
 
-        // SAFETY: TODO
+        // SAFETY: This type enforces the contained pointer is still valid.
         unsafe { count(self.0.as_ptr()) }
     }
 
     pub fn get_provider_descriptor(&self, index: u32) -> Option<&'a ProviderDescriptor> {
         let get_descriptor = self.0.get().get_descriptor?;
 
-        // SAFETY: TODO
+        // SAFETY: This type enforces the contained pointer is still valid.
         let descriptor = unsafe { get_descriptor(self.0.as_ptr(), index) };
 
-        // SAFETY: TODO
+        // SAFETY: The CLAP spec guarantees that if non-NULL, the descriptor pointer is properly aligned and valid.
+        // The descriptor is read-only and never mutated, so it is safe to convert to a shared reference.
         let descriptor = unsafe { descriptor.as_ref()? };
 
-        // SAFETY: TODO
+        // SAFETY: The CLAP spec guarantees that the contents are either NULL or point to valid C strings.
+        // The lifetime of that descriptor is also tied to the factory, which this type tracks as the
+        // 'a lifetime.
         let descriptor = unsafe { ProviderDescriptor::from_raw(descriptor) };
 
         Some(descriptor)
     }
 
     #[inline]
-    pub fn provider_descriptors(&self) -> PluginDescriptorsIter<'a> {
-        PluginDescriptorsIter {
+    pub fn provider_descriptors(&self) -> ProviderDescriptorsIter<'a> {
+        ProviderDescriptorsIter {
             factory: *self,
             range: 0..self.provider_count(),
         }
+    }
+}
+
+impl<'a> IntoIterator for PresetDiscoveryFactory<'a> {
+    type Item = &'a ProviderDescriptor;
+    type IntoIter = ProviderDescriptorsIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> ProviderDescriptorsIter<'a> {
+        self.provider_descriptors()
+    }
+}
+
+impl<'a> IntoIterator for &PresetDiscoveryFactory<'a> {
+    type Item = &'a ProviderDescriptor;
+    type IntoIter = ProviderDescriptorsIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> ProviderDescriptorsIter<'a> {
+        self.provider_descriptors()
     }
 }
 
@@ -40,12 +63,12 @@ impl<'a> PresetDiscoveryFactory<'a> {
 /// plugin factory.
 ///
 /// See the [`PresetDiscoveryFactory::provider_descriptors`] method that produces this iterator.
-pub struct PluginDescriptorsIter<'a> {
+pub struct ProviderDescriptorsIter<'a> {
     factory: PresetDiscoveryFactory<'a>,
     range: core::ops::Range<u32>,
 }
 
-impl<'a> Iterator for PluginDescriptorsIter<'a> {
+impl<'a> Iterator for ProviderDescriptorsIter<'a> {
     type Item = &'a ProviderDescriptor;
 
     #[inline]
@@ -65,16 +88,16 @@ impl<'a> Iterator for PluginDescriptorsIter<'a> {
     }
 }
 
-impl ExactSizeIterator for PluginDescriptorsIter<'_> {
+impl ExactSizeIterator for ProviderDescriptorsIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.range.len()
     }
 }
 
-impl FusedIterator for PluginDescriptorsIter<'_> {}
+impl FusedIterator for ProviderDescriptorsIter<'_> {}
 
-impl DoubleEndedIterator for PluginDescriptorsIter<'_> {
+impl DoubleEndedIterator for ProviderDescriptorsIter<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         loop {

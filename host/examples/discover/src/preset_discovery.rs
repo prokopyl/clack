@@ -28,7 +28,7 @@ pub fn scan_provider(
     host_info: HostInfo,
 ) -> Option<PresetDiscoveryData> {
     let mut provider =
-        Provider::instantiate(PresetIndexer::new, bundle, descriptor.id()?, host_info).unwrap();
+        Provider::instantiate(PresetIndexer::new(), bundle, descriptor.id()?, &host_info).unwrap();
 
     let indexer_data = provider.indexer_mut().take();
 
