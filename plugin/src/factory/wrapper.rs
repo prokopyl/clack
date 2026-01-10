@@ -36,7 +36,7 @@ impl<Raw, F> FactoryWrapper<Raw, F> {
         unsafe { RawFactoryPointer::from_raw(self_ptr.cast()) }
     }
 
-    /// TODO
+    /// Returns a raw pointer to the `Raw` CLAP representation contained in this wrapper.
     #[inline]
     pub fn as_raw_ptr(&self) -> *const Raw {
         self.as_raw().as_raw().as_ptr()

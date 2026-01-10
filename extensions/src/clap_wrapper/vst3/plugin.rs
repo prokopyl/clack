@@ -99,11 +99,9 @@ where
     .unwrap_or(0)
 }
 
-impl<F> FactoryImplementation for PluginFactoryAsVST3Wrapper<F> {
-    type Factory<'a>
-        = PluginFactoryAsVST3<'a>
-    where
-        Self: 'a;
+// SAFETY: The returned raw implementation matches the spec for clap_plugin_factory_as_vst3
+unsafe impl<'a, F: 'a> FactoryImplementation<'a> for PluginFactoryAsVST3Wrapper<F> {
+    type Factory = PluginFactoryAsVST3<'a>;
     type Wrapped = F;
 
     #[inline]

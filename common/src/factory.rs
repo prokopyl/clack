@@ -19,7 +19,7 @@ pub use raw::RawFactoryPointer;
 
 pub mod plugin;
 
-/// A CLAP factory pointer.
+/// A CLAP factory pointer type.
 ///
 /// The role of this trait is to tie a Rust type to a standard CLAP factory identifier and its
 /// matching raw C ABI type.
@@ -71,12 +71,12 @@ pub mod plugin;
 /// }
 ///
 /// ```
-pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync {
-    /// The standard identifier for this extension.
+pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync + 'a {
+    /// The standard identifier(s) for this factory type.
     const IDENTIFIERS: &'static [&'static CStr];
     type Raw: Copy + Sized + Send + Sync + 'static;
 
-    /// Returns an instance of the extension from a given extension pointer.
+    /// Returns a handle to the factory from a given factory pointer.
     ///
     /// # Safety
     ///

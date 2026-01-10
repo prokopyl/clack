@@ -25,11 +25,15 @@ pub use wrapper::FactoryWrapper;
 
 /// Provides an implementation of this extension for a given type `I` (typically either a host or
 /// plugin structure).
-pub trait FactoryImplementation {
-    type Factory<'a>: Factory<'a>
-    where
-        Self: 'a;
+///
+/// # Safety
+///
+/// The wrapper returned by the [`wrapper`](Self::wrapper) function *must* wrap a `Raw` implementation
+/// that fully complies to the CLAP specification of the given [`Factory`] type, and must remain
+/// valid for the duration of the `'a` lifetime.
+pub unsafe trait FactoryImplementation<'a>: 'a {
+    type Factory: Factory<'a>;
     type Wrapped;
 
-    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory<'_> as Factory<'_>>::Raw, Self::Wrapped>;
+    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory as Factory<'a>>::Raw, Self::Wrapped>;
 }

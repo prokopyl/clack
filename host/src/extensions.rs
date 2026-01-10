@@ -165,13 +165,15 @@
 //! pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
 //!
 //! // Mark this type as being the host side of an extension, and tie it to its ID
+//! // SAFETY: CLAP_EXT_LATENCY is the ID of the clap_host_latency extension, defined by the CLAP spec
 //! unsafe impl Extension for HostLatency {
 //!     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_LATENCY];
 //!     type ExtensionSide = HostExtensionSide;
 //!
 //!     #[inline]
 //!     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-//!         Self(raw.cast())
+//!         // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+//!         unsafe { Self(raw.cast()) }
 //!     }
 //! }
 //!

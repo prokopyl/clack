@@ -346,7 +346,7 @@ impl<'a> EntryFactories<'a> {
     /// usage pattern.
     ///
     /// See [`Entry`]'s documentation for an example.
-    pub fn register_factory<F: FactoryImplementation>(&mut self, factory: &'a F) -> &mut Self {
+    pub fn register_factory<F: FactoryImplementation<'a>>(&mut self, factory: &'a F) -> &mut Self {
         if self.found.is_some() {
             return self;
         }

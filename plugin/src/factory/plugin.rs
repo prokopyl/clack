@@ -94,11 +94,9 @@ impl<F: PluginFactoryImpl> PluginFactoryWrapper<F> {
     }
 }
 
-impl<F: PluginFactoryImpl> FactoryImplementation for PluginFactoryWrapper<F> {
-    type Factory<'a>
-        = PluginFactory<'a>
-    where
-        Self: 'a;
+// SAFETY: The returned raw implementation matches the spec for clap_plugin_factory
+unsafe impl<'a, F: PluginFactoryImpl + 'a> FactoryImplementation<'a> for PluginFactoryWrapper<F> {
+    type Factory = PluginFactory<'a>;
     type Wrapped = F;
 
     #[inline]
