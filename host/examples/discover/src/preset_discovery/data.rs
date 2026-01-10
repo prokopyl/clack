@@ -1,4 +1,4 @@
-use crate::preset_discovery::indexer::Location;
+use crate::preset_discovery::indexer::{FileType, Location, Soundpack};
 use crate::preset_discovery::metadata::PresetData;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
@@ -40,6 +40,19 @@ impl Display for PresetsAtLocation {
                     location.file_path.as_ref().unwrap(),
                     location.flags
                 )?;
+
+                for file in files {
+                    writeln!(
+                        f,
+                        "-> {} presets at '{}'",
+                        file.presets.len(),
+                        file.path.to_string_lossy(),
+                    )?;
+
+                    for preset in &file.presets {
+                        writeln!(f, "\t {preset}")?;
+                    }
+                }
             }
         };
 
@@ -55,5 +68,7 @@ pub struct PresetsInFile {
 
 #[derive(Debug)]
 pub struct PresetDiscoveryData {
+    pub file_types: Vec<FileType>,
+    pub soundpacks: Vec<Soundpack>,
     pub presets_per_location: Vec<PresetsAtLocation>,
 }

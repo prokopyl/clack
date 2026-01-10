@@ -27,7 +27,7 @@ impl RawIndexerDescriptor {
                 vendor: host_info.vendor().as_ptr(),
                 url: host_info.url().as_ptr(),
                 version: host_info.version().as_ptr(),
-                get_extension: Some(get_extension::<I>),
+                get_extension: Some(get_extension),
                 declare_filetype: Some(declare_filetype::<I>),
                 declare_location: Some(declare_location::<I>),
                 declare_soundpack: Some(declare_soundpack::<I>),
@@ -44,11 +44,12 @@ impl RawIndexerDescriptor {
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn get_extension<I: IndexerImpl>(
-    indexer: *const clap_preset_discovery_indexer,
-    identifier: *const std::os::raw::c_char,
+unsafe extern "C" fn get_extension(
+    _indexer: *const clap_preset_discovery_indexer,
+    _identifier: *const std::os::raw::c_char,
 ) -> *const c_void {
-    todo!()
+    // Not yet implemented
+    core::ptr::null()
 }
 
 #[allow(clippy::missing_safety_doc)]

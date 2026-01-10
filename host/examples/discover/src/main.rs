@@ -91,6 +91,28 @@ pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode
                 for preset in preset.presets_per_location {
                     println!("{preset}")
                 }
+
+                if !preset.file_types.is_empty() {
+                    println!(
+                        "     > Filtered index on {} file types: ",
+                        preset.file_types.len()
+                    );
+
+                    for file_type in &preset.file_types {
+                        println!("    - {}", file_type);
+                    }
+                }
+
+                if !preset.soundpacks.is_empty() {
+                    println!(
+                        "     > Registered {} sound packs: ",
+                        preset.soundpacks.len()
+                    );
+
+                    for soundpack in &preset.soundpacks {
+                        println!("    - {}", soundpack);
+                    }
+                }
             }
         }
         bundles => {

@@ -22,17 +22,16 @@ impl<F: PresetDiscoveryFactoryImpl> PresetDiscoveryFactoryWrapper<F> {
     }
 }
 
-// TODO: make this impl unsafe
-impl<F: PresetDiscoveryFactoryImpl> FactoryImplementation for PresetDiscoveryFactoryWrapper<F> {
-    type Factory<'a>
-        = PresetDiscoveryFactory<'a>
-    where
-        Self: 'a;
+// SAFETY: The returned raw implementation matches the spec for clap_preset_discovery_factory
+unsafe impl<'a, F: PresetDiscoveryFactoryImpl + 'a> FactoryImplementation<'a>
+    for PresetDiscoveryFactoryWrapper<F>
+{
+    type Factory = PresetDiscoveryFactory<'a>;
 
     type Wrapped = F;
 
     #[inline]
-    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory<'_> as Factory<'_>>::Raw, Self::Wrapped> {
+    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory as Factory<'a>>::Raw, Self::Wrapped> {
         &self.inner
     }
 }

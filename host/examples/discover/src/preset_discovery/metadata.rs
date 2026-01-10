@@ -19,6 +19,17 @@ pub struct PluginId {
     id: Box<CStr>,
 }
 
+impl Display for PluginId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} - {}",
+            self.abi.to_string_lossy().to_uppercase(),
+            self.id.to_string_lossy()
+        )
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct PresetData {
     name: Option<Box<CStr>>,
@@ -37,11 +48,34 @@ pub struct PresetData {
 impl Display for PresetData {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         if let Some(name) = &self.name {
-            write!(f, "{name:?}")?;
+            write!(f, "{}", name.to_string_lossy())?;
+        }
+
+        if let Some(load_key) = &self.load_key {
+            if !load_key.is_empty() {
+                write!(f, " <{}>", load_key.to_string_lossy())?;
+            }
+        }
+
+        if !self.creators.is_empty() {
+            write!(f, " (by {})", JoinCStr(&self.creators))?;
+        }
+
+        if let Some(description) = &self.description {
+            if !description.is_empty() {
+                write!(f, ": {}", description.to_string_lossy())?;
+            }
+        }
+
+        if !self.features.is_empty() {
+            write!(f, " ({})", JoinCStr(&self.features))?;
+        }
+
+        if !self.plugin_ids.is_empty() {
+            write!(f, " (for {})", Join(&self.plugin_ids))?;
         }
 
         Ok(())
-        //todo!()
     }
 }
 
@@ -170,3 +204,37 @@ impl Display for MetadataError {
 }
 
 impl std::error::Error for MetadataError {}
+
+struct Join<'a, D>(&'a [D]);
+
+impl<'a, D: Display> Display for Join<'a, D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut iter = self.0.iter();
+        if let Some(next) = iter.next() {
+            write!(f, "{}", next)?;
+
+            for next in iter {
+                write!(f, ", {}", next)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+struct JoinCStr<'a>(&'a [Box<CStr>]);
+
+impl<'a> Display for JoinCStr<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut iter = self.0.iter();
+        if let Some(next) = iter.next() {
+            write!(f, "{}", next.to_string_lossy())?;
+
+            for next in iter {
+                write!(f, ", {}", next.to_string_lossy())?;
+            }
+        }
+
+        Ok(())
+    }
+}

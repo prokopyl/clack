@@ -40,6 +40,8 @@ pub fn scan_provider(
 
     Some(PresetDiscoveryData {
         presets_per_location,
+        file_types: indexer_data.file_types,
+        soundpacks: indexer_data.soundpacks,
     })
 }
 

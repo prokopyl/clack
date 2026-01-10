@@ -1,4 +1,3 @@
-use crate::preset_discovery::plugin::provider::wrapper::ProviderWrapper;
 use crate::preset_discovery::prelude::*;
 use crate::utils::handle_panic;
 use clap_sys::factory::preset_discovery::*;
@@ -97,8 +96,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
 
             let provider = initializer.init(instance.indexer_info.to_indexer());
 
-            instance.state =
-                ProviderInstanceState::Initialized(ProviderWrapper { inner: provider });
+            instance.state = ProviderInstanceState::Initialized(provider);
 
             Some(())
         })
@@ -112,9 +110,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         location_path: *const c_char,
         clap_preset_discovery_metadata_receiver: *const clap_preset_discovery_metadata_receiver,
     ) -> bool {
-        dbg!("Foo!");
         Self::handle(provider, |instance| {
-            dbg!(location_kind, location_path);
             let ProviderInstanceState::Initialized(wrapper) = &mut instance.state else {
                 return None;
             };
@@ -123,7 +119,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
 
             let receiver = MetadataReceiver::from_raw(clap_preset_discovery_metadata_receiver);
 
-            wrapper.inner.get_metadata(location, receiver);
+            wrapper.get_metadata(location, receiver);
 
             Some(())
         })
@@ -185,7 +181,7 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
 enum ProviderInstanceState<'a, P> {
     Uninitialized(Box<dyn Initializer<'a, P>>),
     Initializing,
-    Initialized(ProviderWrapper<P>),
+    Initialized(P),
     Destroying,
 }
 

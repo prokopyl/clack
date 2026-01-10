@@ -1,6 +1,7 @@
 use clack_extensions::preset_discovery::{self, prelude::*};
 use std::borrow::Cow;
 use std::ffi::CStr;
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 pub struct PresetIndexer {
@@ -51,10 +52,30 @@ impl IndexerImpl for PresetIndexer {
     }
 }
 
+#[derive(Debug)]
 pub struct FileType {
     pub name: Box<CStr>,
     pub description: Option<Box<CStr>>,
     pub extension: Option<Box<Path>>,
+}
+
+impl Display for FileType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name.to_string_lossy())?;
+
+        match &self.extension {
+            Some(extension) => write!(f, "<*.{}>", extension.to_string_lossy())?,
+            None => write!(f, " <all file extensions>")?,
+        };
+
+        if let Some(description) = &self.description {
+            if !description.is_empty() {
+                write!(f, ": {}", description.to_string_lossy())?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -64,10 +85,21 @@ pub struct Location {
     pub file_path: Option<Box<Path>>,
 }
 
+#[derive(Debug)]
 pub struct Soundpack {
     pub flags: Flags,
     pub id: Box<CStr>,
     pub name: Box<CStr>,
+}
+
+impl Display for Soundpack {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name.to_string_lossy())?;
+        write!(f, " <{}>", self.id.to_string_lossy())?;
+        write!(f, " ({:?})", self.flags)?;
+
+        Ok(())
+    }
 }
 
 fn path_from_c_str(cstr: &CStr) -> Box<Path> {

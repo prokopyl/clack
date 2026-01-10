@@ -2,7 +2,6 @@ use crate::preset_discovery::prelude::*;
 pub use instance::ProviderInstance;
 
 mod instance;
-mod wrapper;
 
 /// A provider implementation.
 ///

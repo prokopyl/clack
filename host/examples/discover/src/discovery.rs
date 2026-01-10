@@ -1,7 +1,5 @@
-use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
@@ -154,29 +152,3 @@ impl Display for PluginDescriptor {
         }
     }
 }
-
-/// Errors that happened during discovery.
-#[derive(Debug)]
-pub enum DiscoveryError {
-    /// Unable to load a CLAP bundle.
-    LoadError(PluginBundleError),
-    /// The CLAP bundle has no plugin factory.
-    MissingPluginFactory,
-}
-
-impl From<PluginBundleError> for DiscoveryError {
-    fn from(value: PluginBundleError) -> Self {
-        Self::LoadError(value)
-    }
-}
-
-impl Display for DiscoveryError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DiscoveryError::LoadError(e) => write!(f, "Failed to load plugin bundle: {e}"),
-            DiscoveryError::MissingPluginFactory => f.write_str("Bundle has no plugin factory"),
-        }
-    }
-}
-
-impl Error for DiscoveryError {}

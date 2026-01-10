@@ -59,26 +59,10 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
             indexer_info,
             &self.desc,
             |mut indexer| {
-                dbg!(&indexer);
-
                 indexer.declare_location(LocationInfo {
                     name: c"Default",
                     flags: Flags::IS_FACTORY_CONTENT,
                     location: Location::Plugin,
-                });
-
-                indexer.declare_filetype(FileType {
-                    name: c"Test",
-                    file_extension: Some(c"txt"),
-                    description: None,
-                });
-
-                indexer.declare_location(LocationInfo {
-                    name: c"Test",
-                    flags: Flags::IS_FACTORY_CONTENT,
-                    location: Location::File {
-                        path: c"/home/adrien/Temp/test_clap/",
-                    },
                 });
 
                 GainPresetProvider
@@ -91,7 +75,6 @@ pub struct GainPresetProvider;
 
 impl<'a> ProviderImpl<'a> for GainPresetProvider {
     fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) {
-        dbg!(location);
         if let Location::File { path } = location {
             let path = Path::new(path.to_str().unwrap());
             let file_name = path.file_name().unwrap().to_str().unwrap();
