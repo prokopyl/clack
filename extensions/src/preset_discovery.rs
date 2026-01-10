@@ -36,6 +36,7 @@ unsafe impl Extension for HostPresetLoad {
 
 #[cfg(feature = "clack-host")]
 mod host {
+    pub(crate) mod extension;
     pub(crate) mod indexer;
     pub(crate) mod metadata_receiver;
     pub(crate) mod provider;
@@ -48,6 +49,9 @@ mod plugin {
     pub(crate) mod metadata_receiver;
     pub(crate) mod provider;
 }
+
+#[cfg(feature = "clack-host")]
+pub use host::extension::{HostPresetLoadImpl, PresetLoadError};
 
 #[cfg(feature = "clack-plugin")]
 pub use plugin::extension::PluginPresetLoadImpl;
