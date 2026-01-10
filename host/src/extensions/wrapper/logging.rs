@@ -20,7 +20,7 @@ unsafe fn get_logger(host: *const clap_host) -> Option<ClapLoggingFn> {
 
 fn log_display(error: &HostWrapperError) -> Result<CString, Box<dyn Error>> {
     let mut buf = String::new();
-    write!(buf, "{}", error.msg())?;
+    write!(buf, "{}", error)?;
     Ok(CString::new(buf)?)
 }
 
@@ -41,5 +41,5 @@ pub unsafe fn host_log(host: *const clap_host, e: &HostWrapperError) {
         };
     }
 
-    eprintln!("[CLAP_HOST_ERROR] {}", e.msg());
+    eprintln!("[CLAP_HOST_ERROR] {}", e);
 }

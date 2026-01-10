@@ -4,10 +4,12 @@ use crate::plugin::DestroyLock;
 use crate::prelude::*;
 use crate::util::UnsafeOptionCell;
 use clap_sys::ext::log::{
-    CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
+    CLAP_LOG_ERROR, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
 };
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -282,7 +284,8 @@ impl<H: HostHandlers> HostWrapper<H> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Debug)]
+#[non_exhaustive]
 pub enum HostWrapperError {
     /// An invalid parameter value was encountered.
     ///
@@ -292,19 +295,27 @@ pub enum HostWrapperError {
     NullHostData,
     Panic,
     HostError(PluginInstanceError),
+    /// A generic, type-erased error.
+    Error(Box<dyn Error + 'static>),
+    /// A constant string message to be displayed.
+    Message(&'static str),
+}
+
+impl Display for HostWrapperError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HostWrapperError::NullHostInstance => f.write_str("Host instance pointer is NULL"),
+            HostWrapperError::NullHostData => f.write_str("Host data pointer is NULL"),
+            HostWrapperError::InvalidParameter(s) => f.write_str(s),
+            HostWrapperError::Panic => f.write_str("Host callback panicked"),
+            HostWrapperError::HostError(e) => f.write_str(e.msg()),
+            HostWrapperError::Error(e) => e.fmt(f),
+            HostWrapperError::Message(s) => f.write_str(s),
+        }
+    }
 }
 
 impl HostWrapperError {
-    fn msg(&self) -> &'static str {
-        match self {
-            HostWrapperError::NullHostInstance => "Host instance pointer is NULL",
-            HostWrapperError::NullHostData => "Host data pointer is NULL",
-            HostWrapperError::InvalidParameter(s) => s,
-            HostWrapperError::Panic => "Host callback panicked",
-            HostWrapperError::HostError(e) => e.msg(),
-        }
-    }
-
     fn severity(&self) -> clap_log_severity {
         match self {
             HostWrapperError::NullHostInstance => CLAP_LOG_PLUGIN_MISBEHAVING,
@@ -312,6 +323,7 @@ impl HostWrapperError {
             HostWrapperError::NullHostData => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::Panic => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::HostError(e) => e.severity(),
+            _ => CLAP_LOG_ERROR,
         }
     }
 }
@@ -320,6 +332,16 @@ impl From<PluginInstanceError> for HostWrapperError {
     #[inline]
     fn from(e: PluginInstanceError) -> Self {
         Self::HostError(e)
+    }
+}
+
+impl From<HostError> for HostWrapperError {
+    #[inline]
+    fn from(value: HostError) -> Self {
+        match value {
+            HostError::Error(e) => Self::Error(e),
+            HostError::Message(e) => Self::Message(e),
+        }
     }
 }
 

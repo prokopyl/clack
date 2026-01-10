@@ -8,6 +8,8 @@ pub mod audio_ports_activation;
 pub mod audio_ports_config;
 #[cfg(feature = "clap-wrapper")]
 pub mod clap_wrapper;
+#[cfg(feature = "context-menu")]
+pub mod context_menu;
 #[cfg(feature = "event-registry")]
 pub mod event_registry;
 #[cfg(feature = "gui")]
