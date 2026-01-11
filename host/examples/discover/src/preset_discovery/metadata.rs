@@ -1,4 +1,5 @@
 use clack_extensions::preset_discovery::prelude::*;
+use clack_host::prelude::HostError;
 use clack_host::utils::{Timestamp, UniversalPluginId};
 use core::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -115,7 +116,11 @@ impl MetadataReceiverImpl for MyMetadataReceiver {
         })
     }
 
-    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
+    fn begin_preset(
+        &mut self,
+        name: Option<&CStr>,
+        load_key: Option<&CStr>,
+    ) -> Result<(), HostError> {
         if let Some(current_preset) = self.current_preset.take() {
             self.presets.push(current_preset);
         }
@@ -124,7 +129,9 @@ impl MetadataReceiverImpl for MyMetadataReceiver {
             name: name.map(|s| s.to_owned().into_boxed_c_str()),
             load_key: load_key.map(|s| s.to_owned().into_boxed_c_str()),
             ..PresetData::default()
-        })
+        });
+
+        Ok(())
     }
 
     fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {

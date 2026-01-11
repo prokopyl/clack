@@ -24,7 +24,7 @@ use std::os::raw::c_char;
 /// # Example
 ///
 /// ```
-/// use clack_extensions::preset_discovery::ProviderDescriptor;
+/// use clack_extensions::preset_discovery::provider::ProviderDescriptor;
 ///
 /// fn get_descriptor() -> ProviderDescriptor {
 ///   ProviderDescriptor::new("org.rust-audio.clack.gain-presets", "Clack Gain Example Presets")

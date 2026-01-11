@@ -4,6 +4,10 @@ use crate::utils::cstr_from_nullable_ptr;
 use clack_plugin::factory::*;
 use std::ffi::c_char;
 
+/// A wrapper around a given [`PresetDiscoveryFactoryImpl`] implementation.
+///
+/// This wrapper is required in order to expose a C FFI-compatible factory to the host, and is what
+/// needs to be exposed by an [`Entry`](clack_plugin::entry::Entry).
 pub struct PresetDiscoveryFactoryWrapper<F> {
     inner: FactoryWrapper<clap_preset_discovery_factory, F>,
 }
@@ -77,27 +81,28 @@ unsafe extern "C" fn create<F: PresetDiscoveryFactoryImpl>(
     .unwrap_or(core::ptr::null_mut())
 }
 
+/// A [`PresetDiscoveryFactory`] implementation.
 pub trait PresetDiscoveryFactoryImpl: Send + Sync {
-    /// Returns the number of plugins exposed by this factory.
+    /// Returns the number of providers exposed by this factory.
     fn provider_count(&self) -> u32;
 
-    /// Returns the [`ProviderDescriptor`] of the plugin that is assigned the given index.
+    /// Returns the [`ProviderDescriptor`] of the provider that is assigned the given index.
     ///
     /// Hosts will usually call this method repeatedly with every index from 0 to the total returned
-    /// by [`plugin_count`](Self::provider_count), in order to discover all the plugins
+    /// by [`provider_count`](Self::provider_count), in order to discover all the providers
     /// exposed by this factory.
     ///
-    /// If the given index is out of bounds, or in general does not match any given plugin, this
+    /// If the given index is out of bounds, or in general does not match any given providers, this
     /// returns [`None`].
     fn provider_descriptor(&self, index: u32) -> Option<&ProviderDescriptor>;
 
-    /// Creates a new plugin instance for the plugin type matching the given `plugin_id`.
+    /// Creates a new provider instance for the provider type matching the given `provider_id`.
     ///
-    /// If the given `plugin_id` matches against one of the plugin this factory manages,
+    /// If the given `provider_id` matches against one of the providers this factory manages,
     /// implementors of this trait then use the [`ProviderInstance::new`] method to instantiate the
-    /// corresponding plugin implementation.
+    /// corresponding provider implementation.
     ///
-    /// If the given `plugin_id` does not match any known plugins to this factory, this method
+    /// If the given `provider_id` does not match any known providers to this factory, this method
     /// returns [`None`].
     fn create_provider<'a>(
         &'a self,

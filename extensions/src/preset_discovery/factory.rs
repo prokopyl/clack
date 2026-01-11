@@ -1,3 +1,5 @@
+//! Types and helpers for Preset Discovery factory, which allows hosts to list and create [preset providers](crate::preset_discovery::provider).
+
 use clack_common::factory::{Factory, RawFactoryPointer};
 use clap_sys::factory::preset_discovery::*;
 use std::ffi::CStr;
@@ -14,6 +16,7 @@ mod plugin;
 #[cfg(feature = "clack-plugin")]
 pub use plugin::*;
 
+/// A [`Factory`] which allows hosts to list and create [preset providers](crate::preset_discovery::provider).
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct PresetDiscoveryFactory<'a>(RawFactoryPointer<'a, clap_preset_discovery_factory>);

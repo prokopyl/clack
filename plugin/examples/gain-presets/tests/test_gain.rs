@@ -246,12 +246,18 @@ impl MetadataReceiverImpl for TestReceiver {
         unreachable!()
     }
 
-    fn begin_preset(&mut self, name: Option<&CStr>, load_key: Option<&CStr>) {
+    fn begin_preset(
+        &mut self,
+        name: Option<&CStr>,
+        load_key: Option<&CStr>,
+    ) -> Result<(), HostError> {
         self.presets.push(Preset {
             name: name.unwrap().to_owned(),
             load_key: load_key.unwrap().to_owned(),
             plugin_ids: Vec::new(),
         });
+
+        Ok(())
     }
 
     fn add_plugin_id(&mut self, plugin_id: UniversalPluginId) {

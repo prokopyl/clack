@@ -74,27 +74,34 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
 pub struct GainPresetProvider;
 
 impl<'a> ProviderImpl<'a> for GainPresetProvider {
-    fn get_metadata(&mut self, location: Location, receiver: &mut MetadataReceiver) {
+    fn get_metadata(
+        &mut self,
+        location: Location,
+        receiver: &mut MetadataReceiver,
+    ) -> Result<(), PluginError> {
         if let Location::File { path } = location {
-            let path = Path::new(path.to_str().unwrap());
+            let path = Path::new(path.to_str()?);
             let file_name = path.file_name().unwrap().to_str().unwrap();
-            let load_key = CString::new(file_name.to_string()).unwrap();
+            let load_key = CString::new(file_name.to_string())?;
 
-            receiver.begin_preset(Some(&load_key), Some(&load_key));
+            receiver.begin_preset(Some(&load_key), Some(&load_key))?;
             receiver.add_plugin_id(UniversalPluginId::clap(
                 c"org.rust-audio.clack.gain-presets",
             ));
             receiver.add_creator(c"Me!");
         } else {
             for (i, preset) in PRESETS.iter().enumerate() {
-                let load_key = CString::new(i.to_string()).unwrap();
-                receiver.begin_preset(Some(preset.name), Some(&load_key));
-                receiver.add_plugin_id(UniversalPluginId::clap(
-                    c"org.rust-audio.clack.gain-presets",
-                ));
-                receiver.add_creator(c"Me!");
+                let load_key = CString::new(i.to_string())?;
+                receiver
+                    .begin_preset(Some(preset.name), Some(&load_key))?
+                    .add_plugin_id(UniversalPluginId::clap(
+                        c"org.rust-audio.clack.gain-presets",
+                    ))
+                    .add_creator(c"Me!");
             }
         }
+
+        Ok(())
     }
 }
 

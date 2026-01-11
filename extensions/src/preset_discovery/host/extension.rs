@@ -5,7 +5,6 @@ use clap_sys::ext::preset_load::*;
 use clap_sys::factory::preset_discovery::clap_preset_discovery_location_kind;
 use std::ffi::{CStr, c_char};
 use std::fmt::{Display, Formatter};
-use std::marker::PhantomData;
 
 impl PluginPresetLoad {
     #[inline]
@@ -16,9 +15,7 @@ impl PluginPresetLoad {
         load_key: Option<&CStr>,
     ) -> Result<(), PresetLoadError> {
         let Some(from_location) = plugin.use_extension(&self.0).from_location else {
-            return Err(PresetLoadError {
-                _inner: PhantomData,
-            });
+            return Err(PresetLoadError { _inner: () });
         };
 
         let (kind, path) = location.to_raw();
@@ -31,16 +28,14 @@ impl PluginPresetLoad {
         if success {
             Ok(())
         } else {
-            Err(PresetLoadError {
-                _inner: PhantomData,
-            })
+            Err(PresetLoadError { _inner: () })
         }
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct PresetLoadError {
-    _inner: PhantomData<()>,
+    _inner: (),
 }
 
 impl Display for PresetLoadError {

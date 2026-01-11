@@ -61,8 +61,6 @@ pub mod preset_data;
 
 pub mod factory;
 
-pub use descriptor::*;
-
 /// Allows plugins to provide information on how their presets can be indexed by the host.
 ///
 /// This interface allows a [preset provider](provider) to describe global information that
@@ -78,13 +76,16 @@ pub mod indexer {
 
 /// A plugin-owned interface that provides a list of presets to the host.
 pub mod provider {
+    pub use super::descriptor::ProviderDescriptor;
     #[cfg(feature = "clack-host")]
     pub use super::host::provider::*;
     #[cfg(feature = "clack-plugin")]
     pub use super::plugin::provider::*;
 }
 
-mod metadata_receiver {
+/// A host-owned generic interface that allows [providers](self::provider) to send structured
+/// preset metadata to the host.
+pub mod metadata_receiver {
     #[cfg(feature = "clack-host")]
     pub use super::host::metadata_receiver::*;
     #[cfg(feature = "clack-plugin")]
@@ -94,7 +95,8 @@ mod metadata_receiver {
 pub mod prelude {
     pub use super::preset_data::*;
     pub use super::{
-        HostPresetLoad, PluginPresetLoad, ProviderDescriptor, factory::PresetDiscoveryFactory,
+        HostPresetLoad, PluginPresetLoad, factory::PresetDiscoveryFactory,
+        provider::ProviderDescriptor,
     };
     pub use clack_common::utils::{Timestamp, UniversalPluginId};
 

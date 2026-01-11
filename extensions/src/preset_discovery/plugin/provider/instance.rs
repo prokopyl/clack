@@ -1,5 +1,6 @@
 use crate::preset_discovery::prelude::*;
 use crate::utils::handle_panic;
+use clack_plugin::extensions::prelude::PluginWrapperError;
 use clap_sys::factory::preset_discovery::*;
 use std::ffi::c_char;
 use std::marker::PhantomData;
@@ -119,9 +120,17 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
 
             let receiver = MetadataReceiver::from_raw(clap_preset_discovery_metadata_receiver);
 
-            wrapper.get_metadata(location, receiver);
+            match wrapper.get_metadata(location, receiver) {
+                Ok(()) => Some(()),
+                Err(e) => {
+                    let e = PluginWrapperError::from(e);
+                    let msg = e.format_cstr();
+                    let code = e.os_error_code().unwrap_or(0);
 
-            Some(())
+                    receiver.on_error(code, Some(&msg));
+                    None
+                }
+            }
         })
         .is_some()
     }
