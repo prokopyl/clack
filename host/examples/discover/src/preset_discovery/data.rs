@@ -32,7 +32,7 @@ impl Display for PresetsAtLocation {
                 }
             }
             PresetsAtLocation::Files { location, files } => {
-                write!(
+                writeln!(
                     f,
                     "{} preset files in '{}' (at {:?}, flags: {:?})",
                     files.len(),
