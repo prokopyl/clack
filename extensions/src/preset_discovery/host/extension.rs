@@ -7,6 +7,19 @@ use std::ffi::{CStr, c_char};
 use std::fmt::{Display, Formatter};
 
 impl PluginPresetLoad {
+    /// Loads a preset from a given `location`.
+    ///
+    /// If the given location contains multiple presets, `load_key` can be passed to further
+    /// identify the preset to load.
+    ///
+    /// The `location` and `load_key` can be discovered from a plugin's [preset discovery provider](crate::preset_discovery::provider).
+    ///
+    /// # Errors
+    ///
+    /// If the preset failed to load for any reason, a [`PresetLoadError`] is returned.
+    ///
+    /// That type does not contain any error information, however the plugin may have called
+    /// [`HostPresetLoadImpl::on_error`] with more information about the error.
     #[inline]
     pub fn load_from_location(
         &self,
@@ -33,6 +46,9 @@ impl PluginPresetLoad {
     }
 }
 
+/// Error that can occur when loading a preset.
+///
+/// See [`PluginPresetLoad::load_from_location`].
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct PresetLoadError {
     _inner: (),
@@ -44,7 +60,12 @@ impl Display for PresetLoadError {
     }
 }
 
+/// Implementation of the host side of the Preset Load extension.
 pub trait HostPresetLoadImpl {
+    /// Report to the host that an error occurred while loading a preset.
+    ///
+    /// `error_code` is the operating system error, as returned by e.g. [`std::io::Error::raw_os_error`], if applicable.
+    /// If not applicable, it should be set to a non-error value, e.g. 0 on Unix and Windows.
     fn on_error(
         &mut self,
         location: Location,
@@ -53,6 +74,9 @@ pub trait HostPresetLoadImpl {
         message: Option<&CStr>,
     );
 
+    /// Informs the host that a given preset has been loaded.
+    ///
+    /// This can be used to e.g. keep the host preset browser in sync with the plugin's.
     fn loaded(&mut self, location: Location, load_key: Option<&CStr>);
 }
 

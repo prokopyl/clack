@@ -2,34 +2,38 @@ use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide
 use clap_sys::ext::preset_load::*;
 use std::ffi::CStr;
 
+/// Plugin-side of the Preset Load extension.
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct PluginPresetLoad(RawExtension<PluginExtensionSide, clap_plugin_preset_load>);
 
-// SAFETY: TODO
+// SAFETY: CLAP_EXT_PRESET_LOAD & CLAP_EXT_PRESET_LOAD_COMPAT are the IDs of the clap_plugin_preset_load extension, defined by the CLAP spec
 unsafe impl Extension for PluginPresetLoad {
     const IDENTIFIERS: &'static [&'static CStr] =
         &[CLAP_EXT_PRESET_LOAD, CLAP_EXT_PRESET_LOAD_COMPAT];
     type ExtensionSide = PluginExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        // SAFETY: TODO
+        // SAFETY: Pointer type is upheld by caller
         unsafe { Self(raw.cast()) }
     }
 }
 
+/// Host-side of the Preset Load extension.
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct HostPresetLoad(RawExtension<HostExtensionSide, clap_host_preset_load>);
 
-// SAFETY: TODO
+// SAFETY: CLAP_EXT_PRESET_LOAD & CLAP_EXT_PRESET_LOAD_COMPAT are the IDs of the clap_host_preset_load extension, defined by the CLAP spec
 unsafe impl Extension for HostPresetLoad {
     const IDENTIFIERS: &'static [&'static CStr] =
         &[CLAP_EXT_PRESET_LOAD, CLAP_EXT_PRESET_LOAD_COMPAT];
     type ExtensionSide = HostExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
-        // SAFETY: TODO
+        // SAFETY: Pointer type is upheld by caller
         unsafe { Self(raw.cast()) }
     }
 }
@@ -92,6 +96,7 @@ pub mod metadata_receiver {
     pub use super::plugin::metadata_receiver::*;
 }
 
+/// A helpful prelude re-exporting all the types related to preset discovery and loading implementation.
 pub mod prelude {
     pub use super::preset_data::*;
     pub use super::{
