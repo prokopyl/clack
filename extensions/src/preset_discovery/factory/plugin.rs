@@ -19,6 +19,7 @@ impl<F: PresetDiscoveryFactoryImpl> PresetDiscoveryFactoryWrapper<F> {
         create: Some(create::<F>),
     };
 
+    /// Wraps a given [`PresetDiscoveryFactoryImpl`] implementation.
     pub fn new(inner: F) -> Self {
         Self {
             inner: FactoryWrapper::new(Self::RAW, inner),
@@ -40,12 +41,14 @@ unsafe impl<'a, F: PresetDiscoveryFactoryImpl + 'a> FactoryImplementation<'a>
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn count<F: PresetDiscoveryFactoryImpl>(
     factory: *const clap_preset_discovery_factory,
 ) -> u32 {
     FactoryWrapper::<_, F>::handle(factory, |factory| Ok(factory.provider_count())).unwrap_or(0)
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn get_descriptor<F: PresetDiscoveryFactoryImpl>(
     factory: *const clap_preset_discovery_factory,
     index: u32,
@@ -59,6 +62,7 @@ unsafe extern "C" fn get_descriptor<F: PresetDiscoveryFactoryImpl>(
     .unwrap_or(core::ptr::null())
 }
 
+#[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn create<F: PresetDiscoveryFactoryImpl>(
     factory: *const clap_preset_discovery_factory,
     indexer: *const clap_preset_discovery_indexer,

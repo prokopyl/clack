@@ -1,6 +1,7 @@
-use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper, IndexerWrapperError};
+use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper};
 use crate::preset_discovery::preset_data::{FileType, LocationInfo, Soundpack};
 use clack_common::utils::ClapVersion;
+use clack_host::extensions::prelude::HostWrapperError;
 use clack_host::prelude::HostInfo;
 use clap_sys::factory::preset_discovery::{
     clap_preset_discovery_filetype, clap_preset_discovery_indexer, clap_preset_discovery_location,
@@ -59,9 +60,9 @@ unsafe extern "C" fn declare_filetype<I: IndexerImpl>(
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
         let filetype = FileType::from_raw_ptr(filetype)
-            .ok_or(IndexerWrapperError::InvalidParameter("Invalid FileType"))?;
+            .ok_or(HostWrapperError::InvalidParameter("Invalid FileType"))?;
 
-        indexer.declare_filetype(filetype);
+        indexer.declare_filetype(filetype)?;
         Ok(())
     })
     .is_some()
@@ -74,9 +75,9 @@ unsafe extern "C" fn declare_location<I: IndexerImpl>(
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
         let location = LocationInfo::from_raw_ptr(location)
-            .ok_or(IndexerWrapperError::InvalidParameter("Invalid Location"))?;
+            .ok_or(HostWrapperError::InvalidParameter("Invalid Location"))?;
 
-        indexer.declare_location(location);
+        indexer.declare_location(location)?;
         Ok(())
     })
     .is_some()
@@ -89,9 +90,9 @@ unsafe extern "C" fn declare_soundpack<I: IndexerImpl>(
 ) -> bool {
     IndexerWrapper::<I>::handle(indexer, |indexer| {
         let filetype = Soundpack::from_raw_ptr(soundpack)
-            .ok_or(IndexerWrapperError::InvalidParameter("Invalid Soundpack"))?;
+            .ok_or(HostWrapperError::InvalidParameter("Invalid Soundpack"))?;
 
-        indexer.declare_soundpack(filetype);
+        indexer.declare_soundpack(filetype)?;
         Ok(())
     })
     .is_some()

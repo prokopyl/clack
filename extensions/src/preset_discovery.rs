@@ -1,3 +1,18 @@
+#![warn(missing_docs)]
+
+//! Preset discovery and loading.
+//!
+//! This module contains two parts:
+//!
+//! * The [`PresetDiscoveryFactory`](factory::PresetDiscoveryFactory), which allows hosts to index
+//!   and extract metadata about all presets a plugin supports;
+//! * The [`PluginPresetLoad`] extension (and its [host-side counterpart](HostPresetLoad)), which
+//!   allows host to load the indexed presets.
+//!
+//! Combined, these allow to integrate a plugin's preset management straight into the host, by
+//! e.g. getting all of those presets into the host's own preset browser for the user to select
+//! directly.
+
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::preset_load::*;
 use std::ffi::CStr;

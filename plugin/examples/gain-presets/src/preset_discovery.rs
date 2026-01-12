@@ -63,9 +63,9 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
                     name: c"Default",
                     flags: Flags::IS_FACTORY_CONTENT,
                     location: Location::Plugin,
-                });
+                })?;
 
-                GainPresetProvider
+                Ok(GainPresetProvider)
             },
         ))
     }
@@ -106,7 +106,6 @@ impl<'a> ProviderImpl<'a> for GainPresetProvider {
 }
 
 impl PluginPresetLoadImpl for GainPluginMainThread<'_> {
-    // TODO: fully support errors?
     fn load_from_location(
         &mut self,
         location: Location,

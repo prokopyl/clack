@@ -215,17 +215,19 @@ struct TestIndexer {
 }
 
 impl IndexerImpl for TestIndexer {
-    fn declare_filetype(&mut self, _file_type: FileType) {
+    fn declare_filetype(&mut self, _file_type: FileType) -> Result<(), HostError> {
         unreachable!()
     }
 
-    fn declare_location(&mut self, location: LocationInfo) {
+    fn declare_location(&mut self, location: LocationInfo) -> Result<(), HostError> {
         assert!(!self.declared);
         assert_eq!(location.location, Location::Plugin);
         self.declared = true;
+
+        Ok(())
     }
 
-    fn declare_soundpack(&mut self, _soundpack: Soundpack) {
+    fn declare_soundpack(&mut self, _soundpack: Soundpack) -> Result<(), HostError> {
         unreachable!()
     }
 }

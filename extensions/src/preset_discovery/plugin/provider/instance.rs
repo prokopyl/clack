@@ -1,6 +1,7 @@
 use crate::preset_discovery::prelude::*;
 use crate::utils::handle_panic;
 use clack_plugin::extensions::prelude::PluginWrapperError;
+use clack_plugin::prelude::PluginError;
 use clap_sys::factory::preset_discovery::*;
 use std::ffi::c_char;
 use std::marker::PhantomData;
@@ -27,7 +28,7 @@ impl<'a> ProviderInstance<'a> {
     pub fn new<P: ProviderImpl<'a>>(
         indexer: IndexerInfo<'a>,
         descriptor: &'a ProviderDescriptor,
-        initializer: impl FnOnce(Indexer<'a>) -> P + 'a,
+        initializer: impl FnOnce(Indexer<'a>) -> Result<P, PluginError> + 'a,
     ) -> Self {
         Self {
             lifetime: PhantomData,
@@ -95,7 +96,9 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
                 unreachable!()
             };
 
-            let provider = initializer.init(instance.indexer_info.to_indexer());
+            let Ok(provider) = initializer.init(instance.indexer_info.to_indexer()) else {
+                return None;
+            };
 
             instance.state = ProviderInstanceState::Initialized(provider);
 
@@ -174,6 +177,9 @@ impl<'a, P: ProviderImpl<'a>> ProviderInstanceData<'a, P> {
         }));
     }
 
+    /// # Safety
+    ///
+    /// provider must be valid and its data must be a valid instance of P
     unsafe fn handle<T>(
         provider: *const clap_preset_discovery_provider,
         handler: impl FnOnce(&mut Self) -> Option<T>,
@@ -195,15 +201,15 @@ enum ProviderInstanceState<'a, P> {
 }
 
 trait Initializer<'a, P>: 'a {
-    fn init(self: Box<Self>, indexer: Indexer<'a>) -> P;
+    fn init(self: Box<Self>, indexer: Indexer<'a>) -> Result<P, PluginError>;
 }
 
 impl<'a, F: 'a, P> Initializer<'a, P> for F
 where
-    F: FnOnce(Indexer<'a>) -> P,
+    F: FnOnce(Indexer<'a>) -> Result<P, PluginError>,
 {
     #[inline]
-    fn init(self: Box<Self>, indexer: Indexer<'a>) -> P {
+    fn init(self: Box<Self>, indexer: Indexer<'a>) -> Result<P, PluginError> {
         self(indexer)
     }
 }

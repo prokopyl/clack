@@ -1,4 +1,5 @@
 use clack_extensions::preset_discovery::{self, prelude::*};
+use clack_host::prelude::HostError;
 use std::borrow::Cow;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
@@ -25,30 +26,45 @@ impl PresetIndexer {
 }
 
 impl IndexerImpl for PresetIndexer {
-    fn declare_filetype(&mut self, file_type: preset_discovery::preset_data::FileType) {
+    fn declare_filetype(
+        &mut self,
+        file_type: preset_discovery::preset_data::FileType,
+    ) -> Result<(), HostError> {
         self.file_types.push(FileType {
             name: file_type.name.to_owned().into_boxed_c_str(),
             description: file_type
                 .description
                 .map(|c| c.to_owned().into_boxed_c_str()),
             extension: file_type.description.map(path_from_c_str),
-        })
+        });
+
+        Ok(())
     }
 
-    fn declare_location(&mut self, location: preset_discovery::preset_data::LocationInfo) {
+    fn declare_location(
+        &mut self,
+        location: preset_discovery::preset_data::LocationInfo,
+    ) -> Result<(), HostError> {
         self.locations.push(Location {
             flags: location.flags,
             name: location.name.to_owned().into_boxed_c_str(),
             file_path: location.location.file_path().map(path_from_c_str),
         });
+
+        Ok(())
     }
 
-    fn declare_soundpack(&mut self, soundpack: preset_discovery::preset_data::Soundpack) {
+    fn declare_soundpack(
+        &mut self,
+        soundpack: preset_discovery::preset_data::Soundpack,
+    ) -> Result<(), HostError> {
         self.soundpacks.push(Soundpack {
             flags: soundpack.flags,
             id: soundpack.id.to_owned().into_boxed_c_str(),
             name: soundpack.name.to_owned().into_boxed_c_str(),
-        })
+        });
+
+        Ok(())
     }
 }
 

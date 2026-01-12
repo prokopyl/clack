@@ -65,9 +65,9 @@ pub use error::*;
 ///
 /// impl IndexerImpl for MyIndexer {
 /// /* ... */
-/// # fn declare_filetype(&mut self, _: FileType) {}
-/// # fn declare_location(&mut self, _: LocationInfo) {}
-/// # fn declare_soundpack(&mut self, _: Soundpack) {}
+/// # fn declare_filetype(&mut self, _: FileType) -> Result<(), HostError> { Ok(()) }
+/// # fn declare_location(&mut self, _: LocationInfo)  -> Result<(), HostError> { Ok(()) }
+/// # fn declare_soundpack(&mut self, _: Soundpack)  -> Result<(), HostError> { Ok(()) }
 /// }
 ///
 /// struct MyMetadataReceiver;
@@ -75,7 +75,7 @@ pub use error::*;
 /// impl MetadataReceiverImpl for MyMetadataReceiver {
 /// /* ... */
 /// # fn on_error(&mut self, _: i32, _: Option<&core::ffi::CStr>) {}
-/// # fn begin_preset(&mut self, _: Option<&core::ffi::CStr>, _: Option<&core::ffi::CStr>) -> Result<(), clack_host::prelude::HostError> {Ok(())}
+/// # fn begin_preset(&mut self, _: Option<&core::ffi::CStr>, _: Option<&core::ffi::CStr>) -> Result<(), HostError> {Ok(())}
 /// # fn add_plugin_id(&mut self, _: UniversalPluginId<'_>) {}
 /// # fn set_soundpack_id(&mut self, _: &core::ffi::CStr) {}
 /// # fn set_flags(&mut self, _: Flags) {}

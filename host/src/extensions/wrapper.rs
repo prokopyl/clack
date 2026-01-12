@@ -4,10 +4,14 @@ use crate::plugin::DestroyLock;
 use crate::prelude::*;
 use crate::util::UnsafeOptionCell;
 use clap_sys::ext::log::{
-    CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
+    CLAP_LOG_ERROR, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
 };
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
+use std::borrow::Cow;
+use std::ffi::{CStr, CString};
+use std::fmt::{Display, Formatter};
+use std::io::Write;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -105,11 +109,11 @@ impl<H: HostHandlers> HostWrapper<H> {
     #[inline]
     pub unsafe fn audio_processor(
         &self,
-    ) -> Result<NonNull<<H as HostHandlers>::AudioProcessor<'_>>, PluginInstanceError> {
+    ) -> Result<NonNull<<H as HostHandlers>::AudioProcessor<'_>>, HostWrapperError> {
         let ptr = self
             .audio_processor
             .as_ptr()
-            .ok_or(PluginInstanceError::DeactivatedPlugin)?;
+            .ok_or(HostWrapperError::DeactivatedPlugin)?;
 
         Ok(ptr.cast())
     }
@@ -282,7 +286,7 @@ impl<H: HostHandlers> HostWrapper<H> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub enum HostWrapperError {
     /// An invalid parameter value was encountered.
     ///
@@ -291,35 +295,76 @@ pub enum HostWrapperError {
     NullHostInstance,
     NullHostData,
     Panic,
-    HostError(PluginInstanceError),
+    DeactivatedPlugin,
+    Host(HostError),
+    /// Encountered an error while trying to format another [`HostWrapperError`]
+    ErrorFormatError(std::io::Error),
 }
 
 impl HostWrapperError {
-    fn msg(&self) -> &'static str {
-        match self {
-            HostWrapperError::NullHostInstance => "Host instance pointer is NULL",
-            HostWrapperError::NullHostData => "Host data pointer is NULL",
-            HostWrapperError::InvalidParameter(s) => s,
-            HostWrapperError::Panic => "Host callback panicked",
-            HostWrapperError::HostError(e) => e.msg(),
-        }
-    }
-
     fn severity(&self) -> clap_log_severity {
         match self {
             HostWrapperError::NullHostInstance => CLAP_LOG_PLUGIN_MISBEHAVING,
             HostWrapperError::InvalidParameter(_) => CLAP_LOG_PLUGIN_MISBEHAVING,
             HostWrapperError::NullHostData => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::Panic => CLAP_LOG_HOST_MISBEHAVING,
-            HostWrapperError::HostError(e) => e.severity(),
+            HostWrapperError::DeactivatedPlugin => CLAP_LOG_PLUGIN_MISBEHAVING,
+            HostWrapperError::Host(_) => CLAP_LOG_ERROR,
+            HostWrapperError::ErrorFormatError(_) => CLAP_LOG_HOST_MISBEHAVING,
         }
+    }
+
+    pub fn format_cstr(&self) -> Cow<'static, CStr> {
+        let mut buf = Vec::new();
+        match buf.write_fmt(format_args!("{}", self)) {
+            Ok(()) => {}
+            Err(e) => {
+                // Stop this here to avoid infinitely failing to format the failing error message
+                if matches!(self, HostWrapperError::ErrorFormatError(_)) {
+                    return c"Failed to format error".into();
+                }
+
+                return HostWrapperError::ErrorFormatError(e).format_cstr();
+            }
+        };
+
+        // Truncate until the first NULL byte just in case. This is better than returning no error message.
+        if let Some(idx) = buf.iter().position(|&b| b == 0) {
+            buf.truncate(idx);
+        }
+
+        // This should not be able to happen thanks to the above check, but let's put it here just in case
+        let Ok(str) = CString::new(buf) else {
+            return c"Error format failure: NulError".into();
+        };
+
+        str.into()
     }
 }
 
-impl From<PluginInstanceError> for HostWrapperError {
+impl From<HostError> for HostWrapperError {
     #[inline]
-    fn from(e: PluginInstanceError) -> Self {
-        Self::HostError(e)
+    fn from(e: HostError) -> Self {
+        Self::Host(e)
+    }
+}
+
+impl Display for HostWrapperError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use HostWrapperError::*;
+        match self {
+            NullHostInstance => f.write_str("Host instance pointer is NULL"),
+            NullHostData => f.write_str("Host data pointer is NULL"),
+            InvalidParameter(s) => write!(f, "Invalid parameter: {s}"),
+            Panic => f.write_str("Host callback panicked"),
+            DeactivatedPlugin => {
+                f.write_str("Tried to call an audio-thread method while the plugin was deactivated")
+            }
+            Host(e) => e.fmt(f),
+            ErrorFormatError(e) => {
+                write!(f, "Error while formatting host error: '{e}'")
+            }
+        }
     }
 }
 
