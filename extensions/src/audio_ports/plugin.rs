@@ -58,8 +58,58 @@ impl AudioPortInfoWriter<'_> {
     }
 }
 
+/// Describes the plugin’s audio ports.
+///
+/// Hosts use this to discover how many input/output ports exist and to retrieve
+/// metadata about each port. Information is reported through the provided
+/// [`AudioPortInfoWriter`], which corresponds to
+/// [`clap_plugin_audio_ports.get()`](https://github.com/free-audio/clap/blob/29ffcc273b/include/clap/ext/audio-ports.h#L76)
+/// in the CLAP API.
+///
+/// # Example
+/// Declaring a plugin with one stereo input and one stereo output:
+/// ```no_run
+/// use clack_plugin::audio_ports::{PluginAudioPortsImpl, AudioPortInfoWriter};
+/// struct MyPluginMainThread;
+///
+/// impl PluginAudioPortsImpl for MyPluginMainThread {
+///     fn count(&mut self, is_input: bool) -> u32 {
+///         if is_input { 1 } else { 1 }
+///     }
+///
+///     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
+///         if index == 0 {
+///             writer.set(&AudioPortInfo {
+///                 id: ClapId::new(0),
+///                 name: match is_input {
+///                     true => b"Stereo In",
+///                     false => b"Stereo Out",
+///                 },
+///                 channel_count: 2,
+///                 flags: AudioPortFlags::IS_MAIN,
+///                 port_type: Some(AudioPortType::STEREO),
+///                 in_place_pair: None,
+///             });
+///         }
+///     }
+/// }
+/// ```
 pub trait PluginAudioPortsImpl {
+    /// Returns the number of audio ports for the given direction.
+    ///
+    /// The `is_input` flag tells you whether to report an input or output port,
+    /// so implementations typically branch on it.
     fn count(&mut self, is_input: bool) -> u32;
+
+    /// Populates metadata about the audio port at `index`.
+    ///
+    /// This is where you describe the port’s layout and capabilities
+    /// (name, channel count, flags, etc.) using the [`AudioPortInfoWriter`].
+    ///
+    /// The `is_input` flag tells you whether to report an input or output port,
+    /// so implementations typically branch on it.
+    ///
+    /// The host will call this after [`count`] to enumerate all ports.
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 

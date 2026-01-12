@@ -66,11 +66,17 @@ bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct RescanType: u32 {
+        /// The ports name did change, the host can scan them right away.
         const NAMES = CLAP_AUDIO_PORTS_RESCAN_NAMES;
+        /// The flags did change
         const FLAGS = CLAP_AUDIO_PORTS_RESCAN_FLAGS;
+        /// The channel_count did change
         const CHANNEL_COUNT = CLAP_AUDIO_PORTS_RESCAN_CHANNEL_COUNT;
+        /// The port type did change
         const PORT_TYPE = CLAP_AUDIO_PORTS_RESCAN_PORT_TYPE;
+        /// The in-place pair did change, this requires the plugin to be deactivated before rescan.
         const IN_PLACE_PAIR = CLAP_AUDIO_PORTS_RESCAN_IN_PLACE_PAIR;
+        /// The list of ports have changed: entries have been removed/added.
         const LIST = CLAP_AUDIO_PORTS_RESCAN_LIST;
     }
 }
@@ -98,9 +104,17 @@ bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct AudioPortFlags: u32 {
+        /// This port is the main audio input or output.
+        /// There can be only one main input and main output.
+        /// Main port must be at index 0.
         const IS_MAIN = CLAP_AUDIO_PORT_IS_MAIN;
+        /// This port can be used with 64 bits audio
         const SUPPORTS_64BITS = CLAP_AUDIO_PORT_SUPPORTS_64BITS;
+        /// 64 bits audio is preferred with this port
         const PREFERS_64BITS = CLAP_AUDIO_PORT_PREFERS_64BITS;
+        /// This port must be used with the same sample size as all the other ports which have this flag.
+        /// In other words if all ports have this flag then the plugin may either be used entirely with
+        /// 64 bits audio or 32 bits audio, but it can't be mixed.
         const REQUIRES_COMMON_SAMPLE_SIZE = CLAP_AUDIO_PORT_REQUIRES_COMMON_SAMPLE_SIZE;
     }
 }
@@ -129,13 +143,41 @@ unsafe impl Extension for HostAudioPorts {
     }
 }
 
+/// Metadata describing a single audio port.
+///
+/// This is the Rust equivalent of [`clap_audio_port_info`](https://github.com/free-audio/clap/blob/29ffcc273b/include/clap/ext/audio-ports.h#L42-L65), used by hosts
+/// to understand a port’s identity, layout, and capabilities.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPortInfo<'a> {
-    pub id: ClapId,
+	/// Stable identifier for the port.
+	///
+	/// IDs are allowed to match across directions (i.e. an input port and an output port can both have the same id),
+	/// but are required to be unique within each direction (2 input ports, both with the same id are not allowed)
+	pub id: ClapId,
+
+    /// Display name for the port. Stored as a UTF‑8 byte slice.
+    ///
+    /// > **tip**: use `b""` syntax to set this easily
+    /// > ```rust
+    /// > name = b"MyAudioPort",
+    /// > ```
     pub name: &'a [u8],
+
+    /// Number of channels exposed by this port.
     pub channel_count: u32,
+
+    /// Flags describing the port’s role or behavior
+    /// (e.g. [`AudioPortFlags::IS_MAIN`]).
     pub flags: AudioPortFlags,
+
+    /// Optional classification of the port type.
+    ///
+    /// Examples include mono, stereo, surround, ambisonic, or extension‑defined types.
     pub port_type: Option<AudioPortType<'a>>,
+
+    /// Indicates whether this port supports in‑place processing.
+    ///
+    /// If set, contains the paired port’s ID; `None` means in‑place is not supported.
     pub in_place_pair: Option<ClapId>,
 }
 
