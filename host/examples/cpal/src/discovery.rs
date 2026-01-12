@@ -164,14 +164,8 @@ impl PluginDescriptor {
     pub fn try_from(p: &clack_host::plugin::PluginDescriptor) -> Option<Self> {
         Some(PluginDescriptor {
             id: p.id()?.to_str().ok()?.to_string(),
-            version: p
-                .version()
-                .filter(|s| !s.is_empty())
-                .map(|v| v.to_string_lossy().to_string()),
-            name: p
-                .name()
-                .filter(|s| !s.is_empty())
-                .map(|v| v.to_string_lossy().to_string()),
+            version: p.version().map(|v| v.to_string_lossy().to_string()),
+            name: p.name().map(|v| v.to_string_lossy().to_string()),
         })
     }
 }

@@ -1,0 +1,116 @@
+use super::*;
+use crate::preset_discovery::prelude::*;
+use crate::utils::cstr_from_nullable_ptr;
+use clack_plugin::factory::*;
+use std::ffi::c_char;
+
+/// A wrapper around a given [`PresetDiscoveryFactoryImpl`] implementation.
+///
+/// This wrapper is required in order to expose a C FFI-compatible factory to the host, and is what
+/// needs to be exposed by an [`Entry`](clack_plugin::entry::Entry).
+pub struct PresetDiscoveryFactoryWrapper<F> {
+    inner: FactoryWrapper<clap_preset_discovery_factory, F>,
+}
+
+impl<F: PresetDiscoveryFactoryImpl> PresetDiscoveryFactoryWrapper<F> {
+    const RAW: clap_preset_discovery_factory = clap_preset_discovery_factory {
+        count: Some(count::<F>),
+        get_descriptor: Some(get_descriptor::<F>),
+        create: Some(create::<F>),
+    };
+
+    /// Wraps a given [`PresetDiscoveryFactoryImpl`] implementation.
+    pub fn new(inner: F) -> Self {
+        Self {
+            inner: FactoryWrapper::new(Self::RAW, inner),
+        }
+    }
+}
+
+// SAFETY: The returned raw implementation matches the spec for clap_preset_discovery_factory
+unsafe impl<'a, F: PresetDiscoveryFactoryImpl + 'a> FactoryImplementation<'a>
+    for PresetDiscoveryFactoryWrapper<F>
+{
+    type Factory = PresetDiscoveryFactory<'a>;
+
+    type Wrapped = F;
+
+    #[inline]
+    fn wrapper(&self) -> &FactoryWrapper<<Self::Factory as Factory<'a>>::Raw, Self::Wrapped> {
+        &self.inner
+    }
+}
+
+#[allow(clippy::missing_safety_doc)]
+unsafe extern "C" fn count<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
+) -> u32 {
+    FactoryWrapper::<_, F>::handle(factory, |factory| Ok(factory.provider_count())).unwrap_or(0)
+}
+
+#[allow(clippy::missing_safety_doc)]
+unsafe extern "C" fn get_descriptor<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
+    index: u32,
+) -> *const clap_preset_discovery_provider_descriptor {
+    FactoryWrapper::<_, F>::handle(factory, |factory| {
+        match factory.provider_descriptor(index) {
+            Some(descriptor) => Ok(descriptor.as_raw() as *const _),
+            None => Ok(core::ptr::null()),
+        }
+    })
+    .unwrap_or(core::ptr::null())
+}
+
+#[allow(clippy::missing_safety_doc)]
+unsafe extern "C" fn create<F: PresetDiscoveryFactoryImpl>(
+    factory: *const clap_preset_discovery_factory,
+    indexer: *const clap_preset_discovery_indexer,
+    id: *const c_char,
+) -> *const clap_preset_discovery_provider {
+    FactoryWrapper::<_, F>::handle(factory, |factory| {
+        let indexer = IndexerInfo::from_raw(indexer)
+            .ok_or(FactoryWrapperError::NulPtr("Invalid indexer pointer"))?;
+
+        let id =
+            cstr_from_nullable_ptr(id).ok_or(FactoryWrapperError::NulPtr("Invalid id string"))?;
+
+        let provider = factory.create_provider(indexer, id);
+
+        match provider {
+            Some(instance) => Ok(instance.into_raw()),
+            None => Ok(core::ptr::null_mut()),
+        }
+    })
+    .unwrap_or(core::ptr::null_mut())
+}
+
+/// A [`PresetDiscoveryFactory`] implementation.
+pub trait PresetDiscoveryFactoryImpl: Send + Sync {
+    /// Returns the number of providers exposed by this factory.
+    fn provider_count(&self) -> u32;
+
+    /// Returns the [`ProviderDescriptor`] of the provider that is assigned the given index.
+    ///
+    /// Hosts will usually call this method repeatedly with every index from 0 to the total returned
+    /// by [`provider_count`](Self::provider_count), in order to discover all the providers
+    /// exposed by this factory.
+    ///
+    /// If the given index is out of bounds, or in general does not match any given providers, this
+    /// returns [`None`].
+    fn provider_descriptor(&self, index: u32) -> Option<&ProviderDescriptor>;
+
+    /// Creates a new provider instance for the provider type matching the given `provider_id`.
+    ///
+    /// If the given `provider_id` matches against one of the providers this factory manages,
+    /// implementors of this trait then use the [`ProviderInstance::new`] method to instantiate the
+    /// corresponding provider implementation.
+    ///
+    /// If the given `provider_id` does not match any known providers to this factory, this method
+    /// returns [`None`].
+    fn create_provider<'a>(
+        &'a self,
+        host_info: IndexerInfo<'a>,
+        provider_id: &CStr,
+    ) -> Option<ProviderInstance<'a>>;
+}

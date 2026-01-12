@@ -9,9 +9,12 @@ use crate::plugin::{Plugin, PluginAudioProcessor, PluginBoxInner, PluginError, l
 use crate::process::PluginAudioConfiguration;
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
+use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::error::Error;
+use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
+use std::io::Write;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::ptr::NonNull;
@@ -327,6 +330,8 @@ pub enum PluginWrapperError {
     StringEncoding(std::str::Utf8Error),
     /// Plugin returned a malformed C string.
     InvalidCString(std::ffi::NulError),
+    /// Encountered an error while trying to format another [`PluginWrapperError`]
+    ErrorFormatError(std::io::Error),
     /// A generic or custom error of a given severity.
     Error(clap_log_severity, Box<dyn Error>),
     /// A constant string message to be displayed.
@@ -355,6 +360,42 @@ impl PluginWrapperError {
             PluginWrapperError::Message(s, _) => *s,
             _ => CLAP_LOG_HOST_MISBEHAVING,
         }
+    }
+
+    pub fn os_error_code(&self) -> Option<i32> {
+        let e = match self {
+            PluginWrapperError::Error(_, e) => e,
+            _ => return None,
+        };
+
+        e.downcast_ref::<std::io::Error>()?.raw_os_error()
+    }
+
+    pub fn format_cstr(&self) -> Cow<'static, CStr> {
+        let mut buf = Vec::new();
+        match buf.write_fmt(format_args!("{}", self)) {
+            Ok(()) => {}
+            Err(e) => {
+                // Stop this here to avoid infinitely failing to format the failing error message
+                if matches!(self, PluginWrapperError::ErrorFormatError(_)) {
+                    return c"Failed to format error".into();
+                }
+
+                return PluginWrapperError::ErrorFormatError(e).format_cstr();
+            }
+        };
+
+        // Truncate until the first NULL byte just in case. This is better than returning no error message.
+        if let Some(idx) = buf.iter().position(|&b| b == 0) {
+            buf.truncate(idx);
+        }
+
+        // This should not be able to happen thanks to the above check, but let's put it here just in case
+        let Ok(str) = CString::new(buf) else {
+            return c"Error format failure: NulError".into();
+        };
+
+        str.into()
     }
 
     /// Returns a closure that maps an error to a [`PluginWrapperError::Error`] error of a given
@@ -389,56 +430,57 @@ impl From<PluginError> for PluginWrapperError {
 
 impl Display for PluginWrapperError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use PluginWrapperError::*;
+
         match self {
-            PluginWrapperError::NullPluginInstance => {
+            NullPluginInstance => {
                 f.write_str("Plugin method was called with null clap_plugin pointer")
             }
-            PluginWrapperError::AlreadyDestroyed => f.write_str(
+            AlreadyDestroyed => f.write_str(
                 "Plugin instance was already destroyed (clap_plugin.plugin_data pointer is null)",
             ),
-            PluginWrapperError::PluginCalledDuringInitialization => {
+            PluginCalledDuringInitialization => {
                 f.write_str("Host tried to call plugin function during initialization")
             }
-            PluginWrapperError::InitializationAlreadyFailed => {
-                f.write_str("Plugin initialization has already failed")
-            }
-            PluginWrapperError::AlreadyInitialized => f.write_str("Plugin is already initialized"),
-            PluginWrapperError::Destroying => f.write_str("Plugin is being destroyed"),
-            PluginWrapperError::NulPtr(ptr_name) => {
+            InitializationAlreadyFailed => f.write_str("Plugin initialization has already failed"),
+            AlreadyInitialized => f.write_str("Plugin is already initialized"),
+            Destroying => f.write_str("Plugin is being destroyed"),
+            NulPtr(ptr_name) => {
                 write!(f, "Plugin method was called with null {ptr_name} pointer")
             }
-            PluginWrapperError::InvalidParameter(p) => {
+            InvalidParameter(p) => {
                 write!(f, "Received invalid parameter '{p}'")
             }
-            PluginWrapperError::UninitializedPlugin => {
-                f.write_str("Plugin was not properly initialized before use")
-            }
-            PluginWrapperError::ActivatedPlugin => f.write_str("Plugin was already activated"),
-            PluginWrapperError::DeactivatedPlugin => {
+            UninitializedPlugin => f.write_str("Plugin was not properly initialized before use"),
+            ActivatedPlugin => f.write_str("Plugin was already activated"),
+            DeactivatedPlugin => {
                 f.write_str("Plugin was not activated before calling a audio-thread method")
             }
-            PluginWrapperError::DeactivationRequiredForFunction(function) => write!(
+            DeactivationRequiredForFunction(function) => write!(
                 f,
                 "Host attempted to call '{function}' while plugin was still active"
             ),
-            PluginWrapperError::StringEncoding(e) => {
+            StringEncoding(e) => {
                 write!(
                     f,
                     "Encountered string containing invalid UTF-8 at position {}.",
                     e.valid_up_to()
                 )
             }
-            PluginWrapperError::InvalidCString(e) => {
+            InvalidCString(e) => {
                 write!(
                     f,
                     "Encountered string containing a NUL byte at position {}.",
                     e.nul_position()
                 )
             }
-            PluginWrapperError::Plugin(e) => std::fmt::Display::fmt(&e, f),
-            PluginWrapperError::Error(_, e) => std::fmt::Display::fmt(e, f),
-            PluginWrapperError::Message(_, msg) => f.write_str(msg),
-            PluginWrapperError::Panic => f.write_str("Plugin panicked"),
+            ErrorFormatError(e) => {
+                write!(f, "Error while formatting plugin error: '{e}'")
+            }
+            Plugin(e) => Display::fmt(&e, f),
+            Error(_, e) => Display::fmt(e, f),
+            Message(_, msg) => f.write_str(msg),
+            Panic => f.write_str("Plugin panicked"),
         }
     }
 }

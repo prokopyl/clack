@@ -31,7 +31,7 @@ pub mod plugin;
 ///
 /// # Safety
 ///
-/// The [`IDENTIFIER`](Factory::IDENTIFIERS) **must** match the official identifier for the given
+/// The [`IDENTIFIERS`](Factory::IDENTIFIERS) **must** match the official identifier for the given
 /// factory, otherwise the factory data could be misinterpreted, leading to Undefined Behavior.
 ///
 /// # Example

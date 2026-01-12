@@ -1,6 +1,5 @@
 use crate::host::HostHandlers;
 use crate::process::ProcessingStartError;
-use clap_sys::ext::log::{CLAP_LOG_ERROR, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity};
 use core::fmt;
 use core::fmt::{Debug, Display, Formatter};
 use std::error::Error;
@@ -71,16 +70,6 @@ impl PluginInstanceError {
             Self::NullFactoryCreatePluginFunction => {
                 "Plugin Factory's create_plugin function is null"
             }
-        }
-    }
-
-    pub(crate) fn severity(&self) -> clap_log_severity {
-        match self {
-            PluginInstanceError::MissingPluginFactory => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginInstanceError::NullFactoryCreatePluginFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginInstanceError::NullProcessFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
-            PluginInstanceError::NullActivateFunction => CLAP_LOG_PLUGIN_MISBEHAVING,
-            _ => CLAP_LOG_ERROR,
         }
     }
 }
