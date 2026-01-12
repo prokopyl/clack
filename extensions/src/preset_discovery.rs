@@ -126,11 +126,13 @@ pub mod prelude {
         factory::{PresetDiscoveryFactoryImpl, PresetDiscoveryFactoryWrapper},
         indexer::{Indexer, IndexerInfo},
         metadata_receiver::MetadataReceiver,
-        provider::{ProviderImpl, ProviderInstance, ProviderInstanceError},
+        provider::{ProviderImpl, ProviderInstance},
     };
 
     #[cfg(feature = "clack-host")]
     pub use super::{
-        indexer::IndexerImpl, metadata_receiver::MetadataReceiverImpl, provider::Provider,
+        indexer::IndexerImpl,
+        metadata_receiver::MetadataReceiverImpl,
+        provider::{Provider, ProviderInstanceError},
     };
 }
