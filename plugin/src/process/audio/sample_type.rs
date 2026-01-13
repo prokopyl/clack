@@ -1,6 +1,6 @@
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
-use crate::process::audio::BufferError;
 use crate::process::CelledClapAudioBuffer;
+use crate::process::audio::BufferError;
 
 /// A generic enum to discriminate between buffers containing [`f32`] and [`f64`] sample types.
 ///
