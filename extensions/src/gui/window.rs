@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 ///
 /// # Safety
 ///
-/// This type does enforce that the underlying window handle is still valid. Therefore, while most
+/// This type does *not* enforce that the underlying window handle is still valid. Therefore, while most
 /// the methods to create this type are safe, most functions that use it will be `unsafe`
 /// (e.g. [`PluginGui::set_parent`](crate::gui::PluginGui::set_parent)).
 ///
