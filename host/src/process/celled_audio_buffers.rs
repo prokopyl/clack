@@ -19,7 +19,8 @@ impl CelledClapAudioBuffer {
 
     #[inline]
     pub(crate) fn from_raw_slice(slice: &mut [clap_audio_buffer]) -> &[Self] {
-        // SAFETY: TODO
+        // SAFETY: This type has the same memory layout as clap_audio_buffer,
+        // and transmuting between &mut T and &Cell<T> is safe.
         unsafe { &*(slice as *mut [clap_audio_buffer] as *mut [CelledClapAudioBuffer]) }
     }
 
