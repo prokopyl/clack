@@ -1,7 +1,7 @@
 //! Types to manipulate input and output audio buffers for processing.
 
-use crate::util::check_collection_clap_size_overflow;
 use crate::process::celled_audio_buffers::CelledClapAudioBuffer;
+use crate::util::check_collection_clap_size_overflow;
 use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
@@ -386,9 +386,10 @@ impl<'a> AudioBuffers<'a> {
     /// channel buffers pointed to by `buffers`.
     #[inline]
     pub unsafe fn from_raw_buffers(buffers: *mut [clap_audio_buffer], frames_count: u32) -> Self {
+        let buffers = *(buffers as *const _ as *const _);
         check_collection_clap_size_overflow(buffers);
         Self {
-            buffers: *(buffers as *const _ as *const _),
+            buffers,
             frames_count: Some(frames_count),
         }
     }
@@ -604,11 +605,9 @@ mod test {
         assert_eq!(output_buffers.buffers.len(), 2);
         assert_eq!(output_buffers.frames_count, Some(4));
 
-        let raw_input_buffers = input_buffers.as_raw_buffers();
-        let raw_output_buffers = output_buffers.as_raw_buffers();
         let process = clap_process {
-            audio_inputs: raw_input_buffers.as_ptr(),
-            audio_outputs: raw_output_buffers.as_ptr() as *mut _,
+            audio_inputs: input_buffers.as_raw_buffers().cast(),
+            audio_outputs: output_buffers.as_raw_buffers().cast(),
             audio_inputs_count: input_buffers.port_count(),
             audio_outputs_count: output_buffers.port_count(),
 
