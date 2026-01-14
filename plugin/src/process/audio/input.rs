@@ -1,13 +1,13 @@
 use crate::internal_utils::slice_from_external_parts;
 use crate::prelude::Audio;
+use crate::process::CelledClapAudioBuffer;
 use crate::process::audio::{BufferError, SampleType};
 use clack_common::process::ConstantMask;
-use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::Iter;
 
 /// An iterator of all the available [`InputPort`]s from an [`Audio`] struct.
 pub struct InputPortsIter<'a> {
-    inputs: Iter<'a, clap_audio_buffer>,
+    inputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,
 }
 
@@ -49,7 +49,7 @@ impl ExactSizeIterator for InputPortsIter<'_> {
 /// An input audio port.
 #[derive(Copy, Clone)]
 pub struct InputPort<'a> {
-    inner: &'a clap_audio_buffer,
+    inner: &'a CelledClapAudioBuffer,
     frames_count: u32,
 }
 
@@ -59,7 +59,7 @@ impl<'a> InputPort<'a> {
     /// * The provided buffer must be valid;
     /// * `frames_count` *must* match the size of the buffers.
     #[inline]
-    pub(crate) unsafe fn from_raw(inner: &'a clap_audio_buffer, frames_count: u32) -> Self {
+    pub(crate) unsafe fn from_raw(inner: &'a CelledClapAudioBuffer, frames_count: u32) -> Self {
         Self {
             inner,
             frames_count,
@@ -137,7 +137,7 @@ impl<'a> InputPort<'a> {
     /// The constant mask for this port.
     #[inline]
     pub fn constant_mask(&self) -> ConstantMask {
-        ConstantMask::from_bits(self.inner.constant_mask)
+        ConstantMask::from_bits(self.inner.constant_mask.get())
     }
 }
 
