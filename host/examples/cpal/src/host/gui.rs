@@ -169,7 +169,7 @@ impl Gui {
         )?;
 
         // SAFETY: We ensure the window is valid for the lifetime of the plugin window.
-        unsafe { gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())? };
+        gui.set_parent(plugin, ClapWindow::from_window(&window).unwrap())?;
         // Some plugins don't show anything until this is called, others return an error.
         let _ = gui.show(plugin);
         self.is_open = true;
