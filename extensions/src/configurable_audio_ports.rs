@@ -7,7 +7,6 @@ use clap_sys::ext::configurable_audio_ports::{
 use std::{
     ffi::CStr,
     fmt::{self, Debug},
-    marker::PhantomData,
     ptr::null,
 };
 
@@ -40,6 +39,9 @@ pub enum AudioPortsRequestPort<'a> {
 }
 
 impl<'a> AudioPortsRequestPort<'a> {
+    pub const MONO: Self = AudioPortsRequestPort::Other(Some(AudioPortType::MONO));
+    pub const STEREO: Self = AudioPortsRequestPort::Other(Some(AudioPortType::STEREO));
+
     /// Get the requested port type.
     pub fn port_type(&self) -> Option<AudioPortType<'a>> {
         match self {
@@ -67,20 +69,20 @@ pub struct AudioPortsRequest<'a> {
 impl<'a> AudioPortsRequest<'a> {
     /// # Safety
     ///
-    /// The user must ensure the provided pointer is valid for the duration of lifetime `'a`.
-    pub unsafe fn from_raw(raw: *const clap_audio_port_configuration_request) -> Self {
+    /// The user must ensure the provided request is valid for the duration of lifetime `'a`.
+    pub unsafe fn from_raw(raw: clap_audio_port_configuration_request) -> Self {
         // SAFETY: the caller ensures the pointer is valid, so we can dereference it here.
         unsafe {
             Self {
-                is_input: (*raw).is_input,
-                port_index: (*raw).port_index,
-                channel_count: (*raw).channel_count,
-                port_info: AudioPortsRequestPort::Other(AudioPortType::from_raw((*raw).port_type)),
+                is_input: raw.is_input,
+                port_index: raw.port_index,
+                channel_count: raw.channel_count,
+                port_info: AudioPortsRequestPort::Other(AudioPortType::from_raw(raw.port_type)),
             }
         }
     }
 
-    pub fn as_raw(&self) -> clap_audio_port_configuration_request {
+    pub fn into_raw(&self) -> clap_audio_port_configuration_request {
         clap_audio_port_configuration_request {
             is_input: self.is_input,
             port_index: self.port_index,
@@ -97,9 +99,7 @@ impl<'a> AudioPortsRequest<'a> {
 
 #[derive(Copy, Clone)]
 pub struct AudioPortsRequestList<'a> {
-    phantom: PhantomData<&'a clap_audio_port_configuration_request>,
-    ptr: *const clap_audio_port_configuration_request,
-    len: u32,
+    raw: &'a [clap_audio_port_configuration_request],
 }
 
 impl<'a> AudioPortsRequestList<'a> {
@@ -109,9 +109,8 @@ impl<'a> AudioPortsRequestList<'a> {
     /// and that it points to an array of at least `len` elements.
     pub unsafe fn from_raw(ptr: *const clap_audio_port_configuration_request, len: u32) -> Self {
         Self {
-            phantom: PhantomData,
-            ptr,
-            len,
+            // SAFETY: the caller ensures the pointer is valid, so we can create a slice here.
+            raw: unsafe { std::slice::from_raw_parts(ptr, len as usize) },
         }
     }
 
@@ -120,23 +119,23 @@ impl<'a> AudioPortsRequestList<'a> {
     }
 
     pub fn len(&self) -> usize {
-        self.len as usize
+        self.raw.len()
     }
 
     pub fn get(&self, index: usize) -> Option<AudioPortsRequest<'a>> {
-        if index >= self.len() {
-            return None;
-        }
-
-        // SAFETY: we checked that the index is in-bounds
-        Some(unsafe { AudioPortsRequest::from_raw(self.ptr.add(index)) })
+        // SAFETY: validity is ensured by the lifetime of self.
+        self.raw
+            .get(index)
+            .map(|r| unsafe { AudioPortsRequest::from_raw(*r) })
     }
 
     pub fn iter(
-        &'a self,
+        &self,
     ) -> impl ExactSizeIterator<Item = AudioPortsRequest<'a>> + DoubleEndedIterator + 'a {
-        // SAFETY: the index is in bounds, assuming the `len` field is correct
-        (0..self.len()).map(move |i| unsafe { AudioPortsRequest::from_raw(self.ptr.add(i)) })
+        // SAFETY: validity is ensured by the lifetime of self.
+        self.raw
+            .iter()
+            .map(|r| unsafe { AudioPortsRequest::from_raw(*r) })
     }
 }
 

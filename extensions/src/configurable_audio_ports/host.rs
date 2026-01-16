@@ -17,7 +17,7 @@ impl<'a> AudioPortsRequestListBuffer<'a> {
     }
 
     pub fn push(&mut self, request: AudioPortsRequest<'a>) {
-        self.buffer.push(request.as_raw());
+        self.buffer.push(request.into_raw());
     }
 
     pub fn clear(&mut self) {
@@ -25,18 +25,14 @@ impl<'a> AudioPortsRequestListBuffer<'a> {
     }
 
     pub fn as_list(&self) -> AudioPortsRequestList<'_> {
-        AudioPortsRequestList {
-            ptr: self.buffer.as_ptr(),
-            len: self.buffer.len() as u32,
-            phantom: PhantomData,
-        }
+        AudioPortsRequestList { raw: &self.buffer }
     }
 }
 
 impl<'a> FromIterator<AudioPortsRequest<'a>> for AudioPortsRequestListBuffer<'a> {
     fn from_iter<T: IntoIterator<Item = AudioPortsRequest<'a>>>(iter: T) -> Self {
         Self {
-            buffer: iter.into_iter().map(|r| r.as_raw()).collect(),
+            buffer: iter.into_iter().map(|r| r.into_raw()).collect(),
             phantom: PhantomData,
         }
     }
@@ -44,7 +40,7 @@ impl<'a> FromIterator<AudioPortsRequest<'a>> for AudioPortsRequestListBuffer<'a>
 
 impl<'a> Extend<AudioPortsRequest<'a>> for AudioPortsRequestListBuffer<'a> {
     fn extend<T: IntoIterator<Item = AudioPortsRequest<'a>>>(&mut self, iter: T) {
-        self.buffer.extend(iter.into_iter().map(|r| r.as_raw()));
+        self.buffer.extend(iter.into_iter().map(|r| r.into_raw()));
     }
 }
 
@@ -59,7 +55,7 @@ impl PluginConfigurableAudioPorts {
             match plugin.use_extension(&self.0).can_apply_configuration {
                 None => false,
                 Some(can_apply_configuration) => {
-                    can_apply_configuration(plugin.as_raw(), list.ptr, list.len)
+                    can_apply_configuration(plugin.as_raw(), list.raw.as_ptr(), list.len() as u32)
                 }
             }
         }
@@ -75,7 +71,7 @@ impl PluginConfigurableAudioPorts {
             match plugin.use_extension(&self.0).apply_configuration {
                 None => false,
                 Some(apply_configuration) => {
-                    apply_configuration(plugin.as_raw(), list.ptr, list.len)
+                    apply_configuration(plugin.as_raw(), list.raw.as_ptr(), list.len() as u32)
                 }
             }
         }
