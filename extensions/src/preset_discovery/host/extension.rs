@@ -3,6 +3,7 @@ use crate::utils::{cstr_from_nullable_ptr, cstr_to_nullable_ptr};
 use clack_host::extensions::prelude::*;
 use clap_sys::ext::preset_load::*;
 use clap_sys::factory::preset_discovery::clap_preset_discovery_location_kind;
+use std::error::Error;
 use std::ffi::{CStr, c_char};
 use std::fmt::{Display, Formatter};
 
@@ -59,6 +60,8 @@ impl Display for PresetLoadError {
         f.write_str("Failed to load preset from location")
     }
 }
+
+impl Error for PresetLoadError {}
 
 /// Implementation of the host side of the Preset Load extension.
 pub trait HostPresetLoadImpl {

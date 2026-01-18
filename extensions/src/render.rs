@@ -10,6 +10,7 @@
 
 use clack_common::extensions::{Extension, PluginExtensionSide, RawExtension};
 use clap_sys::ext::render::*;
+use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
@@ -73,6 +74,8 @@ impl Display for PluginRenderError {
         f.write_str("Failed to set plugin's render mode.")
     }
 }
+
+impl Error for PluginRenderError {}
 
 #[cfg(feature = "clack-plugin")]
 mod plugin {
