@@ -1,5 +1,7 @@
 use super::*;
+use crate::audio_ports::{AudioPortInfo, AudioPortInfoBuffer};
 use clack_host::extensions::prelude::*;
+use clap_sys::id::CLAP_INVALID_ID;
 use std::mem::MaybeUninit;
 
 /// A host-provided buffer for the plugin to write an Audio Port Configuration in.
@@ -86,6 +88,51 @@ impl PluginAudioPortsConfig {
         match success {
             true => Ok(()),
             false => Err(AudioPortConfigSelectError),
+        }
+    }
+}
+
+impl PluginAudioPortsConfigInfo {
+    /// Gets the id of the currently selected config, or [`None`] if the current port
+    /// layout isn't part of the config list.
+    pub fn current_config(&self, plugin: &mut PluginMainThreadHandle) -> Option<ClapId> {
+        // SAFETY: This type ensures the function pointer is valid.
+        let id = unsafe { plugin.use_extension(&self.0).current_config?(plugin.as_raw()) };
+        if id == CLAP_INVALID_ID {
+            None
+        } else {
+            Some(ClapId::new(id))
+        }
+    }
+
+    /// Get info about an audio port, for a given `config_id`.
+    /// This is analogous to [`PluginAudioPorts::get`](crate::audio_ports::PluginAudioPorts::get).
+    pub fn get<'b>(
+        &self,
+        plugin: &mut PluginMainThreadHandle,
+        config_id: ClapId,
+        index: usize,
+        is_input: bool,
+        buffer: &'b mut AudioPortInfoBuffer,
+    ) -> Option<AudioPortInfo<'b>> {
+        let get = plugin.use_extension(&self.0).get?;
+
+        // SAFETY: This type ensures the function pointer is valid.
+        let success = unsafe {
+            get(
+                plugin.as_raw(),
+                config_id.get(),
+                index as u32,
+                is_input,
+                buffer.as_raw(),
+            )
+        };
+
+        if success {
+            // SAFETY: we checked if the buffer was successfully written to
+            unsafe { buffer.assume_init() }
+        } else {
+            None
         }
     }
 }
