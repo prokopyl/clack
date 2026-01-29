@@ -1,6 +1,4 @@
-use crate::configurable_audio_ports::{
-    AudioPortsRequest, AudioPortsRequestList, PluginConfigurableAudioPorts,
-};
+use crate::configurable_audio_ports::{AudioPortsRequest, PluginConfigurableAudioPorts};
 use clack_host::plugin::InactivePluginMainThreadHandle;
 use clap_sys::ext::configurable_audio_ports::clap_audio_port_configuration_request;
 use std::marker::PhantomData;
@@ -27,11 +25,6 @@ impl<'a> AudioPortsRequestListBuffer<'a> {
     pub fn clear(&mut self) {
         self.buffer.clear();
     }
-
-    /// Returns a view of the buffer as an [`AudioPortsRequestList`].
-    pub fn as_list(&self) -> AudioPortsRequestList<'_> {
-        AudioPortsRequestList { raw: &self.buffer }
-    }
 }
 
 impl<'a> FromIterator<AudioPortsRequest<'a>> for AudioPortsRequestListBuffer<'a> {
@@ -49,20 +42,38 @@ impl<'a> Extend<AudioPortsRequest<'a>> for AudioPortsRequestListBuffer<'a> {
     }
 }
 
+impl<'a> AudioPortsRequest<'a> {
+    fn as_raw(&self) -> clap_audio_port_configuration_request {
+        clap_audio_port_configuration_request {
+            is_input: self.is_input,
+            port_index: self.port_index,
+            channel_count: self.channel_count,
+            port_type: self
+                .port_info
+                .port_type()
+                .map(|t| t.0.as_ptr())
+                .unwrap_or(std::ptr::null()),
+            port_details: std::ptr::null(),
+        }
+    }
+}
+
 impl PluginConfigurableAudioPorts {
     /// Returns true if the given configurations can be applied using [`apply_configuration`](Self::apply_configuration).
     pub fn can_apply_configuration(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
-        list: AudioPortsRequestList<'_>,
+        list: &AudioPortsRequestListBuffer<'_>,
     ) -> bool {
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
             match plugin.use_extension(&self.0).can_apply_configuration {
                 None => false,
-                Some(can_apply_configuration) => {
-                    can_apply_configuration(plugin.as_raw(), list.raw.as_ptr(), list.len() as u32)
-                }
+                Some(can_apply_configuration) => can_apply_configuration(
+                    plugin.as_raw(),
+                    list.buffer.as_ptr(),
+                    list.buffer.len() as u32,
+                ),
             }
         }
     }
@@ -78,15 +89,17 @@ impl PluginConfigurableAudioPorts {
     pub fn apply_configuration(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
-        list: AudioPortsRequestList<'_>,
+        list: &AudioPortsRequestListBuffer<'_>,
     ) -> bool {
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
             match plugin.use_extension(&self.0).apply_configuration {
                 None => false,
-                Some(apply_configuration) => {
-                    apply_configuration(plugin.as_raw(), list.raw.as_ptr(), list.len() as u32)
-                }
+                Some(apply_configuration) => apply_configuration(
+                    plugin.as_raw(),
+                    list.buffer.as_ptr(),
+                    list.buffer.len() as u32,
+                ),
             }
         }
     }

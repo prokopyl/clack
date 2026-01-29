@@ -1,4 +1,9 @@
-use crate::configurable_audio_ports::{AudioPortsRequestList, PluginConfigurableAudioPorts};
+use crate::{
+    audio_ports::AudioPortType,
+    configurable_audio_ports::{
+        AudioPortsRequest, AudioPortsRequestPort, PluginConfigurableAudioPorts,
+    },
+};
 use clack_common::extensions::{ExtensionImplementation, RawExtensionImplementation};
 use clack_plugin::{
     extensions::wrapper::{PluginWrapper, PluginWrapperError},
@@ -10,6 +15,89 @@ use clap_sys::{
     },
     plugin::clap_plugin,
 };
+use std::fmt::{self, Debug};
+
+/// A list of [`AudioPortsRequest`]s.
+#[derive(Copy, Clone)]
+pub struct AudioPortsRequestList<'a> {
+    raw: &'a [clap_audio_port_configuration_request],
+}
+
+impl<'a> AudioPortsRequestList<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the provided pointer is valid for the duration of lifetime `'a`,
+    /// and that it points to an array of at least `len` elements.
+    unsafe fn from_raw(ptr: *const clap_audio_port_configuration_request, len: u32) -> Self {
+        Self {
+            // SAFETY: the caller ensures the pointer is valid, so we can create a slice here.
+            raw: unsafe { std::slice::from_raw_parts(ptr, len as usize) },
+        }
+    }
+
+    /// Returns true if the list is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the number of requests in the list.
+    pub fn len(&self) -> usize {
+        self.raw.len()
+    }
+
+    /// Returns the request at the given index, or `None` if out of bounds.
+    pub fn get(&self, index: usize) -> Option<AudioPortsRequest<'a>> {
+        // SAFETY: validity is ensured by the lifetime of self.
+        self.raw
+            .get(index)
+            .map(|r| unsafe { AudioPortsRequest::from_raw(*r) })
+    }
+
+    /// Returns an iterator over all requests in the list.
+    pub fn iter(
+        &'a self,
+    ) -> impl ExactSizeIterator<Item = AudioPortsRequest<'a>> + DoubleEndedIterator + 'a {
+        IntoIterator::into_iter(self)
+    }
+}
+
+impl<'a> IntoIterator for &'a AudioPortsRequestList<'a> {
+    type Item = AudioPortsRequest<'a>;
+    type IntoIter = std::iter::Map<
+        std::slice::Iter<'a, clap_audio_port_configuration_request>,
+        fn(&clap_audio_port_configuration_request) -> AudioPortsRequest<'a>,
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        // SAFETY: validity is ensured by the lifetime of self.
+        self.raw
+            .iter()
+            .map(|r| unsafe { AudioPortsRequest::from_raw(*r) })
+    }
+}
+
+impl Debug for AudioPortsRequestList<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
+impl<'a> AudioPortsRequest<'a> {
+    /// # Safety
+    ///
+    /// The user must ensure the provided request is valid for the duration of lifetime `'a`.
+    unsafe fn from_raw(raw: clap_audio_port_configuration_request) -> Self {
+        // SAFETY: the caller ensures the pointer is valid, so we can dereference it here.
+        unsafe {
+            Self {
+                is_input: raw.is_input,
+                port_index: raw.port_index,
+                channel_count: raw.channel_count,
+                port_info: AudioPortsRequestPort::Other(AudioPortType::from_raw(raw.port_type)),
+            }
+        }
+    }
+}
 
 /// Implementation of the Plugin-side of the Configurable Audio Ports extension.
 pub trait PluginConfigurableAudioPortsImpl {
