@@ -7,6 +7,7 @@
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::posix_fd_support::*;
+use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 use std::os::unix::io::RawFd;
@@ -85,6 +86,8 @@ impl Display for FdError {
         }
     }
 }
+
+impl Error for FdError {}
 
 #[cfg(feature = "clack-host")]
 mod host {
