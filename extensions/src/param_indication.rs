@@ -170,12 +170,13 @@ mod plugin {
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
-                let param_id = ClapId::new(param_id);
-                let color = *color;
+                let param_id = ClapId::from_raw(param_id)
+                    .ok_or(PluginWrapperError::InvalidParameter("param_id"))?;
+
                 plugin.main_thread().as_mut().set_mapping(
                     param_id,
                     has_mapping,
-                    color,
+                    *color,
                     CStr::from_ptr(label),
                     CStr::from_ptr(description),
                 );
@@ -197,14 +198,15 @@ mod plugin {
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
-                let param_id = ClapId::new(param_id);
-                let color = *color;
-                let automation_state =
-                    ParamIndicationAutomation::from_raw(automation_state).unwrap();
+                let automation_state = ParamIndicationAutomation::from_raw(automation_state)
+                    .ok_or(PluginWrapperError::InvalidParameter("automation_state"))?;
+                let param_id = ClapId::from_raw(param_id)
+                    .ok_or(PluginWrapperError::InvalidParameter("param_id"))?;
+
                 plugin
                     .main_thread()
                     .as_mut()
-                    .set_automation(param_id, automation_state, color);
+                    .set_automation(param_id, automation_state, *color);
                 Ok(())
             });
         }
