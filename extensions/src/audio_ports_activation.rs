@@ -142,7 +142,7 @@ mod plugin {
     // then `set_active` is called from the audio thread (otherwise it is called from the main thread).
     pub trait PluginAudioPortsActivationSetImpl {
         fn set_active(
-            &self,
+            &mut self,
             is_input: bool,
             port_index: u32,
             is_active: bool,
@@ -198,18 +198,20 @@ mod plugin {
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
-                let sample_size = SampleSize::from_raw(sample_size).unwrap();
+                let sample_size = SampleSize::from_raw(sample_size)
+                    .ok_or(PluginWrapperError::InvalidParameter("sample_size"))?;
+
                 // Handle forwarding to the correct implementation
                 match plugin.audio_processor() {
-                    Ok(audio) => {
+                    Ok(mut audio) => {
                         // audio is active, so this must be done on the audio thread
                         Ok(audio
-                            .as_ref()
+                            .as_mut()
                             .set_active(is_input, port_index, is_active, sample_size))
                     }
                     Err(PluginWrapperError::DeactivatedPlugin) => {
                         // audio thread is *not* active, so this is to be done on the main thread
-                        Ok(plugin.main_thread().as_ref().set_active(
+                        Ok(plugin.main_thread().as_mut().set_active(
                             is_input,
                             port_index,
                             is_active,
