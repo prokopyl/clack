@@ -1,4 +1,4 @@
-use crate::may_be_clap_bundle::may_be_clap_bundle;
+use crate::may_be_clap_bundle;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -8,6 +8,7 @@ pub struct ClapFinder {
 }
 
 impl ClapFinder {
+    #[inline]
     pub fn new<P: Into<PathBuf>>(paths: impl IntoIterator<Item = P>) -> Self {
         Self {
             paths: paths.into_iter().map(P::into).collect(),
@@ -15,6 +16,15 @@ impl ClapFinder {
         }
     }
 
+    #[inline]
+    pub fn from_standard_paths() -> Self {
+        Self {
+            paths: crate::standard_clap_paths(),
+            follow_links: true,
+        }
+    }
+
+    #[inline]
     pub fn follow_links(mut self, yes: bool) -> Self {
         self.follow_links = yes;
         self
@@ -25,6 +35,7 @@ impl IntoIterator for ClapFinder {
     type Item = PathBuf;
     type IntoIter = ClapFinderIter;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         ClapFinderIter {
             paths: self.paths.into_iter(),
