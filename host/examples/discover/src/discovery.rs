@@ -1,8 +1,8 @@
 use clack_host::prelude::*;
+use clap_discovery::ClapFinder;
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use walkdir::{DirEntry, WalkDir};
 
 /// The descriptor of a plugin that was found, alongside the bundle it was loaded from, as well
 /// as its path.
@@ -15,83 +15,22 @@ pub struct FoundBundlePlugin {
     pub path: PathBuf,
 }
 
-/// Returns a list of all the standard CLAP search paths, per the CLAP specification.
-pub fn standard_clap_paths() -> Vec<PathBuf> {
-    let mut paths = vec![];
-
-    if let Some(home_dir) = dirs::home_dir() {
-        paths.push(home_dir.join(".clap"));
-
-        #[cfg(target_os = "macos")]
-        {
-            paths.push(home_dir.join("Library/Audio/Plug-Ins/CLAP"));
-        }
-    }
-
-    #[cfg(windows)]
-    {
-        if let Some(val) = std::env::var_os("CommonProgramFiles") {
-            paths.push(PathBuf::from(val).join("CLAP"))
-        }
-
-        if let Some(dir) = dirs::config_local_dir() {
-            paths.push(dir.join("Programs\\Common\\CLAP"));
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        paths.push(PathBuf::from("/Library/Audio/Plug-Ins/CLAP"));
-    }
-
-    #[cfg(target_family = "unix")]
-    {
-        paths.push("/usr/lib/clap".into());
-        paths.push("/usr/lib64/clap".into());
-    }
-
-    if let Some(env_var) = std::env::var_os("CLAP_PATH") {
-        paths.extend(std::env::split_paths(&env_var))
-    }
-
-    paths
-}
-
-/// Returns `true` if the given entry could refer to a CLAP bundle.
-///
-/// CLAP bundles are files that end with the `.clap` extension.
-fn is_clap_bundle(dir_entry: &DirEntry) -> bool {
-    dir_entry.file_type().is_file() && dir_entry.file_name().to_string_lossy().ends_with(".clap")
-}
-
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
 /// bundles.
-pub fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
-    search_dirs
-        .iter()
-        .flat_map(|path| {
-            WalkDir::new(path)
-                .follow_links(true)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(is_clap_bundle)
-        })
-        .collect()
+pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+    ClapFinder::new(search_dirs).into_iter().collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins in them.
-pub fn scan_bundles(bundles: &[DirEntry]) -> Vec<FoundBundlePlugin> {
-    bundles
-        .par_iter()
-        .filter_map(|p| scan_plugin(p.path()))
-        .collect()
+pub fn scan_bundles(bundles: &[PathBuf]) -> Vec<FoundBundlePlugin> {
+    bundles.par_iter().filter_map(|p| scan_plugin(p)).collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-pub fn scan_bundles_matching(bundles: &[DirEntry], plugin_id: &str) -> Vec<FoundBundlePlugin> {
+pub fn scan_bundles_matching(bundles: &[PathBuf], plugin_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
-        .filter_map(|p| scan_plugin(p.path()))
+        .filter_map(|p| scan_plugin(p))
         .filter(|p| p.plugins.iter().any(|p| p.id == plugin_id))
         .collect()
 }
