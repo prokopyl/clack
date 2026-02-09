@@ -1,0 +1,10 @@
+[package]
+name = "clap-discovery"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dirs-sys = "0.5.0"
+
+[lints]
+workspace = true
