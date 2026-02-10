@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 
-//! Preset finder and loading.
+//! Preset discovery and loading.
 //!
 //! This module contains two parts:
 //!
@@ -111,7 +111,7 @@ pub mod metadata_receiver {
     pub use super::plugin::metadata_receiver::*;
 }
 
-/// A helpful prelude re-exporting all the types related to preset finder and loading implementation.
+/// A helpful prelude re-exporting all the types related to preset discovery and loading implementation.
 pub mod prelude {
     pub use super::preset_data::*;
     pub use super::{

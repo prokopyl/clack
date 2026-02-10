@@ -25,7 +25,7 @@
 //!
 //!   This is a more advanced usage, and it allows to load plugins that have been statically built
 //!   into the host's binary (i.e. built-in plugins) without having to distribute them in separate
-//!   files, or to perform any filesystem access or plugin finder.
+//!   files, or to perform any filesystem access or plugin discovery.
 //!
 //!   If needed, this also allows host implementations to not use Clack's implementation of bundle
 //!   loading (which uses [`libloading`](https://crates.io/crates/libloading) under the hood), and
@@ -49,14 +49,14 @@
 //! Users needing to safeguard against crashes or other kinds of UB from plugins from affecting the
 //! rest of their application should consider using additional process isolation techniques.
 //!
-//! # Plugin bundle finder
+//! # Plugin bundle discovery
 //!
 //! As of now, Clack does not implement any utilities to aid host implementations with discovering
 //! which CLAP bundle files are available to be loaded on the filesystem.
 //!
 //! Refer to the
 //! [CLAP specification](https://github.com/free-audio/clap/blob/main/include/clap/entry.h) for more
-//! information about standard search paths and the general finder process.
+//! information about standard search paths and the general discovery process.
 
 use std::error::Error;
 use std::ffi::CStr;

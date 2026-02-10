@@ -92,7 +92,7 @@ impl<I> IndexerWrapper<I> {
     /// incorrect casts will occur, which will lead to Undefined Behavior.
     ///
     /// The `indexer` pointer must also point to a valid instance of `clap_preset_discovery_indexer`,
-    /// as provided by the preset finder provider. While this function does a couple of simple safety checks, only a few common
+    /// as provided by the preset discovery provider. While this function does a couple of simple safety checks, only a few common
     /// cases are actually covered (i.e. null checks), and those **must not** be relied upon: those
     /// checks only exist to help debugging faulty hosts.
     #[inline]

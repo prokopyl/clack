@@ -59,7 +59,7 @@ pub trait PluginPresetLoadImpl {
     /// If the given location contains multiple presets, `load_key` can be passed to further
     /// identify the preset to load.
     ///
-    /// The `location` and `load_key` should come from a [preset finder provider](crate::preset_discovery::provider).
+    /// The `location` and `load_key` should come from a [preset discovery provider](crate::preset_discovery::provider).
     ///
     /// # Errors
     ///

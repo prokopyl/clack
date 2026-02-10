@@ -5,9 +5,9 @@ use std::fmt::{Display, Formatter};
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum ProviderInstanceError {
-    /// The bundle does not actually provide a preset-finder factory.
+    /// The bundle does not actually provide a preset-discovery factory.
     MissingPresetDiscoveryFactory,
-    /// The 'create' function pointer on the preset-finder factory was NULL.
+    /// The 'create' function pointer on the preset-discovery factory was NULL.
     NullFactoryCreateFunction,
     /// The 'init' function pointer on the returned provider instance was NULL.
     NullInitFunction,
