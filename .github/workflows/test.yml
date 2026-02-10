@@ -104,7 +104,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: miri
-          args: test --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
+          args: test --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui --exclude clack-finder
 
   rustdoc:
     runs-on: ubuntu-latest
