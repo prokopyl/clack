@@ -1,7 +1,9 @@
 [package]
-name = "clap-discovery"
+name = "clack-finder"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 dirs-sys = "0.5.0"

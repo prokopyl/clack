@@ -1,5 +1,5 @@
+use clack_finder::ClapFinder;
 use clack_host::prelude::*;
-use clap_discovery::ClapFinder;
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};

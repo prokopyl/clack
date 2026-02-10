@@ -9,7 +9,7 @@ pub(crate) use descriptor::*;
 
 /// An indexer implementation.
 ///
-/// It must be provided to a [preset discovery provider instance](crate::preset_discovery::provider::ProviderInstance)
+/// It must be provided to a [preset finder provider instance](crate::preset_discovery::provider::ProviderInstance)
 /// during initialization.
 pub trait IndexerImpl: Sized {
     /// Declares a preset file type.

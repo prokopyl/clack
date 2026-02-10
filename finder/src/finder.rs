@@ -1,13 +1,65 @@
-use crate::may_be_clap_bundle;
-use std::path::PathBuf;
+use std::fs::FileType;
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+/// A builder to create an iterator that yields paths to possible CLAP bundle dynamic library files.
+///
+/// This type implements [`IntoIterator`] so that it may be used as the subject of a `for` loop
+/// directly.
+///
+/// This documentation refers only to "possible" CLAP bundles, which means the file paths yielded
+/// by this type are not guaranteed to actually be CLAP bundles. It only seeks `.clap` files in the
+/// standard (or given) locations and filters candidates using information provided by the file
+/// system, but it never actually tries to open or load said files, both for performance and
+/// safety reasons (due to arbitrary code execution).
+///
+/// This makes this type safe to use in any environment.
+///
+/// # Platform Compatibility Notes
+///
+/// On macOS, a CLAP bundle is not a dynamic library file, but a standard [macOS bundle] instead,
+/// contrary to Windows and Linux CLAP bundles.
+///
+/// This type does not yield the path to the CLAP macOS bundle itself, but when it does find one,
+/// it [opens] it and locates the path to its declared executable files, and yields that path instead.
+///
+/// This means, for example, that while this type might yield a path like
+/// `/usr/lib/clap/Surge XT.clap` on Linux, it will yield a path like
+/// `/Library/Audio/Plug-Ins/CLAP/Surge XT.clap/Contents/MacOS/Surge XT` on macOS.
+///
+/// This allows you to directly use the yielded paths with e.g. `clack-host` or `libloading`,
+/// regardless of the platform.
+///
+/// # Example
+///
+/// ```
+/// use clack_finder::ClapFinder;
+///
+/// for bundle_path in ClapFinder::from_standard_paths() {
+///     println!("Found possible CLAP bundle at: {bundle_path}");
+///     // Load the bundle using e.g. clack-host or libloading, etc.
+/// }
+///
+/// ```
+///
+/// [macOS bundle]: https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/AboutBundles/AboutBundles.html
+/// [opens]: https://developer.apple.com/documentation/foundation/bundle
+#[derive(Clone)]
 pub struct ClapFinder {
     paths: Vec<PathBuf>,
     follow_links: bool,
 }
 
 impl ClapFinder {
+    /// Creates a new builder for an iterator that will search CLAP bundles in the directories with
+    /// the provided paths.
+    ///
+    /// Note that the provided paths do not have to point to existing files or directories.
+    /// If the provided directories do not exist or cannot be opened for any reason, they will be
+    /// skipped.
+    ///
+    /// If you want to only seek standard CLAP locations, you can use
+    /// [`ClapFinder::from_standard_paths`] instead.
     #[inline]
     pub fn new<P: Into<PathBuf>>(paths: impl IntoIterator<Item = P>) -> Self {
         Self {
@@ -16,6 +68,11 @@ impl ClapFinder {
         }
     }
 
+    /// Creates a new builder for an iterator that will search CLAP bundles in the standard CLAP
+    /// locations.
+    ///
+    /// The directory paths used are the ones provided by the
+    /// [`standard_clap_paths`](crate::standard_clap_paths) function.
     #[inline]
     pub fn from_standard_paths() -> Self {
         Self {
@@ -24,6 +81,7 @@ impl ClapFinder {
         }
     }
 
+    /// Follow symbolic links. By default, this is *enabled*.
     #[inline]
     pub fn follow_links(mut self, yes: bool) -> Self {
         self.follow_links = yes;
@@ -45,6 +103,12 @@ impl IntoIterator for ClapFinder {
     }
 }
 
+/// An iterator for searching CLAP bundle files.
+///
+/// The order of elements yielded by this iterator is unspecified.
+/// If any encountered directory cannot be opened, then it is skipped.
+///
+/// See the [`ClapFinder`] documentation for more information.
 pub struct ClapFinderIter {
     follow_links: bool,
     paths: std::vec::IntoIter<PathBuf>,
@@ -124,4 +188,22 @@ fn get_executable_path_of_bundle(bundle_path: &std::path::Path) -> Option<PathBu
     let executable_path = executable_url.to_file_path()?;
 
     Some(executable_path)
+}
+
+fn may_be_clap_bundle(path: &Path, file_type: FileType) -> bool {
+    #[cfg(target_os = "macos")]
+    if file_type.is_file() {
+        return false;
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    if file_type.is_dir() {
+        return false;
+    }
+
+    let Some(ext) = path.extension() else {
+        return false;
+    };
+
+    ext == "clap"
 }

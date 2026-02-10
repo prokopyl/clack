@@ -1,13 +1,13 @@
 // Discovering plugins means loading them, which is unsafe
 #![allow(unsafe_code)]
 
+use clack_finder::ClapFinder;
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use walkdir::{DirEntry, WalkDir};
 
 /// The descriptor of a plugin that was found, alongside the bundle it was loaded from, as well
 /// as its path.
@@ -22,102 +22,30 @@ pub struct FoundBundlePlugin {
 
 /// Scans the CLAP standard paths for all the plugin descriptors that match the given ID.
 pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
-    let standard_paths = standard_clap_paths();
+    let standard_paths = clack_finder::standard_clap_paths();
 
     println!("Scanning the following directories for CLAP plugin with ID {id}:");
     for path in &standard_paths {
         println!("\t - {}", path.display())
     }
 
-    let found_bundles = search_for_potential_bundles(&standard_paths);
+    let found_bundles = search_for_potential_bundles(standard_paths);
     println!("\t * Found {} potential CLAP bundles.", found_bundles.len());
 
     scan_plugins(&found_bundles, id)
 }
 
-/// Returns a list of all the standard CLAP search paths, per the CLAP specification.
-fn standard_clap_paths() -> Vec<PathBuf> {
-    let mut paths = vec![];
-
-    if let Some(home_dir) = dirs::home_dir() {
-        paths.push(home_dir.join(".clap"));
-
-        #[cfg(target_os = "macos")]
-        {
-            paths.push(home_dir.join("Library/Audio/Plug-Ins/CLAP"));
-        }
-    }
-
-    #[cfg(windows)]
-    {
-        if let Some(val) = std::env::var_os("CommonProgramFiles") {
-            paths.push(PathBuf::from(val).join("CLAP"))
-        }
-
-        if let Some(dir) = dirs::config_local_dir() {
-            paths.push(dir.join("Programs\\Common\\CLAP"));
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        paths.push(PathBuf::from("/Library/Audio/Plug-Ins/CLAP"));
-    }
-
-    #[cfg(target_family = "unix")]
-    {
-        paths.push("/usr/lib/clap".into())
-    }
-
-    if let Some(env_var) = std::env::var_os("CLAP_PATH") {
-        paths.extend(std::env::split_paths(&env_var))
-    }
-
-    paths
-}
-
-/// Returns `true` if the given entry could refer to a CLAP bundle.
-///
-/// CLAP bundles are files that end with the `.clap` extension.
-fn is_clap_bundle(dir_entry: &DirEntry) -> bool {
-    is_bundle(dir_entry)
-        && dir_entry
-            .path()
-            .extension()
-            .is_some_and(|ext| ext == "clap")
-}
-
-/// Returns `true` if the given entry could refer to a bundle.
-///
-/// CLAP bundles are directories on MacOS and files everywhere else.
-fn is_bundle(dir_entry: &DirEntry) -> bool {
-    if cfg!(target_os = "macos") {
-        dir_entry.file_type().is_dir()
-    } else {
-        dir_entry.file_type().is_file()
-    }
-}
-
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
 /// bundles.
-fn search_for_potential_bundles(search_dirs: &[PathBuf]) -> Vec<DirEntry> {
-    search_dirs
-        .iter()
-        .flat_map(|path| {
-            WalkDir::new(path)
-                .follow_links(true)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(is_clap_bundle)
-        })
-        .collect()
+fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+    ClapFinder::new(search_dirs).into_iter().collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-fn scan_plugins(bundles: &[DirEntry], searched_id: &str) -> Vec<FoundBundlePlugin> {
+fn scan_plugins(bundles: &[PathBuf], searched_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
-        .filter_map(|p| scan_plugin(p.path(), searched_id))
+        .filter_map(|p| scan_plugin(p, searched_id))
         .collect()
 }
 
@@ -203,7 +131,7 @@ pub fn list_plugins_in_bundle(
         .collect())
 }
 
-/// Errors that happened during discovery.
+/// Errors that happened during finder.
 #[derive(Debug)]
 pub enum DiscoveryError {
     /// Unable to load a CLAP bundle.

@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
 /// Returns a list of all the standard CLAP search paths, per the CLAP specification.
+///
+/// Note that this function also takes the standard `CLAP_PATH` environment variable into
+/// consideration.
 pub fn standard_clap_paths() -> Vec<PathBuf> {
     let mut paths = vec![];
 

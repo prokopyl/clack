@@ -53,7 +53,7 @@ fn main() -> Result<(), ExitCode> {
 
 /// Scans the CLAP standard paths for all the plugin descriptors that match the given ID.
 pub fn list_plugins() {
-    let standard_paths = clap_discovery::standard_clap_paths();
+    let standard_paths = clack_finder::standard_clap_paths();
 
     println!("Scanning the following directories for CLAP plugins:");
     for path in &standard_paths {
@@ -129,7 +129,7 @@ pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode
 }
 
 fn scan_standard_paths() -> Vec<PathBuf> {
-    let standard_paths = clap_discovery::standard_clap_paths();
+    let standard_paths = clack_finder::standard_clap_paths();
 
     println!("Scanning the following directories for CLAP plugins:");
     for path in &standard_paths {

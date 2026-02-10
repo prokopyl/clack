@@ -13,7 +13,7 @@ impl PluginPresetLoad {
     /// If the given location contains multiple presets, `load_key` can be passed to further
     /// identify the preset to load.
     ///
-    /// The `location` and `load_key` can be discovered from a plugin's [preset discovery provider](crate::preset_discovery::provider).
+    /// The `location` and `load_key` can be discovered from a plugin's [preset finder provider](crate::preset_discovery::provider).
     ///
     /// # Errors
     ///
