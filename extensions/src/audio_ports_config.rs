@@ -14,6 +14,9 @@
 //! Plugins with very complex configuration possibilities that cannot be covered by this extension,
 //! should instead let the user configure the ports from the plugin GUI, and then request a full
 //! port rescan to the host.
+//!
+//! To inquire the exact bus layout, the plugin implements the [`PluginAudioPortsConfigInfo`]
+//! extension where all busses can be retrieved in the same way as in the [`PluginAudioPorts`](crate::audio_ports::PluginAudioPorts) extension.
 
 use crate::audio_ports::AudioPortType;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
@@ -33,6 +36,28 @@ pub struct PluginAudioPortsConfig(
 // SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
 unsafe impl Extension for PluginAudioPortsConfig {
     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_AUDIO_PORTS_CONFIG];
+    type ExtensionSide = PluginExtensionSide;
+
+    #[inline]
+    unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
+        // SAFETY: the guarantee that this pointer is of the correct type is upheld by the caller.
+        Self(unsafe { raw.cast() })
+    }
+}
+
+/// The Plugin-side of the Audio Ports Configurations extension.
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub struct PluginAudioPortsConfigInfo(
+    RawExtension<PluginExtensionSide, clap_plugin_audio_ports_config_info>,
+);
+
+// SAFETY: This type is repr(C) and ABI-compatible with the matching extension type.
+unsafe impl Extension for PluginAudioPortsConfigInfo {
+    const IDENTIFIERS: &[&CStr] = &[
+        CLAP_EXT_AUDIO_PORTS_CONFIG_INFO,
+        CLAP_EXT_AUDIO_PORTS_CONFIG_INFO_COMPAT,
+    ];
     type ExtensionSide = PluginExtensionSide;
 
     #[inline]
@@ -157,12 +182,10 @@ impl Error for AudioPortConfigSelectError {}
 
 #[cfg(feature = "clack-host")]
 mod host;
-
 #[cfg(feature = "clack-host")]
 pub use host::*;
 
 #[cfg(feature = "clack-plugin")]
 mod plugin;
-
 #[cfg(feature = "clack-plugin")]
 pub use plugin::*;

@@ -50,7 +50,7 @@ all-extensions = [
 ]
 audio-ports = []
 audio-ports-activation = []
-audio-ports-config = []
+audio-ports-config = ["audio-ports"]
 clap-wrapper = []
 event-registry = []
 gui = []

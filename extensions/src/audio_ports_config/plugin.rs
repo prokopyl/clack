@@ -1,6 +1,7 @@
 use super::*;
-use crate::utils::write_to_array_buf;
+use crate::{audio_ports::AudioPortInfoWriter, utils::write_to_array_buf};
 use clack_plugin::extensions::prelude::*;
+use clap_sys::{ext::audio_ports::clap_audio_port_info, id::CLAP_INVALID_ID};
 use std::mem::MaybeUninit;
 
 /// Implementation of the Plugin-side of the Audio Ports Configuration extension.
@@ -25,6 +26,23 @@ pub trait PluginAudioPortsConfigImpl {
     fn select(&mut self, config_id: ClapId) -> Result<(), PluginError>;
 }
 
+/// Implementation of the Plugin-side of the Audio Ports Configuration Info extension.
+pub trait PluginAudioPortsConfigInfoImpl {
+    /// Gets the id of the currently selected config, or [`None`] if the current port
+    /// layout isn't part of the config list.
+    fn current_config(&mut self) -> Option<ClapId>;
+
+    /// Get info about an audio port, for a given `config_id`.
+    /// This is analogous to [`PluginAudioPortsImpl::get`](crate::audio_ports::PluginAudioPortsImpl::get).
+    fn get(
+        &mut self,
+        config_id: ClapId,
+        index: u32,
+        is_input: bool,
+        writer: &mut AudioPortInfoWriter,
+    );
+}
+
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
 unsafe impl<P> ExtensionImplementation<P> for PluginAudioPortsConfig
 where
@@ -36,6 +54,19 @@ where
             count: Some(count::<P>),
             get: Some(get::<P>),
             select: Some(select::<P>),
+        });
+}
+
+// SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
+unsafe impl<P> ExtensionImplementation<P> for PluginAudioPortsConfigInfo
+where
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigInfoImpl>,
+{
+    #[doc(hidden)]
+    const IMPLEMENTATION: RawExtensionImplementation =
+        RawExtensionImplementation::new(&clap_plugin_audio_ports_config_info {
+            current_config: Some(info_current_config::<P>),
+            get: Some(info_get::<P>),
         });
 }
 
@@ -86,6 +117,55 @@ where
         Ok(p.main_thread().as_mut().select(config_id).is_ok())
     })
     .unwrap_or(false)
+}
+
+#[allow(clippy::missing_safety_doc, clippy::undocumented_unsafe_blocks)]
+unsafe extern "C" fn info_current_config<P>(plugin: *const clap_plugin) -> u32
+where
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigInfoImpl>,
+{
+    unsafe {
+        PluginWrapper::<P>::handle(plugin, |p| {
+            Ok(match p.main_thread().as_mut().current_config() {
+                Some(id) => id.get(),
+                None => CLAP_INVALID_ID,
+            })
+        })
+        .unwrap_or(CLAP_INVALID_ID)
+    }
+}
+
+#[allow(clippy::missing_safety_doc, clippy::undocumented_unsafe_blocks)]
+unsafe extern "C" fn info_get<P>(
+    plugin: *const clap_plugin,
+    config_id: u32,
+    index: u32,
+    is_input: bool,
+    info: *mut clap_audio_port_info,
+) -> bool
+where
+    for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigInfoImpl>,
+{
+    unsafe {
+        PluginWrapper::<P>::handle(plugin, |p| {
+            if info.is_null() {
+                return Err(PluginWrapperError::NulPtr("clap_audio_port_info"));
+            };
+
+            let mut writer = AudioPortInfoWriter::from_raw(info);
+
+            p.main_thread().as_mut().get(
+                ClapId::from_raw(config_id)
+                    .ok_or(PluginWrapperError::InvalidParameter("config_id"))?,
+                index,
+                is_input,
+                &mut writer,
+            );
+
+            Ok(writer.is_set())
+        })
+        .unwrap_or(false)
+    }
 }
 
 /// A helper struct to write an [`AudioPortsConfiguration`] into the host's provided buffer.

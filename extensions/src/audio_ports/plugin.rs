@@ -15,11 +15,16 @@ impl AudioPortInfoWriter<'_> {
     /// The user must ensure the provided pointer is aligned and points to a valid allocation.
     /// However, it doesn't have to be initialized.
     #[inline]
-    unsafe fn from_raw(raw: *mut clap_audio_port_info) -> Self {
+    pub(crate) unsafe fn from_raw(raw: *mut clap_audio_port_info) -> Self {
         Self {
             buf: &mut *raw.cast(),
             is_set: false,
         }
+    }
+
+    #[inline]
+    pub(crate) fn is_set(&self) -> bool {
+        self.is_set
     }
 
     #[inline]
@@ -96,7 +101,7 @@ where
 
         let mut writer = AudioPortInfoWriter::from_raw(info);
         p.main_thread().as_mut().get(index, is_input, &mut writer);
-        Ok(writer.is_set)
+        Ok(writer.is_set())
     })
     .unwrap_or(false)
 }

@@ -21,6 +21,17 @@ impl AudioPortInfoBuffer {
             inner: MaybeUninit::zeroed(),
         }
     }
+
+    pub(crate) fn as_raw(&mut self) -> *mut clap_audio_port_info {
+        self.inner.as_mut_ptr()
+    }
+
+    /// # Safety
+    /// The user must ensure that the buffer has been properly initialized by the plugin.
+    pub(crate) unsafe fn assume_init(&self) -> Option<AudioPortInfo<'_>> {
+        // SAFETY: the caller ensures the buffer is initialized
+        unsafe { AudioPortInfo::from_raw(self.inner.assume_init_ref()) }
+    }
 }
 
 impl PluginAudioPorts {
@@ -41,17 +52,12 @@ impl PluginAudioPorts {
     ) -> Option<AudioPortInfo<'b>> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            plugin.use_extension(&self.0).get?(
-                plugin.as_raw(),
-                index,
-                is_input,
-                buffer.inner.as_mut_ptr(),
-            )
+            plugin.use_extension(&self.0).get?(plugin.as_raw(), index, is_input, buffer.as_raw())
         };
 
         if success {
             // SAFETY: we checked if the buffer was successfully written to
-            Some(unsafe { AudioPortInfo::from_raw(buffer.inner.assume_init_ref())? })
+            unsafe { buffer.assume_init() }
         } else {
             None
         }
