@@ -1,7 +1,7 @@
 // Discovering plugins means loading them, which is unsafe
 #![allow(unsafe_code)]
 
-use clack_finder::ClapFinder;
+use clack_finder::{ClapBundle, ClapFinder};
 use clack_host::bundle::PluginBundleError;
 use clack_host::prelude::*;
 use rayon::prelude::*;
@@ -17,7 +17,7 @@ pub struct FoundBundlePlugin {
     /// The bundle the descriptor was loaded from.
     pub bundle: PluginBundle,
     /// The path of the bundle's file.
-    pub path: PathBuf,
+    pub bundle_path: PathBuf,
 }
 
 /// Scans the CLAP standard paths for all the plugin descriptors that match the given ID.
@@ -37,12 +37,12 @@ pub fn scan_for_plugin_id(id: &str) -> Vec<FoundBundlePlugin> {
 
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
 /// bundles.
-fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<ClapBundle> {
     ClapFinder::new(search_dirs).into_iter().collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-fn scan_plugins(bundles: &[PathBuf], searched_id: &str) -> Vec<FoundBundlePlugin> {
+fn scan_plugins(bundles: &[ClapBundle], searched_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
         .filter_map(|p| scan_plugin(p, searched_id))
@@ -51,8 +51,8 @@ fn scan_plugins(bundles: &[PathBuf], searched_id: &str) -> Vec<FoundBundlePlugin
 
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
-    let Ok(bundle) = (unsafe { PluginBundle::load(path) }) else {
+fn scan_plugin(bundle_paths: &ClapBundle, searched_id: &str) -> Option<FoundBundlePlugin> {
+    let Ok(bundle) = (unsafe { PluginBundle::load(bundle_paths.executable_path()) }) else {
         return None;
     };
     for plugin in bundle.get_plugin_factory()?.plugin_descriptors() {
@@ -64,7 +64,7 @@ fn scan_plugin(path: &Path, searched_id: &str) -> Option<FoundBundlePlugin> {
             return Some(FoundBundlePlugin {
                 plugin,
                 bundle,
-                path: path.to_path_buf(),
+                bundle_path: bundle_paths.bundle_path().to_path_buf(),
             });
         }
     }
@@ -125,7 +125,7 @@ pub fn list_plugins_in_bundle(
         .filter_map(PluginDescriptor::try_from)
         .map(|plugin| FoundBundlePlugin {
             bundle: bundle.clone(),
-            path: bundle_path.to_path_buf(),
+            bundle_path: bundle_path.to_path_buf(),
             plugin,
         })
         .collect())
@@ -174,6 +174,6 @@ pub fn load_plugin_id_from_path(
         .map(|plugin| FoundBundlePlugin {
             plugin,
             bundle,
-            path: bundle_path.to_path_buf(),
+            bundle_path: bundle_path.to_path_buf(),
         }))
 }

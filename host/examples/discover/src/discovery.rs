@@ -1,8 +1,8 @@
-use clack_finder::ClapFinder;
+use clack_finder::{ClapBundle, ClapFinder};
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// The descriptor of a plugin that was found, alongside the bundle it was loaded from, as well
 /// as its path.
@@ -17,17 +17,17 @@ pub struct FoundBundlePlugin {
 
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
 /// bundles.
-pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<ClapBundle> {
     ClapFinder::new(search_dirs).into_iter().collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins in them.
-pub fn scan_bundles(bundles: &[PathBuf]) -> Vec<FoundBundlePlugin> {
+pub fn scan_bundles(bundles: &[ClapBundle]) -> Vec<FoundBundlePlugin> {
     bundles.par_iter().filter_map(|p| scan_plugin(p)).collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-pub fn scan_bundles_matching(bundles: &[PathBuf], plugin_id: &str) -> Vec<FoundBundlePlugin> {
+pub fn scan_bundles_matching(bundles: &[ClapBundle], plugin_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .par_iter()
         .filter_map(|p| scan_plugin(p))
@@ -37,8 +37,8 @@ pub fn scan_bundles_matching(bundles: &[PathBuf], plugin_id: &str) -> Vec<FoundB
 
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-pub fn scan_plugin(path: &Path) -> Option<FoundBundlePlugin> {
-    let Ok(bundle) = (unsafe { PluginBundle::load(path) }) else {
+pub fn scan_plugin(path: &ClapBundle) -> Option<FoundBundlePlugin> {
+    let Ok(bundle) = (unsafe { PluginBundle::load(path.executable_path()) }) else {
         return None;
     };
 
@@ -49,7 +49,7 @@ pub fn scan_plugin(path: &Path) -> Option<FoundBundlePlugin> {
             .filter_map(PluginDescriptor::try_from)
             .collect(),
         bundle,
-        path: path.to_path_buf(),
+        path: path.bundle_path().to_path_buf(),
     })
 }
 
