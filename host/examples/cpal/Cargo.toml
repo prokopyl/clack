@@ -8,13 +8,12 @@ publish = false
 [dependencies]
 clack-host = { workspace = true, features = ["default"] }
 clack-extensions = { workspace = true, features = ["clack-host", "audio-ports", "note-ports", "gui", "log", "params", "timer", "raw-window-handle_06"] }
+clack-finder = { workspace = true }
 cpal = "0.15.2"
 crossbeam-channel = "0.5.8"
 clap = { version = "=4.4", features = ["derive"] } # 4.4.x is latest for MSRV 1.70
-dirs = "5.0.1"
 midir = "0.10.0"
 rayon = "1.7.0"
 rtrb = "0.3.0"
-walkdir = "2.3.3"
 winit = { version = "0.30.0", default-features = false, features = ["rwh_06", "x11"] }
 wmidi = "4.0.6"

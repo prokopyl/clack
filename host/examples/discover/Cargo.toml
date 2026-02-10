@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 clack-host = { workspace = true, features = ["default"] }
 clack-extensions = { workspace = true, features = ["clack-host", "preset-discovery"] }
+clack-finder = { workspace = true }
 clap = { version = "=4.4", features = ["derive"] } # 4.4.x is latest for MSRV 1.70
-dirs = "6.0.0"
 rayon = "1.7.0"
-walkdir = "2.3.3"
+walkdir = "2.5.0"
