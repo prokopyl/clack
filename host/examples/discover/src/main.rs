@@ -1,5 +1,6 @@
 use crate::discovery::*;
 use crate::preset_discovery::get_presets;
+use clack_finder::ClapBundle;
 use clap::Parser;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -45,7 +46,7 @@ fn main() -> Result<(), ExitCode> {
     ) {
         list_plugins();
     } else {
-        scan_bundle(args.bundle_path.as_deref(), args.plugin_id.as_deref())?;
+        scan_bundle(args.bundle_path, args.plugin_id.as_deref())?;
     }
 
     Ok(())
@@ -71,9 +72,11 @@ pub fn list_plugins() {
     }
 }
 
-pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode> {
+pub fn scan_bundle(path: Option<PathBuf>, id: Option<&str>) -> Result<(), ExitCode> {
     let bundles = if let Some(path) = path {
-        scan_plugin(path).into_iter().collect()
+        scan_plugin(&ClapBundle::from_unknown_path(path))
+            .into_iter()
+            .collect()
     } else {
         let standard_paths = scan_standard_paths();
         let bundles = search_for_potential_bundles(standard_paths);
