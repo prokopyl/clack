@@ -1,6 +1,8 @@
 use clack_finder::{ClapBundle, ClapFinder};
+use clack_host::bundle::LibraryEntry;
 use clack_host::prelude::*;
 use rayon::prelude::*;
+use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 
@@ -22,14 +24,17 @@ pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<ClapBundle
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins in them.
-pub fn scan_bundles(bundles: &[ClapBundle]) -> Vec<FoundBundlePlugin> {
-    bundles.par_iter().filter_map(|p| scan_plugin(p)).collect()
+pub fn scan_bundles(bundles: Vec<ClapBundle>) -> Vec<FoundBundlePlugin> {
+    bundles
+        .into_par_iter()
+        .filter_map(|p| scan_plugin(p))
+        .collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-pub fn scan_bundles_matching(bundles: &[ClapBundle], plugin_id: &str) -> Vec<FoundBundlePlugin> {
+pub fn scan_bundles_matching(bundles: Vec<ClapBundle>, plugin_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
-        .par_iter()
+        .into_par_iter()
         .filter_map(|p| scan_plugin(p))
         .filter(|p| p.plugins.iter().any(|p| p.id == plugin_id))
         .collect()
@@ -37,11 +42,22 @@ pub fn scan_bundles_matching(bundles: &[ClapBundle], plugin_id: &str) -> Vec<Fou
 
 /// Scans a given bundle, looking for a plugin matching the given ID.
 /// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-pub fn scan_plugin(path: &ClapBundle) -> Option<FoundBundlePlugin> {
-    let Ok(bundle) = (unsafe { PluginBundle::load(path.executable_path()) }) else {
-        return None;
-    };
+pub fn scan_plugin(path: ClapBundle) -> Option<FoundBundlePlugin> {
+    let bundle_path = CString::new(path.bundle_path().to_string_lossy().into_owned()).ok()?;
 
+    let library = unsafe { LibraryEntry::load_from_path(path.executable_path()) }.ok()?;
+    let bundle = unsafe { PluginBundle::load_from(library, &bundle_path) }.ok()?;
+
+    scan_bundle(bundle, path.into_bundle_path())
+}
+
+pub fn scan_plugin_from_path(path: PathBuf) -> Option<FoundBundlePlugin> {
+    let bundle = unsafe { PluginBundle::load(&path) }.ok()?;
+
+    scan_bundle(bundle, path)
+}
+
+fn scan_bundle(bundle: PluginBundle, bundle_path: PathBuf) -> Option<FoundBundlePlugin> {
     Some(FoundBundlePlugin {
         plugins: bundle
             .get_plugin_factory()?
@@ -49,7 +65,7 @@ pub fn scan_plugin(path: &ClapBundle) -> Option<FoundBundlePlugin> {
             .filter_map(PluginDescriptor::try_from)
             .collect(),
         bundle,
-        path: path.bundle_path().to_path_buf(),
+        path: bundle_path,
     })
 }
 

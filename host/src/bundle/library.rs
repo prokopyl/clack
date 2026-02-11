@@ -1,22 +1,23 @@
 use crate::bundle::PluginBundleError;
+use crate::bundle::entry_provider::EntryProvider;
 use clack_common::entry::EntryDescriptor;
 use libloading::Library;
 use std::ffi::{CStr, OsStr};
-use std::ops::Deref;
 use std::ptr::NonNull;
 
-pub(crate) struct PluginEntryLibrary {
+// TODO: bikeshade
+pub struct LibraryEntry {
     _library: Library,
     entry_ptr: NonNull<EntryDescriptor>,
 }
 
 const SYMBOL_NAME: &CStr = c"clap_entry";
-impl PluginEntryLibrary {
+impl LibraryEntry {
     /// # Safety
     ///
     /// Loading an external library is inherently unsafe. Users must try their best to load only
     /// valid CLAP bundles.
-    pub unsafe fn load(path: &OsStr) -> Result<Self, PluginBundleError> {
+    pub unsafe fn load_from_path(path: impl AsRef<OsStr>) -> Result<Self, PluginBundleError> {
         let library = Library::new(path).map_err(PluginBundleError::LibraryLoadingError)?;
 
         Self::load_from_library(library)
@@ -50,24 +51,17 @@ impl PluginEntryLibrary {
             entry_ptr,
         })
     }
-
-    #[inline]
-    pub const fn entry(&self) -> &EntryDescriptor {
-        // SAFETY: this type's only constructor guarantees this pointer is valid
-        unsafe { self.entry_ptr.as_ref() }
-    }
 }
 
-impl Deref for PluginEntryLibrary {
-    type Target = EntryDescriptor;
-
+// SAFETY: TODO
+unsafe impl EntryProvider for LibraryEntry {
     #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.entry()
+    fn entry_pointer(&self) -> NonNull<EntryDescriptor> {
+        self.entry_ptr
     }
 }
 
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
-unsafe impl Send for PluginEntryLibrary {}
+unsafe impl Send for LibraryEntry {}
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
-unsafe impl Sync for PluginEntryLibrary {}
+unsafe impl Sync for LibraryEntry {}

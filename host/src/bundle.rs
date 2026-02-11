@@ -1,4 +1,4 @@
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 
 //! Loading and handling of CLAP plugin bundle files.
 //!
@@ -65,10 +65,13 @@ use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
 
 mod cache;
-mod entry;
+mod entry_provider;
+mod loaded_entry;
 
 #[cfg(feature = "libloading")]
 mod library;
+#[cfg(feature = "libloading")]
+pub use library::LibraryEntry;
 
 #[cfg(feature = "clack-plugin")]
 mod clack_plugin;
@@ -78,6 +81,7 @@ mod clack_plugin;
 pub mod diva_stub;
 
 use crate::bundle::cache::CachedEntry;
+use crate::bundle::entry_provider::EntryProvider;
 use crate::factory::{Factory, plugin::PluginFactory};
 pub use clack_common::entry::*;
 use clack_common::factory::RawFactoryPointer;
@@ -153,7 +157,7 @@ impl PluginBundle {
     /// ```
     #[cfg(feature = "libloading")]
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
-        use crate::bundle::library::PluginEntryLibrary;
+        use crate::bundle::library::LibraryEntry;
         use std::ffi::CString;
 
         let bundle_path = std::path::Path::new(path.as_ref());
@@ -173,9 +177,16 @@ impl PluginBundle {
             bundle_path
         };
 
-        let library = PluginEntryLibrary::load(library_path.as_ref())?;
+        let library = LibraryEntry::load_from_path(library_path)?;
 
-        let inner = cache::load_from_library(library, &bundle_path_cstr)?;
+        Self::load_from(library, &bundle_path_cstr)
+    }
+
+    pub unsafe fn load_from(
+        entry: impl EntryProvider,
+        bundle_path: &CStr,
+    ) -> Result<Self, PluginBundleError> {
+        let inner = cache::get_or_init(entry, &bundle_path)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
@@ -197,14 +208,14 @@ impl PluginBundle {
     ///
     #[cfg(feature = "clack-plugin")]
     pub fn load_from_clack<E: ::clack_plugin::entry::Entry>(
-        path: &CStr,
+        bundle_path: &CStr,
     ) -> Result<Self, PluginBundleError> {
-        let entry = E::new(path).map_err(|_| PluginBundleError::EntryInitFailed)?;
+        let entry = E::new(bundle_path).map_err(|_| PluginBundleError::EntryInitFailed)?;
         let inner = PluginBundleInner::FromClack(clack_plugin::ClackEntry::new(entry));
 
         Ok(Self { inner })
     }
-
+    /*
     /// Loads a CLAP bundle from a given symbol in a given [`libloading::Library`].
     ///
     /// This function takes ownership of the [`libloading::Library`] object, ensuring it stays
@@ -248,20 +259,20 @@ impl PluginBundle {
         library: libloading::Library,
         symbol_name: &CStr,
     ) -> Result<Self, PluginBundleError> {
-        use crate::bundle::library::PluginEntryLibrary;
+        use crate::bundle::library::PluginEntryLibraryOld;
         use std::ffi::CString;
 
         let path = path.as_ref();
         let path_cstr = CString::new(path.as_encoded_bytes())?;
 
-        let library = PluginEntryLibrary::load_from_symbol_in_library(library, symbol_name)?;
+        let library = PluginEntryLibraryOld::load_from_symbol_in_library(library, symbol_name)?;
 
         let inner = cache::load_from_library(library, &path_cstr)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
         })
-    }
+    }*/
 
     /// Loads a CLAP bundle from a `'static` [`EntryDescriptor`].
     ///
@@ -299,16 +310,14 @@ impl PluginBundle {
         inner: &'static EntryDescriptor,
         plugin_path: &CStr,
     ) -> Result<Self, PluginBundleError> {
-        Ok(Self {
-            inner: PluginBundleInner::Cached(cache::load_from_raw(inner, plugin_path)?),
-        })
+        Self::load_from(inner, plugin_path)
     }
 
     /// Gets the raw, C-FFI plugin entry descriptor exposed by this bundle.
     #[inline]
     pub fn raw_entry(&self) -> &EntryDescriptor {
         match &self.inner {
-            PluginBundleInner::Cached(entry) => entry.raw_entry(),
+            PluginBundleInner::Cached(entry) => entry.as_ref(),
             #[cfg(feature = "clack-plugin")]
             PluginBundleInner::FromClack(_) => &clack_plugin::ClackEntry::DUMMY_DESCRIPTOR,
         }
@@ -340,7 +349,7 @@ impl PluginBundle {
         match &self.inner {
             PluginBundleInner::Cached(entry) => {
                 // SAFETY: this type ensures the function pointer is valid.
-                let ptr = unsafe { entry.raw_entry().get_factory?(identifier.as_ptr()) };
+                let ptr = unsafe { entry.get().get_factory?(identifier.as_ptr()) };
                 let ptr = NonNull::new(ptr.cast_mut())?;
                 // SAFETY: Per the CLAP spec, if this pointer is non-null it has to be valid for reads
                 let ptr = unsafe { RawFactoryPointer::from_raw(ptr.cast()) };

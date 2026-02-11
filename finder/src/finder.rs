@@ -226,26 +226,18 @@ pub struct ClapBundle {
 }
 
 impl ClapBundle {
-    /// Tries to figure out if the given path is either a CLAP bundle path or an executable path, and
-    /// attempts to recreate the missing one, and returns both in a new [`ClapBundle`].
-    ///
-    /// On most platforms this is a trivial no-op, since CLAP executable and bundle paths are the
-    /// same. However on macOS the executable is contained in the bundle.
-    pub fn from_unknown_path(path: PathBuf) -> Self {
-        #[cfg(not(target_os = "macos"))]
-        return Self { bundle_path: path };
-        #[cfg(target_os = "macos")]
-        {
-            todo!()
-        }
-    }
-
     /// Returns the path of the CLAP bundle.
     ///
     /// This is the path you want to pass to a CLAP entry's `init` function.
     #[inline]
     pub fn bundle_path(&self) -> &Path {
         &self.bundle_path
+    }
+
+    /// Returns the path of the CLAP bundle, consuming this [`ClapBundle`].
+    #[inline]
+    pub fn into_bundle_path(self) -> PathBuf {
+        self.bundle_path
     }
 
     /// Returns the path to the executable dynamic library file of the CLAP bundle.

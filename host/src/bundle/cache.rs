@@ -1,13 +1,16 @@
 use crate::bundle::PluginBundleError;
-use crate::bundle::entry::LoadedEntry;
+use crate::bundle::entry_provider::EntryProvider;
+use crate::bundle::loaded_entry::{LoadedEntry, LoadedEntryDyn};
 use clack_common::entry::EntryDescriptor;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::ffi::CStr;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::hash::{BuildHasherDefault, DefaultHasher};
+use std::ptr::NonNull;
+use std::sync::{Arc, Mutex};
 
 #[derive(Hash, Eq, PartialEq)]
-struct EntryPointer(*const EntryDescriptor);
+struct EntryPointer(NonNull<EntryDescriptor>);
 
 // SAFETY: we're treating those pointers as pure addresses, we never read from them
 unsafe impl Send for EntryPointer {}
@@ -15,19 +18,23 @@ unsafe impl Send for EntryPointer {}
 // SAFETY: we're treating those pointers as pure addresses, we never read from them
 unsafe impl Sync for EntryPointer {}
 
-static ENTRY_CACHE: LazyLock<Mutex<HashMap<EntryPointer, Arc<EntrySourceInner>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+static ENTRY_CACHE: Mutex<
+    HashMap<EntryPointer, Arc<dyn LoadedEntryDyn>, BuildHasherDefault<DefaultHasher>>,
+> = Mutex::new(HashMap::with_hasher(BuildHasherDefault::new()));
 
-fn get_or_insert(
-    entry_pointer: EntryPointer,
-    load_entry: impl FnOnce() -> Result<EntrySourceInner, PluginBundleError>,
+pub(crate) fn get_or_init<E: EntryProvider>(
+    entry_provider: E,
+    init_bundle_path: &CStr,
 ) -> Result<CachedEntry, PluginBundleError> {
     let mut cache = ENTRY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+
+    let entry_pointer = EntryPointer(entry_provider.entry_pointer());
 
     let s = match cache.entry(entry_pointer) {
         Entry::Occupied(e) => Arc::clone(e.get()),
         Entry::Vacant(e) => {
-            let entry_source = Arc::new(load_entry()?);
+            let entry_source: Arc<dyn LoadedEntryDyn> =
+                Arc::new(LoadedEntry::load(entry_provider, init_bundle_path)?);
             e.insert(Arc::clone(&entry_source));
             entry_source
         }
@@ -36,62 +43,29 @@ fn get_or_insert(
     Ok(CachedEntry(Some(s)))
 }
 
-#[cfg(feature = "libloading")]
-pub(crate) fn load_from_library(
-    library: crate::bundle::library::PluginEntryLibrary,
-    plugin_path: &CStr,
-) -> Result<CachedEntry, PluginBundleError> {
-    get_or_insert(EntryPointer(library.entry()), move || {
-        // SAFETY: PluginEntryLibrary type guarantees the entry
-        let entry = unsafe { LoadedEntry::load(library.entry(), plugin_path) }?;
-        Ok(EntrySourceInner::FromLibrary {
-            entry,
-            _library: library,
-        })
-    })
-}
-
-/// # Safety
-///
-/// User must ensure that the provided entry is fully valid, as well as everything it exposes.
-pub(crate) unsafe fn load_from_raw(
-    entry_descriptor: &'static EntryDescriptor,
-    plugin_path: &CStr,
-) -> Result<CachedEntry, PluginBundleError> {
-    get_or_insert(EntryPointer(entry_descriptor), || {
-        // SAFETY: entry_descriptor is 'static, it is always valid.
-        Ok(EntrySourceInner::FromRaw(LoadedEntry::load(
-            entry_descriptor,
-            plugin_path,
-        )?))
-    })
-}
-
-enum EntrySourceInner {
-    FromRaw(LoadedEntry),
-    #[cfg(feature = "libloading")]
-    FromLibrary {
-        // SAFETY: drop order is important! We must deinit the entry before unloading the library.
-        entry: LoadedEntry,
-        _library: crate::bundle::library::PluginEntryLibrary,
-    },
-}
-
 #[derive(Clone)]
-pub(crate) struct CachedEntry(Option<Arc<EntrySourceInner>>);
+pub(crate) struct CachedEntry(Option<Arc<dyn LoadedEntryDyn>>);
 
 impl CachedEntry {
     #[inline]
-    pub(crate) fn raw_entry(&self) -> &EntryDescriptor {
+    pub(crate) fn raw_entry(&self) -> NonNull<EntryDescriptor> {
         let Some(entry) = &self.0 else {
             unreachable!("Unloaded state only exists during CachedEntry's Drop implementation")
         };
 
-        match entry.as_ref() {
-            EntrySourceInner::FromRaw(raw) => raw.entry(),
-            #[cfg(feature = "libloading")]
-            EntrySourceInner::FromLibrary { entry, .. } => entry.entry(),
-        }
+        entry.entry_pointer()
+    }
+
+    #[inline]
+    pub fn as_ref(&self) -> &EntryDescriptor {
+        // SAFETY: TODO
+        unsafe { self.raw_entry().as_ref() }
+    }
+
+    #[inline]
+    pub fn get(&self) -> EntryDescriptor {
+        // SAFETY: TODO
+        unsafe { self.raw_entry().read() }
     }
 }
 
