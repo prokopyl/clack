@@ -61,7 +61,7 @@
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
-
+use std::path::Path;
 use std::ptr::NonNull;
 
 mod cache;
@@ -159,9 +159,11 @@ impl PluginBundle {
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::LibraryEntry;
 
-        let (library_path, bundle_path) = LibraryEntry::resolve_path(path.as_ref())?;
+        let path = Path::new(&path);
 
-        let library = LibraryEntry::load_from_path(library_path)?;
+        let (library_path, bundle_path) = LibraryEntry::resolve_path(path)?;
+
+        let library = LibraryEntry::load_from_path(library_path.as_ref())?;
         Self::load_from(library, &bundle_path)
     }
 
@@ -391,6 +393,12 @@ pub enum PluginBundleError {
     #[cfg(feature = "libloading")]
     /// The given path is not a valid C string.
     InvalidNulPath(std::ffi::NulError),
+    /// An I/O error occurred.
+    Io(std::io::Error),
+    /// Failed to resolve a CLAP bundle path.
+    ///
+    /// This error can only occur on macOS.
+    ResolveFailed,
     /// The entry pointer exposed by the dynamic library file is `null`.
     NullEntryPointer,
     /// The exposed entry used an incompatible CLAP version.
@@ -411,6 +419,7 @@ impl Error for PluginBundleError {
             PluginBundleError::InvalidNulPath(e) => Some(e),
             #[cfg(feature = "libloading")]
             PluginBundleError::LibraryLoadingError(e) => Some(e),
+            PluginBundleError::Io(e) => Some(e),
             _ => None,
         }
     }
@@ -428,7 +437,9 @@ impl Display for PluginBundleError {
             PluginBundleError::LibraryLoadingError(e) => {
                 write!(f, "Failed to load plugin descriptor library: {e}")
             }
+            PluginBundleError::Io(e) => Display::fmt(e, f),
             PluginBundleError::NullEntryPointer => f.write_str("Plugin entry pointer is null"),
+            PluginBundleError::ResolveFailed => f.write_str("Failed to resolve plugin bundle path"),
             PluginBundleError::IncompatibleClapVersion { plugin_version } => write!(
                 f,
                 "Incompatible CLAP version: plugin is v{}, host is v{}",
@@ -444,5 +455,12 @@ impl From<std::ffi::NulError> for PluginBundleError {
     #[inline]
     fn from(value: std::ffi::NulError) -> Self {
         Self::InvalidNulPath(value)
+    }
+}
+
+impl From<std::io::Error> for PluginBundleError {
+    #[inline]
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
     }
 }
