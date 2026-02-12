@@ -1,6 +1,6 @@
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
+use crate::process::CelledClapAudioBuffer;
 use crate::process::audio::BufferError;
-use clap_sys::audio_buffer::clap_audio_buffer;
 
 /// A generic enum to discriminate between buffers containing [`f32`] and [`f64`] sample types.
 ///
@@ -273,7 +273,7 @@ impl<'a> SampleType<&'a [*mut f32], &'a [*mut f64]> {
     ///
     /// The caller must ensure the provided buffer is valid.
     #[inline]
-    pub(crate) unsafe fn from_raw_buffer(raw: &clap_audio_buffer) -> Result<Self, BufferError> {
+    pub(crate) unsafe fn from_raw_buffer(raw: &CelledClapAudioBuffer) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
             (true, true) => {
                 if raw.channel_count == 0 {
@@ -311,7 +311,7 @@ impl<'a> SampleType<&'a mut [*mut f32], &'a mut [*mut f64]> {
     /// access to its contents.
     #[inline]
     pub(crate) unsafe fn from_raw_buffer_mut(
-        raw: &mut clap_audio_buffer,
+        raw: &CelledClapAudioBuffer,
     ) -> Result<Self, BufferError> {
         match (raw.data32.is_null(), raw.data64.is_null()) {
             (true, true) => {

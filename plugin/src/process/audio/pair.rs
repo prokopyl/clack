@@ -1,9 +1,8 @@
 use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
-use crate::process::Audio;
 use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{BufferError, InputPort, OutputPort, SampleType};
+use crate::process::{Audio, CelledClapAudioBuffer};
 use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
-use clap_sys::audio_buffer::clap_audio_buffer;
 use std::slice::{Iter, IterMut};
 
 /// A pair of Input and Output ports.
@@ -15,8 +14,8 @@ use std::slice::{Iter, IterMut};
 /// In those cases, a given pair will only contain one port instead of two. However,
 /// a [`PortPair`] is always guaranteed to contain at least one port, be it an input or output.
 pub struct PortPair<'a> {
-    input: Option<&'a clap_audio_buffer>,
-    output: Option<&'a mut clap_audio_buffer>,
+    input: Option<&'a CelledClapAudioBuffer>,
+    output: Option<&'a CelledClapAudioBuffer>,
     frames_count: u32,
 }
 
@@ -27,8 +26,8 @@ impl<'a> PortPair<'a> {
     /// * `frames_count` *must* match the size of the buffers.
     #[inline]
     pub(crate) unsafe fn from_raw(
-        input: Option<&'a clap_audio_buffer>,
-        output: Option<&'a mut clap_audio_buffer>,
+        input: Option<&'a CelledClapAudioBuffer>,
+        output: Option<&'a CelledClapAudioBuffer>,
         frames_count: u32,
     ) -> Option<Self> {
         match (input, output) {
@@ -67,9 +66,7 @@ impl<'a> PortPair<'a> {
     /// If the port layout is asymmetric and there is no input port, this returns [`None`].
     #[inline]
     pub fn input_info(&self) -> Option<AudioPortProcessingInfo> {
-        self.input
-            .as_ref()
-            .map(|buf| AudioPortProcessingInfo::from_raw(buf))
+        self.input.as_ref().map(|buf| buf.processing_info())
     }
 
     /// Retrieves the port info for the output of this pair.
@@ -77,9 +74,7 @@ impl<'a> PortPair<'a> {
     /// If the port layout is asymmetric and there is no output port, this returns [`None`].
     #[inline]
     pub fn output_info(&self) -> Option<AudioPortProcessingInfo> {
-        self.output
-            .as_ref()
-            .map(|buf| AudioPortProcessingInfo::from_raw(buf))
+        self.output.as_ref().map(|buf| buf.processing_info())
     }
 
     /// Retrieves the port pair's channels.
@@ -192,11 +187,11 @@ impl<'a> PortPair<'a> {
     pub fn constant_masks(&self) -> (ConstantMask, ConstantMask) {
         (
             self.input
-                .map(|i| ConstantMask::from_bits(i.constant_mask))
+                .map(|i| ConstantMask::from_bits(i.constant_mask.get()))
                 .unwrap_or(ConstantMask::FULLY_CONSTANT),
             self.output
                 .as_ref()
-                .map(|o| ConstantMask::from_bits(o.constant_mask))
+                .map(|o| ConstantMask::from_bits(o.constant_mask.get()))
                 .unwrap_or(ConstantMask::FULLY_CONSTANT),
         )
     }
@@ -333,8 +328,8 @@ impl<S> ExactSizeIterator for PairedChannelsIter<'_, S> {
 
 /// An iterator of all of the available [`PortPair`]s from an [`Audio`] struct.
 pub struct PortPairsIter<'a> {
-    inputs: Iter<'a, clap_audio_buffer>,
-    outputs: IterMut<'a, clap_audio_buffer>,
+    inputs: Iter<'a, CelledClapAudioBuffer>,
+    outputs: Iter<'a, CelledClapAudioBuffer>,
     frames_count: u32,
 }
 
@@ -343,7 +338,7 @@ impl<'a> PortPairsIter<'a> {
     pub(crate) fn new(audio: &'a mut Audio<'_>) -> Self {
         Self {
             inputs: audio.inputs.iter(),
-            outputs: audio.outputs.iter_mut(),
+            outputs: audio.outputs.iter(),
             frames_count: audio.frames_count,
         }
     }
