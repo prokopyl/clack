@@ -2,7 +2,8 @@ use crate::bundle::PluginBundleError;
 use crate::bundle::entry_provider::EntryProvider;
 use clack_common::entry::EntryDescriptor;
 use libloading::Library;
-use std::ffi::{CStr, OsStr};
+use std::borrow::Cow;
+use std::ffi::{CStr, CString, OsStr};
 use std::ptr::NonNull;
 
 // TODO: bikeshade
@@ -13,6 +14,20 @@ pub struct LibraryEntry {
 
 const SYMBOL_NAME: &CStr = c"clap_entry";
 impl LibraryEntry {
+    pub fn resolve_path(path: &OsStr) -> Result<(Cow<OsStr>, CString), PluginBundleError> {
+        #[cfg(target_os = "macos")]
+        {
+            Ok(macos_resolve::resolve_path(path.as_ref()))
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            // TODO: unwrap?
+            let bundle_path = CString::new(path.to_string_lossy().into_owned())?;
+
+            Ok((Cow::Borrowed(path), bundle_path))
+        }
+    }
+
     /// # Safety
     ///
     /// Loading an external library is inherently unsafe. Users must try their best to load only
@@ -65,3 +80,13 @@ unsafe impl EntryProvider for LibraryEntry {
 unsafe impl Send for LibraryEntry {}
 // SAFETY: Entries and factories are all thread-safe by the CLAP spec
 unsafe impl Sync for LibraryEntry {}
+
+#[cfg(target_os = "macos")]
+mod macos_resolve {
+    use super::*;
+    use std::ffi::OsStr;
+
+    pub(super) fn resolve_path(path: &OsStr) -> (Cow<OsStr>, CString) {
+        todo!()
+    }
+}

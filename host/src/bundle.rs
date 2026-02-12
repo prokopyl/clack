@@ -158,35 +158,18 @@ impl PluginBundle {
     #[cfg(feature = "libloading")]
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginBundleError> {
         use crate::bundle::library::LibraryEntry;
-        use std::ffi::CString;
 
-        let bundle_path = std::path::Path::new(path.as_ref());
-        let bundle_path_cstr = CString::new(bundle_path.as_os_str().as_encoded_bytes())?;
-
-        let library_path = if cfg!(target_os = "macos")
-            && std::fs::metadata(bundle_path)
-                .map(|metadata| metadata.is_dir())
-                .unwrap_or_default()
-        {
-            if let Some(file_stem) = bundle_path.file_stem() {
-                &*bundle_path.join("Contents/MacOS").join(file_stem)
-            } else {
-                bundle_path
-            }
-        } else {
-            bundle_path
-        };
+        let (library_path, bundle_path) = LibraryEntry::resolve_path(path.as_ref())?;
 
         let library = LibraryEntry::load_from_path(library_path)?;
-
-        Self::load_from(library, &bundle_path_cstr)
+        Self::load_from(library, &bundle_path)
     }
 
     pub unsafe fn load_from(
         entry: impl EntryProvider,
         bundle_path: &CStr,
     ) -> Result<Self, PluginBundleError> {
-        let inner = cache::get_or_init(entry, &bundle_path)?;
+        let inner = cache::get_or_init(entry, bundle_path)?;
 
         Ok(Self {
             inner: PluginBundleInner::Cached(inner),
