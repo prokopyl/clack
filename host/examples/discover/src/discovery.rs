@@ -1,5 +1,5 @@
 use clack_finder::{ClapBundle, ClapFinder};
-use clack_host::bundle::LibraryEntry;
+use clack_host::entry::LibraryEntry;
 use clack_host::prelude::*;
 use rayon::prelude::*;
 use std::ffi::CString;
@@ -12,7 +12,7 @@ pub struct FoundBundlePlugin {
     /// The plugin's descriptor.
     pub plugins: Vec<PluginDescriptor>,
     /// The bundle the descriptor was loaded from.
-    pub bundle: PluginBundle,
+    pub bundle: PluginEntry,
     /// The path of the bundle's file.
     pub path: PathBuf,
 }
@@ -46,18 +46,18 @@ pub fn scan_plugin(path: ClapBundle) -> Option<FoundBundlePlugin> {
     let bundle_path = CString::new(path.bundle_path().to_string_lossy().into_owned()).ok()?;
 
     let library = unsafe { LibraryEntry::load_from_path(path.executable_path()) }.ok()?;
-    let bundle = unsafe { PluginBundle::load_from(library, &bundle_path) }.ok()?;
+    let bundle = unsafe { PluginEntry::load_from(library, &bundle_path) }.ok()?;
 
     scan_bundle(bundle, path.into_bundle_path())
 }
 
 pub fn scan_plugin_from_path(path: PathBuf) -> Option<FoundBundlePlugin> {
-    let bundle = unsafe { PluginBundle::load(&path) }.ok()?;
+    let bundle = unsafe { PluginEntry::load(&path) }.ok()?;
 
     scan_bundle(bundle, path)
 }
 
-fn scan_bundle(bundle: PluginBundle, bundle_path: PathBuf) -> Option<FoundBundlePlugin> {
+fn scan_bundle(bundle: PluginEntry, bundle_path: PathBuf) -> Option<FoundBundlePlugin> {
     Some(FoundBundlePlugin {
         plugins: bundle
             .get_plugin_factory()?

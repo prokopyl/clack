@@ -1,5 +1,5 @@
-use crate::bundle::PluginBundleError;
-use crate::bundle::entry_provider::EntryProvider;
+use crate::entry::PluginEntryError;
+use crate::entry::entry_provider::EntryProvider;
 use clack_common::entry::EntryDescriptor;
 use libloading::Library;
 use std::borrow::Cow;
@@ -7,7 +7,10 @@ use std::ffi::{CStr, CString, OsStr};
 use std::path::Path;
 use std::ptr::NonNull;
 
-// TODO: bikeshade
+/// An [`EntryProvider`] which loads an entry from a dynamic library file.
+///
+/// This uses the [`libloading`] library under the hood. It will not be available if the associated
+/// `libloading` Cargo feature of `clack-host` is not enabled.
 pub struct LibraryEntry {
     _library: Library,
     entry_ptr: NonNull<EntryDescriptor>,
@@ -16,14 +19,13 @@ pub struct LibraryEntry {
 const SYMBOL_NAME: &CStr = c"clap_entry";
 impl LibraryEntry {
     #[cfg(feature = "libloading")]
-    pub(crate) fn resolve_path(path: &Path) -> Result<(Cow<'_, Path>, CString), PluginBundleError> {
+    pub(crate) fn resolve_path(path: &Path) -> Result<(Cow<'_, Path>, CString), PluginEntryError> {
         #[cfg(target_os = "macos")]
         {
             macos_resolve::resolve_path(path)
         }
         #[cfg(not(target_os = "macos"))]
         {
-            // TODO: unwrap?
             let bundle_path = CString::new(path.to_string_lossy().into_owned())?;
 
             Ok((Cow::Borrowed(path), bundle_path))
@@ -34,8 +36,8 @@ impl LibraryEntry {
     ///
     /// Loading an external library is inherently unsafe. Users must try their best to load only
     /// valid CLAP bundles.
-    pub unsafe fn load_from_path(path: impl AsRef<OsStr>) -> Result<Self, PluginBundleError> {
-        let library = Library::new(path).map_err(PluginBundleError::LibraryLoadingError)?;
+    pub unsafe fn load_from_path(path: impl AsRef<OsStr>) -> Result<Self, PluginEntryError> {
+        let library = Library::new(path).map_err(PluginEntryError::LibraryLoadingError)?;
 
         Self::load_from_library(library)
     }
@@ -44,7 +46,7 @@ impl LibraryEntry {
     ///
     /// Loading an external library is inherently unsafe. Users must try their best to load only
     /// valid CLAP bundles.
-    pub unsafe fn load_from_library(library: Library) -> Result<Self, PluginBundleError> {
+    pub unsafe fn load_from_library(library: Library) -> Result<Self, PluginEntryError> {
         Self::load_from_symbol_in_library(library, SYMBOL_NAME)
     }
 
@@ -55,13 +57,13 @@ impl LibraryEntry {
     pub unsafe fn load_from_symbol_in_library(
         library: Library,
         symbol_name: &CStr,
-    ) -> Result<Self, PluginBundleError> {
+    ) -> Result<Self, PluginEntryError> {
         let symbol = library
             .get::<*const EntryDescriptor>(symbol_name.to_bytes_with_nul())
-            .map_err(PluginBundleError::LibraryLoadingError)?;
+            .map_err(PluginEntryError::LibraryLoadingError)?;
 
         let entry_ptr = NonNull::new(*symbol as *mut EntryDescriptor)
-            .ok_or(PluginBundleError::NullEntryPointer)?;
+            .ok_or(PluginEntryError::NullEntryPointer)?;
 
         Ok(Self {
             _library: library,
@@ -88,11 +90,11 @@ mod macos_resolve {
     use super::*;
     use std::path::{Path, PathBuf};
 
-    pub(super) fn resolve_path(path: &Path) -> Result<(Cow<'_, Path>, CString), PluginBundleError> {
+    pub(super) fn resolve_path(path: &Path) -> Result<(Cow<'_, Path>, CString), PluginEntryError> {
         if std::fs::metadata(path)?.is_dir() {
             // The given path is to the bundle.
             let executable_path =
-                executable_path_from_bundle(path).ok_or(PluginBundleError::ResolveFailed)?;
+                executable_path_from_bundle(path).ok_or(PluginEntryError::ResolveFailed)?;
 
             let bundle_path = CString::new(path.to_string_lossy().into_owned())?;
 
@@ -119,13 +121,13 @@ mod macos_resolve {
     }
 
     fn bundle_path_from_executable(path: &Path) -> &Path {
-        if let Some(bundle_path) = bundle_path_from_clap_package_ancestor(path) {
+        if let Some(bundle_path) = bundle_path_from_structure(path) {
             return bundle_path;
         };
 
-        if let Some(bundle_path) = bundle_path_from_structure(path) {
+        if let Some(bundle_path) = bundle_path_from_clap_package_ancestor(path) {
             return bundle_path;
-        }
+        };
 
         path
     }

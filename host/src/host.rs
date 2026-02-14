@@ -158,8 +158,8 @@
 //! // Information about our totally legit host.
 //! let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 //!
-//! # mod diva { include!("./bundle/diva_stub.rs"); }
-//! # let bundle = PluginBundle::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
+//! # mod diva { include!("entry/diva_stub.rs"); }
+//! # let bundle = PluginEntry::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
 //! # /*
 //! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
 //! # */

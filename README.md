@@ -176,8 +176,8 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
     // Information about our totally legit host.
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
-    let bundle = unsafe { PluginBundle::load("/home/user/.clap/u-he/libdiva.so")? };
-    let plugin_factory = bundle.get_plugin_factory().unwrap();
+    let entry = unsafe { PluginEntry::load("/home/user/.clap/u-he/libdiva.so")? };
+    let plugin_factory = entry.get_plugin_factory().unwrap();
 
     let plugin_descriptor = plugin_factory.plugin_descriptors()
         .find(|d| d.id().unwrap().to_bytes() == b"com.u-he.diva")
@@ -186,7 +186,7 @@ pub fn load_and_process() -> Result<(), Box<dyn std::error::Error>> {
     let mut plugin_instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared,
         |_| (),
-        &bundle,
+        &entry,
         plugin_descriptor.id().unwrap(),
         &host_info
     )?;

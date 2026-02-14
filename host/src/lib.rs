@@ -18,20 +18,21 @@
 //! See the [`host`] module documentation for more information about how to implement the
 //! [`Host`](host::HostHandlers) trait, and on CLAP's thread specifications model.
 //!
-//! 1. CLAP plugins are distributed in binary files called bundles. These are prebuilt
+//! 1. CLAP plugins are distributed in dynamic library files. These are prebuilt
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
-//!    of multiple plugins. They can be loaded with the [`PluginBundle::load`](bundle::PluginBundle::load)
-//!    method. See the [`bundle`] module documentation for more information.
-//! 2. Bundles' entry points can expose multiple [factories](factory::Factory). These are singleton
+//!    of multiple plugins. They expose an [entry](PluginEntry) that can be loaded and initialized
+//!    with the [`PluginEntry::load`](entry::PluginEntry::load) method. See the [`entry`] module
+//!    documentation for more information.
+//! 2. Plugins' entry points can expose multiple [factories](factory::Factory). These are singleton
 //!    objects that can provide various functionality. The one of main interest is the
 //!    [`PluginFactory`](factory::plugin::PluginFactory), which exposes methods to list and instantiate plugins.
-//!    It can be retrieved from a [`PluginBundle`](bundle::PluginBundle) using the
-//!    [`PluginBundle::get_plugin_factory`](bundle::PluginBundle::get_plugin_factory) method.
+//!    It can be retrieved from a [`PluginEntry`](entry::PluginEntry) using the
+//!    [`PluginEntry::get_plugin_factory`](entry::PluginEntry::get_plugin_factory) method.
 //!
 //!    See the [`factory`] module documentation to learn more about factories.
 //! 3. The [`PluginFactory`](factory::plugin::PluginFactory) can be used to list
 //!    [`PluginDescriptor`s](plugin::PluginDescriptor), each of which contains various information
-//!    (displayed name, author, etc.) about the plugins included in this bundle, including their
+//!    (displayed name, author, etc.) about the plugins included in this entry, including their
 //!    unique IDs. These can be displayed in a list for the user to chose from.
 //! 4. The selected plugin's ID can now be used to create a new
 //!    [`PluginInstance`](plugin::PluginInstance) using its
@@ -140,19 +141,19 @@
 //! // Information about our totally legit host.
 //! let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 //!
-//! // Step 1: Load the bundle in memory.
-//! # mod diva { include!("./bundle/diva_stub.rs"); }
-//! # let bundle = PluginBundle::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
+//! // Step 1: Load the entry in memory.
+//! # mod diva { include!("./entry/diva_stub.rs"); }
+//! # let entry = PluginEntry::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
 //! # /*
-//! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+//! let entry = PluginEntry::load("/home/user/.clap/u-he/libdiva.so")?;
 //! # */
 //!
-//! // Step 2: Get the Plugin factory of this bundle.
-//! let plugin_factory = bundle.get_plugin_factory().unwrap();
+//! // Step 2: Get the Plugin factory of this entry.
+//! let plugin_factory = entry.get_plugin_factory().unwrap();
 //!
 //! // Step 3: Find the descriptor of plugin we're interested in.
 //! let plugin_descriptor = plugin_factory.plugin_descriptors()
-//!     // We're assuming this specific plugin is in this bundle for this example.
+//!     // We're assuming this specific plugin is in this entry for this example.
 //!     // A real host would store all descriptors in a list and show them to the user.
 //!     .find(|d| d.id().unwrap().to_bytes() == b"com.u-he.diva")
 //!     .unwrap();
@@ -164,7 +165,7 @@
 //! let mut plugin_instance = PluginInstance::<MyHost>::new(
 //!     |_| MyHostShared,
 //!     |_| (),
-//!     &bundle,
+//!     &entry,
 //!     plugin_descriptor.id().unwrap(),
 //!     &host_info
 //! )?;
@@ -259,7 +260,7 @@
 //! # Ok(()) }
 //! ```
 
-pub mod bundle;
+pub mod entry;
 pub mod extensions;
 pub use clack_common::factory;
 pub mod host;
@@ -274,7 +275,7 @@ pub use clack_common::utils;
 /// A helpful prelude re-exporting all the types related to host implementation.
 pub mod prelude {
     pub use crate::{
-        bundle::PluginBundle,
+        entry::PluginEntry,
         events::{
             Event, EventHeader, Pckn, UnknownEvent,
             io::{EventBuffer, InputEvents, OutputEvents},

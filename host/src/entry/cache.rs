@@ -1,6 +1,6 @@
-use crate::bundle::PluginBundleError;
-use crate::bundle::entry_provider::EntryProvider;
-use crate::bundle::loaded_entry::{LoadedEntry, LoadedEntryDyn};
+use crate::entry::PluginEntryError;
+use crate::entry::entry_provider::EntryProvider;
+use crate::entry::loaded_entry::{LoadedEntry, LoadedEntryDyn};
 use clack_common::entry::EntryDescriptor;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -25,7 +25,7 @@ static ENTRY_CACHE: Mutex<
 pub(crate) fn get_or_init<E: EntryProvider>(
     entry_provider: E,
     init_bundle_path: &CStr,
-) -> Result<CachedEntry, PluginBundleError> {
+) -> Result<CachedEntry, PluginEntryError> {
     let mut cache = ENTRY_CACHE.lock().unwrap_or_else(|e| e.into_inner());
 
     let entry_pointer = EntryPointer(entry_provider.entry_pointer());

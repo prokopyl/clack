@@ -10,7 +10,7 @@ pub fn it_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
+    let bundle = PluginEntry::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
 
     let descriptor = bundle
         .get_plugin_factory()

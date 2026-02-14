@@ -1,4 +1,4 @@
-use crate::discovery::FoundBundlePlugin;
+use crate::discovery::FoundEntry;
 
 use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
 use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
@@ -158,7 +158,7 @@ impl<'a> MainThreadHandler<'a> for CpalHostMainThread<'a> {
 /// running until the window is closed.
 ///
 /// Otherwise, the plugin runs headless, and will keep running until the process is killed.
-pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
+pub fn run(plugin: FoundEntry) -> Result<(), Box<dyn Error>> {
     let host_info = host_info();
     let plugin_id = CString::new(plugin.plugin.id.as_str())?;
     let (sender, receiver) = unbounded();
@@ -166,7 +166,7 @@ pub fn run(plugin: FoundBundlePlugin) -> Result<(), Box<dyn Error>> {
     let mut instance = PluginInstance::<CpalHost>::new(
         |_| CpalHostShared::new(sender.clone()),
         |shared| CpalHostMainThread::new(shared),
-        &plugin.bundle,
+        &plugin.entry,
         &plugin_id,
         &host_info,
     )?;

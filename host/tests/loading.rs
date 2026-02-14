@@ -1,4 +1,4 @@
-use clack_host::bundle::PluginBundle;
+use clack_host::entry::PluginEntry;
 use clack_host::factory::plugin::PluginFactory;
 
 #[test]
@@ -11,7 +11,7 @@ pub fn it_works() {
         std::env::consts::DLL_SUFFIX
     );
     // SAFETY: we made the plugin, if it's not UB-free then this is what this test is for :)
-    let bundle = unsafe { PluginBundle::load(bundle_path).unwrap() };
+    let bundle = unsafe { PluginEntry::load(bundle_path).unwrap() };
 
     let desc = bundle
         .get_factory::<PluginFactory>()
@@ -35,7 +35,7 @@ pub fn it_works_concurrently() {
         for _ in 0..300 {
             s.spawn(|| {
                 // SAFETY: same as test above
-                let bundle = unsafe { PluginBundle::load(&bundle_path).unwrap() };
+                let bundle = unsafe { PluginEntry::load(&bundle_path).unwrap() };
 
                 let desc = bundle
                     .get_factory::<PluginFactory>()

@@ -1,5 +1,5 @@
 use crate::preset_discovery::indexer::{IndexerImpl, IndexerWrapper, RawIndexerDescriptor};
-use clack_host::prelude::{HostInfo, PluginBundle};
+use clack_host::prelude::{HostInfo, PluginEntry};
 use clap_sys::factory::preset_discovery::clap_preset_discovery_provider;
 use std::ffi::CStr;
 use std::fmt::Debug;
@@ -33,7 +33,7 @@ pub use error::*;
 /// use clack_host::prelude::*;
 /// use clack_extensions::preset_discovery::prelude::*;
 ///
-/// fn get_all_metadata(bundle: &PluginBundle, host_info: &HostInfo) -> Result<(), Box<dyn Error>> {
+/// fn get_all_metadata(bundle: &PluginEntry, host_info: &HostInfo) -> Result<(), Box<dyn Error>> {
 ///     let Some(preset_discovery_factory) = bundle.get_factory::<PresetDiscoveryFactory>() else {
 ///         return Ok(())
 ///     };
@@ -92,14 +92,14 @@ pub struct Provider<I> {
 
     // This is only here to be kept alive
     _indexer_descriptor: Pin<Box<RawIndexerDescriptor>>,
-    _plugin_bundle: PluginBundle,
+    _plugin_bundle: PluginEntry,
     _no_send: PhantomData<*const ()>,
 }
 
 impl<I> Provider<I> {
     /// Instantiate a new provider, backed by a given [`indexer`](IndexerImpl) instance of type `I`.
     ///
-    /// This method requires a reference to the [`PluginBundle`] that contains the provider, as well
+    /// This method requires a reference to the [`PluginEntry`] that contains the provider, as well
     /// as the unique `provider_id` of the provider to create (since bundles can have multiple providers).
     /// The `provider_id` should come from a [`ProviderDescriptor`], provided by a [`PresetDiscoveryFactory`] instance.
     ///
@@ -108,14 +108,14 @@ impl<I> Provider<I> {
     /// See the [module docs](crate::preset_discovery) for a usage example.
     pub fn instantiate(
         indexer: I,
-        plugin_bundle: &PluginBundle,
+        plugin_entry: &PluginEntry,
         provider_id: &CStr,
         host_info: &HostInfo,
     ) -> Result<Self, ProviderInstanceError>
     where
         I: IndexerImpl,
     {
-        let factory: PresetDiscoveryFactory = plugin_bundle
+        let factory: PresetDiscoveryFactory = plugin_entry
             .get_factory()
             .ok_or(ProviderInstanceError::MissingPresetDiscoveryFactory)?;
 
@@ -142,7 +142,7 @@ impl<I> Provider<I> {
             indexer_wrapper,
             _indexer_descriptor: indexer_descriptor,
             provider_ptr,
-            _plugin_bundle: plugin_bundle.clone(),
+            _plugin_bundle: plugin_entry.clone(),
             _no_send: PhantomData,
         })
     }
