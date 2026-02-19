@@ -161,11 +161,11 @@ mod macos_resolve {
 
     fn bundle_path_from_structure(path: &Path) -> Option<&Path> {
         let mut ancestors = path.ancestors();
-        if ancestors.next()? != "MacOS" {
+        if ancestors.next()? != OsStr::new("MacOS") {
             return None;
         }
 
-        if ancestors.next()? != "Contents" {
+        if ancestors.next()? != OsStr::new("Contents") {
             return None;
         }
 
