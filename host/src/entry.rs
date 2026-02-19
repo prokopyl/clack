@@ -145,7 +145,7 @@ enum PluginEntryInner {
 }
 
 impl PluginEntry {
-    /// Loads a CLAP entry from a dynamic library file located at the given path.
+    /// Loads and initializes a CLAP entry from a dynamic library file located at the given path.
     ///
     /// This function also initializes the loaded entry, using the provided path, and returns a
     /// handle to it.

@@ -32,38 +32,64 @@ impl LibraryEntry {
         }
     }
 
+    /// Loads a CLAP entry from a dynamic library file located at the given path.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if library file could not be loaded, if the `clap_entry`
+    /// symbol could not be extracted from the given library, or if the symbol's value is NULL.
+    ///
     /// # Safety
     ///
-    /// Loading an external library is inherently unsafe. Users must try their best to load only
-    /// valid CLAP bundles.
+    /// This function loads an external library object file, which is inherently unsafe, as even
+    /// just loading it can trigger any behavior in your application, including Undefined Behavior.
+    ///
+    /// Additionally, users
     pub unsafe fn load_from_path(path: impl AsRef<OsStr>) -> Result<Self, PluginEntryError> {
         let library = Library::new(path).map_err(PluginEntryError::LibraryLoadingError)?;
 
         Self::load_from_library(library)
     }
 
+    /// Wraps a given [`Library`] object to load a CLAP entry from.
+    ///
+    /// This function will look for the standard `clap_entry` symbol to get the [`EntryDescriptor`]
+    /// pointer from. If you need to load that pointer from another, non-standard symbol, see
+    /// [`load_from_symbol_in_library`](Self::load_from_symbol_in_library).
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the `clap_entry` symbol could not be extracted from the given
+    /// library, or if the symbol's value is NULL.
+    ///
     /// # Safety
     ///
-    /// Loading an external library is inherently unsafe. Users must try their best to load only
-    /// valid CLAP bundles.
+    /// Users of this function must ensure the symbol `clap_entry` in the given library is ABI
+    /// compatible with a pointer to an [`EntryDescriptor`].
     pub unsafe fn load_from_library(library: Library) -> Result<Self, PluginEntryError> {
         Self::load_from_symbol_in_library(library, SYMBOL_NAME)
     }
 
+    /// Wraps a given [`Library`] object to load a CLAP entry from a given symbol it contains.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the symbol could not be extracted from the given
+    /// library, or if the symbol's value is NULL.
+    ///
     /// # Safety
     ///
-    /// Loading an external library is inherently unsafe. Users must try their best to load only
-    /// valid CLAP bundles.
+    /// Users of this function must ensure the given symbol `symbol_name` in the given library is ABI
+    /// compatible with a pointer to an [`EntryDescriptor`].
     pub unsafe fn load_from_symbol_in_library(
         library: Library,
         symbol_name: &CStr,
     ) -> Result<Self, PluginEntryError> {
         let symbol = library
-            .get::<*const EntryDescriptor>(symbol_name.to_bytes_with_nul())
+            .get::<*mut EntryDescriptor>(symbol_name.to_bytes_with_nul())
             .map_err(PluginEntryError::LibraryLoadingError)?;
 
-        let entry_ptr = NonNull::new(*symbol as *mut EntryDescriptor)
-            .ok_or(PluginEntryError::NullEntryPointer)?;
+        let entry_ptr = NonNull::new(*symbol).ok_or(PluginEntryError::NullEntryPointer)?;
 
         Ok(Self {
             _library: library,
@@ -72,7 +98,8 @@ impl LibraryEntry {
     }
 }
 
-// SAFETY: TODO
+// SAFETY: The pointer's value never changes, and since we hold onto the Library it comes from, it
+// will not be unloaded as long as this is alive.
 unsafe impl EntryProvider for LibraryEntry {
     #[inline]
     fn entry_pointer(&self) -> NonNull<EntryDescriptor> {
