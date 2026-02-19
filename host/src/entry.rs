@@ -78,7 +78,6 @@
 use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
-use std::path::Path;
 use std::ptr::NonNull;
 
 mod cache;
@@ -201,6 +200,7 @@ impl PluginEntry {
     #[cfg(feature = "libloading")]
     pub unsafe fn load<P: AsRef<std::ffi::OsStr>>(path: P) -> Result<Self, PluginEntryError> {
         use crate::entry::library::LibraryEntry;
+        use std::path::Path;
 
         let path = Path::new(&path);
 

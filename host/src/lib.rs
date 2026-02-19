@@ -20,7 +20,7 @@
 //!
 //! 1. CLAP plugins are distributed in dynamic library files. These are prebuilt
 //!    dynamically-loaded libraries (with a `.clap` extension), and can contain the implementations
-//!    of multiple plugins. They expose an [entry](PluginEntry) that can be loaded and initialized
+//!    of multiple plugins. They expose an [entry](entry::PluginEntry) that can be loaded and initialized
 //!    with the [`PluginEntry::load`](entry::PluginEntry::load) method. See the [`entry`] module
 //!    documentation for more information.
 //! 2. Plugins' entry points can expose multiple [factories](factory::Factory). These are singleton

@@ -25,17 +25,14 @@ pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<ClapBundle
 
 /// Loads all the given bundles, and returns a list of all the plugins in them.
 pub fn scan_bundles(bundles: Vec<ClapBundle>) -> Vec<FoundBundlePlugin> {
-    bundles
-        .into_par_iter()
-        .filter_map(|p| scan_plugin(p))
-        .collect()
+    bundles.into_par_iter().filter_map(scan_plugin).collect()
 }
 
 /// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
 pub fn scan_bundles_matching(bundles: Vec<ClapBundle>, plugin_id: &str) -> Vec<FoundBundlePlugin> {
     bundles
         .into_par_iter()
-        .filter_map(|p| scan_plugin(p))
+        .filter_map(scan_plugin)
         .filter(|p| p.plugins.iter().any(|p| p.id == plugin_id))
         .collect()
 }
