@@ -82,6 +82,13 @@ impl ClapFinder {
         }
     }
 
+    /// Appends a given list of paths to the paths that will be searched by this [`ClapFinder`].
+    #[inline]
+    pub fn add_paths(mut self, paths: impl IntoIterator<Item = PathBuf>) -> Self {
+        self.extend(paths);
+        self
+    }
+
     /// Follow symbolic links. By default, this is *enabled*.
     #[inline]
     pub fn follow_links(mut self, yes: bool) -> Self {
@@ -101,6 +108,13 @@ impl IntoIterator for ClapFinder {
             follow_links: self.follow_links,
             current_walkdir: None,
         }
+    }
+}
+
+impl Extend<PathBuf> for ClapFinder {
+    #[inline]
+    fn extend<T: IntoIterator<Item = PathBuf>>(&mut self, iter: T) {
+        self.paths.extend(iter);
     }
 }
 

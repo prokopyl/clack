@@ -19,7 +19,7 @@ pub fn standard_clap_paths() -> Vec<PathBuf> {
             paths.push(PathBuf::from(val).join("CLAP"))
         }
 
-        if let Some(dir) = dirs_sys::known_folder_local_app_data() {
+        if let Some(dir) = dirs::config_local_dir() {
             paths.push(dir.join("Programs\\Common\\CLAP"));
         }
     }
@@ -29,7 +29,7 @@ pub fn standard_clap_paths() -> Vec<PathBuf> {
     {
         paths.push(PathBuf::from("/Library/Audio/Plug-Ins/CLAP"));
 
-        if let Some(home_dir) = dirs_sys::home_dir() {
+        if let Some(home_dir) = dirs::home_dir() {
             paths.push(home_dir.join("Library/Audio/Plug-Ins/CLAP"));
         }
     }
@@ -40,7 +40,7 @@ pub fn standard_clap_paths() -> Vec<PathBuf> {
         paths.push("/usr/lib/clap".into());
         paths.push("/usr/lib64/clap".into());
 
-        if let Some(home_dir) = dirs_sys::home_dir() {
+        if let Some(home_dir) = dirs::home_dir() {
             paths.push(home_dir.join(".clap"));
         }
     }

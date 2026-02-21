@@ -6,7 +6,7 @@ rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-dirs-sys = "0.5.0"
+dirs = "6.0.0"
 walkdir = "2.5.0"
 
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
