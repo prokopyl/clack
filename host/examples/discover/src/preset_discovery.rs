@@ -9,13 +9,13 @@ pub mod data;
 mod indexer;
 mod metadata;
 
-pub fn get_presets(bundle: &PluginEntry) -> Vec<PresetDiscoveryData> {
+pub fn get_presets(entry: &PluginEntry) -> Vec<PresetDiscoveryData> {
     let host_info = HostInfo::new("", "", "", "").unwrap();
 
-    if let Some(discovery) = bundle.get_factory::<PresetDiscoveryFactory>() {
+    if let Some(discovery) = entry.get_factory::<PresetDiscoveryFactory>() {
         discovery
             .provider_descriptors()
-            .filter_map(|d| scan_provider(bundle, d, host_info.clone()))
+            .filter_map(|d| scan_provider(entry, d, host_info.clone()))
             .collect()
     } else {
         vec![]
@@ -23,12 +23,12 @@ pub fn get_presets(bundle: &PluginEntry) -> Vec<PresetDiscoveryData> {
 }
 
 pub fn scan_provider(
-    bundle: &PluginEntry,
+    entry: &PluginEntry,
     descriptor: &ProviderDescriptor,
     host_info: HostInfo,
 ) -> Option<PresetDiscoveryData> {
     let mut provider =
-        Provider::instantiate(PresetIndexer::new(), bundle, descriptor.id()?, &host_info).unwrap();
+        Provider::instantiate(PresetIndexer::new(), entry, descriptor.id()?, &host_info).unwrap();
 
     let indexer_data = provider.indexer_mut().take();
 

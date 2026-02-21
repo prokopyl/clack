@@ -7,27 +7,27 @@ use std::process::ExitCode;
 mod discovery;
 mod preset_discovery;
 
-/// A simple CLI tool to discover plugin bundles and extract information about their plugins and presets.
+/// A simple CLI tool to discover plugin files and extract information about their plugins and presets.
 ///
-/// To inspect a specific plugin or bundle, at least one of the `--plugin-id` (`-p`) or the `--bundle-path` (`-b`) parameters should be used.
-/// Otherwise, this tool will simply list all found CLAP bundles and plugins.
+/// To inspect a specific plugin or file, at least one of the `--plugin-id` (`-p`) or the `--file-path` (`-f`) parameters should be used.
+/// Otherwise, this tool will simply list all found CLAP file and plugins.
 #[derive(Parser)]
 #[command(about, long_about)]
 struct Cli {
-    /// Loads the plugin found in the CLAP bundle at the given path.
+    /// Loads the plugin found in the CLAP file at the given path.
     ///
-    /// If the bundle contains multiple plugins, this should be used in conjunction with the
+    /// If the file contains multiple plugins, this should be used in conjunction with the
     /// `--plugin-id` (`-p`) parameter to specify which one to load.
-    #[arg(short = 'b', long = "bundle-path")]
-    bundle_path: Option<PathBuf>,
+    #[arg(short = 'f', long = "file-path")]
+    file_path: Option<PathBuf>,
 
     /// Loads the CLAP plugin with the given unique ID.
     ///
-    /// This will start to scan the filesystem in the standard CLAP paths, and load all CLAP bundles
+    /// This will start to scan the filesystem in the standard CLAP paths, and load all CLAP files
     /// found in those paths to search for the plugin matching the given ID.
     ///
     /// If multiple plugins matching the given ID were found on the filesystem, this should be used
-    /// in conjunction with the `--bundle-path` (`-b`) parameter to specify which file to load the
+    /// in conjunction with the `--file-path` (`-f`) parameter to specify which file to load the
     /// plugin from.
     #[arg(short = 'p', long = "plugin-id")]
     plugin_id: Option<String>,
@@ -39,13 +39,13 @@ fn main() -> Result<(), ExitCode> {
     if matches!(
         args,
         Cli {
-            bundle_path: None,
+            file_path: None,
             plugin_id: None,
         }
     ) {
         list_plugins();
     } else {
-        scan_bundle(args.bundle_path, args.plugin_id.as_deref())?;
+        scan_file(args.file_path, args.plugin_id.as_deref())?;
     }
 
     Ok(())
@@ -60,34 +60,34 @@ pub fn list_plugins() {
         println!("\t - {}", path.display())
     }
 
-    let found_bundles = search_for_potential_bundles(standard_paths);
-    println!(" * Found {} potential CLAP bundles.", found_bundles.len());
+    let potential_files = search_for_potential_files(standard_paths);
+    println!(" * Found {} potential CLAP files.", potential_files.len());
 
-    for bundle in scan_bundles(found_bundles) {
-        println!("  > At {}", bundle.path.to_string_lossy());
-        for plugin in &bundle.plugins {
+    for clap_files in scan_files(potential_files) {
+        println!("  > At {}", clap_files.path.to_string_lossy());
+        for plugin in &clap_files.plugins {
             println!("\t- {}", plugin)
         }
     }
 }
 
-pub fn scan_bundle(path: Option<PathBuf>, id: Option<&str>) -> Result<(), ExitCode> {
-    let bundles = if let Some(path) = path {
+pub fn scan_file(path: Option<PathBuf>, id: Option<&str>) -> Result<(), ExitCode> {
+    let files = if let Some(path) = path {
         scan_plugin_from_path(path).into_iter().collect()
     } else {
         let standard_paths = scan_standard_paths();
-        let bundles = search_for_potential_bundles(standard_paths);
-        scan_bundles_matching(bundles, id.unwrap())
+        let potential_files = search_for_potential_files(standard_paths);
+        scan_files_matching(potential_files, id.unwrap())
     };
 
-    match bundles.as_slice() {
+    match files.as_slice() {
         [] => {
             eprintln!("No plugins found matching the given filters");
             return Err(ExitCode::FAILURE);
         }
-        [bundle] => {
-            println!("  > At {}", bundle.path.to_string_lossy());
-            for preset in get_presets(&bundle.bundle) {
+        [file] => {
+            println!("  > At {}", file.path.to_string_lossy());
+            for preset in get_presets(&file.entry) {
                 for preset in preset.presets_per_location {
                     println!("{preset}")
                 }
@@ -115,10 +115,10 @@ pub fn scan_bundle(path: Option<PathBuf>, id: Option<&str>) -> Result<(), ExitCo
                 }
             }
         }
-        bundles => {
-            for bundle in bundles {
-                println!("  > At {}", bundle.path.to_string_lossy());
-                for plugin in &bundle.plugins {
+        files => {
+            for file in files {
+                println!("  > At {}", file.path.to_string_lossy());
+                for plugin in &file.plugins {
                     println!("\t- {}", plugin)
                 }
             }

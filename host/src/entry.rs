@@ -5,7 +5,7 @@
 //! On Windows and Linux (and other non-macOS UNIXes), CLAP plugins are distributed as prebuilt
 //! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
 //! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
-//! point for the host to read into the bundle.
+//! point for the host to read into the library file.
 //!
 //! On macOS, CLAP plugins are distributed as a standard
 //! [bundle](https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/AboutBundles/AboutBundles.html),

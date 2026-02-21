@@ -3,13 +3,13 @@ use std::fs::FileType;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-/// A builder to create an iterator that yields paths to possible CLAP bundle dynamic library files.
+/// A builder to create an iterator that yields paths to possible CLAP dynamic library files.
 ///
 /// This type implements [`IntoIterator`] so that it may be used as the subject of a `for` loop
 /// directly.
 ///
-/// This documentation refers only to "possible" CLAP bundles, which means the file paths yielded
-/// by this type are not guaranteed to actually be CLAP bundles. It only seeks `.clap` files in the
+/// This documentation refers only to "possible" CLAP files, which means the file paths yielded
+/// by this type are not guaranteed to actually be CLAP files. It only seeks `.clap` files in the
 /// standard (or given) locations and filters candidates using information provided by the file
 /// system, but it never actually tries to open or load said files, both for performance and
 /// safety reasons (due to arbitrary code execution).
@@ -18,7 +18,7 @@ use walkdir::WalkDir;
 ///
 /// # Platform Compatibility Notes
 ///
-/// On macOS, a CLAP bundle is not a dynamic library file, but a standard [macOS bundle] instead,
+/// On macOS, a CLAP files is not a dynamic library file, but a standard [macOS bundle] instead,
 /// contrary to Windows and Linux CLAP bundles.
 ///
 /// This type does not yield the path to the CLAP macOS bundle itself, but when it does find one,
@@ -98,7 +98,7 @@ impl ClapFinder {
 }
 
 impl IntoIterator for ClapFinder {
-    type Item = ClapBundle;
+    type Item = PotentialClapFile;
     type IntoIter = ClapFinderIter;
 
     #[inline]
@@ -131,7 +131,7 @@ pub struct ClapFinderIter {
 }
 
 impl Iterator for ClapFinderIter {
-    type Item = ClapBundle;
+    type Item = PotentialClapFile;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -163,7 +163,7 @@ impl Iterator for ClapFinderIter {
 
             // If there is no way the current file can be a CLAP bundle, filter the entry out
             // and keep going or descending.
-            if !may_be_clap_bundle(entry.path(), entry.file_type()) {
+            if !may_be_clap_file(entry.path(), entry.file_type()) {
                 continue;
             }
 
@@ -171,7 +171,7 @@ impl Iterator for ClapFinderIter {
 
             // On Windows / Linux / other UNIXes, this is simple, as CLAP bundles are always files.
             #[cfg(not(target_os = "macos"))]
-            return Some(ClapBundle {
+            return Some(PotentialClapFile {
                 bundle_path: entry.into_path(),
             });
 
@@ -188,7 +188,7 @@ impl Iterator for ClapFinderIter {
                 // This directory is actually a bundle, so there is nothing for us there.
                 walkdir.skip_current_dir();
 
-                return Some(ClapBundle {
+                return Some(PotentialClapFile {
                     executable_path: Some(executable_path),
                     bundle_path: entry.into_path(),
                 });
@@ -210,7 +210,7 @@ fn get_executable_path_of_bundle(bundle_path: &Path) -> Option<PathBuf> {
     Some(executable_path)
 }
 
-fn may_be_clap_bundle(path: &Path, file_type: FileType) -> bool {
+fn may_be_clap_file(path: &Path, file_type: FileType) -> bool {
     #[cfg(target_os = "macos")]
     if file_type.is_file() {
         return false;
@@ -228,19 +228,19 @@ fn may_be_clap_bundle(path: &Path, file_type: FileType) -> bool {
     ext == "clap"
 }
 
-/// Information about a CLAP bundle.
+/// Information about a potential CLAP plugin file.
 ///
-/// Use this to retrieve a CLAP bundle's [`bundle_path`](Self::bundle_path) and
+/// Use this to retrieve a CLAP file's [`bundle_path`](Self::bundle_path) and
 /// [`executable_path`](Self::executable_path).
 #[derive(Clone)]
-pub struct ClapBundle {
+pub struct PotentialClapFile {
     bundle_path: PathBuf,
     #[cfg(target_os = "macos")]
     executable_path: Option<PathBuf>,
 }
 
-impl ClapBundle {
-    /// Returns the path of the CLAP bundle.
+impl PotentialClapFile {
+    /// Returns the path of the CLAP file.
     ///
     /// This is the path you want to pass to a CLAP entry's `init` function.
     #[inline]
@@ -248,15 +248,15 @@ impl ClapBundle {
         &self.bundle_path
     }
 
-    /// Returns the path of the CLAP bundle, consuming this [`ClapBundle`].
+    /// Returns the path of the CLAP file, consuming this [`PotentialClapFile`].
     #[inline]
     pub fn into_bundle_path(self) -> PathBuf {
         self.bundle_path
     }
 
-    /// Returns the path to the executable dynamic library file of the CLAP bundle.
+    /// Returns the path to the executable dynamic library file of the CLAP file.
     ///
-    /// On most platforms this is the same file as the CLAP bundle itself, but on macOS it is
+    /// On most platforms this is the same file as the CLAP file itself, but on macOS it is
     /// the executable file of the standard bundle instead.
     #[inline]
     pub fn executable_path(&self) -> &Path {
@@ -272,20 +272,18 @@ impl ClapBundle {
     }
 }
 
-impl Debug for ClapBundle {
+impl Debug for PotentialClapFile {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         #[cfg(target_os = "macos")]
         {
-            f.debug_struct("ClapBundle")
+            f.debug_struct("ClapFile")
                 .field("bundle_path", &self.bundle_path)
                 .field("executable_path", &self.executable_path)
                 .finish()
         }
         #[cfg(not(target_os = "macos"))]
         {
-            f.debug_tuple("ClapBundle")
-                .field(&self.bundle_path)
-                .finish()
+            f.debug_tuple("ClapFile").field(&self.bundle_path).finish()
         }
     }
 }

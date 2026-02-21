@@ -94,7 +94,7 @@ impl HostHandlers for MyHost {
 
 #[test]
 pub fn handles_instantiation_errors() {
-    let bundle = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
         c"/home/user/.clap/u-he/libdiva.so",
     )
     .unwrap();
@@ -104,7 +104,7 @@ pub fn handles_instantiation_errors() {
     let plugin_instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared,
         |_| (),
-        &bundle,
+        &entry,
         c"com.u-he.diva",
         &host_info,
     );
@@ -124,12 +124,12 @@ pub fn it_works_concurrently_with_static_entrypoint() {
                 .name(format!("Test {i}"))
                 .spawn_scoped(s, move || {
                     // SAFETY: This descriptor comes from clack
-                    let bundle = unsafe {
+                    let entry = unsafe {
                         PluginEntry::load_from_raw(entrypoint, c"/home/user/.clap/u-he/libdiva.so")
                     }
                     .unwrap();
 
-                    let desc = bundle
+                    let desc = entry
                         .get_factory::<PluginFactory>()
                         .unwrap()
                         .plugin_descriptor(0)

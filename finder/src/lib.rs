@@ -4,5 +4,5 @@
 mod finder;
 mod paths;
 
-pub use finder::{ClapBundle, ClapFinder, ClapFinderIter};
+pub use finder::{ClapFinder, ClapFinderIter, PotentialClapFile};
 pub use paths::standard_clap_paths;

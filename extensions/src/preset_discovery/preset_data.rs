@@ -206,7 +206,7 @@ impl Default for Flags {
 pub enum Location<'a> {
     /// The plugin itself.
     ///
-    /// This is used to mean that the plugin has presets included in its bundle.
+    /// This is used to mean that the plugin has presets included in its own entry file.
     Plugin,
     /// A file or directory.
     File {

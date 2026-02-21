@@ -106,15 +106,14 @@ impl Drop for MyHostMainThread<'_> {
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
-    let bundle =
-        PluginEntry::load_from_clack::<SinglePluginEntry<MyPlugin>>(c"/my/plugin").unwrap();
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<MyPlugin>>(c"/my/plugin").unwrap();
 
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {
             init: OnceLock::new(),
         },
         |_| MyHostMainThread { instance: None },
-        &bundle,
+        &entry,
         c"my.plugin",
         &host,
     )

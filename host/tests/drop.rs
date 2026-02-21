@@ -125,7 +125,7 @@ impl HostHandlers for MyHost {
 }
 
 fn instantiate() -> PluginInstance<MyHost> {
-    let bundle = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
         c"/home/user/.clap/u-he/libdiva.so",
     )
     .unwrap();
@@ -135,7 +135,7 @@ fn instantiate() -> PluginInstance<MyHost> {
     let plugin_instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared,
         |_| (),
-        &bundle,
+        &entry,
         c"com.u-he.diva",
         &host_info,
     );

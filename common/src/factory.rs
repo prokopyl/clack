@@ -1,6 +1,6 @@
 //! Factory types and associated utilities.
 //!
-//! In CLAP, factories are singleton objects exposed by the plugin bundle's
+//! In CLAP, factories are singleton objects exposed by the plugin file's
 //! [entry point](crate::entry), which can in turn expose various functionalities.
 //!
 //! Each factory type has a standard, unique [identifier](Factory::IDENTIFIERS), which allows hosts
@@ -9,7 +9,7 @@
 //! In Clack, factory implementations are represented by the [`Factory`] trait.
 //!
 //! The main factory type is the [`PluginFactory`](plugin::PluginFactory), which enables hosts to
-//! list all the plugin implementations present in a bundle, and then instantiate on of them.
+//! list all the plugin implementations present in a CLAP file, and then instantiate on of them.
 //!
 
 use core::ffi::CStr;

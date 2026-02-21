@@ -1,4 +1,4 @@
-use clack_finder::{ClapBundle, ClapFinder};
+use clack_finder::{ClapFinder, PotentialClapFile};
 use clack_host::entry::LibraryEntry;
 use clack_host::prelude::*;
 use rayon::prelude::*;
@@ -6,63 +6,62 @@ use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 
-/// The descriptor of a plugin that was found, alongside the bundle it was loaded from, as well
-/// as its path.
-pub struct FoundBundlePlugin {
-    /// The plugin's descriptor.
+/// A plugin entry that was successfully scanned for the plugins it exposes.
+pub struct ScannedClapFile {
+    /// The plugins' descriptors.
     pub plugins: Vec<PluginDescriptor>,
-    /// The bundle the descriptor was loaded from.
-    pub bundle: PluginEntry,
-    /// The path of the bundle's file.
+    /// The entry the descriptors were loaded from.
+    pub entry: PluginEntry,
+    /// The path of the entry's bundle file.
     pub path: PathBuf,
 }
 
 /// Search the given directories' contents, and returns a list of all the files that could be CLAP
-/// bundles.
-pub fn search_for_potential_bundles(search_dirs: Vec<PathBuf>) -> Vec<ClapBundle> {
+/// files.
+pub fn search_for_potential_files(search_dirs: Vec<PathBuf>) -> Vec<PotentialClapFile> {
     ClapFinder::new(search_dirs).into_iter().collect()
 }
 
-/// Loads all the given bundles, and returns a list of all the plugins in them.
-pub fn scan_bundles(bundles: Vec<ClapBundle>) -> Vec<FoundBundlePlugin> {
-    bundles.into_par_iter().filter_map(scan_plugin).collect()
+/// Loads all the given files, and returns a list of all the plugins in them.
+pub fn scan_files(files: Vec<PotentialClapFile>) -> Vec<ScannedClapFile> {
+    files.into_par_iter().filter_map(scan_file).collect()
 }
 
-/// Loads all the given bundles, and returns a list of all the plugins that match the given ID.
-pub fn scan_bundles_matching(bundles: Vec<ClapBundle>, plugin_id: &str) -> Vec<FoundBundlePlugin> {
-    bundles
+/// Loads all the given files, and returns a list of all the plugins that match the given ID.
+pub fn scan_files_matching(files: Vec<PotentialClapFile>, plugin_id: &str) -> Vec<ScannedClapFile> {
+    files
         .into_par_iter()
-        .filter_map(scan_plugin)
+        .filter_map(scan_file)
         .filter(|p| p.plugins.iter().any(|p| p.id == plugin_id))
         .collect()
 }
 
-/// Scans a given bundle, looking for a plugin matching the given ID.
-/// If this file wasn't a bundle or doesn't contain a plugin with a given ID, this returns `None`.
-pub fn scan_plugin(path: ClapBundle) -> Option<FoundBundlePlugin> {
-    let bundle_path = CString::new(path.bundle_path().to_string_lossy().into_owned()).ok()?;
+/// Scans a given file, looking for a plugin matching the given ID.
+/// If this file wasn't a CLAP file or doesn't contain a plugin with a given ID, this returns `None`.
+pub fn scan_file(file: PotentialClapFile) -> Option<ScannedClapFile> {
+    let bundle_path = CString::new(file.bundle_path().to_string_lossy().into_owned()).ok()?;
 
-    let library = unsafe { LibraryEntry::load_from_path(path.executable_path()) }.ok()?;
-    let bundle = unsafe { PluginEntry::load_from(library, &bundle_path) }.ok()?;
+    let library = unsafe { LibraryEntry::load_from_path(file.executable_path()) }.ok()?;
+    let entry = unsafe { PluginEntry::load_from(library, &bundle_path) }.ok()?;
 
-    scan_bundle(bundle, path.into_bundle_path())
+    scan_entry(entry, file.into_bundle_path())
 }
 
-pub fn scan_plugin_from_path(path: PathBuf) -> Option<FoundBundlePlugin> {
-    let bundle = unsafe { PluginEntry::load(&path) }.ok()?;
+pub fn scan_plugin_from_path(path: PathBuf) -> Option<ScannedClapFile> {
+    let entry = unsafe { PluginEntry::load(&path) }.ok()?;
 
-    scan_bundle(bundle, path)
+    scan_entry(entry, path)
 }
 
-fn scan_bundle(bundle: PluginEntry, bundle_path: PathBuf) -> Option<FoundBundlePlugin> {
-    Some(FoundBundlePlugin {
-        plugins: bundle
+fn scan_entry(entry: PluginEntry, path: PathBuf) -> Option<ScannedClapFile> {
+    Some(ScannedClapFile {
+        plugins: entry
             .get_plugin_factory()?
             .plugin_descriptors()
             .filter_map(PluginDescriptor::try_from)
             .collect(),
-        bundle,
-        path: bundle_path,
+        entry,
+        path,
     })
 }
 

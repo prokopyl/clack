@@ -159,15 +159,15 @@
 //! let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 //!
 //! # mod diva { include!("entry/diva_stub.rs"); }
-//! # let bundle = PluginEntry::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
+//! # let entry = PluginEntry::load_from_clack::<diva::Entry>(c"/home/user/.clap/u-he/libdiva.so")?;
 //! # /*
-//! let bundle = PluginBundle::load("/home/user/.clap/u-he/libdiva.so")?;
+//! let entry = PluginEntry::load("/home/user/.clap/u-he/libdiva.so")?;
 //! # */
 //!
 //! let mut plugin_instance = PluginInstance::<MyHost>::new(
 //!     |_| MyHostShared::default(),
 //!     |shared| MyHostMainThread { shared, instance: None, latency_changed: false },
-//!     &bundle,
+//!     &entry,
 //!     // We're hard-coding a specific plugin to load for this example
 //!     c"com.u-he.diva",
 //!     &host_info

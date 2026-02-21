@@ -17,14 +17,14 @@ pub(crate) struct PluginInstanceInner<H: HostHandlers> {
 
     is_started: AtomicBool,
 
-    _plugin_bundle: PluginEntry, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
+    _plugin_entry: PluginEntry, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
 impl<H: HostHandlers> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
-        plugin_bundle: &PluginEntry,
+        plugin_entry: &PluginEntry,
         plugin_id: &CStr,
         host_info: HostInfo,
     ) -> Result<Arc<Self>, PluginInstanceError>
@@ -34,7 +34,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             &'s <H as HostHandlers>::Shared<'s>,
         ) -> <H as HostHandlers>::MainThread<'s>,
     {
-        let plugin_factory = plugin_bundle
+        let plugin_factory = plugin_entry
             .get_plugin_factory()
             .ok_or(PluginInstanceError::MissingPluginFactory)?;
 
@@ -45,7 +45,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             host_wrapper,
             host_descriptor,
             plugin_ptr: None,
-            _plugin_bundle: plugin_bundle.clone(),
+            _plugin_entry: plugin_entry.clone(),
             is_started: AtomicBool::new(false),
         });
 

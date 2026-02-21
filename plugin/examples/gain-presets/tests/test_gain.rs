@@ -12,9 +12,9 @@ pub fn it_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
+    let entry = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
 
-    let descriptor = bundle
+    let descriptor = entry
         .get_factory::<PluginFactory>()
         .unwrap()
         .plugin_descriptor(0)
@@ -46,7 +46,7 @@ pub fn it_works() {
     let mut plugin = PluginInstance::<TestHostHandlers>::new(
         |_| TestHostShared,
         |_| TestHostMainThread,
-        &bundle,
+        &entry,
         descriptor.id().unwrap(),
         &info,
     )
@@ -141,8 +141,8 @@ fn preset_listing_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
-    let factory = bundle.get_factory::<PresetDiscoveryFactory>().unwrap();
+    let entry = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
+    let factory = entry.get_factory::<PresetDiscoveryFactory>().unwrap();
     let providers: Vec<_> = factory.provider_descriptors().collect();
     assert_eq!(providers.len(), 1);
     let provider = providers[0];
@@ -153,8 +153,7 @@ fn preset_listing_works() {
 
     let provider_id = provider.id().unwrap();
     let mut provider =
-        Provider::instantiate(TestIndexer { declared: false }, &bundle, provider_id, &info)
-            .unwrap();
+        Provider::instantiate(TestIndexer { declared: false }, &entry, provider_id, &info).unwrap();
 
     assert!(provider.indexer().declared);
 

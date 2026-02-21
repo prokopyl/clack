@@ -11,9 +11,9 @@ pub fn it_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginEntry::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<GainPlugin>>(c"").unwrap();
 
-    let descriptor = bundle
+    let descriptor = entry
         .get_factory::<PluginFactory>()
         .unwrap()
         .plugin_descriptor(0)
@@ -44,7 +44,7 @@ pub fn it_works() {
     let mut plugin = PluginInstance::<TestHostHandlers>::new(
         |_| TestHostShared,
         |_| TestHostMainThread,
-        &bundle,
+        &entry,
         descriptor.id().unwrap(),
         &info,
     )

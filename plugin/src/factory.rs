@@ -1,6 +1,6 @@
 //! Factory types and associated utilities.
 //!
-//! In CLAP, factories are singleton objects exposed by the plugin bundle's
+//! In CLAP, factories are singleton objects exposed by the plugin library's
 //! [entry point](crate::entry), which can in turn expose various functionalities.
 //!
 //! Each factory type has a standard, unique [identifier](Factory::IDENTIFIERS), which allows hosts
@@ -10,7 +10,7 @@
 //!
 //! The main factory type (and, at the time of this writing, the only stable standard one), is the
 //! [`PluginFactory`](plugin::PluginFactoryImpl), which enables hosts to list all the plugin
-//! implementations present in a bundle.
+//! implementations present in an entry.
 //!
 //! See the [`Entry`](crate::entry::Entry) trait documentation for an example on how to create a
 //! custom entry and plugin factory.

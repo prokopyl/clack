@@ -33,8 +33,8 @@ pub use error::*;
 /// use clack_host::prelude::*;
 /// use clack_extensions::preset_discovery::prelude::*;
 ///
-/// fn get_all_metadata(bundle: &PluginEntry, host_info: &HostInfo) -> Result<(), Box<dyn Error>> {
-///     let Some(preset_discovery_factory) = bundle.get_factory::<PresetDiscoveryFactory>() else {
+/// fn get_all_metadata(entry: &PluginEntry, host_info: &HostInfo) -> Result<(), Box<dyn Error>> {
+///     let Some(preset_discovery_factory) = entry.get_factory::<PresetDiscoveryFactory>() else {
 ///         return Ok(())
 ///     };
 ///
@@ -46,7 +46,7 @@ pub use error::*;
 ///             continue
 ///         };
 ///
-///         let mut provider = Provider::instantiate(MyIndexer, bundle, provider_id, host_info)?;
+///         let mut provider = Provider::instantiate(MyIndexer, entry, provider_id, host_info)?;
 ///         // Retreive location info from the indexer, and discover all files with e.g. walkdir
 ///         let locations = /* ... */
 /// # [Location::Plugin];
@@ -92,7 +92,7 @@ pub struct Provider<I> {
 
     // This is only here to be kept alive
     _indexer_descriptor: Pin<Box<RawIndexerDescriptor>>,
-    _plugin_bundle: PluginEntry,
+    _plugin_entry: PluginEntry,
     _no_send: PhantomData<*const ()>,
 }
 
@@ -100,7 +100,7 @@ impl<I> Provider<I> {
     /// Instantiate a new provider, backed by a given [`indexer`](IndexerImpl) instance of type `I`.
     ///
     /// This method requires a reference to the [`PluginEntry`] that contains the provider, as well
-    /// as the unique `provider_id` of the provider to create (since bundles can have multiple providers).
+    /// as the unique `provider_id` of the provider to create (since entries can have multiple providers).
     /// The `provider_id` should come from a [`ProviderDescriptor`], provided by a [`PresetDiscoveryFactory`] instance.
     ///
     /// Moreover, a [`HostInfo`] providing metadata about the host must also be provider.
@@ -142,7 +142,7 @@ impl<I> Provider<I> {
             indexer_wrapper,
             _indexer_descriptor: indexer_descriptor,
             provider_ptr,
-            _plugin_bundle: plugin_entry.clone(),
+            _plugin_entry: plugin_entry.clone(),
             _no_send: PhantomData,
         })
     }

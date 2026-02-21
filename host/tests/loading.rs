@@ -4,16 +4,16 @@ use clack_host::factory::plugin::PluginFactory;
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
 pub fn it_works() {
-    let bundle_path = format!(
+    let library_path = format!(
         "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),
         std::env::consts::DLL_PREFIX,
         std::env::consts::DLL_SUFFIX
     );
     // SAFETY: we made the plugin, if it's not UB-free then this is what this test is for :)
-    let bundle = unsafe { PluginEntry::load(bundle_path).unwrap() };
+    let entry = unsafe { PluginEntry::load(library_path).unwrap() };
 
-    let desc = bundle
+    let desc = entry
         .get_factory::<PluginFactory>()
         .unwrap()
         .plugin_descriptor(0)
@@ -24,7 +24,7 @@ pub fn it_works() {
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
 pub fn it_works_concurrently() {
-    let bundle_path = format!(
+    let entry_path = format!(
         "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),
         std::env::consts::DLL_PREFIX,
@@ -35,9 +35,9 @@ pub fn it_works_concurrently() {
         for _ in 0..300 {
             s.spawn(|| {
                 // SAFETY: same as test above
-                let bundle = unsafe { PluginEntry::load(&bundle_path).unwrap() };
+                let entry = unsafe { PluginEntry::load(&entry_path).unwrap() };
 
-                let desc = bundle
+                let desc = entry
                     .get_factory::<PluginFactory>()
                     .unwrap()
                     .plugin_descriptor(0)

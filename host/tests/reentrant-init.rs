@@ -1,6 +1,5 @@
 use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, PluginTimerImpl, TimerId};
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;
 use std::sync::OnceLock;
 
@@ -41,13 +40,11 @@ impl DefaultPluginFactory for MyPlugin {
         _shared: &(),
     ) -> Result<MyPluginMainThread, PluginError> {
         let timer: HostTimer = host.get_extension().unwrap();
-        let timer_id = timer.register_timer(&mut host, 1_000).unwrap();
+        let timer_id = timer.register_timer(&mut host, 1_000)?;
         assert_eq!(timer_id, TimerId(5));
         Ok(MyPluginMainThread)
     }
 }
-
-static MY_PLUGIN_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<MyPlugin>);
 
 struct MyHost;
 
@@ -117,8 +114,7 @@ impl HostTimerImpl for MyHostMainThread<'_> {
 fn can_call_host_methods_during_init() {
     let host = HostInfo::new("host", "host", "host", "1.0").unwrap();
 
-    // SAFETY: This bundle comes from Clack
-    let bundle = unsafe { PluginEntry::load_from_raw(&MY_PLUGIN_ENTRY, c"/my/plugin") }.unwrap();
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<MyPlugin>>(c"/my/plugin").unwrap();
     let instance = PluginInstance::<MyHost>::new(
         |_| MyHostShared {
             init: OnceLock::new(),
@@ -127,7 +123,7 @@ fn can_call_host_methods_during_init() {
             shared,
             timer_registered: false,
         },
-        &bundle,
+        &entry,
         c"my.plugin",
         &host,
     )

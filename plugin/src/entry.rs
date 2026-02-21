@@ -1,21 +1,21 @@
-//! Types to expose and customize a CLAP bundle's entry.
+//! Types to expose and customize a CLAP file's entry.
 //!
 //! On Windows and Linux (and other non-macOS UNIXes), CLAP plugins are distributed as prebuilt
 //! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
 //! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
-//! point for the host to read into the bundle.
+//! point for the host to read into the library file.
 //!
 //! On macOS, CLAP plugins are distributed as a standard
 //! [bundle](https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/AboutBundles/AboutBundles.html),
 //! which contains the aforementioned dynamically-loaded libraries as its executable file.
 //!
-//! A bundle's [`Entry`] is the only exposed symbol in the library. Once
+//! A CLAP's [`Entry`] is the only exposed symbol in the library. Once
 //! [initialized](Entry::new), its role is to expose a number of [factories](Factory), which are
 //! singletons implementing various functionalities. The most relevant is the [`PluginFactory`](crate::factory::plugin::PluginFactoryImpl),
 //! which allows to list and instantiate plugins. See the [`factory`](crate::factory) module
 //! documentation to learn more about factories.
 //!
-//! An entry type can then be exposed to the host reading the bundle file by using the
+//! An entry type can then be exposed to the host reading the library file by using the
 //! [`clack_export_entry`](crate::clack_export_entry) macro.
 //!
 //! See the [`Entry`] trait documentation for information and examples on how to implement your own
@@ -50,11 +50,11 @@ pub mod prelude {
     };
 }
 
-/// A CLAP bundle's entry point.
+/// A CLAP file's entry point.
 ///
-/// This trait can be implemented by a custom, user-provided type in order to customize the bundle's
+/// This trait can be implemented by a custom, user-provided type in order to customize the library's
 /// entrypoint behavior. The [`clack_export_entry!`](crate::clack_export_entry) macro can then be
-/// used to set that type as the bundle's entry point to be discovered and loaded by hosts.
+/// used to set that type as the library's entry point to be discovered and loaded by hosts.
 ///
 /// If you only care about the entry exposing a single plugin, you may use the [`SinglePluginEntry`]
 /// type instead of making your own.
@@ -170,6 +170,14 @@ pub trait Entry: Sized + Send + Sync + 'static {
     /// The path of the bundle file this entry was loaded from is also given by the host, in case
     /// extra neighboring files need to be loaded.
     ///
+    /// # Platform Compatibility notes
+    ///
+    /// On Windows and Linux, this `bundle_path` is the one of the dynamic library file this entry
+    /// was loaded from.
+    ///
+    /// On macOS, `bundle_path` should be the path of the actual bundle directory the library
+    /// this entry was loaded from, resides in.
+    ///
     /// # Errors
     ///
     /// This returns [`Err`] if any error occurred during instantiation.
@@ -182,7 +190,7 @@ pub trait Entry: Sized + Send + Sync + 'static {
     fn declare_factories<'a>(&'a self, builder: &mut EntryFactories<'a>);
 }
 
-/// An error indicating a bundle's entry has failed loading.
+/// An error indicating an entry has failed loading.
 ///
 /// This error is returned by [`Entry::new`] when it fails.
 #[derive(Copy, Clone, Debug)]
@@ -196,7 +204,7 @@ impl Display for EntryLoadError {
 
 impl Error for EntryLoadError {}
 
-/// Exposes a given [`Entry`] type to the host as *the* bundle's entry point.
+/// Exposes a given [`Entry`] type to the host as *the* library's entry point.
 ///
 /// This macro exports the standard CLAP symbol `clap_entry`, set to an [`EntryDescriptor`] which
 /// relies on the given `entry_type` for behavior.
