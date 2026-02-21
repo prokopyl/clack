@@ -123,13 +123,13 @@ where
     use diva_stub::DivaPluginStub;
     let host_info = HostInfo::new("Legit Studio", "Legit Ltd.", "https://example.com", "4.3.2")?;
 
-    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(c"")?;
+    let entry = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(c"")?;
 
-    let plugin_descriptor = bundle
+    let plugin_descriptor = entry
         .get_plugin_factory()
         .unwrap()
         .plugin_descriptors()
-        // We're assuming this specific plugin is in this bundle for this example.
+        // We're assuming this specific plugin is in this entry for this example.
         // A real host would store all descriptors in a list and show them to the user.
         .find(|d| d.id().unwrap().to_bytes() == b"com.u-he.diva")
         .unwrap();
@@ -137,7 +137,7 @@ where
     let plugin_instance = PluginInstance::<H>::new(
         shared,
         main_thread,
-        &bundle,
+        &entry,
         plugin_descriptor.id().unwrap(),
         &host_info,
     )?;

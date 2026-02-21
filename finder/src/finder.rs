@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::fs::FileType;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -81,6 +82,13 @@ impl ClapFinder {
         }
     }
 
+    /// Appends a given list of paths to the paths that will be searched by this [`ClapFinder`].
+    #[inline]
+    pub fn add_paths(mut self, paths: impl IntoIterator<Item = PathBuf>) -> Self {
+        self.extend(paths);
+        self
+    }
+
     /// Follow symbolic links. By default, this is *enabled*.
     #[inline]
     pub fn follow_links(mut self, yes: bool) -> Self {
@@ -90,7 +98,7 @@ impl ClapFinder {
 }
 
 impl IntoIterator for ClapFinder {
-    type Item = PathBuf;
+    type Item = ClapBundle;
     type IntoIter = ClapFinderIter;
 
     #[inline]
@@ -100,6 +108,13 @@ impl IntoIterator for ClapFinder {
             follow_links: self.follow_links,
             current_walkdir: None,
         }
+    }
+}
+
+impl Extend<PathBuf> for ClapFinder {
+    #[inline]
+    fn extend<T: IntoIterator<Item = PathBuf>>(&mut self, iter: T) {
+        self.paths.extend(iter);
     }
 }
 
@@ -116,7 +131,7 @@ pub struct ClapFinderIter {
 }
 
 impl Iterator for ClapFinderIter {
-    type Item = PathBuf;
+    type Item = ClapBundle;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -156,7 +171,9 @@ impl Iterator for ClapFinderIter {
 
             // On Windows / Linux / other UNIXes, this is simple, as CLAP bundles are always files.
             #[cfg(not(target_os = "macos"))]
-            return Some(entry.into_path());
+            return Some(ClapBundle {
+                bundle_path: entry.into_path(),
+            });
 
             #[cfg(target_os = "macos")]
             {
@@ -171,14 +188,17 @@ impl Iterator for ClapFinderIter {
                 // This directory is actually a bundle, so there is nothing for us there.
                 walkdir.skip_current_dir();
 
-                return Some(executable_path);
+                return Some(ClapBundle {
+                    executable_path: Some(executable_path),
+                    bundle_path: entry.into_path(),
+                });
             }
         }
     }
 }
 
 #[cfg(target_os = "macos")]
-fn get_executable_path_of_bundle(bundle_path: &std::path::Path) -> Option<PathBuf> {
+fn get_executable_path_of_bundle(bundle_path: &Path) -> Option<PathBuf> {
     use objc2_foundation::{NSBundle, NSURL};
 
     let url = NSURL::from_directory_path(bundle_path)?;
@@ -206,4 +226,66 @@ fn may_be_clap_bundle(path: &Path, file_type: FileType) -> bool {
     };
 
     ext == "clap"
+}
+
+/// Information about a CLAP bundle.
+///
+/// Use this to retrieve a CLAP bundle's [`bundle_path`](Self::bundle_path) and
+/// [`executable_path`](Self::executable_path).
+#[derive(Clone)]
+pub struct ClapBundle {
+    bundle_path: PathBuf,
+    #[cfg(target_os = "macos")]
+    executable_path: Option<PathBuf>,
+}
+
+impl ClapBundle {
+    /// Returns the path of the CLAP bundle.
+    ///
+    /// This is the path you want to pass to a CLAP entry's `init` function.
+    #[inline]
+    pub fn bundle_path(&self) -> &Path {
+        &self.bundle_path
+    }
+
+    /// Returns the path of the CLAP bundle, consuming this [`ClapBundle`].
+    #[inline]
+    pub fn into_bundle_path(self) -> PathBuf {
+        self.bundle_path
+    }
+
+    /// Returns the path to the executable dynamic library file of the CLAP bundle.
+    ///
+    /// On most platforms this is the same file as the CLAP bundle itself, but on macOS it is
+    /// the executable file of the standard bundle instead.
+    #[inline]
+    pub fn executable_path(&self) -> &Path {
+        #[cfg(target_os = "macos")]
+        {
+            self.executable_path.as_ref().unwrap_or(&self.bundle_path)
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            &self.bundle_path
+        }
+    }
+}
+
+impl Debug for ClapBundle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        #[cfg(target_os = "macos")]
+        {
+            f.debug_struct("ClapBundle")
+                .field("bundle_path", &self.bundle_path)
+                .field("executable_path", &self.executable_path)
+                .finish()
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            f.debug_tuple("ClapBundle")
+                .field(&self.bundle_path)
+                .finish()
+        }
+    }
 }

@@ -12,9 +12,12 @@ clack-plugin = { workspace = true, optional = true }
 
 libloading = { workspace = true, optional = true }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation = { version = "0.3.2", features = ["NSBundle", "NSURL"], optional = true }
+
 [features]
 default = ["libloading"]
-libloading = ["dep:libloading"]
+libloading = ["dep:libloading", "dep:objc2-foundation"]
 clack-plugin = ["dep:clack-plugin"]
 
 [dev-dependencies]

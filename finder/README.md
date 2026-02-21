@@ -1,3 +1,5 @@
+# `clack-finder`
+
 A small utility library to help you find your [CLAP](https://cleveraudio.org/) audio plugins!
 
 ```rust
@@ -10,3 +12,5 @@ pub fn main() {
     }
 }
 ```
+
+Note that despite this crate's name, this crate does not depend on the rest of the Clack libraries, or vice versa.

@@ -1,9 +1,13 @@
 //! Types to expose and customize a CLAP bundle's entry.
 //!
-//! CLAP plugins are distributed in binary files called bundles, which are prebuilt
+//! On Windows and Linux (and other non-macOS UNIXes), CLAP plugins are distributed as prebuilt
 //! dynamically-loaded libraries (usually `.dll` or `.so` files) with a `.clap` extension.
 //! They expose a single [`EntryDescriptor`], which, once initialized, acts as the entry
 //! point for the host to read into the bundle.
+//!
+//! On macOS, CLAP plugins are distributed as a standard
+//! [bundle](https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/AboutBundles/AboutBundles.html),
+//! which contains the aforementioned dynamically-loaded libraries as its executable file.
 //!
 //! A bundle's [`Entry`] is the only exposed symbol in the library. Once
 //! [initialized](Entry::new), its role is to expose a number of [factories](Factory), which are
@@ -340,7 +344,7 @@ impl<'a> EntryFactories<'a> {
         self.found
     }
 
-    /// Adds a given factory implementation to the list of factories this bundle entry supports.
+    /// Adds a given factory implementation to the list of factories this entry supports.
     ///
     /// This method returns the factory itself, allowing for easy method chaining and a builder-like
     /// usage pattern.

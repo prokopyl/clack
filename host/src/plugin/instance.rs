@@ -17,14 +17,14 @@ pub(crate) struct PluginInstanceInner<H: HostHandlers> {
 
     is_started: AtomicBool,
 
-    _plugin_bundle: PluginBundle, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
+    _plugin_bundle: PluginEntry, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
 impl<H: HostHandlers> PluginInstanceInner<H> {
     pub(crate) fn instantiate<FH, FS>(
         shared: FS,
         main_thread: FH,
-        plugin_bundle: &PluginBundle,
+        plugin_bundle: &PluginEntry,
         plugin_id: &CStr,
         host_info: HostInfo,
     ) -> Result<Arc<Self>, PluginInstanceError>

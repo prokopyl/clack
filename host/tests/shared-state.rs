@@ -86,7 +86,7 @@ impl HostHandlers for MyHost {
 
 #[test]
 pub fn handles_drop_order() {
-    let bundle = PluginBundle::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
+    let bundle = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
         c"/home/user/.clap/u-he/libdiva.so",
     )
     .unwrap();

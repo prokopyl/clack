@@ -1,7 +1,7 @@
 use crate::discovery::*;
 use crate::preset_discovery::get_presets;
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 mod discovery;
@@ -45,7 +45,7 @@ fn main() -> Result<(), ExitCode> {
     ) {
         list_plugins();
     } else {
-        scan_bundle(args.bundle_path.as_deref(), args.plugin_id.as_deref())?;
+        scan_bundle(args.bundle_path, args.plugin_id.as_deref())?;
     }
 
     Ok(())
@@ -63,7 +63,7 @@ pub fn list_plugins() {
     let found_bundles = search_for_potential_bundles(standard_paths);
     println!(" * Found {} potential CLAP bundles.", found_bundles.len());
 
-    for bundle in scan_bundles(&found_bundles) {
+    for bundle in scan_bundles(found_bundles) {
         println!("  > At {}", bundle.path.to_string_lossy());
         for plugin in &bundle.plugins {
             println!("\t- {}", plugin)
@@ -71,13 +71,13 @@ pub fn list_plugins() {
     }
 }
 
-pub fn scan_bundle(path: Option<&Path>, id: Option<&str>) -> Result<(), ExitCode> {
+pub fn scan_bundle(path: Option<PathBuf>, id: Option<&str>) -> Result<(), ExitCode> {
     let bundles = if let Some(path) = path {
-        scan_plugin(path).into_iter().collect()
+        scan_plugin_from_path(path).into_iter().collect()
     } else {
         let standard_paths = scan_standard_paths();
         let bundles = search_for_potential_bundles(standard_paths);
-        scan_bundles_matching(&bundles, id.unwrap())
+        scan_bundles_matching(bundles, id.unwrap())
     };
 
     match bundles.as_slice() {

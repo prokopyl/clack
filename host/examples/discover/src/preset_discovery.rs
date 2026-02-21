@@ -1,5 +1,5 @@
 use clack_extensions::preset_discovery::{self, prelude::*};
-use clack_host::prelude::{HostInfo, PluginBundle};
+use clack_host::prelude::{HostInfo, PluginEntry};
 use data::{PresetDiscoveryData, PresetsAtLocation, PresetsInFile};
 use indexer::{FileType, Location, PresetIndexer};
 use std::ffi::CString;
@@ -9,7 +9,7 @@ pub mod data;
 mod indexer;
 mod metadata;
 
-pub fn get_presets(bundle: &PluginBundle) -> Vec<PresetDiscoveryData> {
+pub fn get_presets(bundle: &PluginEntry) -> Vec<PresetDiscoveryData> {
     let host_info = HostInfo::new("", "", "", "").unwrap();
 
     if let Some(discovery) = bundle.get_factory::<PresetDiscoveryFactory>() {
@@ -23,7 +23,7 @@ pub fn get_presets(bundle: &PluginBundle) -> Vec<PresetDiscoveryData> {
 }
 
 pub fn scan_provider(
-    bundle: &PluginBundle,
+    bundle: &PluginEntry,
     descriptor: &ProviderDescriptor,
     host_info: HostInfo,
 ) -> Option<PresetDiscoveryData> {

@@ -25,7 +25,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
-        bundle: &PluginBundle,
+        entry: &PluginEntry,
         plugin_id: &CStr,
         host: &HostInfo,
     ) -> Result<Self, PluginInstanceError>
@@ -38,7 +38,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         let inner = PluginInstanceInner::<H>::instantiate(
             shared,
             main_thread,
-            bundle,
+            entry,
             plugin_id,
             host.clone(),
         )?;

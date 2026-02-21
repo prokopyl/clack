@@ -12,7 +12,7 @@ pub fn it_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginBundle::load_from_clack::<GainPluginEntry>(c"").unwrap();
+    let bundle = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
 
     let descriptor = bundle
         .get_factory::<PluginFactory>()
@@ -141,7 +141,7 @@ fn preset_listing_works() {
     // Initialize host with basic info
     let info = HostInfo::new("test", "", "", "").unwrap();
 
-    let bundle = PluginBundle::load_from_clack::<GainPluginEntry>(c"").unwrap();
+    let bundle = PluginEntry::load_from_clack::<GainPluginEntry>(c"").unwrap();
     let factory = bundle.get_factory::<PresetDiscoveryFactory>().unwrap();
     let providers: Vec<_> = factory.provider_descriptors().collect();
     assert_eq!(providers.len(), 1);
