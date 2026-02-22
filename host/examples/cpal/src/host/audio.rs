@@ -1,6 +1,5 @@
 use crate::host::CpalHost;
 use clack_host::prelude::*;
-use clack_host::process::StartedPluginAudioProcessor;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
     BuildStreamError, Device, FromSample, OutputCallbackInfo, SampleFormat, Stream, StreamConfig,

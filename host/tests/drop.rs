@@ -46,7 +46,9 @@ impl DefaultPluginFactory for DivaPluginStub {
     }
 }
 
-impl<'a> PluginAudioProcessor<'a, (), DivaPluginStubMainThread> for DivaPluginStubAudioProcessor {
+impl<'a> clack_plugin::plugin::PluginAudioProcessor<'a, (), DivaPluginStubMainThread>
+    for DivaPluginStubAudioProcessor
+{
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
         main_thread: &mut DivaPluginStubMainThread,
