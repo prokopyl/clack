@@ -21,6 +21,7 @@ mod header;
 mod helpers;
 mod pckn;
 
+use crate::utils::usize_to_clap_size;
 pub use header::*;
 pub use pckn::*;
 
@@ -212,7 +213,7 @@ impl UnknownEvent {
         let raw = self.header().as_raw();
         if raw.space_id != space_id.id()
             || raw.type_ != E::TYPE_ID
-            || raw.size != size_of::<E>() as u32
+            || raw.size != const { usize_to_clap_size(size_of::<E>()) }
         {
             return None;
         }

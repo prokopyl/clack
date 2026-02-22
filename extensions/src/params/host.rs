@@ -76,6 +76,7 @@ impl PluginParams {
         let Some(value_to_text) = plugin.use_extension(&self.0).value_to_text else {
             return Err(core::fmt::Error);
         };
+        let len = u32::try_from(buffer.len()).unwrap_or(u32::MAX);
 
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
@@ -84,7 +85,7 @@ impl PluginParams {
                 param_id.get(),
                 value,
                 buffer.as_mut_ptr() as *mut _,
-                buffer.len() as u32,
+                len,
             )
         };
 
@@ -95,7 +96,7 @@ impl PluginParams {
         // SAFETY: technically the whole buffer may not be fully initialized, but uninit u8 is fine
         let buffer = unsafe { assume_init_slice(buffer) };
         // If no nul byte found, we take the entire buffer
-        let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(buffer.len());
+        let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(len as usize);
         Ok(&mut buffer[..buffer_total_len])
     }
 

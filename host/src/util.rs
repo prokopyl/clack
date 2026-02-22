@@ -83,3 +83,16 @@ impl<T> Drop for UnsafeOptionCell<T> {
         *is_some = false;
     }
 }
+
+#[inline]
+pub(crate) const fn check_collection_clap_size_overflow<T>(value: &[T]) {
+    #[cold]
+    #[inline(never)]
+    const fn too_big() -> ! {
+        panic!("CLAP size (u32) overflowed")
+    }
+
+    if value.len() >= u32::MAX as usize {
+        too_big()
+    }
+}

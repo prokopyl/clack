@@ -2,6 +2,7 @@ use crate::events::UnknownEvent;
 use crate::events::event_types::TransportEvent;
 use crate::events::io::implementation::{InputEventBuffer, OutputEventBuffer};
 use crate::events::io::{InputEvents, OutputEvents, TryPushError};
+use crate::utils::{check_clap_size_overflow, usize_to_clap_size};
 use clap_sys::events::clap_event_header;
 use core::mem::MaybeUninit;
 use std::fmt::{Debug, Formatter};
@@ -49,7 +50,7 @@ struct AlignedEventHeader(clap_event_header);
 /// However, this is always a best-effort, and not a guarantee.
 pub struct EventBuffer {
     headers: Vec<MaybeUninit<AlignedEventHeader>>, // force 64-bit alignment
-    indexes: Vec<u32>,
+    indexes: Vec<usize>,
 }
 
 #[inline]
@@ -100,8 +101,11 @@ impl EventBuffer {
 
     /// Returns the number of events in this buffer.
     #[inline]
-    pub fn len(&self) -> usize {
-        self.indexes.len()
+    pub fn len(&self) -> u32 {
+        #[allow(clippy::cast_possible_truncation)] // We always check this can never overflow u32
+        {
+            self.indexes.len() as u32
+        }
     }
 
     /// Returns `true` if this buffer has no events in it (i.e. if `len == 0`), `false` otherwise.
@@ -114,7 +118,7 @@ impl EventBuffer {
     ///
     /// If `index` is out of bounds, this returns [`None`].
     pub fn get(&self, index: u32) -> Option<&UnknownEvent> {
-        let header_index = (*self.indexes.get(index as usize)?) as usize;
+        let header_index = *self.indexes.get(index as usize)?;
         // SAFETY: Registered indexes always have actual event headers written by append_header_data
         // PANIC: We used registered indexes, this should never panic
         let event = unsafe { self.headers[header_index].assume_init_ref() };
@@ -149,7 +153,7 @@ impl EventBuffer {
         self.indexes.sort_unstable_by_key(|i| {
             // SAFETY: Registered indexes always have actual event headers written by append_header_data
             // PANIC: We used registered indexes, this should never panic
-            let event = unsafe { self.headers[*i as usize].assume_init_ref() };
+            let event = unsafe { self.headers[*i].assume_init_ref() };
             event.0.time
         })
     }
@@ -161,7 +165,7 @@ impl EventBuffer {
     /// Panics if `position > len`.
     pub fn insert<E: AsRef<UnknownEvent> + ?Sized>(&mut self, event: &E, position: usize) {
         let index = self.append_header_data(event.as_ref());
-        self.indexes.insert(position, index as u32);
+        self.indexes.insert(position, index);
     }
 
     /// Pushes all events produced by the given `events` iterator at the end of the buffer.
@@ -178,8 +182,11 @@ impl EventBuffer {
     ///
     /// The event is always added at the end of the buffer.
     pub fn push<E: AsRef<UnknownEvent> + ?Sized>(&mut self, event: &E) {
+        // Check the event buffer length cound never overflows u32.
+        check_clap_size_overflow(self.indexes.len().saturating_add(1));
+
         let index = self.append_header_data(event.as_ref());
-        self.indexes.push(index as u32);
+        self.indexes.push(index);
     }
 
     /// Produces an [`InputEvents`] that wraps this buffer as an [`InputEventBuffer`] implementation.
@@ -243,7 +250,7 @@ impl<'a> IntoIterator for &'a EventBuffer {
 impl InputEventBuffer for EventBuffer {
     #[inline]
     fn len(&self) -> u32 {
-        EventBuffer::len(self) as u32
+        EventBuffer::len(self)
     }
 
     #[inline]
@@ -289,14 +296,14 @@ impl Index<usize> for EventBuffer {
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
-        self.get(index as u32).expect(INDEX_ERROR)
+        self.get(usize_to_clap_size(index)).expect(INDEX_ERROR)
     }
 }
 
 /// An iterator over the events contained in an [`EventBuffer`].
 pub struct EventBufferIter<'a> {
     buffer: &'a EventBuffer,
-    range: Range<usize>,
+    range: Range<u32>,
 }
 
 impl<'a> Iterator for EventBufferIter<'a> {
@@ -304,7 +311,7 @@ impl<'a> Iterator for EventBufferIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.range.next()?;
-        self.buffer.get(next_index as u32)
+        self.buffer.get(next_index)
     }
 }
 

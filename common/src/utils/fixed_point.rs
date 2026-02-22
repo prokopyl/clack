@@ -37,6 +37,7 @@ impl FixedPoint {
 
     #[inline]
     pub fn from_float(val: f64) -> Self {
+        #[allow(clippy::cast_possible_truncation)] // This is willingly lossy
         Self((Self::FACTOR as f64 * val).round() as i64)
     }
 }

@@ -472,24 +472,22 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     ) -> Result<ProcessStatus, PluginInstanceError> {
         let frames_count = audio_inputs.min_available_frames_with(audio_outputs);
 
-        let audio_inputs = audio_inputs.as_raw_buffers();
-        let audio_outputs = audio_outputs.as_raw_buffers();
-
         let process = clap_process {
             frames_count,
 
             in_events: input_events.as_raw(),
             out_events: output_events.as_raw_mut(),
 
-            audio_inputs: audio_inputs.as_ptr(),
-            audio_outputs: audio_outputs.as_mut_ptr(),
-            audio_inputs_count: audio_inputs.len() as u32,
-            audio_outputs_count: audio_outputs.len() as u32,
+            audio_inputs: audio_inputs.as_raw_buffers().as_ptr(),
+            audio_outputs: audio_outputs.as_raw_buffers().as_mut_ptr(),
+            audio_inputs_count: audio_inputs.port_count(),
+            audio_outputs_count: audio_outputs.port_count(),
 
             steady_time: match steady_time {
                 None => -1,
                 // This is a wrapping conversion from u64 to i64.
                 // The wrapping allows smooth operation from the plugin if steady_time does actually overflow an i64.
+                #[allow(clippy::cast_possible_wrap)] // Wrapping is actually wanted here!
                 Some(steady_time) => (steady_time & i64::MAX as u64) as i64,
             },
             transport: match transport {

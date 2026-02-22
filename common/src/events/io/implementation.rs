@@ -1,7 +1,7 @@
 use crate::events::io::TryPushError;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, UnknownEvent};
-use crate::utils::handle_panic;
+use crate::utils::{handle_panic, usize_to_clap_size};
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
 
 /// A trait for all types which can act as an ordered, indexed list of [`UnknownEvent`]s.
@@ -179,7 +179,7 @@ impl<T: InputEventBuffer, U: InputEventBuffer> InputEventBuffer for (&T, &U) {
 impl<T: Event, const N: usize> InputEventBuffer for [T; N] {
     #[inline]
     fn len(&self) -> u32 {
-        N.min((u32::MAX - 1) as usize) as u32
+        const { usize_to_clap_size(N) }
     }
 
     #[inline]
@@ -192,7 +192,7 @@ impl<T: Event> InputEventBuffer for &[T] {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[T]>::len(self);
-        len.min((u32::MAX - 1) as usize) as u32
+        usize_to_clap_size(len)
     }
 
     #[inline]
@@ -205,7 +205,7 @@ impl<T: Event> InputEventBuffer for Vec<T> {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[T]>::len(self);
-        len.min((u32::MAX - 1) as usize) as u32
+        usize_to_clap_size(len)
     }
 
     #[inline]
@@ -232,7 +232,7 @@ impl InputEventBuffer for &UnknownEvent {
 impl<const N: usize> InputEventBuffer for [&UnknownEvent; N] {
     #[inline]
     fn len(&self) -> u32 {
-        N.min((u32::MAX - 1) as usize) as u32
+        const { usize_to_clap_size(N) }
     }
 
     #[inline]
@@ -245,7 +245,7 @@ impl InputEventBuffer for &[&UnknownEvent] {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent]>::len(self);
-        len.min((u32::MAX - 1) as usize) as u32
+        usize_to_clap_size(len)
     }
 
     #[inline]
@@ -258,7 +258,7 @@ impl InputEventBuffer for Vec<&UnknownEvent> {
     #[inline]
     fn len(&self) -> u32 {
         let len = <[&UnknownEvent]>::len(self);
-        len.min((u32::MAX - 1) as usize) as u32
+        usize_to_clap_size(len)
     }
 
     #[inline]

@@ -1,6 +1,7 @@
 use crate::events::UnknownEvent;
 use crate::events::io::EventBatcher;
 use crate::events::io::implementation::{InputEventBuffer, raw_input_events};
+use crate::utils::usize_to_clap_size;
 use clap_sys::events::clap_input_events;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -281,7 +282,7 @@ impl Index<usize> for InputEvents<'_> {
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
-        self.get(index as u32).expect(INDEX_ERROR)
+        self.get(usize_to_clap_size(index)).expect(INDEX_ERROR)
     }
 }
 
