@@ -36,3 +36,4 @@ unsafe-op-in-unsafe-fn = "allow"
 [workspace.lints.clippy]
 undocumented-unsafe-blocks = "deny"
 cast-possible-truncation = "deny"
+cast-possible-wrap = "deny"

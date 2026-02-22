@@ -487,6 +487,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
                 None => -1,
                 // This is a wrapping conversion from u64 to i64.
                 // The wrapping allows smooth operation from the plugin if steady_time does actually overflow an i64.
+                #[allow(clippy::cast_possible_wrap)] // Wrapping is actually wanted here!
                 Some(steady_time) => (steady_time & i64::MAX as u64) as i64,
             },
             transport: match transport {

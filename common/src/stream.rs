@@ -145,6 +145,15 @@ impl Write for OutputStream<'_> {
     }
 }
 
+// Guaranteed to not be able to overflow either i64 or usize
+fn saturating_from_u64(val: u64) -> usize {
+    // Cap size to i64 first, so that return value range is coherent
+    let val = i64::try_from(val).unwrap_or(i64::MAX);
+
+    // Can only happen on <= 32bit platforms
+    usize::try_from(val).unwrap_or(usize::MAX)
+}
+
 #[allow(clippy::missing_safety_doc)]
 unsafe extern "C" fn read<R: Read + Sized>(
     istream: *const clap_istream,
@@ -152,12 +161,22 @@ unsafe extern "C" fn read<R: Read + Sized>(
     size: u64,
 ) -> i64 {
     let reader = &mut *((*istream).ctx as *mut R);
-    let size = usize::try_from(size).unwrap_or(isize::MAX as usize);
+    let size = saturating_from_u64(size);
 
     let buffer = slice_from_external_parts_mut(buffer as *mut u8, size);
 
     match handle_interrupted(|| reader.read(buffer)) {
-        Ok(read) => read as i64,
+        #[allow(clippy::cast_possible_wrap)]
+        Ok(read) => {
+            // Read implementation is bad. We return the size of the buffer instead.
+            if read > size {
+                // We know size fits in i64
+                size as i64
+            } else {
+                // Since read <= size and size fits in i64, then read also fits in i64
+                read as i64
+            }
+        }
         Err(_) => -1,
     }
 }
@@ -169,12 +188,22 @@ unsafe extern "C" fn write<W: Write + Sized>(
     size: u64,
 ) -> i64 {
     let writer = &mut *((*ostream).ctx as *mut W);
-    let size = usize::try_from(size).unwrap_or(isize::MAX as usize);
+    let size = saturating_from_u64(size);
 
     let buffer = slice_from_external_parts(buffer as *const u8, size);
 
     match handle_interrupted(|| writer.write(buffer)) {
-        Ok(written) => written as i64,
+        #[allow(clippy::cast_possible_wrap)]
+        Ok(written) => {
+            // Read implementation is bad. We return the size of the buffer instead.
+            if written > size {
+                // We know size fits in i64
+                size as i64
+            } else {
+                // Since written <= size and size fits in i64, then written also firs in i64
+                written as i64
+            }
+        }
         Err(_) => -1,
     }
 }
