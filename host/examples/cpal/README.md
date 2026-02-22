@@ -84,7 +84,6 @@ following dependencies:
   [`wmidi`](https://crates.io/crates/wmidi) to decode them to CLAP note events.
 * [`rtrb`](https://crates.io/crates/rtrb) as a SPSC ringbuffer-based channel to send MIDI events from `midir`'s thread
   to CPAL's audio thread.
-* [`walkdir`](https://crates.io/crates/walkdir) and [`rayon`](https://crates.io/crates/rayon), for multi-thread
-  plugin discovery.
+* [`rayon`](https://crates.io/crates/rayon) for multi-thread plugin discovery.
 * [`winit`](https://crates.io/crates/winit), to create a window for plugin GUIs to embed into, and to drive the UI
   event loop.

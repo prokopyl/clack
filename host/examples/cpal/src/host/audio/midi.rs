@@ -65,13 +65,11 @@ impl MidiReceiver {
 
         let ports = input.ports();
 
-        if ports.is_empty() {
+        let Some(selected_port) = ports.last() else {
             println!("No MIDI input device found. Plugin will not be fed any MIDI input.");
             return Ok(None);
-        }
+        };
 
-        // PANIC: we checked ports wasn't empty above
-        let selected_port = ports.last().unwrap();
         let port_name = input.port_name(selected_port)?;
 
         if ports.len() > 1 {

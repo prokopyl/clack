@@ -140,6 +140,7 @@ impl StreamAudioProcessor {
     pub fn process<S: FromSample<f32>>(&mut self, data: &mut [S]) {
         self.buffers.ensure_buffer_size_matches(data.len());
         let sample_count = self.buffers.cpal_buf_len_to_frame_count(data.len());
+        dbg!(sample_count);
 
         let (ins, mut outs) = self.buffers.prepare_plugin_buffers(data.len());
 
