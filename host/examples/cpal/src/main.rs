@@ -23,7 +23,7 @@ struct Cli {
     ///
     /// If the file contains multiple plugins, this should be used in conjunction with the
     /// `--plugin-id` (`-p`) parameter to specify which one to load.
-    #[arg(short = 'p', long = "file-path")]
+    #[arg(short = 'f', long = "file-path")]
     file_path: Option<PathBuf>,
     /// Loads the CLAP plugin with the given unique ID.
     ///
