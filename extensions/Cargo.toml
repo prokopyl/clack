@@ -27,6 +27,7 @@ all-extensions = [
     "audio-ports-activation",
     "audio-ports-config",
     "clap-wrapper",
+    "configurable-audio-ports",
     "event-registry",
     "gui",
     "latency",
@@ -52,6 +53,7 @@ audio-ports = []
 audio-ports-activation = []
 audio-ports-config = ["audio-ports"]
 clap-wrapper = []
+configurable-audio-ports = []
 event-registry = []
 gui = []
 latency = []
