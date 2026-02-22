@@ -83,7 +83,7 @@ impl Read for InputStream<'_> {
             return Ok(0);
         };
         match ret {
-            i if i >= 0 => Ok(i as usize),
+            i if i >= 0 => Ok(usize::try_from(i).map_err(std::io::Error::other)?),
             code => Err(std::io::Error::other(StreamError { code })),
         }
     }
@@ -134,7 +134,7 @@ impl Write for OutputStream<'_> {
         };
 
         match ret {
-            i if i >= 0 => Ok(i as usize),
+            i if i >= 0 => Ok(usize::try_from(i).map_err(std::io::Error::other)?),
             code => Err(std::io::Error::other(StreamError { code })),
         }
     }
@@ -152,7 +152,9 @@ unsafe extern "C" fn read<R: Read + Sized>(
     size: u64,
 ) -> i64 {
     let reader = &mut *((*istream).ctx as *mut R);
-    let buffer = slice_from_external_parts_mut(buffer as *mut u8, size as usize);
+    let size = usize::try_from(size).unwrap_or(isize::MAX as usize);
+
+    let buffer = slice_from_external_parts_mut(buffer as *mut u8, size);
 
     match handle_interrupted(|| reader.read(buffer)) {
         Ok(read) => read as i64,
@@ -167,7 +169,9 @@ unsafe extern "C" fn write<W: Write + Sized>(
     size: u64,
 ) -> i64 {
     let writer = &mut *((*ostream).ctx as *mut W);
-    let buffer = slice_from_external_parts(buffer as *const u8, size as usize);
+    let size = usize::try_from(size).unwrap_or(isize::MAX as usize);
+
+    let buffer = slice_from_external_parts(buffer as *const u8, size);
 
     match handle_interrupted(|| writer.write(buffer)) {
         Ok(written) => written as i64,

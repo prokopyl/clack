@@ -2,6 +2,7 @@
 
 use crate::events::Event;
 use crate::events::spaces::{CoreEventSpace, EventSpaceId};
+use crate::utils::usize_to_clap_size;
 use bitflags::bitflags;
 use clap_sys::events::clap_event_header;
 use clap_sys::events::{CLAP_EVENT_DONT_RECORD, CLAP_EVENT_IS_LIVE};
@@ -59,9 +60,9 @@ impl<E> EventHeader<E> {
     /// If you need to also account for the size of the payload, see [`size`](Self::size).
     #[inline]
     pub const fn payload_size(&self) -> u32 {
-        self.inner
-            .size
-            .saturating_sub(size_of::<EventHeader>() as u32)
+        const HEADER_SIZE: u32 = const { usize_to_clap_size(size_of::<EventHeader>()) };
+
+        self.inner.size.saturating_sub(HEADER_SIZE)
     }
 
     /// The raw event type ID.
@@ -209,7 +210,7 @@ impl<E: Event> EventHeader<E> {
     ) -> Self {
         Self {
             inner: clap_event_header {
-                size: size_of::<E>() as u32,
+                size: const { usize_to_clap_size(size_of::<E>()) },
                 time,
                 space_id: space_id.id(),
                 type_: E::TYPE_ID,

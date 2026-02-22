@@ -42,12 +42,12 @@ impl PluginNoteName {
     pub fn get<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        index: usize,
+        index: u32,
         buffer: &'b mut NoteNameBuffer,
     ) -> Option<NoteName<'b>> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { plugin.use_extension(&self.0).get?(plugin.as_raw(), index as u32, buffer.inner.as_mut_ptr()) };
+            unsafe { plugin.use_extension(&self.0).get?(plugin.as_raw(), index, buffer.inner.as_mut_ptr()) };
 
         if success {
             // SAFETY: we just checked the buffer was successfully written to.

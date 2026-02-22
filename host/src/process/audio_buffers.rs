@@ -1,5 +1,6 @@
 //! Types to manipulate input and output audio buffers for processing.
 
+use crate::util::check_collection_clap_size_overflow;
 use clack_common::process::AudioPortProcessingInfo;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
@@ -155,7 +156,7 @@ impl AudioPorts {
         self.resize_buffer_configs(iter.len());
         self.buffer_lists.clear();
 
-        let mut min_channel_buffer_length = usize::MAX;
+        let mut min_channel_buffer_length = u32::MAX;
         let mut total = 0;
         let mut has_reallocated = false;
 
@@ -168,11 +169,13 @@ impl AudioPorts {
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length =
-                            min_channel_buffer_length.min(channel.buffer.len());
+                        min_channel_buffer_length = min_channel_buffer_length
+                            .min(saturate_usize_to_clap_size(channel.buffer.len()));
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
+
+                        check_collection_clap_size_overflow(&self.buffer_lists);
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -184,11 +187,13 @@ impl AudioPorts {
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length =
-                            min_channel_buffer_length.min(channel.buffer.len());
+                        min_channel_buffer_length = min_channel_buffer_length
+                            .min(saturate_usize_to_clap_size(channel.buffer.len()));
                         if channel.is_constant {
                             constant_mask |= 1 << i as u64
                         }
+
+                        check_collection_clap_size_overflow(&self.buffer_lists);
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -204,7 +209,11 @@ impl AudioPorts {
 
             // PANIC: this can only panic with an invalid implementation of ExactSizeIterator
             let descriptor = &mut self.buffer_configs[i];
-            descriptor.channel_count = buffers.len() as u32;
+            #[allow(clippy::cast_possible_truncation)]
+            // We already checked above that it cannot be overflowed
+            {
+                descriptor.channel_count = buffers.len() as u32;
+            }
             descriptor.latency = port.latency;
             descriptor.constant_mask = constant_mask;
 
@@ -240,10 +249,10 @@ impl AudioPorts {
 
         InputAudioBuffers {
             buffers: &self.buffer_configs[..total],
-            frames_count: if min_channel_buffer_length == usize::MAX {
+            frames_count: if min_channel_buffer_length == u32::MAX {
                 None
             } else {
-                Some(min_channel_buffer_length as u32)
+                Some(min_channel_buffer_length)
             },
         }
     }
@@ -262,7 +271,7 @@ impl AudioPorts {
         self.resize_buffer_configs(iter.len());
         self.buffer_lists.clear();
 
-        let mut min_channel_buffer_length = usize::MAX;
+        let mut min_channel_buffer_length = u32::MAX;
         let mut total = 0;
         let mut has_reallocated = false;
 
@@ -274,7 +283,10 @@ impl AudioPorts {
             let is_f64 = match port.channels {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length
+                            .min(saturate_usize_to_clap_size(channel.len()));
+
+                        check_collection_clap_size_overflow(&self.buffer_lists);
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -286,7 +298,10 @@ impl AudioPorts {
                 }
                 AudioPortBufferType::F64(channels) => {
                     for channel in channels {
-                        min_channel_buffer_length = min_channel_buffer_length.min(channel.len());
+                        min_channel_buffer_length = min_channel_buffer_length
+                            .min(saturate_usize_to_clap_size(channel.len()));
+
+                        check_collection_clap_size_overflow(&self.buffer_lists);
 
                         if self.buffer_lists.len() >= self.buffer_lists.capacity() {
                             has_reallocated = true;
@@ -302,7 +317,11 @@ impl AudioPorts {
 
             // PANIC: this can only panic with an invalid implementation of ExactSizeIterator
             let descriptor = &mut self.buffer_configs[i];
-            descriptor.channel_count = buffers.len() as u32;
+            #[allow(clippy::cast_possible_truncation)]
+            // We already checked above that it cannot be overflowed
+            {
+                descriptor.channel_count = buffers.len() as u32;
+            }
             descriptor.latency = port.latency;
             descriptor.constant_mask = 0;
 
@@ -338,10 +357,10 @@ impl AudioPorts {
 
         OutputAudioBuffers {
             buffers: &mut self.buffer_configs[..total],
-            frames_count: if min_channel_buffer_length == usize::MAX {
+            frames_count: if min_channel_buffer_length == u32::MAX {
                 None
             } else {
-                Some(min_channel_buffer_length as u32)
+                Some(min_channel_buffer_length)
             },
         }
     }
@@ -349,6 +368,18 @@ impl AudioPorts {
     #[inline]
     pub fn port_count(&self) -> usize {
         self.buffer_configs.len()
+    }
+}
+
+#[inline]
+const fn saturate_usize_to_clap_size(value: usize) -> u32 {
+    if value > u32::MAX as usize {
+        u32::MAX - 1
+    } else {
+        #[allow(clippy::cast_possible_truncation)] // We just checked it above, it cannot overflow
+        {
+            value as u32
+        }
     }
 }
 
@@ -389,6 +420,8 @@ impl<'a> InputAudioBuffers<'a> {
     /// channel buffers pointed to by `buffers`.
     #[inline]
     pub unsafe fn from_raw_buffers(buffers: &'a [clap_audio_buffer], frames_count: u32) -> Self {
+        check_collection_clap_size_overflow(buffers);
+
         Self {
             buffers,
             frames_count: Some(frames_count),
@@ -423,8 +456,12 @@ impl<'a> InputAudioBuffers<'a> {
 
     /// The number of port buffers this [`InputAudioBuffers`] has been given.
     #[inline]
-    pub fn port_count(&self) -> usize {
-        self.buffers.len()
+    pub fn port_count(&self) -> u32 {
+        #[allow(clippy::cast_possible_truncation)]
+        // We checked above that buffers' len cannot overflow u32
+        {
+            self.buffers.len() as u32
+        }
     }
 
     /// The number of frames in these input buffers.
@@ -503,6 +540,8 @@ impl<'a> OutputAudioBuffers<'a> {
         buffers: &'a mut [clap_audio_buffer],
         frames_count: u32,
     ) -> Self {
+        check_collection_clap_size_overflow(buffers);
+
         Self {
             buffers,
             frames_count: Some(frames_count),
@@ -599,8 +638,12 @@ impl<'a> OutputAudioBuffers<'a> {
 
     /// The number of port buffers this [`OutputAudioBuffers`] has been given.
     #[inline]
-    pub fn port_count(&self) -> usize {
-        self.buffers.len()
+    pub fn port_count(&self) -> u32 {
+        #[allow(clippy::cast_possible_truncation)]
+        // We checked above that buffers' len cannot overflow u32
+        {
+            self.buffers.len() as u32
+        }
     }
 
     /// The number of frames in these output buffers.
@@ -746,8 +789,8 @@ mod test {
         let process = clap_process {
             audio_inputs: raw_input_buffers.as_ptr(),
             audio_outputs: raw_output_buffers.as_ptr() as *mut _,
-            audio_inputs_count: raw_input_buffers.len() as u32,
-            audio_outputs_count: raw_output_buffers.len() as u32,
+            audio_inputs_count: input_buffers.port_count(),
+            audio_outputs_count: output_buffers.port_count(),
 
             steady_time: 0,
             frames_count: 4,

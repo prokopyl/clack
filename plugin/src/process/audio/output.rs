@@ -177,7 +177,11 @@ impl<S> OutputChannels<'_, S> {
     /// The number of channels.
     #[inline]
     pub fn channel_count(&self) -> u32 {
-        self.data.len() as u32
+        // This is always constructed from u32, so overflow should not be able to happen
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            self.data.len() as u32
+        }
     }
 
     /// Retrieves the sample buffer of the channel at a given index, as a read-only slice.

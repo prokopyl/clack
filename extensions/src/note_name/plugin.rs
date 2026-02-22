@@ -6,13 +6,13 @@ use std::mem::MaybeUninit;
 /// Implementation of the Plugin-side of the Note Name extension.
 pub trait PluginNoteNameImpl {
     /// Returns the number of available [`NoteName`]s.
-    fn count(&mut self) -> usize;
+    fn count(&mut self) -> u32;
 
     /// Retrieves a specific [`NoteName`] from its index.
     ///
     /// The plugin gets passed a host-provided mutable buffer to write the configuration into, to
     /// avoid any unnecessary allocations.
-    fn get(&mut self, index: usize, writer: &mut NoteNameWriter);
+    fn get(&mut self, index: u32, writer: &mut NoteNameWriter);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -33,7 +33,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginNoteNameImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count() as u32)).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -51,7 +51,7 @@ where
         };
 
         let mut writer = NoteNameWriter::from_raw(config);
-        p.main_thread().as_mut().get(index as usize, &mut writer);
+        p.main_thread().as_mut().get(index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

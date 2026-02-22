@@ -303,6 +303,7 @@ impl GuiSize {
     /// ```
     #[inline]
     pub fn unpack_from_u64(raw: u64) -> Self {
+        #[allow(clippy::cast_possible_truncation)] // Truncation is what we want here!
         GuiSize {
             width: raw as u32,
             height: (raw >> u32::BITS) as u32,

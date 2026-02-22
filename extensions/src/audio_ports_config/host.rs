@@ -43,16 +43,12 @@ impl PluginAudioPortsConfig {
     pub fn get<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
-        index: usize,
+        index: u32,
         buffer: &'b mut AudioPortsConfigBuffer,
     ) -> Option<AudioPortsConfiguration<'b>> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
-            plugin.use_extension(&self.0).get?(
-                plugin.as_raw(),
-                index as u32,
-                buffer.inner.as_mut_ptr(),
-            )
+            plugin.use_extension(&self.0).get?(plugin.as_raw(), index, buffer.inner.as_mut_ptr())
         };
 
         if success {

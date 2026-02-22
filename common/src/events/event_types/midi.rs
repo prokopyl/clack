@@ -1,7 +1,7 @@
 use crate::events::helpers::impl_event_helpers;
 use crate::events::spaces::CoreEventSpace;
 use crate::events::{Event, EventFlags, EventHeader, UnknownEvent};
-use crate::utils::slice_from_external_parts;
+use crate::utils::*;
 use clap_sys::events::{
     CLAP_EVENT_MIDI, CLAP_EVENT_MIDI_SYSEX, CLAP_EVENT_MIDI2, clap_event_midi,
     clap_event_midi_sysex, clap_event_midi2,
@@ -128,6 +128,9 @@ impl AsRef<UnknownEvent> for MidiSysExEvent {
 }
 
 impl MidiSysExEvent {
+    /// # Panics
+    ///
+    /// This will panic if `data.len()` is larger than `u32::MAX`.
     #[inline]
     pub const fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
         Self {
@@ -135,7 +138,7 @@ impl MidiSysExEvent {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
                 port_index,
                 buffer: data.as_ptr(),
-                size: data.len() as u32,
+                size: usize_to_clap_size(data.len()),
             },
         }
     }

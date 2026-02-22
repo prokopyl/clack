@@ -108,3 +108,26 @@ pub(crate) const unsafe fn slice_from_external_parts_mut<'a, T>(
 
     core::slice::from_raw_parts_mut(data, len)
 }
+
+#[inline]
+pub(crate) const fn check_clap_size_overflow(value: usize) {
+    #[cold]
+    #[inline(never)]
+    const fn too_big() -> ! {
+        panic!("CLAP size (u32) overflowed")
+    }
+
+    if value > u32::MAX as usize {
+        too_big()
+    }
+}
+
+#[inline]
+pub(crate) const fn usize_to_clap_size(value: usize) -> u32 {
+    check_clap_size_overflow(value);
+
+    #[allow(clippy::cast_possible_truncation)] // We just checked above, it cannot truncate
+    {
+        value as u32
+    }
+}
