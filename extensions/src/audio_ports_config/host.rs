@@ -111,7 +111,7 @@ impl PluginAudioPortsConfigInfo {
         &self,
         plugin: &mut PluginMainThreadHandle,
         config_id: ClapId,
-        index: usize,
+        index: u32,
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,
     ) -> Option<AudioPortInfo<'b>> {
@@ -122,7 +122,7 @@ impl PluginAudioPortsConfigInfo {
             get(
                 plugin.as_raw(),
                 config_id.get(),
-                index as u32,
+                index,
                 is_input,
                 buffer.as_raw(),
             )
