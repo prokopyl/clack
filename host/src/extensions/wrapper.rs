@@ -9,6 +9,7 @@ use clap_sys::ext::log::{
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::borrow::Cow;
+use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
 use std::io::Write;
@@ -297,7 +298,6 @@ pub enum HostWrapperError {
     NullHostData,
     Panic,
     DeactivatedPlugin,
-    Host(HostError),
     /// Encountered an error while trying to format another [`HostWrapperError`]
     ErrorFormatError(std::io::Error),
     /// A generic, type-erased error.
@@ -314,7 +314,6 @@ impl HostWrapperError {
             HostWrapperError::NullHostData => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::Panic => CLAP_LOG_HOST_MISBEHAVING,
             HostWrapperError::DeactivatedPlugin => CLAP_LOG_PLUGIN_MISBEHAVING,
-            HostWrapperError::Host(_) => CLAP_LOG_ERROR,
             HostWrapperError::ErrorFormatError(_) => CLAP_LOG_HOST_MISBEHAVING,
             _ => CLAP_LOG_ERROR,
         }
@@ -348,13 +347,6 @@ impl HostWrapperError {
     }
 }
 
-impl From<HostError> for HostWrapperError {
-    #[inline]
-    fn from(e: HostError) -> Self {
-        Self::Host(e)
-    }
-}
-
 impl Display for HostWrapperError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use HostWrapperError::*;
@@ -366,7 +358,8 @@ impl Display for HostWrapperError {
             DeactivatedPlugin => {
                 f.write_str("Tried to call an audio-thread method while the plugin was deactivated")
             }
-            Host(e) => e.fmt(f),
+            Message(s) => f.write_str(s),
+            Error(e) => Display::fmt(e, f),
             ErrorFormatError(e) => {
                 write!(f, "Error while formatting host error: '{e}'")
             }

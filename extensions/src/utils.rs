@@ -82,14 +82,3 @@ pub(crate) const unsafe fn slice_from_external_parts_mut<'a, T>(
 
     core::slice::from_raw_parts_mut(data, len)
 }
-
-#[cfg(not(test))]
-#[allow(unused)]
-pub(crate) use std::panic::catch_unwind as handle_panic;
-
-#[cfg(test)]
-#[inline]
-#[allow(unused)]
-pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
-    Ok(f())
-}
