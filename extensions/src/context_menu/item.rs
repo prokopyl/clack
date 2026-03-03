@@ -9,20 +9,35 @@ use std::ffi::c_void;
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[non_exhaustive]
 pub enum ItemKind {
+    /// A simple context menu entry that can be activated.
     Entry = CLAP_CONTEXT_MENU_ITEM_ENTRY,
+    /// A context menu entry with a check-box.
     CheckEntry = CLAP_CONTEXT_MENU_ITEM_CHECK_ENTRY,
+    /// A menu separator.
     Separator = CLAP_CONTEXT_MENU_ITEM_SEPARATOR,
+    /// Marks the beginning of a submenu.
+    ///
+    /// All further items after this will be associated to this submenu.
     BeginSubmenu = CLAP_CONTEXT_MENU_ITEM_BEGIN_SUBMENU,
+    /// Marks the end of a submenu.
+    ///
+    /// All further items after this will be associated to the previous [`BeginSubmenu`](Self::BeginSubmenu),
+    /// or to the main menu if there wasn't any.
     EndSubmenu = CLAP_CONTEXT_MENU_ITEM_END_SUBMENU,
+    /// A title or heading.
     Title = CLAP_CONTEXT_MENU_ITEM_TITLE,
 }
 
 impl ItemKind {
+    /// Returns this [`ItemKind`] as its raw, C-FFI compatible representation.
     #[inline]
     pub const fn to_raw(self) -> clap_context_menu_item_kind {
         self as u32
     }
 
+    /// Interprets the given `raw` as the C-FFI compatible representation of an [`ItemKind`].
+    ///
+    /// This returns `None` if the given value does not match a known [`ItemKind`].
     #[inline]
     pub const fn from_raw(raw: clap_context_menu_item_kind) -> Option<Self> {
         match raw {
@@ -68,7 +83,12 @@ pub enum Item<'a> {
     /// Marks the beginning of a submenu.
     ///
     /// All further items after this will be associated to this submenu.
-    BeginSubmenu { label: &'a CStr, enabled: bool },
+    BeginSubmenu {
+        /// The label of the menu entry.
+        label: &'a CStr,
+        /// Whether the entry is enabled.
+        enabled: bool,
+    },
     /// Marks the end of a submenu.
     ///
     /// All further items after this will be associated to the previous [`BeginSubmenu`](Self::BeginSubmenu),
@@ -84,6 +104,7 @@ pub enum Item<'a> {
 }
 
 impl Item<'_> {
+    /// Returns the [`ItemKind`] of this item.
     #[inline]
     pub const fn kind(&self) -> ItemKind {
         match self {
@@ -96,14 +117,28 @@ impl Item<'_> {
         }
     }
 
+    /// # Safety
+    ///
+    /// data must be valid for reads and its type must match kind
     #[inline]
     pub(crate) unsafe fn from_raw(
         kind: clap_context_menu_item_kind,
         data: *const c_void,
     ) -> Option<Self> {
+        /// # Safety
+        ///
+        /// data must be valid for reads of type T
+        unsafe fn get_data<T>(data: *const c_void) -> Option<T> {
+            if data.is_null() {
+                None
+            } else {
+                Some(data.cast::<T>().read())
+            }
+        }
+
         match kind {
             CLAP_CONTEXT_MENU_ITEM_ENTRY => {
-                let data = data.cast::<clap_context_menu_entry>().as_ref()?;
+                let data = get_data::<clap_context_menu_entry>(data)?;
                 Some(Self::Entry {
                     enabled: data.is_enabled,
                     action_id: ClapId::from_raw(data.action_id)?,
@@ -111,7 +146,7 @@ impl Item<'_> {
                 })
             }
             CLAP_CONTEXT_MENU_ITEM_CHECK_ENTRY => {
-                let data = data.cast::<clap_context_menu_check_entry>().as_ref()?;
+                let data = get_data::<clap_context_menu_check_entry>(data)?;
                 Some(Self::CheckEntry {
                     enabled: data.is_enabled,
                     action_id: ClapId::from_raw(data.action_id)?,
@@ -121,7 +156,7 @@ impl Item<'_> {
             }
             CLAP_CONTEXT_MENU_ITEM_SEPARATOR => Some(Item::Separator),
             CLAP_CONTEXT_MENU_ITEM_BEGIN_SUBMENU => {
-                let data = data.cast::<clap_context_menu_submenu>().as_ref()?;
+                let data = get_data::<clap_context_menu_submenu>(data)?;
                 Some(Self::BeginSubmenu {
                     enabled: data.is_enabled,
                     label: cstr_from_nullable_ptr(data.label)?,
@@ -129,7 +164,7 @@ impl Item<'_> {
             }
             CLAP_CONTEXT_MENU_ITEM_END_SUBMENU => Some(Item::EndSubmenu),
             CLAP_CONTEXT_MENU_ITEM_TITLE => {
-                let data = data.cast::<clap_context_menu_item_title>().as_ref()?;
+                let data = get_data::<clap_context_menu_item_title>(data)?;
                 Some(Self::Title {
                     enabled: data.is_enabled,
                     title: cstr_from_nullable_ptr(data.title)?,

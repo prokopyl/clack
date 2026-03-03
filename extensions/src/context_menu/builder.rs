@@ -4,11 +4,23 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 
+/// An implementation of a [`ContextMenuBuilder`].
 pub trait ContextMenuBuilderImpl: Sized {
-    fn add_item(&mut self, item: Item) -> Result<(), ContextMenuError>;
+    /// Returns `true` if the given type of menu item is supported, `false` otherwise.
     fn supports(&mut self, item_type: ItemKind) -> bool;
+    /// Adds the given item to the context menu.
+    ///
+    /// # Errors
+    ///
+    /// This can return [`ContextMenuError::Builder`] if the item type is not supported, or if
+    /// adding the item failed for any other reason.
+    fn add_item(&mut self, item: Item) -> Result<(), ContextMenuError>;
 }
 
+/// Builds a Context Menu from a list of [`Item`]s.
+///
+/// This type is actually a type-erased, thin wrapper around a [`ContextMenuBuilderImpl`], which
+/// allows it to be passed between plugin and host.
 #[repr(C)]
 pub struct ContextMenuBuilder<'a> {
     raw: clap_context_menu_builder,
@@ -16,6 +28,7 @@ pub struct ContextMenuBuilder<'a> {
 }
 
 impl<'a> ContextMenuBuilder<'a> {
+    /// Creates a new [`ContextMenuBuilder`] by wrapping a unique reference to a given implementation.
     #[inline]
     pub const fn new<I: ContextMenuBuilderImpl>(implementation: &'a mut I) -> Self {
         Self {
@@ -28,11 +41,14 @@ impl<'a> ContextMenuBuilder<'a> {
         }
     }
 
+    /// Returns a unique reference to this builder's raw, C-FFI compatible representation.
     #[inline]
     pub fn as_raw_mut(&mut self) -> &mut clap_context_menu_builder {
         &mut self.raw
     }
 
+    /// Retrieves a [`ContextMenuBuilder`] from a given pointer to its raw, C-FFI compatible representation.
+    ///
     /// # Safety
     ///
     /// The given `raw` pointer must be valid for reads, and both the context pointer `ctx` and all
@@ -46,15 +62,22 @@ impl<'a> ContextMenuBuilder<'a> {
         }
     }
 
+    /// Returns `true` if the given type of menu item is supported, `false` otherwise.
     pub fn supports(&mut self, item_kind: ItemKind) -> bool {
         let Some(supports) = self.raw.supports else {
             return false;
         };
 
-        // SAFETY: TODO
+        // SAFETY: This type ensures self.raw is valid
         unsafe { supports(&self.raw, item_kind.to_raw()) }
     }
 
+    /// Adds the given item to the context menu.
+    ///
+    /// # Errors
+    ///
+    /// This can return [`ContextMenuError::Builder`] if the item type is not supported, or if
+    /// adding the item failed for any other reason.
     pub fn add_item(&mut self, item: &Item) -> Result<(), ContextMenuError> {
         let Some(add_item) = self.raw.add_item else {
             return Err(ContextMenuError::Builder);
@@ -69,7 +92,8 @@ impl<'a> ContextMenuBuilder<'a> {
 
         let item_kind = item.kind();
 
-        // SAFETY: TODO
+        // SAFETY: This type ensures self.raw is valid, and raw_item_ptr is guaranteed to be valid
+        // or null by raw_item().
         let success = unsafe { add_item(&self.raw, item_kind.to_raw(), raw_item_ptr) };
 
         if success {

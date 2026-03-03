@@ -3,6 +3,8 @@ use clack_plugin::extensions::prelude::*;
 use clap_sys::id::clap_id;
 
 impl HostContextMenu {
+    /// Asks the host to populate the given `builder`, with the contents of a context menu
+    /// that targets the given `target`.
     #[inline]
     pub fn populate(
         &self,
@@ -27,6 +29,10 @@ impl HostContextMenu {
         }
     }
 
+    /// Asks the host to perform a context menu action, designated by the given `action_id`.
+    ///
+    /// The given `action_id` belongs to the menu created by [`populate`](Self::populate) with the
+    /// given `target`.
     #[inline]
     pub fn perform(
         &self,
@@ -51,6 +57,7 @@ impl HostContextMenu {
         }
     }
 
+    /// Returns `true` if the host can pop up its context menu on behalf of the plugin, `false` otherwise.
     #[inline]
     pub fn can_popup(&self, host: &mut HostMainThreadHandle) -> bool {
         let Some(can_popup) = host.use_extension(&self.0).can_popup else {
@@ -62,6 +69,7 @@ impl HostContextMenu {
         unsafe { can_popup(host.as_raw()) }
     }
 
+    /// Asks the host to pop up its context menu at a given location.
     #[inline]
     pub fn popup(
         &self,
@@ -89,13 +97,20 @@ impl HostContextMenu {
     }
 }
 
+/// Implementation of the plugin-side of the Context Menu extension.
 pub trait PluginContextMenuImpl {
+    /// Asks the plugin to populate the given `builder`, with the contents of a context menu
+    /// that targets the given `target`.
     fn populate(
         &mut self,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), PluginError>;
 
+    /// Asks the plugin to perform a context menu action, designated by the given `action_id`.
+    ///
+    /// The given `action_id` belongs to the menu created by [`populate`](Self::populate) with the
+    /// given `target`.
     fn perform(&mut self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), PluginError>;
 }
 
