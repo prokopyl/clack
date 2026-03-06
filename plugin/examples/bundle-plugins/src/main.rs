@@ -4,10 +4,14 @@ use std::process::Command;
 
 struct Plugin {
     project_name: &'static str,
+    id: &'static str,
+    display_name: &'static str,
 }
 
 const PLUGINS: &[Plugin] = &[Plugin {
     project_name: "clack-plugin-gain",
+    id: "org.rust-audio.clack.gain",
+    display_name: "Clack Gain Example",
 }];
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +37,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         let dylib_name = dylib_name(plugin.project_name);
         let dylib_path = target_dir.join(dylib_name);
 
+        #[cfg(not(target_os = "macos"))]
         make_bundle(plugin, &dist_dir, &dylib_path)?;
+        #[cfg(target_os = "macos")]
+        make_macos_bundle(plugin, &dist_dir, &dylib_path)?;
     }
 
     Ok(())
@@ -50,9 +57,17 @@ fn dylib_name(project_name: &str) -> String {
     let project_name = project_name.replace('-', "_");
 
     #[cfg(target_os = "linux")]
-    format!("lib{}.so", project_name)
+    {
+        format!("lib{}.so", project_name)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        format!("lib{}.dylib", project_name)
+    }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn make_bundle(
     plugin: &Plugin,
     dist_dir: &Path,
@@ -68,4 +83,72 @@ fn make_bundle(
     );
     std::fs::copy(dylib_path, bundle_path)?;
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn make_macos_bundle(
+    plugin: &Plugin,
+    dist_dir: &Path,
+    dylib_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let bundle_name = format!("{}.clap", plugin.project_name);
+    let bundle_path = dist_dir.join(bundle_name);
+
+    remove_bundle_if_exists(&bundle_path);
+
+    let executable_dir = bundle_path.join("Contents/MacOS");
+    let executable_path = executable_dir.join(plugin.project_name);
+
+    println!("Crating bundle {}", bundle_path.display());
+    std::fs::create_dir_all(executable_dir)?;
+
+    println!(
+        "Copying {} to bundle {}",
+        dylib_path.display(),
+        executable_path.display()
+    );
+    std::fs::copy(dylib_path, executable_path)?;
+
+    let plist = info_plist(plugin);
+    let plist_path = bundle_path.join("Contents/Info.plist");
+    std::fs::write(plist_path, plist)?;
+
+    Ok(())
+}
+
+fn remove_bundle_if_exists(bundle_path: &Path) {
+    let Ok(existing) = std::fs::metadata(bundle_path) else {
+        return;
+    };
+
+    let result = if existing.is_dir() {
+        std::fs::remove_dir_all(bundle_path)
+    } else {
+        std::fs::remove_file(bundle_path)
+    };
+
+    match result {
+        Ok(()) => {
+            println!("Removed previous bundle {}", bundle_path.display());
+        }
+        Err(e) => eprintln!("Failed to remove {}: {}", bundle_path.display(), e),
+    }
+}
+
+fn info_plist(plugin: &Plugin) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>{}</string>
+    <key>CFBundleExecutable</key>
+    <string>{}</string>
+    <key>CFBundleIdentifier</key>
+    <string>{}</string>
+</dict>
+</plist>"#,
+        plugin.display_name, plugin.project_name, plugin.id
+    )
 }
