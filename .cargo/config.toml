@@ -1,0 +1,2 @@
+[alias]
+bundle-plugins = "run -p bundle-plugins --"

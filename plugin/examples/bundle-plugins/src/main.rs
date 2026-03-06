@@ -9,11 +9,28 @@ struct Plugin {
     display_name: &'static str,
 }
 
-const PLUGINS: &[Plugin] = &[Plugin {
-    project_name: "clack-plugin-gain",
-    id: "org.rust-audio.clack.gain",
-    display_name: "Clack Gain Example",
-}];
+const PLUGINS: &[Plugin] = &[
+    Plugin {
+        project_name: "clack-plugin-gain",
+        id: "org.rust-audio.clack.gain",
+        display_name: "Clack Gain Example",
+    },
+    Plugin {
+        project_name: "clack-plugin-gain-gui",
+        id: "org.rust-audio.clack.gain-gui",
+        display_name: "Clack Gain GUI Example",
+    },
+    Plugin {
+        project_name: "clack-plugin-gain-presets",
+        id: "org.rust-audio.clack.gain-presets",
+        display_name: "Clack Gain Presets Example",
+    },
+    Plugin {
+        project_name: "clack-plugin-polysynth",
+        id: "org.rust-audio.clack.polysynth",
+        display_name: "Clack PolySynth Example",
+    },
+];
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_root = project_root();
