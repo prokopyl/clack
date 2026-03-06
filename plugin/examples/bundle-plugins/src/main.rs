@@ -1,5 +1,5 @@
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 struct Plugin {
@@ -10,7 +10,7 @@ const PLUGINS: &[Plugin] = &[Plugin {
     project_name: "clack-plugin-gain",
 }];
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_root = project_root();
     let cargo_path = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
 

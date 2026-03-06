@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 
 [dev-dependencies]
-clack-host = { workspace = true }
+clack-host = { workspace = true, features = ["libloading"] }
