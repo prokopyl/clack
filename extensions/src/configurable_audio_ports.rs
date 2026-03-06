@@ -9,6 +9,7 @@ use clap_sys::ext::configurable_audio_ports::{
     CLAP_EXT_CONFIGURABLE_AUDIO_PORTS, CLAP_EXT_CONFIGURABLE_AUDIO_PORTS_COMPAT,
     clap_audio_port_configuration_request, clap_plugin_configurable_audio_ports,
 };
+use core::fmt;
 use std::{
     ffi::{CStr, c_void},
     marker::PhantomData,
@@ -184,7 +185,7 @@ impl<'a> AudioPortsRequestDetails<'a> {
 }
 
 /// A request to configure a single audio port.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct AudioPortsRequest<'a>(clap_audio_port_configuration_request, PhantomData<&'a ()>);
 
@@ -250,6 +251,16 @@ impl<'a> AudioPortsRequest<'a> {
     ) -> &'a [AudioPortsRequest<'a>] {
         // SAFETY: Safe due to #[repr(transparent)]
         unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const _, slice.len()) }
+    }
+}
+
+impl<'a> fmt::Debug for AudioPortsRequest<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AudioPortsRequest")
+            .field("is_input", &self.is_input())
+            .field("port_index", &self.port_index())
+            .field("details", &self.details())
+            .finish()
     }
 }
 
