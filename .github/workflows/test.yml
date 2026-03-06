@@ -29,7 +29,7 @@ jobs:
         # We already check this example works with latest rust, we don't need to check it with MSRV
       - name: Build (except CPAL & GUI examples)
         if: matrix.toolchain == '1.85.1'
-        run: cargo build --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
+        run: cargo build --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui  --exclude bundle-plugins
       - name: Check Plugin-only Extensions
         run: cargo check -p clack-extensions -F "clack-extensions/all-extensions" -F "clack-extensions/clack-plugin" --no-default-features
       - name: Check Host-only Extensions
@@ -43,7 +43,7 @@ jobs:
         run: cargo test --all --verbose
       - name: Run tests (except CPAL & GUI examples)
         if: matrix.toolchain == '1.85.1'
-        run: cargo test --all --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui
+        run: cargo test --all --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui  --exclude bundle-plugins
 
   clippy:
     runs-on: ubuntu-latest
@@ -104,7 +104,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: miri
-          args: test --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui --exclude clack-finder
+          args: test --all --all-features --verbose --exclude clack-host-cpal --exclude clack-plugin-gain-gui --exclude clack-finder --exclude bundle-plugins
 
   rustdoc:
     runs-on: ubuntu-latest

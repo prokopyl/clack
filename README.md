@@ -138,6 +138,11 @@ impl<'a> PluginAudioProcessor<'a, (), ()> for MyGainPluginAudioProcessor {
 clack_export_entry!(SinglePluginEntry<MyGainPlugin>);
 ```
 
+Example plugins in this repository can be compiled to proper `.clap` bundles by running the `cargo bundle-plugins`
+command.
+
+See the [`bundle-plugins` command](./plugin/examples/bundle-plugins)'s README.md file for more information.
+
 ## `clack-host` example
 
 This example implements a very simple host, which loads a specific plugin and processes a couple of
