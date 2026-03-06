@@ -68,6 +68,14 @@ pub enum AudioPortsRequestDetails<'a> {
         /// Requested number of channels.
         channels: u32,
     },
+
+    #[doc(hidden)]
+    Unknown {
+        /// The raw port type string provided by the host, if any.
+        port_type: AudioPortType<'a>,
+        /// The requested number of channels for this port.
+        channels: u32,
+    },
 }
 
 impl<'a> AudioPortsRequestDetails<'a> {
@@ -81,6 +89,7 @@ impl<'a> AudioPortsRequestDetails<'a> {
             AudioPortsRequestDetails::Surround { .. } => Some(AudioPortType::SURROUND),
             #[cfg(feature = "ambisonic")]
             AudioPortsRequestDetails::Ambisonic { .. } => Some(AudioPortType::AMBISONIC),
+            AudioPortsRequestDetails::Unknown { port_type, .. } => Some(*port_type),
         }
     }
 
@@ -96,6 +105,7 @@ impl<'a> AudioPortsRequestDetails<'a> {
             }
             #[cfg(feature = "ambisonic")]
             AudioPortsRequestDetails::Ambisonic { channels, .. } => *channels,
+            AudioPortsRequestDetails::Unknown { channels, .. } => *channels,
         }
     }
 
@@ -111,43 +121,51 @@ impl<'a> AudioPortsRequestDetails<'a> {
         // SAFETY: Pointer validity ensured by the caller.
         let port_type = unsafe { AudioPortType::from_raw(port_type) };
 
-        if port_type == Some(AudioPortType::MONO) && channels == 1 {
-            return Self::Mono;
-        }
+        match port_type {
+            None => Self::Untyped { channels },
+            Some(port_type) if port_type == AudioPortType::MONO && channels == 1 => Self::Mono,
+            Some(port_type) if port_type == AudioPortType::STEREO && channels == 2 => Self::Stereo,
 
-        if port_type == Some(AudioPortType::STEREO) && channels == 2 {
-            return Self::Stereo;
-        }
+            #[cfg(feature = "surround")]
+            Some(port_type) if port_type == AudioPortType::SURROUND && !port_details.is_null() => {
+                // SAFETY: details pointer validity is ensured by the caller.
+                let surround_channels = unsafe {
+                    crate::surround::SurroundChannel::from_raw_slice(std::slice::from_raw_parts(
+                        port_details as *const u8,
+                        channels as usize,
+                    ))
+                };
 
-        #[cfg(feature = "surround")]
-        if port_type == Some(AudioPortType::SURROUND) && !port_details.is_null() {
-            // SAFETY: details pointer validity is ensured by the caller.
-            let channels = unsafe {
-                crate::surround::SurroundChannel::from_raw_slice(std::slice::from_raw_parts(
-                    port_details as *const u8,
-                    channels as usize,
-                ))
-            };
-
-            if let Some(channels) = channels {
-                return Self::Surround { channels };
+                match surround_channels {
+                    Some(channels) => Self::Surround { channels },
+                    None => Self::Unknown {
+                        port_type,
+                        channels,
+                    },
+                }
             }
-        }
 
-        #[cfg(feature = "ambisonic")]
-        if port_type == Some(AudioPortType::AMBISONIC) && !port_details.is_null() {
-            // SAFETY: Validity ensured by the caller.
-            let config =
-                unsafe { crate::ambisonic::AmbisonicConfig::from_raw(*(port_details as *const _)) };
+            #[cfg(feature = "ambisonic")]
+            Some(port_type) if port_type == AudioPortType::AMBISONIC && !port_details.is_null() => {
+                // SAFETY: Validity ensured by the caller.
+                let config = unsafe {
+                    crate::ambisonic::AmbisonicConfig::from_raw(*(port_details as *const _))
+                };
 
-            if let Some(config) = config {
-                return Self::Ambisonic { config, channels };
+                match config {
+                    Some(config) => Self::Ambisonic { config, channels },
+                    None => Self::Unknown {
+                        port_type,
+                        channels,
+                    },
+                }
             }
-        }
 
-        // For any unsupported or unrecognized port type, we return an untyped request with the given channel count.
-        // TODO: Should we return an error instead in case of unknown port type/invalid port details?
-        Self::Untyped { channels }
+            Some(port_type) => Self::Unknown {
+                port_type,
+                channels,
+            },
+        }
     }
 
     fn raw_details(&self) -> *const c_void {
@@ -173,6 +191,12 @@ pub struct AudioPortsRequest<'a>(clap_audio_port_configuration_request, PhantomD
 impl<'a> AudioPortsRequest<'a> {
     /// Create a new audio port configuration request with the given details.
     pub fn new(is_input: bool, port_index: u32, details: AudioPortsRequestDetails<'a>) -> Self {
+        if let AudioPortsRequestDetails::Unknown { .. } = details {
+            panic!(
+                "AudioPortsRequestDetails::Unknown is only for representing unknown requests from the host, and shouldn't be used to create new requests"
+            );
+        }
+
         Self(
             clap_audio_port_configuration_request {
                 is_input,
