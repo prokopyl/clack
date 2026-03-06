@@ -65,6 +65,11 @@ fn dylib_name(project_name: &str) -> String {
     {
         format!("lib{}.dylib", project_name)
     }
+
+    #[cfg(target_os = "windows")]
+    {
+        format!("{}.dll", project_name)
+    }
 }
 
 #[cfg(not(target_os = "macos"))]
