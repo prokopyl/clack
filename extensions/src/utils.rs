@@ -24,6 +24,17 @@ pub(crate) const fn cstr_to_nullable_ptr(str: Option<&CStr>) -> *const c_char {
     }
 }
 
+#[cfg(not(test))]
+#[allow(unused)]
+pub(crate) use std::panic::catch_unwind as handle_panic;
+
+#[cfg(test)]
+#[inline]
+#[allow(unused)]
+pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
+    Ok(f())
+}
+
 pub(crate) fn data_from_array_buf<const N: usize>(data: &[c_char; N]) -> &[u8] {
     // SAFETY: casting from i8 to u8 is safe
     let data = unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, data.len()) };
@@ -70,15 +81,4 @@ pub(crate) const unsafe fn slice_from_external_parts_mut<'a, T>(
     }
 
     core::slice::from_raw_parts_mut(data, len)
-}
-
-#[cfg(not(test))]
-#[allow(unused)]
-pub(crate) use std::panic::catch_unwind as handle_panic;
-
-#[cfg(test)]
-#[inline]
-#[allow(unused)]
-pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
-    Ok(f())
 }
