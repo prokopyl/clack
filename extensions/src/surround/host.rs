@@ -33,11 +33,6 @@ impl PluginSurround {
         port_index: u32,
         buffer: &'a mut [u8],
     ) -> &'a [SurroundChannel] {
-        let buffer_len = match u32::try_from(buffer.len()) {
-            Ok(len) => len,
-            Err(_) => return &[], // buffer is too large to fit in a u32, so we can't write the channel map
-        };
-
         match handle.use_extension(&self.0).get_channel_map {
             // SAFETY: This type ensures the function pointer is valid.
             Some(get_channel_map) => unsafe {
@@ -46,10 +41,15 @@ impl PluginSurround {
                     is_input,
                     port_index,
                     buffer.as_mut_ptr() as *mut _,
-                    buffer_len,
+                    buffer.len().try_into().unwrap_or(u32::MAX), //saturating cast
                 );
 
-                SurroundChannel::from_raw_slice(&buffer[..written as usize]).unwrap_or_default()
+                let slice = match buffer.get(..written as usize) {
+                    Some(buf) => buf,
+                    None => buffer,
+                };
+
+                SurroundChannel::from_raw_slice(slice).unwrap_or_default()
             },
             None => &[],
         }
