@@ -2,6 +2,7 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
+#[allow(unused)]
 struct Plugin {
     project_name: &'static str,
     id: &'static str,
@@ -121,6 +122,7 @@ fn make_macos_bundle(
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn remove_bundle_if_exists(bundle_path: &Path) {
     let Ok(existing) = std::fs::metadata(bundle_path) else {
         return;
@@ -140,6 +142,7 @@ fn remove_bundle_if_exists(bundle_path: &Path) {
     }
 }
 
+#[cfg(target_os = "macos")]
 fn info_plist(plugin: &Plugin) -> String {
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
