@@ -612,6 +612,9 @@ const fn empty_features() -> *const *const c_char {
     EMPTY_FEATURES.as_ptr().cast()
 }
 
+/// An iterator over a [`PluginDescriptor`]'s features list.
+///
+/// This type is obtained from the [`PluginDescriptor::features`] method.
 pub struct FeaturesIter<'a> {
     ptr: CArrayIter,
     _marker: PhantomData<&'a OwnedCStringArray>,

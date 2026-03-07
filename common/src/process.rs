@@ -1,3 +1,5 @@
+//! Types exposing data and metadata to be used by plugins during audio processing.
+
 use clap_sys::process::*;
 use std::fmt::Debug;
 

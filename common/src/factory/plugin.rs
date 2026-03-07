@@ -1,9 +1,20 @@
+//! The plugin factory type, which is the entry point for hosts to discover and instantiate plugins.
+//!
+//! In CLAP, the Plugin Factory is the main factory type (and at the time of writing, the only
+//! stable standard one). Its purpose is to expose to the host a list of all the plugin types
+//! included in this file, and to allow the host to instantiate them.
+//!
+//! See the [`factory` module documentation](crate::factory) to learn more about factories.
+
 use crate::factory::{Factory, RawFactoryPointer};
 use crate::plugin::PluginDescriptor;
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use std::ffi::CStr;
 use std::iter::FusedIterator;
 
+/// A Plugin Factory.
+///
+/// See the [module documentation](self) to learn more about the role of a Plugin Factory.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginFactory<'a>(RawFactoryPointer<'a, clap_plugin_factory>);

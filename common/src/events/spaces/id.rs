@@ -3,6 +3,10 @@ use crate::events::spaces::core::CoreEventSpace;
 use clap_sys::events::CLAP_CORE_EVENT_SPACE_ID;
 use std::marker::PhantomData;
 
+/// An event space identifier, optionally tied to its [`EventSpace`] type `S`.
+///
+/// If `S` is the unit type `()`, then this means this identifier is not tied to any particular
+/// event space (i.e. it is type-erased).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct EventSpaceId<S = ()> {
     id: u16,
@@ -10,13 +14,19 @@ pub struct EventSpaceId<S = ()> {
 }
 
 impl<S> EventSpaceId<S> {
+    /// The raw numeric value that represents an invalid event space identifier.
     pub const INVALID_ID: u16 = u16::MAX;
 
+    /// Returns raw numeric value of this identifier.
+    ///
+    /// The returned value cannot be equal to [`Self::INVALID_ID`].
     #[inline]
     pub const fn id(&self) -> u16 {
         self.id
     }
 
+    /// Returns the raw numeric value of the given identifier, or [`Self::INVALID_ID`] if the
+    /// `None` is passed.
     #[inline]
     pub const fn optional_id(this: &Option<Self>) -> u16 {
         match this {
@@ -51,6 +61,10 @@ impl<'a, S: EventSpace<'a>> From<EventSpaceId<S>> for EventSpaceId<()> {
 }
 
 impl EventSpaceId<CoreEventSpace<'_>> {
+    /// Returns the identifier for the [`CoreEventSpace`].
+    ///
+    /// It is the only event space that has a constant, specific ID designated by the CLAP
+    /// specification, and which can be retrieved without using an event registry.
     #[inline]
     pub const fn core() -> Self {
         Self {
@@ -61,6 +75,9 @@ impl EventSpaceId<CoreEventSpace<'_>> {
 }
 
 impl EventSpaceId<()> {
+    /// Creates a new, type-erased [`EventSpaceId`] from its raw numeric value.
+    ///
+    /// This returns `None` if the passed value is equal to [`Self::INVALID_ID`].
     #[inline]
     pub const fn new(id: u16) -> Option<Self> {
         if id == u16::MAX {

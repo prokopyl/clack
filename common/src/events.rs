@@ -38,41 +38,56 @@ pub use pckn::*;
 /// * The type *must* be ABI-compatible with the matching raw, C-FFI compatible event type.
 /// * All instances of this type *must* be initialized and valid.
 pub unsafe trait Event: AsRef<UnknownEvent> + Sized + 'static {
+    /// The raw event type identifier for this event type.
+    ///
+    /// This *MUST* match the identifier defined in the CLAP specification for this event.
     const TYPE_ID: u16;
+    /// The event space this event type is a part of.
     type EventSpace<'a>: EventSpace<'a>;
 
+    /// Returns the [`EventFlags`] of this event.
     #[inline]
     fn flags(&self) -> EventFlags {
         self.header().flags()
     }
 
+    /// Sets the [`EventFlags`] of this event.
     #[inline]
     fn set_flags(&mut self, flags: EventFlags) {
         self.header_mut().set_flags(flags)
     }
 
+    /// Builds an event with the given [`EventFlags`], and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     fn with_flags(mut self, flags: EventFlags) -> Self {
         self.header_mut().set_flags(flags);
         self
     }
 
+    /// Returns the time stamp of this event, in samples.
     #[inline]
     fn time(&self) -> u32 {
         self.header().time()
     }
 
+    /// Sets the time stamp of this event, in samples.
     #[inline]
     fn set_time(&mut self, time: u32) {
         self.header_mut().set_time(time)
     }
 
+    /// Builds an event with the given time stamp, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     fn with_time(mut self, time: u32) -> Self {
         self.header_mut().set_time(time);
         self
     }
 
+    /// Returns a shared, immutable reference to this event's header.
     #[inline]
     fn header(&self) -> &EventHeader<Self> {
         // SAFETY: this trait guarantees the raw_header points to an event
@@ -80,6 +95,7 @@ pub unsafe trait Event: AsRef<UnknownEvent> + Sized + 'static {
         unsafe { EventHeader::from_raw_unchecked(self.raw_header()) }
     }
 
+    /// Returns an exclusive, mutable reference to this event's header.
     #[inline]
     fn header_mut(&mut self) -> &mut EventHeader<Self> {
         // SAFETY: this trait guarantees the raw_header points to an event
@@ -87,20 +103,31 @@ pub unsafe trait Event: AsRef<UnknownEvent> + Sized + 'static {
         unsafe { EventHeader::from_raw_unchecked_mut(self.raw_header_mut()) }
     }
 
+    /// Returns this event as a type-erased [`UnknownEvent`].
     #[inline]
     fn as_unknown(&self) -> &UnknownEvent {
         // SAFETY: this trait guarantees the raw_header points to an initialized and valid event.
         unsafe { UnknownEvent::from_raw(self.raw_header()) }
     }
 
+    /// Returns a shared, immutable reference to the raw, C-FFI compatible representation of this header's event.
     #[inline]
     fn raw_header(&self) -> &clap_event_header {
         // SAFETY: This trait guarantees self points to an initialized and valid event.
         unsafe { &*(self as *const Self as *const clap_event_header) }
     }
 
+    /// Returns an exclusive, mutable reference to the raw, C-FFI compatible representation of this header's event.
+    ///
+    /// # Safety
+    ///
+    /// This method allows mutating the event header's fields, most notably `type_`, `size` and
+    /// `space_id`.
+    ///
+    /// Modifying those fields may trigger Undefined Behavior, as it can make other readers of this
+    /// event treat it as a type or size that it is actually not.
     #[inline]
-    fn raw_header_mut(&mut self) -> &mut clap_event_header {
+    unsafe fn raw_header_mut(&mut self) -> &mut clap_event_header {
         // SAFETY: This trait guarantees self points to an initialized and valid event.
         unsafe { &mut *(self as *mut Self as *mut clap_event_header) }
     }

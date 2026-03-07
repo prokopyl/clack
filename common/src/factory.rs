@@ -74,6 +74,7 @@ pub mod plugin;
 pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync + 'a {
     /// The standard identifier(s) for this factory type.
     const IDENTIFIERS: &'static [&'static CStr];
+    /// The type of the raw, C-FFI compatible representation of this factory type.
     type Raw: Copy + Sized + Send + Sync + 'static;
 
     /// Returns a handle to the factory from a given factory pointer.
@@ -81,6 +82,7 @@ pub unsafe trait Factory<'a>: Copy + Sized + Send + Sync + 'a {
     /// # Safety
     ///
     /// The caller must ensure that not only is the factory structure the `raw` pointer points
-    /// to is valid, but also
+    /// to is valid, but also each of its contained fields is also valid for this factory type
+    /// to be usable safely.
     unsafe fn from_raw(raw: RawFactoryPointer<'a, Self::Raw>) -> Self;
 }

@@ -29,6 +29,7 @@ impl AsRef<UnknownEvent> for MidiEvent {
 }
 
 impl MidiEvent {
+    /// Creates a new raw MIDI 1.0 event from a `time` stamp, a `port_index`, and raw MIDI `data`.
     #[inline]
     pub const fn new(time: u32, port_index: u16, data: [u8; 3]) -> Self {
         Self {
@@ -235,6 +236,7 @@ impl AsRef<UnknownEvent> for Midi2Event {
 }
 
 impl Midi2Event {
+    /// Creates a new raw MIDI 2.0 event from a `time` stamp, a `port_index`, and raw MIDI `data`.
     #[inline]
     pub const fn new(time: u32, port_index: u16, data: [u32; 4]) -> Self {
         Self {
