@@ -181,23 +181,20 @@ impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {}
 clack_export_entry!(SinglePluginEntry<GainPlugin>);
 
 impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
-    fn is_api_supported(&mut self, configuration: clack_extensions::gui::GuiConfiguration) -> bool {
+    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool {
         configuration.api_type
             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
             && !configuration.is_floating
     }
 
-    fn get_preferred_api(&'_ mut self) -> Option<clack_extensions::gui::GuiConfiguration<'_>> {
+    fn get_preferred_api(&'_ mut self) -> Option<GuiConfiguration<'_>> {
         Some(GuiConfiguration {
             api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
             is_floating: false,
         })
     }
 
-    fn create(
-        &mut self,
-        _configuration: clack_extensions::gui::GuiConfiguration,
-    ) -> Result<(), PluginError> {
+    fn create(&mut self, _configuration: GuiConfiguration) -> Result<(), PluginError> {
         Ok(())
     }
 
@@ -219,7 +216,7 @@ impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
     }
 
     fn set_parent(&mut self, window: clack_extensions::gui::Window) -> Result<(), PluginError> {
-        self.gui.set_parent(window);
+        self.gui.set_parent(window, self.shared);
         Ok(())
     }
 
@@ -228,7 +225,6 @@ impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        self.gui.open(self.shared)?;
         Ok(())
     }
 
