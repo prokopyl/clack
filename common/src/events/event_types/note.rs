@@ -40,6 +40,7 @@ pub struct NoteEndEvent {
     inner: NoteEvent<NoteEndEvent>,
 }
 impl NoteOnEvent {
+    /// Creates a new [`NoteOnEvent`] from a `time` stamp, a [`Pckn`] target, and a `velocity`.
     #[inline]
     pub const fn new(time: u32, pckn: Pckn, velocity: f64) -> Self {
         Self {
@@ -47,16 +48,21 @@ impl NoteOnEvent {
         }
     }
 
+    /// Returns the velocity of this [`NoteOnEvent`].
     #[inline]
     pub const fn velocity(&self) -> f64 {
         self.inner.inner.velocity
     }
 
+    /// Sets the velocity of this [`NoteOnEvent`].
     #[inline]
     pub const fn set_velocity(&mut self, velocity: f64) {
         self.inner.inner.velocity = velocity
     }
 
+    /// Builds a [`NoteOnEvent`] with the given velocity, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_velocity(mut self, velocity: f64) -> Self {
         self.inner.inner.velocity = velocity;
@@ -67,6 +73,7 @@ impl NoteOnEvent {
 }
 
 impl NoteOffEvent {
+    /// Creates a new [`NoteOffEvent`] from a `time` stamp, a [`Pckn`] target, and a `velocity`.
     #[inline]
     pub const fn new(time: u32, pckn: Pckn, velocity: f64) -> Self {
         Self {
@@ -74,16 +81,21 @@ impl NoteOffEvent {
         }
     }
 
+    /// Returns the velocity of this [`NoteOnEvent`].
     #[inline]
     pub const fn velocity(&self) -> f64 {
         self.inner.inner.velocity
     }
 
+    /// Sets the velocity of this [`NoteOnEvent`].
     #[inline]
     pub const fn set_velocity(&mut self, velocity: f64) {
         self.inner.inner.velocity = velocity
     }
 
+    /// Builds a [`NoteOffEvent`] with the given velocity, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_velocity(mut self, velocity: f64) -> Self {
         self.inner.inner.velocity = velocity;
@@ -94,6 +106,7 @@ impl NoteOffEvent {
 }
 
 impl NoteChokeEvent {
+    /// Creates a new [`NoteChokeEvent`] from a `time` stamp and a [`Pckn`] target.
     #[inline]
     pub const fn new(time: u32, pckn: Pckn) -> Self {
         Self {
@@ -105,6 +118,7 @@ impl NoteChokeEvent {
 }
 
 impl NoteEndEvent {
+    /// Creates a new [`NoteEndEvent`] from a `time` stamp and a [`Pckn`] target.
     #[inline]
     pub const fn new(time: u32, pckn: Pckn) -> Self {
         Self {

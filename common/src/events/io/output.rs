@@ -51,11 +51,21 @@ impl<'a> OutputEvents<'a> {
         &mut *(raw as *mut _ as *mut _)
     }
 
+    /// Returns a reference to a C FFI-compatible representation of this event list.
+    #[inline]
+    pub const fn as_raw(&mut self) -> &clap_output_events {
+        // SAFETY: OutputEvents list has the same layout and is repr(C)
+        unsafe { &*(self as *const _ as *const _) }
+    }
+
     /// Returns a C FFI-compatible mutable pointer to this event list.
     ///
-    /// This pointer is only valid until the list is dropped.
+    /// # Safety
+    ///
+    /// This method allows mutating the list's inner fields.
+    /// Modifying those fields may trigger Undefined Behavior.
     #[inline]
-    pub const fn as_raw_mut(&mut self) -> &mut clap_output_events {
+    pub const unsafe fn as_raw_mut(&mut self) -> &mut clap_output_events {
         // SAFETY: OutputEvents list has the same layout and is repr(C)
         unsafe { &mut *(self as *mut _ as *mut _) }
     }

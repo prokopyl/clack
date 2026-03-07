@@ -476,7 +476,7 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
             frames_count,
 
             in_events: input_events.as_raw(),
-            out_events: output_events.as_raw_mut(),
+            out_events: output_events.as_raw(),
 
             audio_inputs: audio_inputs.as_raw_buffers().as_ptr(),
             audio_outputs: audio_outputs.as_raw_buffers().as_mut_ptr(),

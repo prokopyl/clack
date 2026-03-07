@@ -6,9 +6,17 @@ macro_rules! impl_event_helpers {
             &self.inner
         }
 
-        /// Returns a mutable reference to the underlying raw, C-FFI compatible event struct.
+        /// Returns an exclusive, mutable reference to the raw, C-FFI compatible event struct.
+        ///
+        /// # Safety
+        ///
+        /// This method allows mutating the event header's fields, most notably `type_`, `size` and
+        /// `space_id`.
+        ///
+        /// Modifying those fields may trigger Undefined Behavior, as it can make other readers of this
+        /// event treat it as a type or size that it is actually not.
         #[inline]
-        pub const fn as_raw_mut(&mut self) -> &mut $raw_type {
+        pub const unsafe fn as_raw_mut(&mut self) -> &mut $raw_type {
             &mut self.inner
         }
 

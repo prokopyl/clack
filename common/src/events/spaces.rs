@@ -1,3 +1,5 @@
+//! Event spaces and associated utilities.
+
 mod core;
 mod id;
 

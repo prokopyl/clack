@@ -154,8 +154,16 @@ impl<E> EventHeader<E> {
     }
 
     /// Returns this header as a mutable reference to a raw, C-FFI compatible header struct.
+    ///
+    /// # Safety
+    ///
+    /// This method allows mutating the event header's fields, most notably `type_`, `size` and
+    /// `space_id`.
+    ///
+    /// Modifying those fields may trigger Undefined Behavior, as it can make other readers of this
+    /// event treat it as a type or size that it is actually not.
     #[inline]
-    pub const fn as_raw_mut(&mut self) -> &mut clap_event_header {
+    pub const unsafe fn as_raw_mut(&mut self) -> &mut clap_event_header {
         &mut self.inner
     }
 

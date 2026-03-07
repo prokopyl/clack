@@ -8,6 +8,7 @@ use clap_sys::events::{
 };
 use std::fmt::{Debug, Formatter};
 
+/// Sets a parameter's value.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ParamValueEvent {
@@ -28,6 +29,8 @@ impl AsRef<UnknownEvent> for ParamValueEvent {
 }
 
 impl ParamValueEvent {
+    /// Creates a new [`ParamValueEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target,
+    /// a parameter `value` and an optional [`Cookie`].
     #[inline]
     pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, value: f64, cookie: Cookie) -> Self {
         Self {
@@ -44,32 +47,44 @@ impl ParamValueEvent {
         }
     }
 
+    /// Returns the parameter ID this event targets.
+    ///
+    /// This returns [`None`] if the parameter ID is invalid.
     #[inline]
     pub const fn param_id(&self) -> Option<ClapId> {
         ClapId::from_raw(self.inner.param_id)
     }
 
+    /// Sets the parameter ID this event targets.
     #[inline]
     pub const fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
+    /// Builds a [`ParamValueEvent`] with the given parameter ID target, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
         self.inner.param_id = param_id.get();
         self
     }
 
+    /// Returns the parameter value of this event.
     #[inline]
     pub const fn value(&self) -> f64 {
         self.inner.value
     }
 
+    /// Sets the parameter value of this event.
     #[inline]
     pub const fn set_value(&mut self, value: f64) {
         self.inner.value = value
     }
 
+    /// Builds a [`ParamValueEvent`] with the given parameter value, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_value(mut self, value: f64) -> Self {
         self.inner.value = value;
@@ -79,16 +94,21 @@ impl ParamValueEvent {
     impl_event_helpers!(clap_event_param_value);
     impl_event_pckn!(self.inner);
 
+    /// The [`Cookie`] sent alongside this event.
     #[inline]
     pub const fn cookie(&self) -> Cookie {
         Cookie::from_raw(self.inner.cookie)
     }
 
+    /// Sets the given [`Cookie`] to be sent alongside this event.
     #[inline]
     pub const fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
+    /// Builds a [`ParamValueEvent`] with the given [`Cookie`], and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
         self.inner.cookie = cookie.as_raw();
@@ -123,6 +143,7 @@ impl Debug for ParamValueEvent {
     }
 }
 
+/// Sets a parameter modulation amount.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ParamModEvent {
@@ -143,6 +164,8 @@ impl AsRef<UnknownEvent> for ParamModEvent {
 }
 
 impl ParamModEvent {
+    /// Creates a new [`ParamModEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target,
+    /// a parameter modulation `amount` and an optional [`Cookie`].
     #[inline]
     pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, amount: f64, cookie: Cookie) -> Self {
         Self {
@@ -159,32 +182,44 @@ impl ParamModEvent {
         }
     }
 
+    /// Returns the parameter ID this event targets.
+    ///
+    /// This returns [`None`] if the parameter ID is invalid.
     #[inline]
     pub const fn param_id(&self) -> Option<ClapId> {
         ClapId::from_raw(self.inner.param_id)
     }
 
+    /// Sets the parameter ID this event targets.
     #[inline]
     pub fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
+    /// Builds a [`ParamValueEvent`] with the given parameter ID target, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
         self.inner.param_id = param_id.get();
         self
     }
 
+    /// Returns the parameter modulation amount of this event.
     #[inline]
     pub const fn amount(&self) -> f64 {
         self.inner.amount
     }
 
+    /// Sets the parameter modulation amount of this event.
     #[inline]
     pub fn set_amount(&mut self, amount: f64) {
         self.inner.amount = amount
     }
 
+    /// Builds a [`ParamModEvent`] with the given parameter modulation amount, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_amount(mut self, amount: f64) -> Self {
         self.inner.amount = amount;
@@ -194,16 +229,21 @@ impl ParamModEvent {
     impl_event_helpers!(clap_event_param_mod);
     impl_event_pckn!(self.inner);
 
+    /// The [`Cookie`] sent alongside this event.
     #[inline]
     pub const fn cookie(&self) -> Cookie {
         Cookie::from_raw(self.inner.cookie)
     }
 
+    /// Sets the given [`Cookie`] to be sent alongside this event.
     #[inline]
     pub fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
+    /// Builds a [`ParamValueEvent`] with the given [`Cookie`], and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
         self.inner.cookie = cookie.as_raw();
@@ -238,6 +278,9 @@ impl Debug for ParamModEvent {
     }
 }
 
+/// Indicates that the user started adjusting a knob or parameter value.
+///
+/// For the event to raise when the user finishes this adjustment, see [`ParamGestureEndEvent`].
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ParamGestureBeginEvent {
@@ -258,6 +301,7 @@ impl AsRef<UnknownEvent> for ParamGestureBeginEvent {
 }
 
 impl ParamGestureBeginEvent {
+    /// Creates a new [`ParamGestureBeginEvent`] from a `time` stamp and a parameter ID.
     #[inline]
     pub const fn new(time: u32, param_id: ClapId) -> Self {
         Self {
@@ -268,16 +312,23 @@ impl ParamGestureBeginEvent {
         }
     }
 
+    /// Returns the parameter ID this event targets.
+    ///
+    /// This returns [`None`] if the parameter ID is invalid.
     #[inline]
     pub const fn param_id(&self) -> Option<ClapId> {
         ClapId::from_raw(self.inner.param_id)
     }
 
+    /// Sets the parameter ID this event targets.
     #[inline]
     pub fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
+    /// Builds a [`ParamGestureBeginEvent`] with the given parameter ID target, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
         self.inner.param_id = param_id.get();
@@ -303,6 +354,9 @@ impl PartialEq for ParamGestureBeginEvent {
     }
 }
 
+/// Indicates that the user finished adjusting a knob or parameter value.
+///
+/// For the event to raise when the user starts this adjustment, see [`ParamGestureBeginEvent`].
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ParamGestureEndEvent {
@@ -323,6 +377,7 @@ impl AsRef<UnknownEvent> for ParamGestureEndEvent {
 }
 
 impl ParamGestureEndEvent {
+    /// Creates a new [`ParamGestureEndEvent`] from a `time` stamp and a parameter ID.
     #[inline]
     pub const fn new(time: u32, param_id: ClapId) -> Self {
         Self {
@@ -333,16 +388,23 @@ impl ParamGestureEndEvent {
         }
     }
 
+    /// Returns the parameter ID this event targets.
+    ///
+    /// This returns [`None`] if the parameter ID is invalid.
     #[inline]
     pub const fn param_id(&self) -> Option<ClapId> {
         ClapId::from_raw(self.inner.param_id)
     }
 
+    /// Sets the parameter ID this event targets.
     #[inline]
     pub fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
+    /// Builds a [`ParamGestureEndEvent`] with the given parameter ID target, and returns it.
+    ///
+    /// This is useful to use in a builder-style pattern.
     #[inline]
     pub const fn with_param_id(mut self, param_id: ClapId) -> Self {
         self.inner.param_id = param_id.get();
