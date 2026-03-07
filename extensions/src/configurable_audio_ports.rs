@@ -152,7 +152,7 @@ impl<'a> AudioPortsRequestDetails<'a> {
     }
 
     /// The number of channels requested.
-    pub const fn channels(&self) -> u32 {
+    pub const fn channel_count(&self) -> u32 {
         self.channel_count
     }
 

@@ -266,7 +266,7 @@ impl<'a> crate::configurable_audio_ports::AudioPortsRequestDetails<'a> {
             unsafe {
                 SurroundChannel::from_raw_slice(std::slice::from_raw_parts(
                     self.as_raw() as *const u8,
-                    self.channels() as usize,
+                    self.channel_count() as usize,
                 ))
             }
         } else {
