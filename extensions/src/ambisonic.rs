@@ -1,4 +1,4 @@
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 //! This extension can be used to specify the ambisonic channel mapping ([`AmbisonicConfig`]) used by the plugin.
 
@@ -77,6 +77,9 @@ pub enum AmbisonicNormalization {
 }
 
 impl AmbisonicConfig {
+    /// Create an [`AmbisonicConfig`] from a raw [`clap_ambisonic_config`] struct.
+    ///
+    /// Returns [`None`] if the struct contains invalid values for the ordering or normalization fields.
     pub fn from_raw(raw: clap_ambisonic_config) -> Option<Self> {
         Some(Self {
             ordering: AmbisonicOrdering::from_raw(raw.ordering)?,
@@ -84,13 +87,15 @@ impl AmbisonicConfig {
         })
     }
 
-    pub fn as_raw(&self) -> &clap_ambisonic_config {
+    /// Convert this [`AmbisonicConfig`] to its raw [`clap_ambisonic_config`] representation.
+    pub const fn as_raw(&self) -> &clap_ambisonic_config {
         // SAFETY: This type is repr(C) and ABI-compatible with clap_ambisonic_config, and all of its fields are valid for the corresponding fields in clap_ambisonic_config.
         unsafe { &*(self as *const Self as *const clap_ambisonic_config) }
     }
 }
 
 impl AmbisonicOrdering {
+    /// Create an [`AmbisonicOrdering`] from a raw `u32` value.
     pub fn from_raw(raw: u32) -> Option<Self> {
         match raw {
             i if i == CLAP_AMBISONIC_ORDERING_FUMA => Some(AmbisonicOrdering::FuMa),
@@ -99,12 +104,14 @@ impl AmbisonicOrdering {
         }
     }
 
+    /// Convert this [`AmbisonicOrdering`] to its raw `u32` representation.
     pub fn to_raw(self) -> u32 {
         self as _
     }
 }
 
 impl AmbisonicNormalization {
+    /// Create an [`AmbisonicNormalization`] from a raw `u32` value.
     pub fn from_raw(raw: u32) -> Option<Self> {
         match raw {
             i if i == CLAP_AMBISONIC_NORMALIZATION_MAXN => Some(AmbisonicNormalization::MaxN),
@@ -116,6 +123,7 @@ impl AmbisonicNormalization {
         }
     }
 
+    /// Convert this [`AmbisonicNormalization`] to its raw `u32` representation.
     pub fn to_raw(self) -> u32 {
         self as _
     }
@@ -124,6 +132,33 @@ impl AmbisonicNormalization {
 impl AudioPortType<'static> {
     /// Ambisonic audio port type.
     pub const AMBISONIC: Self = AudioPortType(CLAP_PORT_AMBISONIC);
+}
+
+#[cfg(feature = "configurable-audio-ports")]
+impl<'a> crate::configurable_audio_ports::AudioPortsRequestDetails<'a> {
+    /// Create a new port request for an ambisonic port with the given configuration
+    pub const fn ambisonic(channels: u32, config: &'a AmbisonicConfig) -> Self {
+        // SAFETY: The lifetime validity is ensured by the caller
+        unsafe {
+            Self::from_raw(
+                Some(AudioPortType::AMBISONIC),
+                channels,
+                config.as_raw() as *const _ as *const _,
+            )
+        }
+    }
+
+    /// If this is an ambisonic port, return the ambisonic configuration.
+    pub fn as_ambisonic(&self) -> Option<AmbisonicConfig> {
+        if self.port_type() == Some(AudioPortType::AMBISONIC) && !self.as_raw().is_null() {
+            // SAFETY: According to the spec, if port type is AMBISONIC,
+            // then port_details is a valid pointer to a `clap_ambisonic_config` struct
+            // https://github.com/free-audio/clap/blob/29ffcc273be7c7c651f6c9953b99e69700e2387a/include/clap/ext/configurable-audio-ports.h#L35
+            unsafe { AmbisonicConfig::from_raw(*(self.as_raw() as *const clap_ambisonic_config)) }
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(feature = "clack-plugin")]

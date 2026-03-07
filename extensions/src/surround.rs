@@ -243,6 +243,38 @@ impl AudioPortType<'static> {
     pub const SURROUND: Self = AudioPortType(CLAP_PORT_SURROUND);
 }
 
+#[cfg(feature = "configurable-audio-ports")]
+impl<'a> crate::configurable_audio_ports::AudioPortsRequestDetails<'a> {
+    /// Create a new port request for a surround port with the given channel map.
+    pub fn surround(channels: &'a [SurroundChannel]) -> Self {
+        // SAFETY: The lifetime validity is ensured by the caller
+        unsafe {
+            Self::from_raw(
+                Some(AudioPortType::SURROUND),
+                channels.len().try_into().unwrap_or(u32::MAX),
+                SurroundChannel::as_raw_slice(channels).as_ptr() as *const _,
+            )
+        }
+    }
+
+    /// If this is a surround port, return the surround channel map as a slice of [`SurroundChannel`]s.
+    pub fn as_surround(&self) -> Option<&'a [SurroundChannel]> {
+        if self.port_type() == Some(AudioPortType::SURROUND) && !self.as_raw().is_null() {
+            // SAFETY: According to the spec, if port type is SURROUND,
+            // then port_details is a valid pointer to an array of `channel_count` u8 values corresponding to valid surround channels.
+            // https://github.com/free-audio/clap/blob/29ffcc273be7c7c651f6c9953b99e69700e2387a/include/clap/ext/configurable-audio-ports.h#L34
+            unsafe {
+                SurroundChannel::from_raw_slice(std::slice::from_raw_parts(
+                    self.as_raw() as *const u8,
+                    self.channels() as usize,
+                ))
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(feature = "clack-plugin")]
 mod plugin;
 #[cfg(feature = "clack-plugin")]
