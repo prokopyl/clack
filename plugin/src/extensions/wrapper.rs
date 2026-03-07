@@ -362,6 +362,9 @@ impl PluginWrapperError {
         }
     }
 
+    /// If this error holds an [`io::Error`](std::io::Error), returns its raw OS error.
+    ///
+    /// If not applicable, this returns `None` instead.
     pub fn os_error_code(&self) -> Option<i32> {
         let e = match self {
             PluginWrapperError::Error(_, e) => e,
@@ -371,6 +374,10 @@ impl PluginWrapperError {
         e.downcast_ref::<std::io::Error>()?.raw_os_error()
     }
 
+    /// Formats this error into either a [`CStr`] or [`CString`].
+    ///
+    /// This will handle formatting failures and return an appropriate message in that case, so
+    /// unlike the [`Display`] implementation, this will always return a displayable error message.
     pub fn format_cstr(&self) -> Cow<'static, CStr> {
         let mut buf = Vec::new();
         match buf.write_fmt(format_args!("{}", self)) {

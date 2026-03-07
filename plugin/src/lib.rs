@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![warn(missing_docs)]
 
 extern crate core;
 

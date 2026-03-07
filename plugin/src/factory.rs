@@ -23,8 +23,7 @@ pub use clack_common::factory::*;
 pub use error::FactoryWrapperError;
 pub use wrapper::FactoryWrapper;
 
-/// Provides an implementation of this extension for a given type `I` (typically either a host or
-/// plugin structure).
+/// A types that provides a specific factory implementation.
 ///
 /// # Safety
 ///
@@ -32,8 +31,11 @@ pub use wrapper::FactoryWrapper;
 /// that fully complies to the CLAP specification of the given [`Factory`] type, and must remain
 /// valid for the duration of the `'a` lifetime.
 pub unsafe trait FactoryImplementation<'a>: 'a {
+    /// The [`Factory`] type this is able to provide.
     type Factory: Factory<'a>;
+    /// The inner factory implementation type in the [`FactoryWrapper`] returned by [`wrapper`](Self::wrapper)
     type Wrapped;
 
+    /// Returns the [`FactoryWrapper`] instance this type is able to provide.
     fn wrapper(&self) -> &FactoryWrapper<<Self::Factory as Factory<'a>>::Raw, Self::Wrapped>;
 }
