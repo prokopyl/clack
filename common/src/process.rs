@@ -47,6 +47,9 @@ impl ProcessStatus {
         }
     }
 
+    /// Combines two [`ProcessStatus`]es, returning one that meets the minimum processing requirements
+    /// of both statuses.
+    #[inline]
     pub fn combined_with(self, other: ProcessStatus) -> ProcessStatus {
         use ProcessStatus::*;
 

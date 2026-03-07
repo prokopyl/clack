@@ -1,4 +1,4 @@
-use clap_sys::entry::clap_plugin_entry;
+//! Types describing a CLAP file’s entry.
 
 /// A C-FFI compatible descriptor of a CLAP file's entry point.
 ///
@@ -7,4 +7,4 @@ use clap_sys::entry::clap_plugin_entry;
 ///
 /// This type is what is exposed by the `clack-plugin` crate, and can be loaded using the
 /// `clack-host` crate.
-pub type EntryDescriptor = clap_plugin_entry;
+pub type EntryDescriptor = clap_sys::entry::clap_plugin_entry;

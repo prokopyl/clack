@@ -32,9 +32,16 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 pub struct ConstantMask(u64);
 
 impl ConstantMask {
+    /// The capacity, in bits, of a [`ConstantMask`].
+    ///
+    /// This is how many channels can be represented in a [`ConstantMask`].
     pub const CAPACITY: u8 = 64;
 
+    /// A [`ConstantMask`] that represents all 64 possible channels as being fully constant.
+    /// This constant mask has all its bits set to `1`.
     pub const FULLY_CONSTANT: ConstantMask = ConstantMask(u64::MAX);
+    /// A [`ConstantMask`] that represents all 64 possible channels as being fully dynamic.
+    /// This constant mask has all its bits set to `0`.
     pub const FULLY_DYNAMIC: ConstantMask = ConstantMask(0);
 
     /// Creates a new constant mask from its inner bitmask representation.

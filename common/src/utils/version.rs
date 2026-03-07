@@ -27,6 +27,7 @@ impl ClapVersion {
     /// The version of the CLAP API that is implemented by this Clack implementation.
     pub const CURRENT: ClapVersion = Self::from_raw(clap_sys::version::CLAP_VERSION);
 
+    /// Creates a [`ClapVersion`] from its raw, C-FFI compatible representation.
     #[inline]
     pub const fn from_raw(raw: clap_version) -> Self {
         Self {
@@ -36,6 +37,7 @@ impl ClapVersion {
         }
     }
 
+    /// Returns this [`ClapVersion`] as its raw, C-FFI compatible representation.
     #[inline]
     pub const fn to_raw(self) -> clap_version {
         clap_version {
@@ -45,6 +47,11 @@ impl ClapVersion {
         }
     }
 
+    /// Returns whether this [`ClapVersion`] is compatible with the current version of this `clack`
+    /// library.
+    ///
+    /// This currently returns true if this version's `major` field is `1`, and false
+    /// otherwise.
     #[inline]
     pub const fn is_compatible(&self) -> bool {
         clap_sys::version::clap_version_is_compatible(self.to_raw())

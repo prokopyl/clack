@@ -42,22 +42,28 @@ use std::ffi::c_void;
 pub struct Cookie(*mut c_void);
 
 impl Cookie {
+    /// Creates a default "empty" cookie, i.e. a Cookie with a `null` pointer.
     #[inline]
     pub const fn empty() -> Self {
         Self(core::ptr::null_mut())
     }
 
+    /// Creates a [`Cookie`] from the given pointer.
     #[inline]
     pub const fn from_raw(ptr: *mut c_void) -> Self {
         Self(ptr)
     }
 
+    /// Returns the pointer value contains in this [`Cookie`].
     #[inline]
     pub const fn as_raw(&self) -> *mut c_void {
         self.0
     }
 }
 
+/// Creates a default "empty" cookie, i.e. a Cookie with a `null` pointer.
+///
+/// This is the same as using [`Cookie::empty`].
 impl Default for Cookie {
     #[inline]
     fn default() -> Self {

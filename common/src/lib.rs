@@ -1,4 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![warn(missing_docs)]
 
 //! A small crate containing various CLAP utilities and definitions that are common to both
 //! plugins and hosts.
