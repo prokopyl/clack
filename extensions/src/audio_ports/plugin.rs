@@ -69,7 +69,9 @@ impl AudioPortInfoWriter<'_> {
 /// # Example
 /// Declaring a plugin with one stereo input and one stereo output:
 /// ```no_run
-/// use clack_plugin::audio_ports::{PluginAudioPortsImpl, AudioPortInfoWriter};
+/// use clack_extensions::audio_ports::{PluginAudioPortsImpl, AudioPortInfoWriter, AudioPortInfo, AudioPortFlags, AudioPortType};
+/// use clack_common::utils::ClapId;
+///
 /// struct MyPluginMainThread;
 ///
 /// impl PluginAudioPortsImpl for MyPluginMainThread {
@@ -109,7 +111,7 @@ pub trait PluginAudioPortsImpl {
     /// The `is_input` flag tells you whether to report an input or output port,
     /// so implementations typically branch on it.
     ///
-    /// The host will call this after [`count`] to enumerate all ports.
+    /// The host will call this after [`Self::count`] to enumerate all ports.
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 

@@ -149,16 +149,16 @@ unsafe impl Extension for HostAudioPorts {
 /// to understand a port’s identity, layout, and capabilities.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPortInfo<'a> {
-	/// Stable identifier for the port.
-	///
-	/// IDs are allowed to match across directions (i.e. an input port and an output port can both have the same id),
-	/// but are required to be unique within each direction (2 input ports, both with the same id are not allowed)
-	pub id: ClapId,
+    /// Stable identifier for the port.
+    ///
+    /// IDs are allowed to match across directions (i.e. an input port and an output port can both have the same id),
+    /// but are required to be unique within each direction (2 input ports, both with the same id are not allowed)
+    pub id: ClapId,
 
     /// Display name for the port. Stored as a UTF‑8 byte slice.
     ///
     /// > **tip**: use `b""` syntax to set this easily
-    /// > ```rust
+    /// > ```rust,ignore
     /// > name = b"MyAudioPort",
     /// > ```
     pub name: &'a [u8],
