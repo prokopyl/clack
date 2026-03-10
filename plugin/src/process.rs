@@ -11,7 +11,11 @@ use std::ops::RangeBounds;
 
 pub use clack_common::process::*;
 pub mod audio;
-use crate::internal_utils::{slice_from_external_parts, slice_from_external_parts_mut};
+mod celled_audio_buffers;
+
+pub(crate) use celled_audio_buffers::CelledClapAudioBuffer;
+
+use crate::internal_utils::slice_from_external_parts;
 use audio::*;
 
 /// Metadata about the current process call.
@@ -197,8 +201,8 @@ impl Events<'_> {
 /// }
 /// ```
 pub struct Audio<'a> {
-    inputs: &'a [clap_audio_buffer],
-    outputs: &'a mut [clap_audio_buffer],
+    inputs: &'a [CelledClapAudioBuffer],
+    outputs: &'a [CelledClapAudioBuffer],
     frames_count: u32,
 }
 
@@ -215,11 +219,11 @@ impl<'a> Audio<'a> {
         Audio {
             frames_count: raw_process.frames_count,
             inputs: slice_from_external_parts(
-                raw_process.audio_inputs,
+                raw_process.audio_inputs.cast(),
                 raw_process.audio_inputs_count as usize,
             ),
-            outputs: slice_from_external_parts_mut(
-                raw_process.audio_outputs,
+            outputs: slice_from_external_parts(
+                raw_process.audio_outputs.cast(),
                 raw_process.audio_outputs_count as usize,
             ),
         }
@@ -236,45 +240,71 @@ impl<'a> Audio<'a> {
     /// channel buffers pointed to by `buffers`.
     #[inline]
     pub unsafe fn from_raw_buffers(
-        inputs: &'a [clap_audio_buffer],
-        outputs: &'a mut [clap_audio_buffer],
+        inputs: *mut [clap_audio_buffer],
+        outputs: *mut [clap_audio_buffer],
         frames_count: u32,
     ) -> Self {
         Self {
-            inputs,
-            outputs,
+            inputs: &*(inputs as *const _),
+            outputs: &*(outputs as *const _),
             frames_count,
         }
     }
 
-    /// Returns the raw input and output buffers structs, respectively.
+    /// Returns a raw pointer to a slice of the raw input buffers structs.
+    ///
+    /// # Safety
+    ///
+    /// While this function is safe to use, there are many cases where using the resulting pointer
+    /// is not.
+    ///
+    /// This is because the contents slice of buffer structs (as well as the raw audio buffers these
+    /// point to) are valid for both reads and writes from other, potentially aliased pointers to
+    /// that data.
+    ///
+    /// This means it is not valid to create either shared (`&`) or mutable (`&mut`) Rust references
+    /// to these buffers or their data.
+    ///
+    /// In order to safely access the data, you can either use [`Cell`]s, or perform direct
+    /// read or write operations, e.g. using [`ptr::read`] or [`ptr::write`].
+    ///
+    /// [`ptr::read`]: core::ptr::read
+    /// [`ptr::write`]: core::ptr::write
+    /// [`Cell`]: core::cell::Cell
     #[inline]
-    pub fn raw_buffers(&mut self) -> (&'a [clap_audio_buffer], &mut [clap_audio_buffer]) {
-        (self.inputs, self.outputs)
+    pub fn raw_inputs(&self) -> *mut [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts_mut(
+            self.inputs.as_ptr().cast_mut().cast(),
+            self.inputs.len(),
+        )
     }
 
-    /// Returns the raw input and output buffers structs, respectively, consuming the audio struct.
+    /// Returns a raw pointer to a C array of the raw output buffers structs.
+    ///
+    /// # Safety
+    ///
+    /// While this function is safe to use, there are many cases where using the resulting pointer
+    /// is not.
+    ///
+    /// This is because the contents slice of buffer structs (as well as the raw audio buffers these
+    /// point to) are valid for both reads and writes from other, potentially aliased pointers to
+    /// that data.
+    ///
+    /// This means it is not valid to create either shared (`&`) or mutable (`&mut`) Rust references
+    /// to these buffers or their data.
+    ///
+    /// In order to safely access the data, you can either use [`Cell`]s, or perform direct
+    /// read or write operations, e.g. using [`ptr::read`] or [`ptr::write`].
+    ///
+    /// [`ptr::read`]: core::ptr::read
+    /// [`ptr::write`]: core::ptr::write
+    /// [`Cell`]: core::cell::Cell
     #[inline]
-    pub fn to_raw_buffers(self) -> (&'a [clap_audio_buffer], &'a mut [clap_audio_buffer]) {
-        (self.inputs, self.outputs)
-    }
-
-    /// Returns the raw input buffers structs.
-    #[inline]
-    pub fn raw_input_buffers(&self) -> &'a [clap_audio_buffer] {
-        self.inputs
-    }
-
-    /// Returns the raw output buffers structs.
-    #[inline]
-    pub fn raw_output_buffers(&mut self) -> &mut [clap_audio_buffer] {
-        self.outputs
-    }
-
-    /// Returns the raw output buffers structs, consuming the audio struct.
-    #[inline]
-    pub fn to_raw_output_buffers(self) -> &'a mut [clap_audio_buffer] {
-        self.outputs
+    pub fn raw_outputs(&self) -> *mut [clap_audio_buffer] {
+        core::ptr::slice_from_raw_parts_mut(
+            self.outputs.as_ptr().cast_mut().cast(),
+            self.outputs.len(),
+        )
     }
 
     /// Retrieves the [`InputPort`] at a given index.
@@ -302,7 +332,7 @@ impl<'a> Audio<'a> {
     pub fn input_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
         self.inputs
             .get(index)
-            .map(AudioPortProcessingInfo::from_raw)
+            .map(CelledClapAudioBuffer::processing_info)
     }
 
     /// Retrieves the number of available [`InputPort`]s.
@@ -326,7 +356,9 @@ impl<'a> Audio<'a> {
     /// output port by its index.
     #[inline]
     pub fn input_ports_infos(&self) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
-        self.inputs.iter().map(AudioPortProcessingInfo::from_raw)
+        self.inputs
+            .iter()
+            .map(CelledClapAudioBuffer::processing_info)
     }
 
     /// Retrieves the [`OutputPort`] at a given index.
@@ -338,7 +370,7 @@ impl<'a> Audio<'a> {
     #[inline]
     pub fn output_port(&mut self, index: usize) -> Option<OutputPort<'_>> {
         self.outputs
-            .get_mut(index)
+            .get(index)
             // SAFETY: this type ensures the provided buffer is valid and frames_count is correct.
             // Also, &mut ensures there is no input being read concurrently
             .map(|buf| unsafe { OutputPort::from_raw(buf, self.frames_count) })
@@ -355,7 +387,7 @@ impl<'a> Audio<'a> {
     pub fn output_port_info(&self, index: usize) -> Option<AudioPortProcessingInfo> {
         self.outputs
             .get(index)
-            .map(AudioPortProcessingInfo::from_raw)
+            .map(CelledClapAudioBuffer::processing_info)
     }
 
     /// Retrieves the number of available [`OutputPort`]s.
@@ -381,7 +413,9 @@ impl<'a> Audio<'a> {
     pub fn output_ports_infos(
         &self,
     ) -> impl ExactSizeIterator<Item = AudioPortProcessingInfo> + '_ {
-        self.outputs.iter().map(AudioPortProcessingInfo::from_raw)
+        self.outputs
+            .iter()
+            .map(CelledClapAudioBuffer::processing_info)
     }
 
     /// Retrieves the [`PortPair`] at a given index.
@@ -396,7 +430,7 @@ impl<'a> Audio<'a> {
         unsafe {
             PortPair::from_raw(
                 self.inputs.get(index),
-                self.outputs.get_mut(index),
+                self.outputs.get(index),
                 self.frames_count,
             )
         }
@@ -431,8 +465,8 @@ impl<'a> Audio<'a> {
 
         let outputs = self
             .outputs
-            .get_mut((range.start_bound().cloned(), range.end_bound().cloned()))
-            .unwrap_or(&mut []);
+            .get((range.start_bound().cloned(), range.end_bound().cloned()))
+            .unwrap_or(&[]);
 
         Audio {
             inputs,
