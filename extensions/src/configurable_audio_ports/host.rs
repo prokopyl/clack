@@ -1,4 +1,4 @@
-use crate::configurable_audio_ports::{AudioPortsRequest, PluginConfigurableAudioPorts};
+use crate::configurable_audio_ports::{AudioPortRequest, PluginConfigurableAudioPorts};
 use clack_host::plugin::InactivePluginMainThreadHandle;
 
 impl PluginConfigurableAudioPorts {
@@ -6,7 +6,7 @@ impl PluginConfigurableAudioPorts {
     pub fn can_apply_configuration(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
-        requests: &[AudioPortsRequest<'_>],
+        requests: &[AudioPortRequest<'_>],
     ) -> bool {
         let requests_len = match u32::try_from(requests.len()) {
             Ok(len) => len,
@@ -15,7 +15,7 @@ impl PluginConfigurableAudioPorts {
 
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
-            let requests = AudioPortsRequest::as_raw_slice(requests);
+            let requests = AudioPortRequest::slice_as_raw(requests);
             match plugin.use_extension(&self.0).can_apply_configuration {
                 None => false,
                 Some(can_apply_configuration) => {
@@ -36,7 +36,7 @@ impl PluginConfigurableAudioPorts {
     pub fn apply_configuration(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
-        requests: &[AudioPortsRequest<'_>],
+        requests: &[AudioPortRequest<'_>],
     ) -> bool {
         let requests_len = match u32::try_from(requests.len()) {
             Ok(len) => len,
@@ -45,7 +45,7 @@ impl PluginConfigurableAudioPorts {
 
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
-            let requests = AudioPortsRequest::as_raw_slice(requests);
+            let requests = AudioPortRequest::slice_as_raw(requests);
             match plugin.use_extension(&self.0).apply_configuration {
                 None => false,
                 Some(apply_configuration) => {

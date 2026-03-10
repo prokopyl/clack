@@ -1,9 +1,6 @@
 use crate::ambisonic::{AmbisonicConfig, HostAmbisonic, PluginAmbisonic};
 use clack_plugin::{
-    extensions::{
-        ExtensionImplementation,
-        wrapper::{PluginWrapper, PluginWrapperError},
-    },
+    extensions::{ExtensionImplementation, wrapper::PluginWrapper},
     host::HostMainThreadHandle,
     plugin::Plugin,
 };
@@ -53,11 +50,10 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginAmbisonicImpl>,
 {
     unsafe {
-        PluginWrapper::<P>::handle(plugin, |plugin| match AmbisonicConfig::from_raw(*config) {
-            Some(config) => Ok(plugin.main_thread().as_ref().is_config_supported(config)),
-            None => Err(PluginWrapperError::InvalidParameter(
-                "clap_ambisonic_config",
-            )),
+        PluginWrapper::<P>::handle(plugin, |plugin| {
+            let config = AmbisonicConfig::from_raw(*config);
+
+            Ok(plugin.main_thread().as_ref().is_config_supported(config))
         })
         .unwrap_or(false)
     }

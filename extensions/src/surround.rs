@@ -22,6 +22,7 @@ unsafe impl Extension for PluginSurround {
     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_SURROUND, CLAP_EXT_SURROUND_COMPAT];
     type ExtensionSide = PluginExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
         // SAFETY: This type is expected to contain a type that is ABI-compatible with the matching extension type.
         Self(unsafe { raw.cast() })
@@ -33,6 +34,7 @@ unsafe impl Extension for HostSurround {
     const IDENTIFIERS: &[&CStr] = &[CLAP_EXT_SURROUND, CLAP_EXT_SURROUND_COMPAT];
     type ExtensionSide = HostExtensionSide;
 
+    #[inline]
     unsafe fn from_raw(raw: RawExtension<Self::ExtensionSide>) -> Self {
         // SAFETY: This type is expected to contain a type that is ABI-compatible with the matching extension type.
         Self(unsafe { raw.cast() })
@@ -42,7 +44,7 @@ unsafe impl Extension for HostSurround {
 /// A specific surround channel.
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[allow(clippy::cast_possible_truncation)] // The CLAP spec defines these as u32, but there are only 20 valid values, so they will always fit in a u8.
+#[allow(clippy::cast_possible_truncation)] // The CLAP spec defines these as u32, but there are only 20 valid values, so they will always fit in an u8.
 pub enum SurroundChannel {
     /// Front left speaker.
     FrontLeft = CLAP_SURROUND_FL as u8,
@@ -139,24 +141,24 @@ impl SurroundChannel {
     #[inline]
     pub fn from_raw(raw: u8) -> Option<Self> {
         match raw as u32 {
-            i if i == CLAP_SURROUND_FL => Some(SurroundChannel::FrontLeft),
-            i if i == CLAP_SURROUND_FR => Some(SurroundChannel::FrontRight),
-            i if i == CLAP_SURROUND_FC => Some(SurroundChannel::FrontCenter),
-            i if i == CLAP_SURROUND_LFE => Some(SurroundChannel::LowFrequency),
-            i if i == CLAP_SURROUND_BL => Some(SurroundChannel::BackLeft),
-            i if i == CLAP_SURROUND_BR => Some(SurroundChannel::BackRight),
-            i if i == CLAP_SURROUND_FLC => Some(SurroundChannel::FrontLeftCenter),
-            i if i == CLAP_SURROUND_FRC => Some(SurroundChannel::FrontRightCenter),
-            i if i == CLAP_SURROUND_BC => Some(SurroundChannel::BackCenter),
-            i if i == CLAP_SURROUND_SL => Some(SurroundChannel::SideLeft),
-            i if i == CLAP_SURROUND_SR => Some(SurroundChannel::SideRight),
-            i if i == CLAP_SURROUND_TC => Some(SurroundChannel::TopCenter),
-            i if i == CLAP_SURROUND_TFL => Some(SurroundChannel::TopFrontLeft),
-            i if i == CLAP_SURROUND_TFC => Some(SurroundChannel::TopFrontCenter),
-            i if i == CLAP_SURROUND_TFR => Some(SurroundChannel::TopFrontRight),
-            i if i == CLAP_SURROUND_TBL => Some(SurroundChannel::TopBackLeft),
-            i if i == CLAP_SURROUND_TBC => Some(SurroundChannel::TopBackCenter),
-            i if i == CLAP_SURROUND_TBR => Some(SurroundChannel::TopBackRight),
+            CLAP_SURROUND_FL => Some(SurroundChannel::FrontLeft),
+            CLAP_SURROUND_FR => Some(SurroundChannel::FrontRight),
+            CLAP_SURROUND_FC => Some(SurroundChannel::FrontCenter),
+            CLAP_SURROUND_LFE => Some(SurroundChannel::LowFrequency),
+            CLAP_SURROUND_BL => Some(SurroundChannel::BackLeft),
+            CLAP_SURROUND_BR => Some(SurroundChannel::BackRight),
+            CLAP_SURROUND_FLC => Some(SurroundChannel::FrontLeftCenter),
+            CLAP_SURROUND_FRC => Some(SurroundChannel::FrontRightCenter),
+            CLAP_SURROUND_BC => Some(SurroundChannel::BackCenter),
+            CLAP_SURROUND_SL => Some(SurroundChannel::SideLeft),
+            CLAP_SURROUND_SR => Some(SurroundChannel::SideRight),
+            CLAP_SURROUND_TC => Some(SurroundChannel::TopCenter),
+            CLAP_SURROUND_TFL => Some(SurroundChannel::TopFrontLeft),
+            CLAP_SURROUND_TFC => Some(SurroundChannel::TopFrontCenter),
+            CLAP_SURROUND_TFR => Some(SurroundChannel::TopFrontRight),
+            CLAP_SURROUND_TBL => Some(SurroundChannel::TopBackLeft),
+            CLAP_SURROUND_TBC => Some(SurroundChannel::TopBackCenter),
+            CLAP_SURROUND_TBR => Some(SurroundChannel::TopBackRight),
             18 => Some(SurroundChannel::TopSideLeft),
             19 => Some(SurroundChannel::TopSideRight),
             _ => None,
@@ -171,7 +173,7 @@ impl SurroundChannel {
 
     /// Convert a raw byte slice to a slice of [`SurroundChannel`]s, if every value in the slice corresponds to a valid channel.
     #[inline]
-    pub fn from_raw_slice(slice: &[u8]) -> Option<&[SurroundChannel]> {
+    pub fn slice_from_raw(slice: &[u8]) -> Option<&[SurroundChannel]> {
         for value in slice {
             SurroundChannel::from_raw(*value)?;
         }
@@ -187,7 +189,7 @@ impl SurroundChannel {
 
     /// Convert this slice of [`SurroundChannel`]s to a slice of raw u8 values.
     #[inline]
-    pub fn as_raw_slice(slice: &[SurroundChannel]) -> &[u8] {
+    pub fn slice_as_raw(slice: &[SurroundChannel]) -> &[u8] {
         // SAFETY: SurroundChannel is repr(u8) and thus has the same memory layout as u8.
         unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const u8, slice.len()) }
     }
@@ -243,38 +245,6 @@ impl AudioPortType<'static> {
     pub const SURROUND: Self = AudioPortType(CLAP_PORT_SURROUND);
 }
 
-#[cfg(feature = "configurable-audio-ports")]
-impl<'a> crate::configurable_audio_ports::AudioPortsRequestDetails<'a> {
-    /// Create a new port request for a surround port with the given channel map.
-    pub fn surround(channels: &'a [SurroundChannel]) -> Self {
-        // SAFETY: The lifetime validity is ensured by the caller
-        unsafe {
-            Self::from_raw(
-                Some(AudioPortType::SURROUND),
-                channels.len().try_into().unwrap_or(u32::MAX),
-                SurroundChannel::as_raw_slice(channels).as_ptr() as *const _,
-            )
-        }
-    }
-
-    /// If this is a surround port, return the surround channel map as a slice of [`SurroundChannel`]s.
-    pub fn as_surround(&self) -> Option<&'a [SurroundChannel]> {
-        if self.port_type() == Some(AudioPortType::SURROUND) && !self.as_raw().is_null() {
-            // SAFETY: According to the spec, if port type is SURROUND,
-            // then port_details is a valid pointer to an array of `channel_count` u8 values corresponding to valid surround channels.
-            // https://github.com/free-audio/clap/blob/29ffcc273be7c7c651f6c9953b99e69700e2387a/include/clap/ext/configurable-audio-ports.h#L34
-            unsafe {
-                SurroundChannel::from_raw_slice(std::slice::from_raw_parts(
-                    self.as_raw() as *const u8,
-                    self.channel_count() as usize,
-                ))
-            }
-        } else {
-            None
-        }
-    }
-}
-
 #[cfg(feature = "clack-plugin")]
 mod plugin;
 #[cfg(feature = "clack-plugin")]
@@ -284,3 +254,8 @@ pub use plugin::*;
 mod host;
 #[cfg(feature = "clack-host")]
 pub use host::*;
+
+#[cfg(feature = "configurable-audio-ports")]
+mod config;
+#[cfg(feature = "configurable-audio-ports")]
+pub use config::*;

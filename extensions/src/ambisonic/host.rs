@@ -41,7 +41,7 @@ impl PluginAmbisonic {
             let result =
                 unsafe { (get_config)(handle.as_raw(), is_input, port_index, &mut config) };
 
-            result.then(|| AmbisonicConfig::from_raw(config)).flatten()
+            result.then(|| AmbisonicConfig::from_raw(config))
         } else {
             None
         }

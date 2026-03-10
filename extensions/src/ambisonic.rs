@@ -5,7 +5,7 @@
 use crate::audio_ports::AudioPortType;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::ambisonic::*;
-use std::ffi::CStr;
+use std::ffi::{CStr, c_void};
 
 /// The Plugin-side of the Ambisonic extension.
 #[derive(Copy, Clone)]
@@ -40,19 +40,16 @@ unsafe impl Extension for HostAmbisonic {
 }
 
 /// Ambisonic data exchange format for an audio port.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct AmbisonicConfig {
-    /// Ambisonic channel ordering
-    pub ordering: AmbisonicOrdering,
-
-    /// Ambisonic normalization method
-    pub normalization: AmbisonicNormalization,
+    inner: clap_ambisonic_config,
 }
 
 /// Component ordering for an ambisonic data exchange format.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AmbisonicOrdering {
     /// Furse-Malham channel ordering
     FuMa = CLAP_AMBISONIC_ORDERING_FUMA,
@@ -63,6 +60,7 @@ pub enum AmbisonicOrdering {
 /// Normalization method for an ambisonic data exchange format.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AmbisonicNormalization {
     /// maxN normalization scheme
     MaxN = CLAP_AMBISONIC_NORMALIZATION_MAXN,
@@ -77,54 +75,73 @@ pub enum AmbisonicNormalization {
 }
 
 impl AmbisonicConfig {
+    /// Creates a new [`AmbisonicConfig`] from a given [`AmbisonicOrdering`] and [`AmbisonicNormalization`].
+    #[inline]
+    pub const fn new(ordering: AmbisonicOrdering, normalization: AmbisonicNormalization) -> Self {
+        Self {
+            inner: clap_ambisonic_config {
+                normalization: normalization.to_raw(),
+                ordering: ordering.to_raw(),
+            },
+        }
+    }
+
     /// Create an [`AmbisonicConfig`] from a raw [`clap_ambisonic_config`] struct.
-    ///
-    /// Returns [`None`] if the struct contains invalid values for the ordering or normalization fields.
-    pub fn from_raw(raw: clap_ambisonic_config) -> Option<Self> {
-        Some(Self {
-            ordering: AmbisonicOrdering::from_raw(raw.ordering)?,
-            normalization: AmbisonicNormalization::from_raw(raw.normalization)?,
-        })
+    #[inline]
+    pub fn from_raw(raw: clap_ambisonic_config) -> Self {
+        Self { inner: raw }
     }
 
     /// Convert this [`AmbisonicConfig`] to its raw [`clap_ambisonic_config`] representation.
+    #[inline]
     pub const fn as_raw(&self) -> &clap_ambisonic_config {
-        // SAFETY: This type is repr(C) and ABI-compatible with clap_ambisonic_config, and all of its fields are valid for the corresponding fields in clap_ambisonic_config.
-        unsafe { &*(self as *const Self as *const clap_ambisonic_config) }
+        &self.inner
+    }
+
+    /// Returns the [`AmbisonicOrdering`] of this configuration.
+    #[inline]
+    pub const fn ordering(&self) -> Option<AmbisonicOrdering> {
+        AmbisonicOrdering::from_raw(self.inner.ordering)
+    }
+
+    /// Returns the [`AmbisonicNormalization`] of this configuration.
+    #[inline]
+    pub const fn normalization(&self) -> Option<AmbisonicNormalization> {
+        AmbisonicNormalization::from_raw(self.inner.normalization)
     }
 }
 
 impl AmbisonicOrdering {
     /// Create an [`AmbisonicOrdering`] from a raw `u32` value.
-    pub fn from_raw(raw: u32) -> Option<Self> {
+    pub const fn from_raw(raw: u32) -> Option<Self> {
         match raw {
-            i if i == CLAP_AMBISONIC_ORDERING_FUMA => Some(AmbisonicOrdering::FuMa),
-            i if i == CLAP_AMBISONIC_ORDERING_ACN => Some(AmbisonicOrdering::ACN),
+            CLAP_AMBISONIC_ORDERING_FUMA => Some(AmbisonicOrdering::FuMa),
+            CLAP_AMBISONIC_ORDERING_ACN => Some(AmbisonicOrdering::ACN),
             _ => None,
         }
     }
 
     /// Convert this [`AmbisonicOrdering`] to its raw `u32` representation.
-    pub fn to_raw(self) -> u32 {
+    pub const fn to_raw(self) -> u32 {
         self as _
     }
 }
 
 impl AmbisonicNormalization {
     /// Create an [`AmbisonicNormalization`] from a raw `u32` value.
-    pub fn from_raw(raw: u32) -> Option<Self> {
+    pub const fn from_raw(raw: u32) -> Option<Self> {
         match raw {
-            i if i == CLAP_AMBISONIC_NORMALIZATION_MAXN => Some(AmbisonicNormalization::MaxN),
-            i if i == CLAP_AMBISONIC_NORMALIZATION_SN3D => Some(AmbisonicNormalization::SN3D),
-            i if i == CLAP_AMBISONIC_NORMALIZATION_SN2D => Some(AmbisonicNormalization::SN2D),
-            i if i == CLAP_AMBISONIC_NORMALIZATION_N3D => Some(AmbisonicNormalization::N3D),
-            i if i == CLAP_AMBISONIC_NORMALIZATION_N2D => Some(AmbisonicNormalization::N2D),
+            CLAP_AMBISONIC_NORMALIZATION_MAXN => Some(AmbisonicNormalization::MaxN),
+            CLAP_AMBISONIC_NORMALIZATION_SN3D => Some(AmbisonicNormalization::SN3D),
+            CLAP_AMBISONIC_NORMALIZATION_SN2D => Some(AmbisonicNormalization::SN2D),
+            CLAP_AMBISONIC_NORMALIZATION_N3D => Some(AmbisonicNormalization::N3D),
+            CLAP_AMBISONIC_NORMALIZATION_N2D => Some(AmbisonicNormalization::N2D),
             _ => None,
         }
     }
 
     /// Convert this [`AmbisonicNormalization`] to its raw `u32` representation.
-    pub fn to_raw(self) -> u32 {
+    pub const fn to_raw(self) -> u32 {
         self as _
     }
 }
@@ -135,28 +152,35 @@ impl AudioPortType<'static> {
 }
 
 #[cfg(feature = "configurable-audio-ports")]
-impl<'a> crate::configurable_audio_ports::AudioPortsRequestDetails<'a> {
-    /// Create a new port request for an ambisonic port with the given configuration
-    pub const fn ambisonic(channels: u32, config: &'a AmbisonicConfig) -> Self {
-        // SAFETY: The lifetime validity is ensured by the caller
-        unsafe {
-            Self::from_raw(
-                Some(AudioPortType::AMBISONIC),
-                channels,
-                config.as_raw() as *const _ as *const _,
-            )
-        }
-    }
+// SAFETY: AudioPortType::AMBISONIC is the identifier for the Ambisonic port type.
+unsafe impl<'a> crate::configurable_audio_ports::PortConfigDetails<'a> for AmbisonicConfig {
+    const PORT_TYPE: AudioPortType<'static> = AudioPortType::AMBISONIC;
 
-    /// If this is an ambisonic port, return the ambisonic configuration.
-    pub fn as_ambisonic(&self) -> Option<AmbisonicConfig> {
-        if self.port_type() == Some(AudioPortType::AMBISONIC) && !self.as_raw().is_null() {
-            // SAFETY: According to the spec, if port type is AMBISONIC,
-            // then port_details is a valid pointer to a `clap_ambisonic_config` struct
-            // https://github.com/free-audio/clap/blob/29ffcc273be7c7c651f6c9953b99e69700e2387a/include/clap/ext/configurable-audio-ports.h#L35
-            unsafe { AmbisonicConfig::from_raw(*(self.as_raw() as *const clap_ambisonic_config)) }
-        } else {
-            None
+    unsafe fn from_details(
+        details: &crate::configurable_audio_ports::AudioPortRequestDetails<'a>,
+    ) -> Self {
+        // SAFETY: Caller guarantees raw_details is valid matches CLAP_PORT_AMBISONIC,
+        // which ensures the details pointer is of type clap_ambisonic_config as per the CLAP spec
+        let raw = unsafe { *(details.raw_details() as *const clap_ambisonic_config) };
+        AmbisonicConfig::from_raw(raw)
+    }
+}
+
+#[cfg(feature = "configurable-audio-ports")]
+impl AmbisonicConfig {
+    /// Returns this configuration as a generic [`AudioPortRequestDetails`](crate::configurable_audio_ports::AudioPortRequestDetails),
+    /// also using the provided `channel_count`.
+    pub fn as_request_details(
+        &self,
+        channel_count: u32,
+    ) -> crate::configurable_audio_ports::AudioPortRequestDetails<'_> {
+        // SAFETY: AMBISONIC is valid for any channel count, and the type for it is clap_ambisonic_config as per the CLAP spec
+        unsafe {
+            crate::configurable_audio_ports::AudioPortRequestDetails::from_raw(
+                Some(AudioPortType::AMBISONIC),
+                channel_count,
+                &self.inner as *const _ as *const c_void,
+            )
         }
     }
 }

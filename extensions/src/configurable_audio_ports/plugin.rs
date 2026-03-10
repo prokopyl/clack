@@ -1,4 +1,4 @@
-use crate::configurable_audio_ports::{AudioPortsRequest, PluginConfigurableAudioPorts};
+use crate::configurable_audio_ports::{AudioPortRequest, PluginConfigurableAudioPorts};
 use clack_common::extensions::{ExtensionImplementation, RawExtensionImplementation};
 use clack_plugin::{
     extensions::wrapper::{PluginWrapper, PluginWrapperError},
@@ -16,7 +16,7 @@ pub trait PluginConfigurableAudioPortsImpl {
     /// Returns true if the given configurations can be applied using [`apply_configuration`](PluginConfigurableAudioPortsImpl::apply_configuration).
     ///
     /// Must be called when the plugin is deactivated.
-    fn can_apply_configuration(&mut self, list: &[AudioPortsRequest<'_>]) -> bool;
+    fn can_apply_configuration(&mut self, list: &[AudioPortRequest<'_>]) -> bool;
 
     /// Submit a bunch of configuration requests which will atomically be applied together,
     /// or discarded together.
@@ -28,7 +28,7 @@ pub trait PluginConfigurableAudioPortsImpl {
     /// Returns true if applied, false otherwise.
     ///
     /// Must be called when the plugin is deactivated.
-    fn apply_configuration(&mut self, list: &[AudioPortsRequest<'_>]) -> bool;
+    fn apply_configuration(&mut self, list: &[AudioPortRequest<'_>]) -> bool;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -63,7 +63,7 @@ where
 
             Ok(p.main_thread()
                 .as_mut()
-                .can_apply_configuration(AudioPortsRequest::from_raw_slice(
+                .can_apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))
         })
@@ -90,7 +90,7 @@ where
 
             Ok(p.main_thread()
                 .as_mut()
-                .apply_configuration(AudioPortsRequest::from_raw_slice(
+                .apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))
         })

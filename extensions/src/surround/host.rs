@@ -49,7 +49,7 @@ impl PluginSurround {
                     None => buffer,
                 };
 
-                SurroundChannel::from_raw_slice(slice).unwrap_or_default()
+                SurroundChannel::slice_from_raw(slice).unwrap_or_default()
             },
             None => &[],
         }
