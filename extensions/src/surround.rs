@@ -171,23 +171,7 @@ impl SurroundChannel {
         self as _
     }
 
-    /// Convert a raw byte slice to a slice of [`SurroundChannel`]s, if every value in the slice corresponds to a valid channel.
-    #[inline]
-    pub fn slice_from_raw(slice: &[u8]) -> Option<&[SurroundChannel]> {
-        for value in slice {
-            SurroundChannel::from_raw(*value)?;
-        }
-
-        // SAFETY: Every value in the slice has been verified to be a valid SurroundChannel, and SurroundChannel is repr(u8) and thus has the same memory layout as u8.
-        unsafe {
-            Some(std::slice::from_raw_parts(
-                slice.as_ptr() as *const SurroundChannel,
-                slice.len(),
-            ))
-        }
-    }
-
-    /// Convert this slice of [`SurroundChannel`]s to a slice of raw u8 values.
+    /// Converts a slice of [`SurroundChannel`]s to a slice of raw u8 values.
     #[inline]
     pub fn slice_as_raw(slice: &[SurroundChannel]) -> &[u8] {
         // SAFETY: SurroundChannel is repr(u8) and thus has the same memory layout as u8.
@@ -255,7 +239,5 @@ mod host;
 #[cfg(feature = "clack-host")]
 pub use host::*;
 
-#[cfg(feature = "configurable-audio-ports")]
 mod config;
-#[cfg(feature = "configurable-audio-ports")]
 pub use config::*;

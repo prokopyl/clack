@@ -1,4 +1,6 @@
-use crate::surround::{HostSurround, PluginSurround, SurroundChannel, SurroundChannels};
+use crate::surround::{
+    HostSurround, PluginSurround, SurroundChannel, SurroundChannels, SurroundConfig,
+};
 use clack_host::{
     extensions::{ExtensionImplementation, RawExtensionImplementation, wrapper::HostWrapper},
     host::HostHandlers,
@@ -7,7 +9,7 @@ use clack_host::{
 use clap_sys::{ext::surround::clap_host_surround, host::clap_host};
 
 impl PluginSurround {
-    /// Check if the plugin supports the a surround configuration mask.
+    /// Check if the plugin supports a given surround configuration mask.
     pub fn is_channel_mask_supported(
         &self,
         handle: &mut PluginMainThreadHandle,
@@ -32,27 +34,28 @@ impl PluginSurround {
         is_input: bool,
         port_index: u32,
         buffer: &'a mut [u8],
-    ) -> &'a [SurroundChannel] {
-        match handle.use_extension(&self.0).get_channel_map {
-            // SAFETY: This type ensures the function pointer is valid.
-            Some(get_channel_map) => unsafe {
-                let written = get_channel_map(
-                    handle.as_raw(),
-                    is_input,
-                    port_index,
-                    buffer.as_mut_ptr() as *mut _,
-                    buffer.len().try_into().unwrap_or(u32::MAX), //saturating cast
-                );
+    ) -> SurroundConfig<'a> {
+        let Some(get_channel_map) = handle.use_extension(&self.0).get_channel_map else {
+            return SurroundConfig::from_raw(&[]);
+        };
 
-                let slice = match buffer.get(..written as usize) {
-                    Some(buf) => buf,
-                    None => buffer,
-                };
+        // SAFETY: This type ensures the function pointer is valid.
+        let written = unsafe {
+            get_channel_map(
+                handle.as_raw(),
+                is_input,
+                port_index,
+                buffer.as_mut_ptr() as *mut _,
+                buffer.len().try_into().unwrap_or(u32::MAX), //saturating cast
+            )
+        };
 
-                SurroundChannel::slice_from_raw(slice).unwrap_or_default()
-            },
+        let slice = match buffer.get(..written as usize) {
+            Some(buf) => buf,
             None => &[],
-        }
+        };
+
+        SurroundConfig::from_raw(slice)
     }
 }
 
