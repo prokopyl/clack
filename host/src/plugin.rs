@@ -16,12 +16,86 @@ use instance::*;
 pub use clack_common::plugin::*;
 
 /// A plugin instance.
+///
+/// This type is generic over `H`, the type of the host callback handlers, which the plugin can
+/// call use directly when its own methods are called by the host.
 pub struct PluginInstance<H: HostHandlers> {
     pub(crate) inner: ManuallyDrop<Arc<PluginInstanceInner<H>>>,
     _no_send: PhantomData<*const ()>,
 }
 
 impl<H: HostHandlers> PluginInstance<H> {
+    /// Creates a new plugin instance from a given [`PluginEntry`].
+    ///
+    /// The specific plugin to be instantiated is identified by the given `plugin_id`.
+    ///
+    /// This method takes two closures, here named `FS` and `FH`, which will respectively create
+    /// the [`Shared`](HostHandlers::Shared) and [`MainThread`](HostHandlers::MainThread) callback
+    /// handler instances associated with this plugin instance.
+    ///
+    /// The [`MainThread`](HostHandlers::MainThread)-producing callback takes a long-lived reference
+    /// to its [`Shared`](HostHandlers::Shared) counterpart, so that it can be accessed at any time
+    /// from the main thread if needed.
+    ///
+    /// The [`Shared`](HostHandlers::Shared)-producing callback takes a unit reference `&()`. It is
+    /// not used for anything, but is necessary for proper lifetime binding.
+    ///
+    /// This method also takes a reference to a [`HostInfo`], giving the plugin some metadata about
+    /// the host itself.
+    ///
+    /// # Errors
+    ///
+    /// If for some reason the given [`PluginEntry`] does not expose a [`PluginFactory`](crate::factory::plugin::PluginFactory),
+    /// then this will return [`PluginInstanceError::MissingPluginFactory`].
+    ///
+    /// If the `PluginFactory`'s `create_plugin` function pointer is NULL,
+    /// this will return [`PluginInstanceError::NullFactoryCreatePluginFunction`].
+    ///
+    /// If the given `plugin_id` does not exist, or if more generally the
+    /// `PluginFactory`'s `create_plugin` function returned NULL,
+    /// then this will return [`PluginInstanceError::PluginNotFound`].
+    ///
+    /// Otherwise, if the plugin instantiation implementation failed, it will return
+    /// [`PluginInstanceError::InstantiationFailed`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_host::prelude::*;
+    ///
+    /// struct MyHost;
+    ///
+    /// struct MyHostMainThread { /* ... */ }
+    ///
+    /// impl HostHandlers for MyHost {
+    ///     type Shared<'a> = /* ... */
+    /// # ();
+    ///     type AudioProcessor<'a> = /* ... */
+    /// # ();
+    ///     type MainThread<'a> = MyHostMainThread;
+    /// }
+    ///
+    /// impl<'a> MainThreadHandler<'a> for MyHostMainThread {
+    ///     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
+    ///         // Called whn the plugin has been fully initialized.
+    ///     }
+    /// }
+    ///
+    /// # mod diva { include!("./entry/diva_stub.rs"); }
+    ///
+    /// let entry = /* ... */
+    /// # PluginEntry::load_from_clack::<diva::Entry>(c"").unwrap();
+    /// let host_info = HostInfo::new("Foo DAW", "Foo Inc.", "https://example.com", "0.0.1").unwrap();
+    ///
+    /// let instance = PluginInstance::<MyHost>::new(
+    ///     |_|(),
+    ///     |_| MyHostMainThread {},
+    ///     &entry,
+    ///     c"com.audio.the-plugin",
+    ///     &host_info
+    /// );
+    ///
+    /// ```
     pub fn new<FS, FH>(
         shared: FS,
         main_thread: FH,
@@ -111,7 +185,6 @@ impl<H: HostHandlers> PluginInstance<H> {
         wrapper.deactivate_with(drop_with)
     }
 
-    // FIXME: this should be on the handle?
     #[inline]
     pub fn call_on_main_thread_callback(&mut self) {
         // SAFETY: this is done on the main thread, and the &mut reference guarantees no aliasing
