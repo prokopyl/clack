@@ -1,7 +1,7 @@
 use crate::audio_ports::AudioPortType;
 use crate::configurable_audio_ports::{AudioPortRequestDetails, PortConfigDetails};
 use crate::surround::SurroundChannel;
-use core::slice;
+use core::{fmt, slice};
 
 /// Surround configuration data for a specific audio port.
 ///
@@ -10,7 +10,7 @@ use core::slice;
 ///
 /// See [`channel_count`](Self::channel_count) and [`get`](Self::get) to get the number of channels and
 /// a channel at a specific index from the list, respectively.
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct SurroundConfig<'a>(&'a [u8]);
 
 // SAFETY: AudioPortType::SURROUND is the identifier for the Surround port type.
@@ -29,6 +29,18 @@ unsafe impl<'a> PortConfigDetails<'a> for SurroundConfig<'a> {
 }
 
 impl<'a> SurroundConfig<'a> {
+    /// Creates a new [`SurroundConfig`] from the given list of channels.
+    #[inline]
+    pub fn new(channels: &'a [SurroundChannel]) -> Self {
+        // SAFETY: SurroundChannel is repr(u8) and therefore has the same memory layout as u8
+        unsafe {
+            Self::from_raw(slice::from_raw_parts(
+                channels.as_ptr().cast(),
+                channels.len(),
+            ))
+        }
+    }
+
     /// Returns the number of channels in this surround configuration.
     #[inline]
     pub fn channel_count(&self) -> usize {
@@ -68,5 +80,28 @@ impl<'a> SurroundConfig<'a> {
                 self.0.as_ptr().cast(),
             )
         }
+    }
+}
+
+impl<'a> IntoIterator for SurroundConfig<'a> {
+    type Item = Option<SurroundChannel>;
+    type IntoIter = core::iter::Map<core::slice::Iter<'a, u8>, fn(&u8) -> Option<SurroundChannel>>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|byte| SurroundChannel::from_raw(*byte))
+    }
+}
+
+impl<'a> From<SurroundConfig<'a>> for AudioPortRequestDetails<'a> {
+    #[inline]
+    fn from(config: SurroundConfig<'a>) -> Self {
+        config.as_request_details()
+    }
+}
+
+impl<'a> fmt::Debug for SurroundConfig<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(*self).finish()
     }
 }

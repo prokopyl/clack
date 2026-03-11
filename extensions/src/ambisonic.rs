@@ -5,6 +5,7 @@
 use crate::audio_ports::AudioPortType;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::ambisonic::*;
+use core::fmt;
 use std::ffi::{CStr, c_void};
 
 /// The Plugin-side of the Ambisonic extension.
@@ -40,7 +41,7 @@ unsafe impl Extension for HostAmbisonic {
 }
 
 /// Ambisonic data exchange format for an audio port.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct AmbisonicConfig {
     inner: clap_ambisonic_config,
@@ -149,6 +150,15 @@ impl AmbisonicNormalization {
 impl AudioPortType<'static> {
     /// Ambisonic audio port type.
     pub const AMBISONIC: Self = AudioPortType(CLAP_PORT_AMBISONIC);
+}
+
+impl fmt::Debug for AmbisonicConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AmbisonicConfig")
+            .field("ordering", &self.ordering())
+            .field("normalization", &self.normalization())
+            .finish()
+    }
 }
 
 #[cfg(feature = "configurable-audio-ports")]

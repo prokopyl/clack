@@ -170,13 +170,6 @@ impl SurroundChannel {
     pub fn to_raw(self) -> u8 {
         self as _
     }
-
-    /// Converts a slice of [`SurroundChannel`]s to a slice of raw u8 values.
-    #[inline]
-    pub fn slice_as_raw(slice: &[SurroundChannel]) -> &[u8] {
-        // SAFETY: SurroundChannel is repr(u8) and thus has the same memory layout as u8.
-        unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const u8, slice.len()) }
-    }
 }
 
 impl From<SurroundChannel> for SurroundChannels {
