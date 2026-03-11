@@ -1,6 +1,4 @@
-use crate::surround::{
-    HostSurround, PluginSurround, SurroundChannel, SurroundChannels, SurroundConfig,
-};
+use crate::surround::{HostSurround, PluginSurround, SurroundChannels, SurroundConfig};
 use clack_host::{
     extensions::{ExtensionImplementation, RawExtensionImplementation, wrapper::HostWrapper},
     host::HostHandlers,
