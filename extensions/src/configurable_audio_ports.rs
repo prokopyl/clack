@@ -42,18 +42,67 @@ unsafe impl Extension for PluginConfigurableAudioPorts {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct AudioPortRequest<'a> {
-    /// Is this request for an input port?
-    pub is_input: bool,
-    /// The port index to configure
-    pub port_index: u32,
-    /// The requested port type and details
-    pub details: AudioPortRequestDetails<'a>,
+    inner: clap_audio_port_configuration_request,
+    phantom: PhantomData<&'a ()>,
 }
 
 impl<'a> AudioPortRequest<'a> {
+    /// Create a new audio port configuration request with the given parameters.
+    ///
+    /// The `details` parameter could be one of:
+    /// - [`AudioPortRequestDetails::mono()`] for a mono port;
+    /// - [`AudioPortRequestDetails::stereo()`] for a stereo port;
+    /// - [`AudioPortRequestDetails::untyped()`] for a `null`-typed port with a custom channel count;
+    /// - [`SurroundConfig`](crate::surround::SurroundConfig) for a surround port (if the Surround extension is enabled);
+    /// - [`AmbisonicLayout`](crate::ambisonic::AmbisonicLayout) for an ambisonic port (if the Ambisonic extension is enabled);
+    /// - A custom type that implements [`PortConfigDetails`] for a specific port type.
+    #[inline]
+    pub fn new(
+        is_input: bool,
+        port_index: u32,
+        details: impl Into<AudioPortRequestDetails<'a>>,
+    ) -> Self {
+        let details = details.into();
+
+        Self {
+            phantom: PhantomData,
+            inner: clap_audio_port_configuration_request {
+                is_input,
+                port_index,
+                port_details: details.raw_details(),
+                port_type: details.port_type().map_or(null(), |t| t.as_raw()),
+                channel_count: details.channel_count(),
+            },
+        }
+    }
+
+    /// Whether this is a request for an input port (`true`) or an output port (`false`).
+    #[inline]
+    pub const fn is_input(&self) -> bool {
+        self.inner.is_input
+    }
+
+    /// The index of the port to configure.
+    /// This is the index of the port in the list of ports of the given direction
+    #[inline]
+    pub const fn port_index(&self) -> u32 {
+        self.inner.port_index
+    }
+
+    /// Details for this port configuration request.
+    #[inline]
+    pub const fn details(&self) -> AudioPortRequestDetails<'a> {
+        AudioPortRequestDetails {
+            port_details: self.inner.port_details,
+            port_type: self.inner.port_type,
+            channel_count: self.inner.channel_count,
+            phantom: PhantomData,
+        }
+    }
+
     /// Convert a slice of `AudioPortsRequest` to a slice of `clap_audio_port_configuration_request`.
     #[inline]
-    pub fn slice_as_raw(
+    pub const fn slice_as_raw(
         slice: &'a [AudioPortRequest<'a>],
     ) -> &'a [clap_audio_port_configuration_request] {
         // SAFETY: Safe due to #[repr(C)] and matching ABI
@@ -70,22 +119,11 @@ impl<'a> AudioPortRequest<'a> {
     /// * The `port_type` and `port_details` fields must be valid for `'a`;
     /// * The `port_details` and `channel_count` must be valid for the type of port described by the `port_type` field.
     #[inline]
-    pub unsafe fn slice_from_raw(
+    pub const unsafe fn slice_from_raw(
         slice: &'a [clap_audio_port_configuration_request],
     ) -> &'a [AudioPortRequest<'a>] {
         // SAFETY: Safe due to #[repr(C)] and matching ABI
         unsafe { std::slice::from_raw_parts(slice.as_ptr() as *const _, slice.len()) }
-    }
-}
-
-impl<'a> fmt::Debug for AudioPortRequest<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AudioPortsRequest")
-            .field("is_input", &self.is_input)
-            .field("port_index", &self.port_index)
-            .field("port_type", &self.details.port_type())
-            .field("channel_count", &self.details.channel_count())
-            .finish_non_exhaustive()
     }
 }
 
@@ -139,13 +177,13 @@ impl<'a> AudioPortRequestDetails<'a> {
     /// Attempts to cast this [`AudioPortRequestDetails`] into a specific [`PortConfigDetails`].
     ///
     /// This returns `None` if the given port type does not match this [`AudioPortRequestDetails`] represents.
-    pub fn details<T: PortConfigDetails<'a>>(&self) -> Option<T> {
+    pub fn downcast<T: PortConfigDetails<'a>>(&self) -> Option<T> {
         if self.port_type() != Some(T::PORT_TYPE) {
             return None;
         }
 
         // SAFETY: We just checked above that the port type matches this instance.
-        Some(unsafe { T::from_details(self) })
+        Some(unsafe { T::from_details(*self) })
     }
 
     /// Create a new port request from raw components.
@@ -180,6 +218,9 @@ pub unsafe trait PortConfigDetails<'a>: Sized {
     /// The port type identifier that this type represents.
     const PORT_TYPE: AudioPortType<'static>;
 
+    /// Converts this type of port configuration details into a generic [`AudioPortRequestDetails`].
+    fn to_details(&self) -> AudioPortRequestDetails<'a>;
+
     /// Creates this type of port configuration details from a reference to a generic
     /// [`AudioPortRequestDetails`].
     ///
@@ -188,7 +229,33 @@ pub unsafe trait PortConfigDetails<'a>: Sized {
     /// The caller must ensure that the given `raw` port request details actually match this type
     /// by checking it with the [`PORT_TYPE`](Self::PORT_TYPE) constant.
     /// This function does not perform that check.
-    unsafe fn from_details(raw: &AudioPortRequestDetails<'a>) -> Self;
+    unsafe fn from_details(raw: AudioPortRequestDetails<'a>) -> Self;
+}
+
+impl<'a> fmt::Debug for AudioPortRequest<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AudioPortsRequest")
+            .field("is_input", &self.is_input())
+            .field("port_index", &self.port_index())
+            .field("details", &self.details())
+            .finish()
+    }
+}
+
+impl<'a> fmt::Debug for AudioPortRequestDetails<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AudioPortsRequestDetails")
+            .field("port_type", &self.port_type())
+            .field("channel_count", &self.channel_count())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<'a, T: PortConfigDetails<'a>> From<T> for AudioPortRequestDetails<'a> {
+    #[inline]
+    fn from(details: T) -> Self {
+        details.to_details()
+    }
 }
 
 #[cfg(feature = "clack-plugin")]
@@ -198,46 +265,3 @@ pub use plugin::*;
 
 #[cfg(feature = "clack-host")]
 mod host;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use core::mem::{align_of, size_of};
-
-    // This is so cursed, so I just want all the tests
-    #[test]
-    fn test() {
-        assert_eq!(
-            size_of::<AudioPortRequest<'static>>(),
-            size_of::<clap_audio_port_configuration_request>()
-        );
-
-        assert_eq!(
-            align_of::<AudioPortRequest>(),
-            align_of::<clap_audio_port_configuration_request>()
-        );
-
-        let val = &AudioPortRequest {
-            details: AudioPortRequestDetails::stereo(),
-            is_input: true,
-            port_index: 0,
-        };
-
-        // SAFETY: should be the same representation
-        let raw_val =
-            unsafe { &*(val as *const _ as *const clap_audio_port_configuration_request) };
-
-        assert_eq!(
-            &raw const val.details.port_type,
-            &raw const raw_val.port_type
-        );
-        assert_eq!(
-            &raw const val.details.port_details,
-            &raw const raw_val.port_details
-        );
-        assert_eq!(
-            &raw const val.details.channel_count,
-            &raw const raw_val.channel_count
-        );
-    }
-}

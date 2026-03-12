@@ -47,6 +47,15 @@ pub struct AmbisonicConfig {
     inner: clap_ambisonic_config,
 }
 
+/// The ambisonic layout of an audio port, consisting of an [`AmbisonicConfig`] and a channel count.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct AmbisonicLayout<'a> {
+    /// The ambisonic channel mapping used by the plugin.
+    pub config: &'a AmbisonicConfig,
+    /// The number of channels in this ambisonic format.
+    pub channel_count: u32,
+}
+
 /// Component ordering for an ambisonic data exchange format.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -161,36 +170,48 @@ impl fmt::Debug for AmbisonicConfig {
     }
 }
 
-#[cfg(feature = "configurable-audio-ports")]
-// SAFETY: AudioPortType::AMBISONIC is the identifier for the Ambisonic port type.
-unsafe impl<'a> crate::configurable_audio_ports::PortConfigDetails<'a> for AmbisonicConfig {
-    const PORT_TYPE: AudioPortType<'static> = AudioPortType::AMBISONIC;
+impl Eq for AmbisonicConfig {}
 
-    unsafe fn from_details(
-        details: &crate::configurable_audio_ports::AudioPortRequestDetails<'a>,
-    ) -> Self {
-        // SAFETY: Caller guarantees raw_details is valid matches CLAP_PORT_AMBISONIC,
-        // which ensures the details pointer is of type clap_ambisonic_config as per the CLAP spec
-        let raw = unsafe { *(details.raw_details() as *const clap_ambisonic_config) };
-        AmbisonicConfig::from_raw(raw)
+impl PartialEq for AmbisonicConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.ordering == other.inner.ordering
+            && self.inner.normalization == other.inner.normalization
     }
 }
 
 #[cfg(feature = "configurable-audio-ports")]
-impl AmbisonicConfig {
-    /// Returns this configuration as a generic [`AudioPortRequestDetails`](crate::configurable_audio_ports::AudioPortRequestDetails),
-    /// also using the provided `channel_count`.
-    pub fn as_request_details(
-        &self,
-        channel_count: u32,
-    ) -> crate::configurable_audio_ports::AudioPortRequestDetails<'_> {
-        // SAFETY: AMBISONIC is valid for any channel count, and the type for it is clap_ambisonic_config as per the CLAP spec
-        unsafe {
-            crate::configurable_audio_ports::AudioPortRequestDetails::from_raw(
-                Some(AudioPortType::AMBISONIC),
-                channel_count,
-                &self.inner as *const _ as *const c_void,
-            )
+mod configurable_audio_ports {
+    use super::*;
+    use crate::configurable_audio_ports::{AudioPortRequestDetails, PortConfigDetails};
+
+    // SAFETY: AudioPortType::AMBISONIC is the identifier for the Ambisonic port type.
+    unsafe impl<'a> PortConfigDetails<'a> for AmbisonicLayout<'a> {
+        const PORT_TYPE: AudioPortType<'static> = AudioPortType::AMBISONIC;
+
+        fn to_details(&self) -> AudioPortRequestDetails<'a> {
+            // SAFETY: AMBISONIC is valid for any channel count, and the type for it is clap_ambisonic_config as per the CLAP spec
+            unsafe {
+                AudioPortRequestDetails::from_raw(
+                    Some(AudioPortType::AMBISONIC),
+                    self.channel_count,
+                    self.config.as_raw() as *const clap_ambisonic_config as *const c_void,
+                )
+            }
+        }
+
+        unsafe fn from_details(details: AudioPortRequestDetails<'a>) -> Self {
+            // SAFETY: Caller guarantees raw_details is valid matches CLAP_PORT_AMBISONIC,
+            // which ensures the details pointer is of type clap_ambisonic_config as per the CLAP spec,
+            // which is ABI-compatible with AmbisonicConfig
+            unsafe {
+                Self {
+                    channel_count: details.channel_count(),
+                    config: details
+                        .raw_details()
+                        .cast::<AmbisonicConfig>()
+                        .as_ref_unchecked(),
+                }
+            }
         }
     }
 }
