@@ -23,10 +23,12 @@ static_assertions = "1.1.0"
 
 [features]
 all-extensions = [
+    "ambisonic",
     "audio-ports",
     "audio-ports-activation",
     "audio-ports-config",
     "clap-wrapper",
+    "configurable-audio-ports",
     "context-menu",
     "event-registry",
     "gui",
@@ -42,6 +44,7 @@ all-extensions = [
     "render",
     "state",
     "state-context",
+    "surround",
     "tail",
     "thread-check",
     "thread-pool",
@@ -49,11 +52,13 @@ all-extensions = [
     "track-info",
     "voice-info"
 ]
+ambisonic = ["audio-ports"]
 audio-ports = []
 audio-ports-activation = []
 audio-ports-config = ["audio-ports"]
 context-menu = []
 clap-wrapper = []
+configurable-audio-ports = ["audio-ports"]
 event-registry = []
 gui = []
 latency = []
@@ -68,6 +73,7 @@ remote-controls = []
 render = []
 state = []
 state-context = ["state"]
+surround = ["audio-ports"]
 tail = []
 thread-check = []
 thread-pool = []
