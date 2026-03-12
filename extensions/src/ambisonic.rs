@@ -206,10 +206,7 @@ mod configurable_audio_ports {
             unsafe {
                 Self {
                     channel_count: details.channel_count(),
-                    config: details
-                        .raw_details()
-                        .cast::<AmbisonicConfig>()
-                        .as_ref_unchecked(),
+                    config: &*details.raw_details().cast::<AmbisonicConfig>(),
                 }
             }
         }
