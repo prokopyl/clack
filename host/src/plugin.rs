@@ -123,6 +123,12 @@ impl<H: HostHandlers> PluginInstance<H> {
         self.inner.raw_instance()
     }
 
+    /// Returns the [`PluginEntry`] this plugin instance was loaded from.
+    #[inline]
+    pub fn entry(&self) -> &PluginEntry {
+        self.inner.entry()
+    }
+
     #[inline]
     pub fn is_active(&self) -> bool {
         self.inner.is_active()

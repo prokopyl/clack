@@ -17,7 +17,7 @@ pub(crate) struct PluginInstanceInner<H: HostHandlers> {
 
     is_started: AtomicBool,
 
-    _plugin_entry: PluginEntry, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
+    plugin_entry: PluginEntry, // SAFETY: Keep the DLL/.SO alive while plugin is instantiated
 }
 
 impl<H: HostHandlers> PluginInstanceInner<H> {
@@ -45,7 +45,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
             host_wrapper,
             host_descriptor,
             plugin_ptr: None,
-            _plugin_entry: plugin_entry.clone(),
+            plugin_entry: plugin_entry.clone(),
             is_started: AtomicBool::new(false),
         });
 
@@ -91,6 +91,11 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     #[inline]
     pub fn wrapper(&self) -> &HostWrapper<H> {
         &self.host_wrapper
+    }
+
+    #[inline]
+    pub fn entry(&self) -> &PluginEntry {
+        &self.plugin_entry
     }
 
     #[inline]
