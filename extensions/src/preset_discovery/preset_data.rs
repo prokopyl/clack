@@ -5,6 +5,7 @@ use bitflags::bitflags;
 use clack_common::utils::Timestamp;
 use clap_sys::factory::preset_discovery::*;
 use std::ffi::{CStr, c_char};
+use std::sync::Arc;
 
 /// A type of file the host should match for when searching preset directory locations.
 #[derive(Copy, Clone, Debug)]

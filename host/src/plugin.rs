@@ -123,6 +123,27 @@ impl<H: HostHandlers> PluginInstance<H> {
         })
     }
 
+    /// Activates the plugin instance, preparing it to process audio and events according to the given [`PluginAudioConfiguration`].
+    ///
+    /// This method takes a closure `FA`, which will create
+    /// the [`AudioProcessor`](HostHandlers::AudioProcessor) callback
+    /// handler instance associated with this plugin instance.
+    ///
+    /// This closure takes a long-lived reference to the [`Shared`](HostHandlers::Shared) handler
+    /// so that it can be accessed at any time from the audio thread / audio-processing context if needed.
+    ///
+    /// This closure also provides a temporary, exclusive reference to the [`MainThread`](HostHandlers::MainThread) handler.
+    ///
+    /// # Errors
+    ///
+    /// This will return [`PluginInstanceError::AlreadyActivatedPlugin`] if the plugin has already
+    /// been activated.
+    ///
+    /// If the plugin instance's `activate` function pointer is NULL,
+    /// this will return [`PluginInstanceError::NullActivateFunction`].
+    ///
+    /// Otherwise, if the plugin instance's `activate` function implementation failed for any reason,
+    /// this will return [`PluginInstanceError::ActivationFailed`].
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,
@@ -141,6 +162,18 @@ impl<H: HostHandlers> PluginInstance<H> {
         Ok(StoppedPluginAudioProcessor::new(Arc::clone(&self.inner)))
     }
 
+    /// De-activates the plugin instance, freeing its processing-related resources, and allows it
+    /// to be re-[activated](Self::activate) with a different audio configuration.
+    ///
+    /// This consumes the [`StoppedPluginAudioProcessor`] handle created by [`activate`](Self::activate),
+    /// in order to ensure it cannot be used anymore.
+    ///
+    /// For a version of this method that does not require the [`StoppedPluginAudioProcessor`] handle,
+    /// see [`try_deactivate`](Self::try_deactivate).
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the provided `processor` handle did not come from this plugin instance.
     #[inline]
     pub fn deactivate(&mut self, processor: StoppedPluginAudioProcessor<H>) {
         self.deactivate_with(processor, |_, _| ())
@@ -151,6 +184,25 @@ impl<H: HostHandlers> PluginInstance<H> {
         self.try_deactivate_with(|_, _| ())
     }
 
+    /// De-activates the plugin instance, freeing its processing-related resources, and allows it
+    /// to be re-[activated](Self::activate) with a different audio configuration.
+    ///
+    /// This consumes the [`StoppedPluginAudioProcessor`] handle created by [`activate`](Self::activate),
+    /// in order to ensure it cannot be used anymore.
+    ///
+    /// This is equivalent to [`Self::deactivate`], except this method also takes a closure type `D`,
+    /// which allows to customize the destruction process of the [`AudioProcessor`](HostHandlers::AudioProcessor) callback
+    /// handler instance that was created during [`activate`](Self::activate).
+    ///
+    /// This may be useful to e.g. reuse or reprocess components or allocations the [`AudioProcessor`](HostHandlers::AudioProcessor) callback
+    /// handler instance owned, either by giving it to the [`MainThread`](HostHandlers::MainThread) handler
+    /// (which is also provided by a temporary, exclusive reference), or by returning it.
+    ///
+    /// This function will return whatever the destructor closure returned.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the provided `processor` handle did not come from this plugin instance.
     pub fn deactivate_with<T, D>(
         &mut self,
         processor: StoppedPluginAudioProcessor<H>,
@@ -234,6 +286,7 @@ impl<H: HostHandlers> PluginInstance<H> {
         self.inner.plugin_shared()
     }
 
+    /// Returns a main-thread handle to the plugin.
     #[inline]
     pub fn plugin_handle(&mut self) -> PluginMainThreadHandle<'_> {
         // SAFETY: this type can only exist on the main thread.
