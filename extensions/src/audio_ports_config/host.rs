@@ -30,7 +30,6 @@ impl AudioPortsConfigBuffer {
 impl PluginAudioPortsConfig {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
-        // SAFETY: This type ensures the function pointer is valid.
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.

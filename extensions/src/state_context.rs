@@ -155,7 +155,6 @@ mod host {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { load(plugin.as_raw(), stream.as_raw_mut(), context_type.to_raw()) };
 
-            // SAFETY: This type ensures the function pointer is valid.
             if success {
                 Ok(())
             } else {
