@@ -136,7 +136,7 @@ mod plugin {
             // SAFETY: This type ensures the function pointer is valid.
             match unsafe { unregister_timer(host.as_raw(), timer_id.0) } {
                 true => Ok(()),
-                false => Err(TimerError::RegisterError),
+                false => Err(TimerError::UnregisterError),
             }
         }
     }
