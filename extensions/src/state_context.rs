@@ -159,7 +159,7 @@ mod host {
             if success {
                 Ok(())
             } else {
-                Err(StateError::saving())
+                Err(StateError::loading())
             }
         }
 
@@ -174,7 +174,7 @@ mod host {
             let save = plugin
                 .use_extension(&self.0)
                 .save
-                .ok_or(StateError::loading())?;
+                .ok_or(StateError::saving())?;
 
             let success =
                 // SAFETY: This type ensures the function pointer is valid.
