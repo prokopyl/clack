@@ -194,12 +194,10 @@ impl PluginGui {
             plugin
                 .use_extension(&self.0)
                 .set_size
-                .ok_or(GuiError::SetScaleError)?(
-                plugin.as_raw(), size.width, size.height
-            )
+                .ok_or(GuiError::SetSizeError)?(plugin.as_raw(), size.width, size.height)
         };
 
-        success.then_some(()).ok_or(GuiError::SetScaleError)
+        success.then_some(()).ok_or(GuiError::SetSizeError)
     }
 
     /// Embeds the plugin's GUI into the given parent window.
@@ -250,10 +248,10 @@ impl PluginGui {
             plugin
                 .use_extension(&self.0)
                 .set_transient
-                .ok_or(GuiError::SetParentError)?(plugin.as_raw(), window.as_raw())
+                .ok_or(GuiError::SetTransientError)?(plugin.as_raw(), window.as_raw())
         };
 
-        success.then_some(()).ok_or(GuiError::SetParentError)
+        success.then_some(()).ok_or(GuiError::SetTransientError)
     }
 
     /// Give a suggested window title to the plugin.
