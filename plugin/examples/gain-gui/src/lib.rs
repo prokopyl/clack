@@ -2,9 +2,10 @@
 #![warn(missing_docs, clippy::missing_docs_in_private_items)]
 #![doc = include_str!("../README.md")]
 
-use crate::params::GainParamsLocal;
+use crate::params::{GainParamsLocal, Gesture};
 use crate::{gui::GainPluginGui, params::GainParamsShared};
 use clack_extensions::{audio_ports::*, gui::PluginGui, params::*, state::PluginState};
+use clack_plugin::events::event_types::{ParamGestureBeginEvent, ParamGestureEndEvent};
 use clack_plugin::prelude::*;
 use std::sync::Arc;
 
@@ -37,7 +38,7 @@ impl DefaultPluginFactory for GainPlugin {
     fn get_descriptor() -> PluginDescriptor {
         use clack_plugin::plugin::features::*;
 
-        PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
+        PluginDescriptor::new("org.rust-audio.clack.gain-egui", "Clack Gain EGUI Example")
             .with_features([AUDIO_EFFECT, STEREO])
     }
 
@@ -143,18 +144,32 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
             }
         }
 
-        // Publish any parameter changes we may have received.
+        // Publish any parameter changes we may have received back to the GUI.
         if self.params.push_updates(&self.shared.params) {
             // Request the on-main-thread callback, which we use to refresh the UI if it is open
             self.host.request_callback();
         }
 
-        // First, send out Begin/EndGesture events if needed
-        self.params
-            .fetch_gesture_and_send_events(&self.shared.params, events.output);
+        let current_gesture = self
+            .params
+            .fetch_gesture(&self.shared.params, has_ui_param_updates);
+
+        if let Some(Gesture::Begin | Gesture::Both) = current_gesture {
+            let _ = events.output.try_push(ParamGestureBeginEvent::new(
+                0,
+                GainParamsShared::PARAM_VOLUME_ID,
+            ));
+        }
 
         if has_ui_param_updates {
             self.params.send_param_events(events.output);
+        }
+
+        if let Some(Gesture::End | Gesture::Both) = current_gesture {
+            let _ = events.output.try_push(ParamGestureEndEvent::new(
+                audio.frames_count(),
+                GainParamsShared::PARAM_VOLUME_ID,
+            ));
         }
 
         Ok(ProcessStatus::ContinueIfNotQuiet)

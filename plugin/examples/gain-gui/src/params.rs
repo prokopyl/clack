@@ -3,9 +3,7 @@
 use crate::{GainPluginAudioProcessor, GainPluginMainThread};
 use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
-use clack_plugin::events::event_types::{
-    ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent,
-};
+use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
@@ -33,7 +31,7 @@ pub struct GainParamsShared {
 
 impl GainParamsShared {
     /// The unique identifier for the Volume parameter.
-    const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
+    pub const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
 
     /// Initializes the shared parameter value.
     pub fn new() -> Self {
@@ -44,9 +42,11 @@ impl GainParamsShared {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Gesture {
     Begin,
     End,
+    Both,
 }
 
 /// TODO
@@ -101,13 +101,21 @@ impl GainParamsLocal {
     }
 
     #[inline]
-    pub fn fetch_gesture(&mut self, shared: &GainParamsShared) -> Option<Gesture> {
+    pub fn fetch_gesture(
+        &mut self,
+        shared: &GainParamsShared,
+        has_ui_param_updates: bool,
+    ) -> Option<Gesture> {
         let previous_gesture = self.has_gesture;
 
         self.has_gesture = shared.has_gesture.load(Ordering::Relaxed);
 
         if previous_gesture == self.has_gesture {
-            return None;
+            return if has_ui_param_updates && !self.has_gesture {
+                Some(Gesture::Both)
+            } else {
+                None
+            };
         }
 
         if previous_gesture {
@@ -139,27 +147,6 @@ impl GainParamsLocal {
         );
 
         let _ = output_events.try_push(event);
-    }
-
-    pub fn fetch_gesture_and_send_events(
-        &mut self,
-        shared: &GainParamsShared,
-        output_events: &mut OutputEvents,
-    ) {
-        let Some(new_state) = self.fetch_gesture(shared) else {
-            return;
-        };
-
-        let _ = match new_state {
-            Gesture::Begin => output_events.try_push(ParamGestureBeginEvent::new(
-                0,
-                GainParamsShared::PARAM_VOLUME_ID,
-            )),
-            Gesture::End => output_events.try_push(ParamGestureEndEvent::new(
-                0,
-                GainParamsShared::PARAM_VOLUME_ID,
-            )),
-        };
     }
 }
 
