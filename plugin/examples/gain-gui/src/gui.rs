@@ -38,7 +38,7 @@ pub struct GainPluginGui {
 }
 
 impl GainPluginGui {
-    /// Set parent window.
+    /// Creates a new GUI window, and embeds it into the given `parent`.
     pub fn new(parent: Window<'_>, state: &GainPluginShared) -> Self {
         let settings = WindowOpenOptions {
             title: "Gain Plugin".to_string(),
