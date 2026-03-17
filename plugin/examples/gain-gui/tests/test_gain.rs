@@ -20,7 +20,7 @@ pub fn it_works() {
 
     assert_eq!(
         descriptor.id().unwrap().to_bytes(),
-        b"org.rust-audio.clack.gain-gui"
+        b"org.rust-audio.clack.gain-egui"
     );
     assert_eq!(
         descriptor.name().unwrap().to_bytes(),
