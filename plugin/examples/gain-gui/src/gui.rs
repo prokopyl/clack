@@ -1,36 +1,44 @@
-//! Contains all types and implementations related to Gui window managementb
-use crate::{GainPluginShared, params::GainParams};
+//! Contains all types and implementations related to Gui window management
+use crate::params::GainParamsLocal;
+use crate::{GainPluginMainThread, GainPluginShared, params::GainParamsShared};
 use baseview::{Size, WindowHandle, WindowOpenOptions, WindowScalePolicy};
+use clack_extensions::gui::*;
+use clack_plugin::prelude::*;
 use egui_baseview::{
     EguiWindow, GraphicsConfig, Queue,
     egui::{self, Context, Slider},
 };
 use std::sync::Arc;
 
-///
+struct AppState {
+    shared_params: Arc<GainParamsShared>,
+    local_params: GainParamsLocal,
+}
+
+impl AppState {
+    pub fn new(shared_params: &Arc<GainParamsShared>) -> Self {
+        Self {
+            local_params: GainParamsLocal::new(shared_params),
+            shared_params: Arc::clone(shared_params),
+        }
+    }
+}
+
 /// The type that holds the window in Clack.
-///
-/// This is what implements the [`HasRawWindowHandle `] trait.
-#[derive(Default)]
 pub struct GainPluginGui {
     /// Holds handle to plugin window.
-    handle: Option<WindowHandle>,
+    handle: WindowHandle,
+    egui_context: Context,
 }
 
 impl GainPluginGui {
     /// Close Plugin window.
-    pub fn close(&mut self) {
-        if let Some(mut handle) = self.handle.take() {
-            handle.close();
-        }
+    pub fn close(mut self) {
+        self.handle.close();
     }
 
     /// Set parent window.
-    pub fn set_parent(
-        &mut self,
-        parent: clack_extensions::gui::Window<'_>,
-        state: &GainPluginShared,
-    ) {
+    pub fn new(parent: Window<'_>, state: &GainPluginShared) -> Self {
         let settings = WindowOpenOptions {
             title: "Gain Plugin".to_string(),
             size: Size::new(400.0, 200.0),
@@ -38,24 +46,121 @@ impl GainPluginGui {
             gl_config: Some(Default::default()),
         };
 
-        self.handle = Some(EguiWindow::open_parented(
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        let handle = EguiWindow::open_parented(
             &parent,
             settings,
             GraphicsConfig::default(),
-            state.params.clone(),
-            |_egui_ctx: &Context, _queue: &mut Queue, _state: &mut Arc<GainParams>| {},
-            |egui_ctx: &Context, _queue: &mut Queue, state: &mut Arc<GainParams>| {
+            AppState::new(&state.params),
+            move |egui_ctx: &Context, _queue: &mut Queue, _state: &mut AppState| {
+                tx.send(egui_ctx.clone()).unwrap()
+            },
+            |egui_ctx: &Context, _queue: &mut Queue, state: &mut AppState| {
+                state.local_params.fetch_updates(&state.shared_params);
+
                 egui::CentralPanel::default().show(egui_ctx, |ui| {
                     ui.heading("Gain Plugin");
-                    let mut value = state.get_volume();
+                    let mut value = state.local_params.get_volume();
                     if ui
                         .add(Slider::new(&mut value, 0.0..=1.0).text("gain"))
                         .changed()
                     {
-                        state.set_volume(value);
+                        state.local_params.set_volume(value);
+                        state.local_params.push_updates(&state.shared_params);
                     };
                 });
             },
-        ));
+        );
+
+        let egui_context = rx.recv().unwrap();
+
+        Self {
+            handle,
+            egui_context,
+        }
+    }
+
+    pub fn refresh(&self) {
+        self.egui_context.request_repaint();
+    }
+}
+
+impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
+    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool {
+        configuration.api_type
+            == GuiApiType::default_for_current_platform().expect("Unsupported platform")
+            && !configuration.is_floating
+    }
+
+    fn get_preferred_api(&mut self) -> Option<GuiConfiguration<'_>> {
+        Some(GuiConfiguration {
+            api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
+            is_floating: false,
+        })
+    }
+
+    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError> {
+        if configuration.is_floating {
+            return Err(PluginError::Message(
+                "Invalid GUI configuration: this plugin does not support floating mode",
+            ));
+        }
+
+        let supported_type =
+            GuiApiType::default_for_current_platform().expect("Unsupported platform");
+
+        if configuration.api_type != supported_type {
+            return Err(PluginError::Message(
+                "Invalid GUI configuration: unsupported API type",
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn destroy(&mut self) {
+        if let Some(gui) = self.gui.take() {
+            gui.close()
+        }
+    }
+
+    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn get_size(&mut self) -> Option<GuiSize> {
+        Some(GuiSize {
+            width: 400,
+            height: 200,
+        })
+    }
+
+    fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
+        self.gui = Some(GainPluginGui::new(window, self.shared));
+        Ok(())
+    }
+
+    fn set_transient(&mut self, _window: Window) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn show(&mut self) -> Result<(), PluginError> {
+        if let Some(gui) = &self.gui {
+            gui.refresh()
+        }
+        Ok(())
+    }
+
+    fn hide(&mut self) -> Result<(), PluginError> {
+        if let Some(gui) = &self.gui {
+            gui.refresh()
+        }
+
+        Ok(())
     }
 }

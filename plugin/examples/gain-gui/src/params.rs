@@ -3,16 +3,15 @@
 use crate::{GainPluginAudioProcessor, GainPluginMainThread};
 use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
+use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
+use clack_plugin::utils::Cookie;
 use std::ffi::CStr;
 use std::fmt::Write as _;
 use std::io::{Read, Write as _};
 use std::sync::atomic::{AtomicU32, Ordering};
-
-/// The unique identifier for the Volume parameter.
-pub const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
 
 /// The default value of the volume parameter.
 const DEFAULT_VOLUME: f32 = 1.0;
@@ -24,43 +23,87 @@ const DEFAULT_VOLUME: f32 = 1.0;
 /// This struct will be used both by the [`GainPluginMainThread`] (which the host will use
 /// to query the value of our parameters), and by the [`GainPluginAudioProcessor`], which will
 /// actually modulate the audio samples.
-pub struct GainParams {
+pub struct GainParamsShared {
     /// The current value of the volume parameter.
     volume: AtomicF32,
 }
 
-impl GainParams {
+impl GainParamsShared {
+    /// The unique identifier for the Volume parameter.
+    const PARAM_VOLUME_ID: ClapId = ClapId::new(1);
+
     /// Initializes the shared parameter value.
     pub fn new() -> Self {
         Self {
             volume: AtomicF32::new(DEFAULT_VOLUME),
         }
     }
+}
 
-    /// Returns the current volume.
-    #[inline]
-    pub fn get_volume(&self) -> f32 {
-        self.volume.load(Ordering::SeqCst)
+/// TODO
+pub struct GainParamsLocal {
+    /// The local value of the volume parameter.
+    volume: f32,
+}
+
+impl GainParamsLocal {
+    pub fn new(shared: &GainParamsShared) -> Self {
+        Self {
+            volume: shared.volume.load(),
+        }
     }
 
-    /// Sets a new value for the value parameter.
-    /// The value is clamped, as it should only be in the `0..=1` range.
     #[inline]
-    pub fn set_volume(&self, new_volume: f32) {
-        let new_volume = new_volume.clamp(0., 1.);
-        self.volume.store(new_volume, Ordering::SeqCst)
+    pub fn get_volume(&self) -> f32 {
+        self.volume
+    }
+
+    #[inline]
+    pub fn set_volume(&mut self, new_volume: f32) {
+        self.volume = new_volume.clamp(0.0, 1.0);
+    }
+
+    #[inline]
+    pub fn fetch_updates(&mut self, shared: &GainParamsShared) -> bool {
+        let latest_volume = shared.volume.load();
+
+        if latest_volume != self.volume {
+            self.volume = latest_volume;
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn push_updates(&self, shared: &GainParamsShared) -> bool {
+        let previous_value = shared.volume.swap(self.volume);
+
+        previous_value != self.volume
     }
 
     /// Handles incoming events.
     ///
     /// If the given event is a matching parameter change event, the volume parameter will be
     /// updated accordingly.
-    pub fn handle_event(&self, event: &UnknownEvent) {
+    pub fn handle_event(&mut self, event: &UnknownEvent) {
         if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
-            if event.param_id() == PARAM_VOLUME_ID {
-                self.set_volume(event.value() as f32)
+            if event.param_id() == GainParamsShared::PARAM_VOLUME_ID {
+                self.set_volume(event.value() as f32);
             }
         }
+    }
+
+    pub fn send_param_events(&self, output_events: &mut OutputEvents) {
+        let event = ParamValueEvent::new(
+            0,
+            GainParamsShared::PARAM_VOLUME_ID,
+            Pckn::match_all(),
+            self.volume as f64,
+            Cookie::empty(),
+        );
+
+        let _ = output_events.try_push(event);
     }
 }
 
@@ -70,7 +113,8 @@ impl GainParams {
 /// volume parameter to store, so we just store its bytes (in little-endian) and call it a day.
 impl PluginStateImpl for GainPluginMainThread<'_> {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
-        let volume_param = self.shared.params.get_volume();
+        self.params.fetch_updates(&self.shared.params);
+        let volume_param = self.params.get_volume();
 
         output.write_all(&volume_param.to_le_bytes())?;
         Ok(())
@@ -80,7 +124,8 @@ impl PluginStateImpl for GainPluginMainThread<'_> {
         let mut buf = [0; 4];
         input.read_exact(&mut buf)?;
         let volume_value = f32::from_le_bytes(buf);
-        self.shared.params.set_volume(volume_value);
+        self.params.set_volume(volume_value);
+        self.params.push_updates(&self.shared.params);
         Ok(())
     }
 }
@@ -108,7 +153,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
 
     fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
         if param_id == 1 {
-            Some(self.shared.params.get_volume() as f64)
+            Some(self.params.get_volume() as f64)
         } else {
             None
         }
@@ -145,7 +190,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         _output_parameter_changes: &mut OutputEvents,
     ) {
         for event in input_parameter_changes {
-            self.shared.params.handle_event(event)
+            self.params.handle_event(event)
         }
     }
 }
@@ -157,7 +202,7 @@ impl PluginAudioProcessorParams for GainPluginAudioProcessor<'_> {
         _output_parameter_changes: &mut OutputEvents,
     ) {
         for event in input_parameter_changes {
-            self.shared.params.handle_event(event)
+            self.params.handle_event(event)
         }
     }
 }
@@ -174,14 +219,19 @@ impl AtomicF32 {
 
     /// Stores the given `value` using the given `order`ing.
     #[inline]
-    fn store(&self, value: f32, order: Ordering) {
-        self.0.store(f32_to_u32_bytes(value), order)
+    fn store(&self, value: f32) {
+        self.0.store(f32_to_u32_bytes(value), Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn swap(&self, value: f32) -> f32 {
+        f32_from_u32_bytes(self.0.swap(f32_to_u32_bytes(value), Ordering::Relaxed))
     }
 
     /// Loads the contained `value` using the given `order`ing.
     #[inline]
-    fn load(&self, order: Ordering) -> f32 {
-        f32_from_u32_bytes(self.0.load(order))
+    fn load(&self) -> f32 {
+        f32_from_u32_bytes(self.0.load(Ordering::Relaxed))
     }
 }
 

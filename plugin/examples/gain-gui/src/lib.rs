@@ -1,14 +1,10 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(missing_docs, clippy::missing_docs_in_private_items)]
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
 #![doc = include_str!("../README.md")]
 
-use crate::{gui::GainPluginGui, params::GainParams};
-use clack_extensions::{
-    audio_ports::*,
-    gui::{GuiApiType, GuiConfiguration, PluginGui, PluginGuiImpl},
-    params::*,
-    state::PluginState,
-};
+use crate::params::GainParamsLocal;
+use crate::{gui::GainPluginGui, params::GainParamsShared};
+use clack_extensions::{audio_ports::*, gui::PluginGui, params::*, state::PluginState};
 use clack_plugin::prelude::*;
 use std::sync::Arc;
 
@@ -47,7 +43,7 @@ impl DefaultPluginFactory for GainPlugin {
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(GainPluginShared {
-            params: Arc::new(GainParams::new()),
+            params: Arc::new(GainParamsShared::new()),
         })
     }
 
@@ -57,7 +53,8 @@ impl DefaultPluginFactory for GainPlugin {
     ) -> Result<Self::MainThread<'a>, PluginError> {
         Ok(Self::MainThread {
             shared,
-            gui: GainPluginGui::default(),
+            params: GainParamsLocal::new(&shared.params),
+            gui: None,
         })
     }
 }
@@ -67,21 +64,27 @@ impl DefaultPluginFactory for GainPlugin {
 /// It receives parameter events, and process a stereo audio signal by operating on the given audio
 /// buffer.
 pub struct GainPluginAudioProcessor<'a> {
+    params: GainParamsLocal,
     /// A reference to the plugin's shared data.
     shared: &'a GainPluginShared,
+    host: HostAudioProcessorHandle<'a>,
 }
 
 impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
     for GainPluginAudioProcessor<'a>
 {
     fn activate(
-        _host: HostAudioProcessorHandle<'a>,
+        host: HostAudioProcessorHandle<'a>,
         _main_thread: &mut GainPluginMainThread,
         shared: &'a GainPluginShared,
         _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         // This is where we would allocate intermediate buffers and such if we needed them.
-        Ok(Self { shared })
+        Ok(Self {
+            host,
+            shared,
+            params: GainParamsLocal::new(&shared.params),
+        })
     }
 
     fn process(
@@ -118,23 +121,36 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
             }
         }
 
+        // Receive any param updates from the main thread and/or the GUI.
+        let has_param_updates = self.params.fetch_updates(&self.shared.params);
+
         // Now let's process the audio, while splitting the processing in batches between each
         // sample-accurate event.
 
         for event_batch in events.input.batch() {
             // Process all param events in this batch
             for event in event_batch.events() {
-                self.shared.params.handle_event(event)
+                self.params.handle_event(event)
             }
 
             // Get the volume value after all parameter changes have been handled.
-            let volume = self.shared.params.get_volume();
+            let volume = self.params.get_volume();
 
             for buf in channel_buffers.iter_mut().flatten() {
                 for sample in buf.iter_mut() {
                     *sample *= volume
                 }
             }
+        }
+
+        // Publish any parameter changes we may have received.
+        if self.params.push_updates(&self.shared.params) {
+            // Request the on-main-thread callback, which we use to refresh the UI if it is open
+            self.host.request_callback();
+        }
+
+        if has_param_updates {
+            self.params.send_param_events(events.output);
         }
 
         Ok(ProcessStatus::ContinueIfNotQuiet)
@@ -163,73 +179,26 @@ impl PluginAudioPortsImpl for GainPluginMainThread<'_> {
 /// The plugin data that gets shared between the Main Thread and the Audio Thread.
 pub struct GainPluginShared {
     /// The plugin's parameter values.
-    params: Arc<GainParams>,
+    params: Arc<GainParamsShared>,
 }
 
 impl PluginShared<'_> for GainPluginShared {}
 
 /// The data that belongs to the main thread of our plugin.
 pub struct GainPluginMainThread<'a> {
+    params: GainParamsLocal,
     /// A reference to the plugin's shared data.
     shared: &'a GainPluginShared,
-    /// A reference to the plugin's window.
-    gui: GainPluginGui,
+    /// The plugin's GUI state and context
+    gui: Option<GainPluginGui>,
 }
 
-impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {}
+impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
+    fn on_main_thread(&mut self) {
+        if let Some(gui) = &self.gui {
+            gui.refresh()
+        }
+    }
+}
 
 clack_export_entry!(SinglePluginEntry<GainPlugin>);
-
-impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
-    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool {
-        configuration.api_type
-            == GuiApiType::default_for_current_platform().expect("Unsupported platform")
-            && !configuration.is_floating
-    }
-
-    fn get_preferred_api(&'_ mut self) -> Option<GuiConfiguration<'_>> {
-        Some(GuiConfiguration {
-            api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
-            is_floating: false,
-        })
-    }
-
-    fn create(&mut self, _configuration: GuiConfiguration) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn destroy(&mut self) {}
-
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn get_size(&mut self) -> Option<clack_extensions::gui::GuiSize> {
-        Some(clack_extensions::gui::GuiSize {
-            width: 400,
-            height: 200,
-        })
-    }
-
-    fn set_size(&mut self, _size: clack_extensions::gui::GuiSize) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_parent(&mut self, window: clack_extensions::gui::Window) -> Result<(), PluginError> {
-        self.gui.set_parent(window, self.shared);
-        Ok(())
-    }
-
-    fn set_transient(&mut self, _window: clack_extensions::gui::Window) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn show(&mut self) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn hide(&mut self) -> Result<(), PluginError> {
-        self.gui.close();
-        Ok(())
-    }
-}
