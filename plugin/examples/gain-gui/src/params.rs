@@ -3,7 +3,9 @@
 use crate::{GainPluginAudioProcessor, GainPluginMainThread};
 use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
-use clack_plugin::events::event_types::ParamValueEvent;
+use clack_plugin::events::event_types::{
+    ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent,
+};
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
@@ -11,7 +13,7 @@ use clack_plugin::utils::Cookie;
 use std::ffi::CStr;
 use std::fmt::Write as _;
 use std::io::{Read, Write as _};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// The default value of the volume parameter.
 const DEFAULT_VOLUME: f32 = 1.0;
@@ -26,6 +28,7 @@ const DEFAULT_VOLUME: f32 = 1.0;
 pub struct GainParamsShared {
     /// The current value of the volume parameter.
     volume: AtomicF32,
+    has_gesture: AtomicBool,
 }
 
 impl GainParamsShared {
@@ -36,20 +39,28 @@ impl GainParamsShared {
     pub fn new() -> Self {
         Self {
             volume: AtomicF32::new(DEFAULT_VOLUME),
+            has_gesture: AtomicBool::new(false),
         }
     }
+}
+
+pub enum Gesture {
+    Begin,
+    End,
 }
 
 /// TODO
 pub struct GainParamsLocal {
     /// The local value of the volume parameter.
     volume: f32,
+    pub has_gesture: bool,
 }
 
 impl GainParamsLocal {
     pub fn new(shared: &GainParamsShared) -> Self {
         Self {
             volume: shared.volume.load(),
+            has_gesture: shared.has_gesture.load(Ordering::Relaxed),
         }
     }
 
@@ -82,6 +93,30 @@ impl GainParamsLocal {
         previous_value != self.volume
     }
 
+    #[inline]
+    pub fn push_gesture(&self, shared: &GainParamsShared) {
+        shared
+            .has_gesture
+            .store(self.has_gesture, Ordering::Relaxed);
+    }
+
+    #[inline]
+    pub fn fetch_gesture(&mut self, shared: &GainParamsShared) -> Option<Gesture> {
+        let previous_gesture = self.has_gesture;
+
+        self.has_gesture = shared.has_gesture.load(Ordering::Relaxed);
+
+        if previous_gesture == self.has_gesture {
+            return None;
+        }
+
+        if previous_gesture {
+            Some(Gesture::End)
+        } else {
+            Some(Gesture::Begin)
+        }
+    }
+
     /// Handles incoming events.
     ///
     /// If the given event is a matching parameter change event, the volume parameter will be
@@ -104,6 +139,27 @@ impl GainParamsLocal {
         );
 
         let _ = output_events.try_push(event);
+    }
+
+    pub fn fetch_gesture_and_send_events(
+        &mut self,
+        shared: &GainParamsShared,
+        output_events: &mut OutputEvents,
+    ) {
+        let Some(new_state) = self.fetch_gesture(shared) else {
+            return;
+        };
+
+        let _ = match new_state {
+            Gesture::Begin => output_events.try_push(ParamGestureBeginEvent::new(
+                0,
+                GainParamsShared::PARAM_VOLUME_ID,
+            )),
+            Gesture::End => output_events.try_push(ParamGestureEndEvent::new(
+                0,
+                GainParamsShared::PARAM_VOLUME_ID,
+            )),
+        };
     }
 }
 
@@ -217,18 +273,13 @@ impl AtomicF32 {
         Self(AtomicU32::new(f32_to_u32_bytes(value)))
     }
 
-    /// Stores the given `value` using the given `order`ing.
-    #[inline]
-    fn store(&self, value: f32) {
-        self.0.store(f32_to_u32_bytes(value), Ordering::Relaxed)
-    }
-
+    /// Stores the given `value`, and returns the previously stored one.
     #[inline]
     fn swap(&self, value: f32) -> f32 {
         f32_from_u32_bytes(self.0.swap(f32_to_u32_bytes(value), Ordering::Relaxed))
     }
 
-    /// Loads the contained `value` using the given `order`ing.
+    /// Loads the contained `value`.
     #[inline]
     fn load(&self) -> f32 {
         f32_from_u32_bytes(self.0.load(Ordering::Relaxed))

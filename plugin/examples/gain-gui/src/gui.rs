@@ -32,11 +32,6 @@ pub struct GainPluginGui {
 }
 
 impl GainPluginGui {
-    /// Close Plugin window.
-    pub fn close(mut self) {
-        self.handle.close();
-    }
-
     /// Set parent window.
     pub fn new(parent: Window<'_>, state: &GainPluginShared) -> Self {
         let settings = WindowOpenOptions {
@@ -62,13 +57,16 @@ impl GainPluginGui {
                 egui::CentralPanel::default().show(egui_ctx, |ui| {
                     ui.heading("Gain Plugin");
                     let mut value = state.local_params.get_volume();
-                    if ui
-                        .add(Slider::new(&mut value, 0.0..=1.0).text("gain"))
-                        .changed()
-                    {
+
+                    let slider = ui.add(Slider::new(&mut value, 0.0..=1.0).text("gain"));
+
+                    if slider.changed() {
                         state.local_params.set_volume(value);
                         state.local_params.push_updates(&state.shared_params);
                     };
+
+                    state.local_params.has_gesture = slider.is_pointer_button_down_on();
+                    state.local_params.push_gesture(&state.shared_params);
                 });
             },
         );
@@ -83,6 +81,12 @@ impl GainPluginGui {
 
     pub fn refresh(&self) {
         self.egui_context.request_repaint();
+    }
+}
+
+impl Drop for GainPluginGui {
+    fn drop(&mut self) {
+        self.handle.close();
     }
 }
 
@@ -120,9 +124,7 @@ impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
     }
 
     fn destroy(&mut self) {
-        if let Some(gui) = self.gui.take() {
-            gui.close()
-        }
+        let _ = self.gui.take();
     }
 
     fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {

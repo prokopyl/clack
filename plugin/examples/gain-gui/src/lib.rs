@@ -122,7 +122,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
         }
 
         // Receive any param updates from the main thread and/or the GUI.
-        let has_param_updates = self.params.fetch_updates(&self.shared.params);
+        let has_ui_param_updates = self.params.fetch_updates(&self.shared.params);
 
         // Now let's process the audio, while splitting the processing in batches between each
         // sample-accurate event.
@@ -149,7 +149,11 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
             self.host.request_callback();
         }
 
-        if has_param_updates {
+        // First, send out Begin/EndGesture events if needed
+        self.params
+            .fetch_gesture_and_send_events(&self.shared.params, events.output);
+
+        if has_ui_param_updates {
             self.params.send_param_events(events.output);
         }
 
