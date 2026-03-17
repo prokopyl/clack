@@ -65,8 +65,8 @@ impl PluginAudioPorts {
 }
 
 pub trait HostAudioPortsImpl {
-    fn is_rescan_flag_supported(&self, flag: RescanType) -> bool;
-    fn rescan(&mut self, flag: RescanType);
+    fn is_rescan_flag_supported(&self, flag: AudioPortRescanFlags) -> bool;
+    fn rescan(&mut self, flag: AudioPortRescanFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -90,7 +90,7 @@ where
         Ok(host
             .main_thread()
             .as_ref()
-            .is_rescan_flag_supported(RescanType::from_bits_truncate(flag)))
+            .is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
     })
     .unwrap_or(false)
 }
@@ -103,7 +103,7 @@ where
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
             .as_mut()
-            .rescan(RescanType::from_bits_truncate(flag));
+            .rescan(AudioPortRescanFlags::from_bits_truncate(flag));
 
         Ok(())
     });

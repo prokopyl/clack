@@ -1,6 +1,6 @@
 use crate::discovery::FoundPlugin;
 
-use clack_extensions::audio_ports::{HostAudioPortsImpl, PluginAudioPorts, RescanType};
+use clack_extensions::audio_ports::{AudioPortRescanFlags, HostAudioPortsImpl, PluginAudioPorts};
 use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_extensions::params::{
@@ -354,11 +354,11 @@ impl HostLogImpl for CpalHostShared {
 }
 
 impl HostAudioPortsImpl for CpalHostMainThread<'_> {
-    fn is_rescan_flag_supported(&self, _flag: RescanType) -> bool {
+    fn is_rescan_flag_supported(&self, _flag: AudioPortRescanFlags) -> bool {
         false
     }
 
-    fn rescan(&mut self, _flag: RescanType) {
+    fn rescan(&mut self, _flag: AudioPortRescanFlags) {
         // We don't support audio ports changing on the fly
     }
 }

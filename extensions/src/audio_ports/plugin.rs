@@ -1,4 +1,4 @@
-use crate::audio_ports::{AudioPortInfo, HostAudioPorts, PluginAudioPorts, RescanType};
+use crate::audio_ports::{AudioPortInfo, AudioPortRescanFlags, HostAudioPorts, PluginAudioPorts};
 use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
@@ -160,7 +160,11 @@ where
 
 impl HostAudioPorts {
     #[inline]
-    pub fn is_rescan_flag_supported(&self, host: &HostMainThreadHandle, flag: RescanType) -> bool {
+    pub fn is_rescan_flag_supported(
+        &self,
+        host: &HostMainThreadHandle,
+        flag: AudioPortRescanFlags,
+    ) -> bool {
         match host.use_extension(&self.0).is_rescan_flag_supported {
             None => false,
             // SAFETY: This type ensures the function pointer is valid.
@@ -169,7 +173,7 @@ impl HostAudioPorts {
     }
 
     #[inline]
-    pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: RescanType) {
+    pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: AudioPortRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flag.bits()) }

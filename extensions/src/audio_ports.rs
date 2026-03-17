@@ -65,7 +65,7 @@ impl AudioPortType<'_> {
 bitflags! {
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct RescanType: u32 {
+    pub struct AudioPortRescanFlags: u32 {
         /// The ports name did change, the host can scan them right away.
         const NAMES = CLAP_AUDIO_PORTS_RESCAN_NAMES;
         /// The flags did change
@@ -81,7 +81,7 @@ bitflags! {
     }
 }
 
-impl RescanType {
+impl AudioPortRescanFlags {
     /// Returns `true` if any of the set flag values requires the plugin to be deactivated
     /// before re-scanning.
     /// Otherwise, this returns false.
@@ -89,12 +89,12 @@ impl RescanType {
     /// As of now, this is true if any flag is set except for [`NAMES`](Self::NAMES).
     #[inline]
     pub const fn requires_deactivate(&self) -> bool {
-        const RESTART_REQUIRED: RescanType = RescanType::FLAGS
-            .union(RescanType::CHANNEL_COUNT)
-            .union(RescanType::PORT_TYPE)
-            .union(RescanType::PORT_TYPE)
-            .union(RescanType::IN_PLACE_PAIR)
-            .union(RescanType::LIST);
+        const RESTART_REQUIRED: AudioPortRescanFlags = AudioPortRescanFlags::FLAGS
+            .union(AudioPortRescanFlags::CHANNEL_COUNT)
+            .union(AudioPortRescanFlags::PORT_TYPE)
+            .union(AudioPortRescanFlags::PORT_TYPE)
+            .union(AudioPortRescanFlags::IN_PLACE_PAIR)
+            .union(AudioPortRescanFlags::LIST);
 
         self.intersects(RESTART_REQUIRED)
     }
