@@ -26,6 +26,7 @@ const DEFAULT_VOLUME: f32 = 1.0;
 pub struct GainParamsShared {
     /// The current value of the volume parameter.
     volume: AtomicF32,
+    /// Whether a gesture is currently active or not on the `volume` parameter
     has_gesture: AtomicBool,
 }
 
@@ -42,21 +43,33 @@ impl GainParamsShared {
     }
 }
 
+/// A param gesture change type
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum Gesture {
+pub enum GestureChange {
+    /// User started changing a parameter
     Begin,
+    /// User finished changing a parameter
     End,
+    /// User both started and finished changing a parameter during the current block
     Both,
 }
 
-/// TODO
+/// The local-side of parameter state.
+///
+/// This state is local to the current thread (whether it is the main-thread, the UI or the audio
+/// thread), it is not shared directly with the others.
+///
+/// This allows us to both check for differences, and to only update parameter state when we want
+/// to.
 pub struct GainParamsLocal {
     /// The local value of the volume parameter.
     volume: f32,
+    /// Whether the user is currently changing the parameter, that we know of
     pub has_gesture: bool,
 }
 
 impl GainParamsLocal {
+    /// Initializes a new local state from the current shared state.
     pub fn new(shared: &GainParamsShared) -> Self {
         Self {
             volume: shared.volume.load(),
@@ -64,16 +77,23 @@ impl GainParamsLocal {
         }
     }
 
+    /// Returns the current local volume value.
     #[inline]
     pub fn get_volume(&self) -> f32 {
         self.volume
     }
 
+    /// Sets the current local volume value to `new_volume`.
+    ///
+    /// It is clamped to the range `0..=1.0`.
     #[inline]
     pub fn set_volume(&mut self, new_volume: f32) {
         self.volume = new_volume.clamp(0.0, 1.0);
     }
 
+    /// Fetch updates from the `shared` state.
+    ///
+    /// If the volume parameter has been updated, this returns `true`.
     #[inline]
     pub fn fetch_updates(&mut self, shared: &GainParamsShared) -> bool {
         let latest_volume = shared.volume.load();
@@ -86,6 +106,9 @@ impl GainParamsLocal {
         }
     }
 
+    /// Pushes the local volume parameter value to the `shared` state.
+    ///
+    /// If the values were different and an actual update occurred, this returns `true`.
     #[inline]
     pub fn push_updates(&self, shared: &GainParamsShared) -> bool {
         let previous_value = shared.volume.swap(self.volume);
@@ -93,6 +116,7 @@ impl GainParamsLocal {
         previous_value != self.volume
     }
 
+    /// Pushes the local gesture state to the `shared` state.
     #[inline]
     pub fn push_gesture(&self, shared: &GainParamsShared) {
         shared
@@ -100,28 +124,32 @@ impl GainParamsLocal {
             .store(self.has_gesture, Ordering::Relaxed);
     }
 
+    /// Fetches updates to the gesture state.
+    ///
+    /// If a gesture state changed occurred, it is returned.
+    /// If the gesture did not change from the last update, `None` is returned.
     #[inline]
     pub fn fetch_gesture(
         &mut self,
         shared: &GainParamsShared,
         has_ui_param_updates: bool,
-    ) -> Option<Gesture> {
+    ) -> Option<GestureChange> {
         let previous_gesture = self.has_gesture;
 
         self.has_gesture = shared.has_gesture.load(Ordering::Relaxed);
 
         if previous_gesture == self.has_gesture {
             return if has_ui_param_updates && !self.has_gesture {
-                Some(Gesture::Both)
+                Some(GestureChange::Both)
             } else {
                 None
             };
         }
 
         if previous_gesture {
-            Some(Gesture::End)
+            Some(GestureChange::End)
         } else {
-            Some(Gesture::Begin)
+            Some(GestureChange::Begin)
         }
     }
 
@@ -137,6 +165,7 @@ impl GainParamsLocal {
         }
     }
 
+    /// Sends the value of the volume parameter to the host, via a [`ParamValueEvent`].
     pub fn send_param_events(&self, output_events: &mut OutputEvents) {
         let event = ParamValueEvent::new(
             0,
@@ -227,18 +256,6 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         }
     }
 
-    fn flush(
-        &mut self,
-        input_parameter_changes: &InputEvents,
-        _output_parameter_changes: &mut OutputEvents,
-    ) {
-        for event in input_parameter_changes {
-            self.params.handle_event(event)
-        }
-    }
-}
-
-impl PluginAudioProcessorParams for GainPluginAudioProcessor<'_> {
     fn flush(
         &mut self,
         input_parameter_changes: &InputEvents,

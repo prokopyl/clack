@@ -1,4 +1,5 @@
-//! Contains all types and implementations related to Gui window management
+//! Contains all types and implementations related to the plugin's GUI
+
 use crate::params::GainParamsLocal;
 use crate::{GainPluginMainThread, GainPluginShared, params::GainParamsShared};
 use baseview::{Size, WindowHandle, WindowOpenOptions, WindowScalePolicy};
@@ -10,12 +11,16 @@ use egui_baseview::{
 };
 use std::sync::Arc;
 
+/// The EGUI application state
 struct AppState {
+    /// A handle to the shared params state
     shared_params: Arc<GainParamsShared>,
+    /// The local state of the parameters
     local_params: GainParamsLocal,
 }
 
 impl AppState {
+    /// Initializes a new [`AppState`] from the given shared params state handle
     pub fn new(shared_params: &Arc<GainParamsShared>) -> Self {
         Self {
             local_params: GainParamsLocal::new(shared_params),
@@ -24,10 +29,11 @@ impl AppState {
     }
 }
 
-/// The type that holds the window in Clack.
+/// GUI state that can be accessed directly by the main thread
 pub struct GainPluginGui {
-    /// Holds handle to plugin window.
+    /// The handle to the baseview plugin window.
     handle: WindowHandle,
+    /// The handle to the EGUI context
     egui_context: Context,
 }
 
@@ -79,7 +85,8 @@ impl GainPluginGui {
         }
     }
 
-    pub fn refresh(&self) {
+    /// Requests the UI to repaint itself, e.g. in response to events or parameter changes
+    pub fn request_repaint(&self) {
         self.egui_context.request_repaint();
     }
 }
@@ -153,14 +160,14 @@ impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
 
     fn show(&mut self) -> Result<(), PluginError> {
         if let Some(gui) = &self.gui {
-            gui.refresh()
+            gui.request_repaint()
         }
         Ok(())
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
         if let Some(gui) = &self.gui {
-            gui.refresh()
+            gui.request_repaint()
         }
 
         Ok(())
