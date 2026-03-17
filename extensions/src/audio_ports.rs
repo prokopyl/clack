@@ -92,7 +92,6 @@ impl AudioPortRescanFlags {
         const RESTART_REQUIRED: AudioPortRescanFlags = AudioPortRescanFlags::FLAGS
             .union(AudioPortRescanFlags::CHANNEL_COUNT)
             .union(AudioPortRescanFlags::PORT_TYPE)
-            .union(AudioPortRescanFlags::PORT_TYPE)
             .union(AudioPortRescanFlags::IN_PLACE_PAIR)
             .union(AudioPortRescanFlags::LIST);
 
