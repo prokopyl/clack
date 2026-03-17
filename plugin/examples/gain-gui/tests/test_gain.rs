@@ -20,9 +20,12 @@ pub fn it_works() {
 
     assert_eq!(
         descriptor.id().unwrap().to_bytes(),
-        b"org.rust-audio.clack.gain"
+        b"org.rust-audio.clack.gain-egui"
     );
-    assert_eq!(descriptor.name().unwrap().to_bytes(), b"Clack Gain Example");
+    assert_eq!(
+        descriptor.name().unwrap().to_bytes(),
+        b"Clack Gain EGUI Example"
+    );
 
     assert!(descriptor.vendor().is_none());
     assert!(descriptor.url().is_none());

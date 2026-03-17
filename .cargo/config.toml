@@ -1,2 +1,2 @@
 [alias]
-bundle-plugins = "run -p bundle-plugins --"
+bundle-plugins = "run -p bundle-plugins --release --"

@@ -40,7 +40,7 @@ impl GainParams {
     /// Returns the current volume.
     #[inline]
     pub fn get_volume(&self) -> f32 {
-        self.volume.load(Ordering::SeqCst)
+        self.volume.load()
     }
 
     /// Sets a new value for the value parameter.
@@ -48,7 +48,7 @@ impl GainParams {
     #[inline]
     pub fn set_volume(&self, new_volume: f32) {
         let new_volume = new_volume.clamp(0., 1.);
-        self.volume.store(new_volume, Ordering::SeqCst)
+        self.volume.store(new_volume)
     }
 
     /// Handles incoming events.
@@ -174,14 +174,14 @@ impl AtomicF32 {
 
     /// Stores the given `value` using the given `order`ing.
     #[inline]
-    fn store(&self, value: f32, order: Ordering) {
-        self.0.store(f32_to_u32_bytes(value), order)
+    fn store(&self, value: f32) {
+        self.0.store(f32_to_u32_bytes(value), Ordering::Relaxed)
     }
 
     /// Loads the contained `value` using the given `order`ing.
     #[inline]
-    fn load(&self, order: Ordering) -> f32 {
-        f32_from_u32_bytes(self.0.load(order))
+    fn load(&self) -> f32 {
+        f32_from_u32_bytes(self.0.load(Ordering::Relaxed))
     }
 }
 
