@@ -7,6 +7,7 @@ use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide
 use clap_sys::ext::surround::*;
 use core::{fmt, slice};
 use std::ffi::CStr;
+use std::fmt::Debug;
 
 /// The Plugin-side of the Surround extension.
 #[derive(Copy, Clone)]
@@ -274,17 +275,94 @@ impl<'a> SurroundConfig<'a> {
     }
 }
 
-impl<'a> IntoIterator for SurroundConfig<'a> {
-    type Item = Option<SurroundChannel>;
-    type IntoIter = core::iter::Map<core::slice::Iter<'a, u8>, fn(&u8) -> Option<SurroundChannel>>;
+/// An iterator over the [`SurroundChannel`]s in a [`SurroundConfig`].
+#[derive(Clone)]
+pub struct SurroundConfigIter<'a> {
+    inner: slice::Iter<'a, u8>,
+}
 
+impl<'a> SurroundConfigIter<'a> {
+    /// A view over the raw byte representation of the remaining channels
     #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter().map(|byte| SurroundChannel::from_raw(*byte))
+    pub fn as_raw_slice(&self) -> &'a [u8] {
+        self.inner.as_slice()
     }
 }
 
-impl<'a> fmt::Debug for SurroundConfig<'a> {
+impl Debug for SurroundConfigIter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.clone()).finish()
+    }
+}
+
+impl<'a> Iterator for SurroundConfigIter<'a> {
+    type Item = Option<SurroundChannel>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(SurroundChannel::from_raw(*self.inner.next()?))
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.inner.count()
+    }
+
+    #[inline]
+    fn last(mut self) -> Option<Self::Item> {
+        self.next_back()
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        Some(SurroundChannel::from_raw(*self.inner.nth(n)?))
+    }
+}
+
+impl<'a> DoubleEndedIterator for SurroundConfigIter<'a> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        Some(SurroundChannel::from_raw(*self.inner.next_back()?))
+    }
+}
+
+impl<'a> ExactSizeIterator for SurroundConfigIter<'a> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+impl<'a> IntoIterator for SurroundConfig<'a> {
+    type Item = Option<SurroundChannel>;
+    type IntoIter = SurroundConfigIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        SurroundConfigIter {
+            inner: self.0.iter(),
+        }
+    }
+}
+
+impl<'a> IntoIterator for &SurroundConfig<'a> {
+    type Item = Option<SurroundChannel>;
+    type IntoIter = SurroundConfigIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        SurroundConfigIter {
+            inner: self.0.iter(),
+        }
+    }
+}
+
+impl<'a> Debug for SurroundConfig<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(*self).finish()
     }
