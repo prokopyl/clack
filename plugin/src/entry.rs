@@ -27,6 +27,7 @@ use crate::factory::{Factory, FactoryImplementation};
 use std::error::Error;
 use std::ffi::{CStr, c_void};
 use std::fmt::{Display, Formatter};
+use std::hint::unreachable_unchecked;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::ptr::NonNull;
 use std::sync::Mutex;
@@ -91,7 +92,7 @@ pub mod prelude {
 /// }
 ///
 /// impl Entry for MyEntry {
-///     fn new(bundle_path: &CStr) -> Result<Self, EntryLoadError> {
+///     fn new(bundle_path: Option<&CStr>) -> Result<Self, EntryLoadError> {
 ///         // Initialize the factory and its wrapper
 ///         Ok(Self { plugin_factory: PluginFactoryWrapper::new(MyPluginFactory::new()) })
 ///     }
@@ -170,6 +171,21 @@ pub trait Entry: Sized + Send + Sync + 'static {
     /// The path of the bundle file this entry was loaded from is also given by the host, in case
     /// extra neighboring files need to be loaded.
     ///
+    /// # Host Compatibility Notes
+    ///
+    /// Some hosts might misbehave and pass an empty path to this function, or might even forget
+    /// to properly initialize the entry before trying to get factories from it.
+    ///
+    /// In those cases, Clack will call this function to instantiate the entry "just-in-time", but
+    /// `None` will be passed to this function instead of the path.
+    ///
+    /// This is still invalid host behavior according to the CLAP specification. Therefore, it is
+    /// completely valid for implementations of this function to always return [`EntryLoadError`]
+    /// when `None` is passed instead of a path.
+    ///
+    /// However, this allows plugins that may not need the bundle file path to initialize, and at
+    /// least partially recover.
+    ///
     /// # Platform Compatibility notes
     ///
     /// On Windows and Linux, this `bundle_path` is the one of the dynamic library file this entry
@@ -180,8 +196,8 @@ pub trait Entry: Sized + Send + Sync + 'static {
     ///
     /// # Errors
     ///
-    /// This returns [`Err`] if any error occurred during instantiation.
-    fn new(bundle_path: &CStr) -> Result<Self, EntryLoadError>;
+    /// This returns [`EntryLoadError`] if any error occurred during instantiation.
+    fn new(bundle_path: Option<&CStr>) -> Result<Self, EntryLoadError>;
 
     /// Declares the factories this entry exposes to the host, by registering them to the given
     /// [`EntryFactories`] builder.
@@ -225,7 +241,7 @@ impl Error for EntryLoadError {}
 /// pub struct MyEntry;
 ///
 /// impl Entry for MyEntry {
-/// #    fn new(bundle_path: &CStr) -> Result<Self, EntryLoadError> {
+/// #    fn new(bundle_path: Option<&CStr>) -> Result<Self, EntryLoadError> {
 /// #        unreachable!()
 /// #    }
 ///     /* ... */
@@ -281,7 +297,7 @@ macro_rules! clack_entry {
                 unsafe extern "C" fn get_factory(
                     identifier: *const ::core::ffi::c_char,
                 ) -> *const ::core::ffi::c_void {
-                    HOLDER.get_factory(identifier)
+                    HOLDER.get_factory_with(identifier, $entry_lambda)
                 }
 
                 $crate::entry::EntryDescriptor {
@@ -411,7 +427,7 @@ impl<E: Entry> EntryHolder<E> {
     pub unsafe fn init_with(
         &self,
         plugin_path: *const core::ffi::c_char,
-        entry_factory: impl FnOnce(&CStr) -> Result<E, EntryLoadError> + UnwindSafe,
+        entry_factory: impl FnOnce(Option<&CStr>) -> Result<E, EntryLoadError> + UnwindSafe,
     ) -> bool {
         let Ok(Ok(mut inner)) = handle_panic(|| self.inner.lock()) else {
             // A poisoned lock means init() panicked, so we consider the entry unusable.
@@ -428,6 +444,7 @@ impl<E: Entry> EntryHolder<E> {
             }
             Uninitialized => {
                 let plugin_path = CStr::from_ptr(plugin_path);
+                let plugin_path = (!plugin_path.is_empty()).then_some(plugin_path);
                 let entry = handle_panic(|| entry_factory(plugin_path));
 
                 if let Ok(Ok(entry)) = entry {
@@ -465,19 +482,55 @@ impl<E: Entry> EntryHolder<E> {
 
     /// # Safety
     ///
+    /// Users *must* ensure this is called at least once before any other method, and that
+    /// `plugin_path` points to a valid, NULL-terminated C string.
+    #[inline]
+    pub unsafe fn get_factory(&self, identifier: *const core::ffi::c_char) -> *const c_void {
+        self.get_factory_with(identifier, |p| E::new(p))
+    }
+
+    /// # Safety
+    ///
     /// This must only be called between calls to init and de_init, and identifier must point to a
     /// valid, NULL-terminated C string.
-    pub unsafe fn get_factory(&self, identifier: *const core::ffi::c_char) -> *const c_void {
+    pub unsafe fn get_factory_with(
+        &self,
+        identifier: *const core::ffi::c_char,
+        entry_factory: impl FnOnce(Option<&CStr>) -> Result<E, EntryLoadError> + UnwindSafe,
+    ) -> *const c_void {
         if identifier.is_null() {
             return core::ptr::null();
         }
 
-        let Ok(inner) = self.inner.lock() else {
+        let Ok(mut inner) = self.inner.lock() else {
             return core::ptr::null();
         };
 
-        let Initialized { entry, .. } = &*inner else {
-            return core::ptr::null();
+        let entry = match &*inner {
+            Initialized { entry, .. } => entry,
+            Uninitialized => {
+                let entry = handle_panic(|| entry_factory(None));
+
+                if let Ok(Ok(entry)) = entry {
+                    *inner = Initialized {
+                        entry,
+                        // This will leak the entry if deinit() is not called afterward, but it's better than
+                        // straight-up failing to load.
+                        reference_count: 1,
+                    };
+
+                    let Initialized { entry, .. } = &*inner else {
+                        // SAFETY: we just initialized it to Initialized above
+                        unsafe {
+                            unreachable_unchecked();
+                        }
+                    };
+
+                    entry
+                } else {
+                    return core::ptr::null();
+                }
+            }
         };
 
         let identifier = CStr::from_ptr(identifier);

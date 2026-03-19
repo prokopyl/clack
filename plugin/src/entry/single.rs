@@ -57,7 +57,7 @@ pub struct SinglePluginEntry<P: DefaultPluginFactory> {
 }
 
 impl<P: DefaultPluginFactory> Entry for SinglePluginEntry<P> {
-    fn new(_plugin_path: &CStr) -> Result<Self, EntryLoadError> {
+    fn new(_plugin_path: Option<&CStr>) -> Result<Self, EntryLoadError> {
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(SinglePluginFactory {
                 descriptor: P::get_descriptor(),

@@ -254,7 +254,7 @@ impl PluginEntry {
     pub fn load_from_clack<E: ::clack_plugin::entry::Entry>(
         path: &CStr,
     ) -> Result<Self, PluginEntryError> {
-        let entry = E::new(path).map_err(|_| PluginEntryError::EntryInitFailed)?;
+        let entry = E::new(Some(path)).map_err(|_| PluginEntryError::EntryInitFailed)?;
         let inner = PluginEntryInner::FromClack(clack_plugin::ClackEntry::new(entry));
 
         Ok(Self { inner })
