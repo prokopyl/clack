@@ -176,7 +176,7 @@ pub struct GainPluginEntry {
 }
 
 impl Entry for GainPluginEntry {
-    fn new(_bundle_path: &CStr) -> Result<Self, EntryLoadError> {
+    fn new(_bundle_path: Option<&CStr>) -> Result<Self, EntryLoadError> {
         use clack_plugin::plugin::features::*;
         Ok(Self {
             plugin_factory: PluginFactoryWrapper::new(GainPluginFactory {
