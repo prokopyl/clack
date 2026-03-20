@@ -6,7 +6,7 @@ use std::ffi::CStr;
 
 /// A Plugin Factory (CLAP-as-VST3) implementation.
 ///
-/// See the [module documentation](self) to learn more about the role of this factory.
+/// See the [module documentation](super) to learn more about the role of this factory.
 pub trait PluginFactoryAsVST3Impl {
     /// Returns the extra VST3 information for the plugin with the given index, if available.
     fn get_vst3_info(&self, index: u32) -> Option<&PluginInfoAsVST3<'_>>;

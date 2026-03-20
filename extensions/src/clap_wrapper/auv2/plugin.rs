@@ -5,7 +5,7 @@ use std::ffi::CStr;
 
 /// A Plugin Factory (CLAP-as-AUv2) implementation.
 ///
-/// See the [module documentation](self) to learn more about the role of this factory.
+/// See the [module documentation](super) to learn more about the role of this factory.
 pub trait PluginFactoryAsAUv2Impl {
     /// Returns the extra AUv2 information for the plugin with the given index, if available.
     fn get_auv2_info(&self, index: u32) -> Option<PluginInfoAsAUv2>;
