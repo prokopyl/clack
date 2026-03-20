@@ -68,7 +68,7 @@ pub enum NoteDialect {
     /// Events like [`MidiEvent`](clack_common::events::event_types::MidiEvent),
     /// [`MidiSysExEvent`](clack_common::events::event_types::MidiSysExEvent).
     Midi = CLAP_NOTE_DIALECT_MIDI,
-    /// Same as [`MIDI`](Self::MIDI), but with additional MPE support.
+    /// Same as [`Midi`](Self::Midi), but with additional MPE support.
     MidiMpe = CLAP_NOTE_DIALECT_MIDI_MPE,
     /// Events like [`Midi2Event`](clack_common::events::event_types::Midi2Event).
     Midi2 = CLAP_NOTE_DIALECT_MIDI2,

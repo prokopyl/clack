@@ -203,7 +203,7 @@ pub trait PluginMainThreadParams {
 
 /// Implementation of plugin parameter handling logic that runs on the *audio thread*.
 ///
-/// The CLAP host might call the [`flush`] method to synchronize parameter changes
+/// The CLAP host might call the [`flush`](Self::flush) method to synchronize parameter changes
 /// while the plugin is active.
 pub trait PluginAudioProcessorParams {
     /// Flushes a set of parameter changes.

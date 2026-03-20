@@ -66,7 +66,7 @@ mod host {
         /// The space ID 0 is reserved for CLAP's core events.
         fn query(&self, space_name: &CStr) -> Option<EventSpaceId>;
 
-        /// Same as [`query`], but uses the [`EventSpace`] type instead of a name string to specify the event space.
+        /// Same as [`query`](Self::query), but uses the [`EventSpace`] type instead of a name string to specify the event space.
         #[inline]
         fn query_type<'a, S: EventSpace<'a>>(&self) -> Option<EventSpaceId<S>> {
             // SAFETY: the EventSpaceId has been fetched from S's name.

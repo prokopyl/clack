@@ -74,7 +74,7 @@ pub trait HostAudioPortsImpl {
     fn is_rescan_flag_supported(&self, flag: AudioPortRescanFlags) -> bool;
 
     /// Rescan the full list of audio ports according to the flags.
-    /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`]).
+    /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
     /// Certain flags require the plugin to be de-activated.
     fn rescan(&mut self, flag: AudioPortRescanFlags);
 }
