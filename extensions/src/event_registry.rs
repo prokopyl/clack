@@ -1,3 +1,6 @@
+//! This extension allows plugins to query the host for support of custom event spaces,
+//! and to get the corresponding event space IDs.
+
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::event_registry::{CLAP_EXT_EVENT_REGISTRY, clap_host_event_registry};
 use std::ffi::CStr;

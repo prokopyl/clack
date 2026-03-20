@@ -1,3 +1,7 @@
+//! This extension provides a way for plugins to log messages through the host,
+//! which can be useful for debugging and error reporting. The host can choose how to handle these log messages,
+//! such as writing them to a dedicated log file.
+
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::log::{CLAP_EXT_LOG, clap_host_log, clap_log_severity};
 use std::ffi::CStr;

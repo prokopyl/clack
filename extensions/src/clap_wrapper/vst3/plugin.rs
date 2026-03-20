@@ -4,16 +4,30 @@ use clack_plugin::extensions::prelude::*;
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
 
+/// A Plugin Factory (CLAP-as-VST3) implementation.
+///
+/// See the [module documentation](self) to learn more about the role of this factory.
 pub trait PluginFactoryAsVST3Impl {
+    /// Returns the extra VST3 information for the plugin with the given index, if available.
     fn get_vst3_info(&self, index: u32) -> Option<&PluginInfoAsVST3<'_>>;
 }
 
+/// A wrapper around a given [`PluginFactoryAsVST3Impl`] implementation.
+///
+/// This wrapper is required in order to expose a C FFI-compatible factory to the host.
 #[repr(C)]
 pub struct PluginFactoryAsVST3Wrapper<F> {
     inner: FactoryWrapper<clap_plugin_factory_as_vst3, F>,
 }
 
 impl<F: PluginFactoryAsVST3Impl> PluginFactoryAsVST3Wrapper<F> {
+    /// Creates a new [`PluginFactoryAsVST3Wrapper`] with the given vendor info (name, URL and email) and a factory implementation.
+    ///
+    /// # Parameters
+    /// * `vendor`: the name of the plugin vendor.
+    /// * `vendor_url`: the URL to the website of the plugin vendor.
+    /// * `email_contact`: the email contact of the plugin vendor.
+    /// * `factory`: the factory implementation.
     #[inline]
     pub const fn new(
         vendor: Option<&'static CStr>,
@@ -56,8 +70,11 @@ impl<F: PluginFactoryAsVST3Impl> PluginFactoryAsVST3Wrapper<F> {
     }
 }
 
+/// Implementation for the Plugin-side for the CLAP-as-VST3 wrapper extension.
 pub trait PluginAsVST3Impl {
+    /// Returns the number of MIDI channels supported by the plugin for a given note port.
     fn num_midi_channels(&mut self, note_port: u32) -> u32;
+    /// Returns the supported note expression types for a given note port.
     fn supported_note_expressions(&mut self) -> SupportedNoteExpressions;
 }
 

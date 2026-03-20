@@ -1,3 +1,7 @@
+//! This extension allows plugins to report their latency in samples,
+//! so that hosts can use it to implement Plugin Delay Compensation (PDC),
+//! which ensures that the tracks in a project stay in sync even when plugins introduce latency.
+
 use clack_common::extensions::*;
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
 use std::ffi::CStr;

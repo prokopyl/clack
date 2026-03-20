@@ -3,16 +3,29 @@ use super::{PluginAsAuv2Factory, PluginInfoAsAUv2};
 use clack_plugin::factory::{FactoryImplementation, FactoryWrapper};
 use std::ffi::CStr;
 
+/// A Plugin Factory (CLAP-as-AUv2) implementation.
+///
+/// See the [module documentation](self) to learn more about the role of this factory.
 pub trait PluginFactoryAsAUv2Impl {
+    /// Returns the extra AUv2 information for the plugin with the given index, if available.
     fn get_auv2_info(&self, index: u32) -> Option<PluginInfoAsAUv2>;
 }
 
+/// A wrapper around a given [`PluginFactoryAsAUv2Impl`] implementation.
+///
+/// This wrapper is required in order to expose a C FFI-compatible factory to the host.
 #[repr(C)]
 pub struct PluginFactoryAsAUv2Wrapper<F> {
     inner: FactoryWrapper<clap_plugin_factory_as_auv2, F>,
 }
 
 impl<F: PluginFactoryAsAUv2Impl> PluginFactoryAsAUv2Wrapper<F> {
+    /// Creates a new [`PluginFactoryAsAUv2Wrapper`] with the given manufacturer info (name and four-character code) and factory implementation.
+    ///
+    /// # Parameters
+    /// * `manufacturer_code`: a four-character code identifying the plugin manufacturer.
+    /// * `manufacturer_name`: the name of the plugin manufacturer.
+    /// * `factory`: the factory implementation.
     pub const fn new(
         manufacturer_code: &'static CStr,
         manufacturer_name: &'static CStr,
