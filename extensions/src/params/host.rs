@@ -3,6 +3,7 @@ use clack_common::events::io::{InputEvents, OutputEvents};
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
+/// A buffer in which plugins may write parameter information into.
 #[derive(Clone)]
 pub struct ParamInfoBuffer {
     inner: MaybeUninit<clap_param_info>,
@@ -16,6 +17,7 @@ impl Default for ParamInfoBuffer {
 }
 
 impl ParamInfoBuffer {
+    /// Creates a new, empty [`ParamInfoBuffer`].
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -25,6 +27,7 @@ impl ParamInfoBuffer {
 }
 
 impl PluginParams {
+    /// Returns the total number of parameters the plugin exposes.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
@@ -33,6 +36,22 @@ impl PluginParams {
         }
     }
 
+    /// Gets the metadata for a parameter by its index.
+    ///
+    /// The host calls this to learn about a parameter’s identity, range, name,
+    /// and other properties. The implementation should write the parameter’s
+    /// metadata into the provided `info` writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_index`: The index of the parameter to query. Must be less than
+    ///   the value returned by `count()`.
+    /// * `info`: A writer to populate with the parameter’s metadata.
+    ///
+    /// # Return
+    ///
+    /// The implementation should return `true` on success, or `false` if
+    /// `param_index` is out of bounds.
     pub fn get_info<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -56,6 +75,18 @@ impl PluginParams {
         }
     }
 
+    /// Gets the current value of a parameter by its ID.
+    ///
+    /// The host calls this to read a parameter’s state. The implementation
+    /// should return the parameter’s current plain value.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_id`: The ID of the parameter to query.
+    ///
+    /// # Return
+    ///
+    /// Returns the current value of the parameter, or `None` if the ID is invalid.
     pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: ClapId) -> Option<f64> {
         let mut value = 0.0;
         // SAFETY: This type ensures the function pointer is valid.
@@ -66,6 +97,20 @@ impl PluginParams {
         if valid { Some(value) } else { None }
     }
 
+    /// Converts a parameter’s plain value to a human-readable string.
+    ///
+    /// The host uses this to display parameter values in a user-friendly format,
+    /// such as "440.0 Hz" instead of just "440.0".
+    ///
+    /// # Arguments
+    ///
+    /// * `param_id`: The ID of the parameter.
+    /// * `value`: The plain value to format.
+    /// * `writer`: A writer to populate with the formatted text.
+    ///
+    /// # Return
+    ///
+    /// Returns `Ok(())` on success, or `Err` if formatting fails.
     pub fn value_to_text<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -100,6 +145,18 @@ impl PluginParams {
         Ok(&mut buffer[..buffer_total_len])
     }
 
+    /// Converts a human-readable string back to a parameter’s plain value.
+    ///
+    /// The host uses this to handle user text input for parameter values.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_id`: The ID of the parameter.
+    /// * `text`: The text to parse.
+    ///
+    /// # Return
+    ///
+    /// Returns the parsed value, or `None` if parsing fails or the ID is invalid.
     pub fn text_to_value(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -121,6 +178,19 @@ impl PluginParams {
         if valid { Some(value) } else { None }
     }
 
+    /// Flushes pending parameter changes between the host and plugin.
+    ///
+    /// This method is called by the host to synchronize parameter values in
+    /// either direction. It receives incoming changes via `input_parameter_changes`
+    /// and allows the plugin to send outgoing changes via `output_parameter_changes`.
+    ///
+    /// This is typically called when the plugin is not actively processing audio,
+    /// but can also be used for parameter automation without audio playback.
+    ///
+    /// # Arguments
+    ///
+    /// * `input_parameter_changes`: A reader for incoming parameter change events.
+    /// * `output_parameter_changes`: A writer for outgoing parameter change events.
     pub fn flush(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
@@ -139,6 +209,12 @@ impl PluginParams {
         }
     }
 
+    /// Flushes a set of parameter changes.
+    ///
+    /// Note: if the plugin is processing, then the process() call will already
+    /// achieve the parameter update (bidirectional), so a call to flush isn't
+    /// required, also be aware that the plugin may use the sample offset in
+    /// process(), while this information would be lost within flush().
     pub fn flush_active(
         &self,
         plugin: &mut PluginAudioProcessorHandle,
@@ -164,12 +240,22 @@ unsafe fn assume_init_slice<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
     &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
 }
 
+/// Implementation of the thread-safe Host Params extension operations.
 pub trait HostParamsImplShared {
+    /// Requests a parameter flush.
+    ///
+    /// The host will the schedule a call to either `process()` or `flush()`.
+    ///
+    /// This function is always safe to use, but should not be called from the plugin's audio thread,
+    /// as it would already be within `process()` or `flush()`.
     fn request_flush(&self);
 }
 
+/// Implementation of the main-thread Host Params extension operations.
 pub trait HostParamsImplMainThread {
+    /// Rescan the full list of parameters, according to the given `flags`.
     fn rescan(&mut self, flags: ParamRescanFlags);
+    /// Clears reference to a parameter (identified by `param_id`), according to the given `flags`.
     fn clear(&mut self, param_id: ClapId, flags: ParamClearFlags);
 }
 

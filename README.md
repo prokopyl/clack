@@ -89,7 +89,7 @@ impl DefaultPluginFactory for MyGainPlugin {
         PluginDescriptor::new("org.rust-audio.clack.gain", "Clack Gain Example")
     }
 
-    fn new_shared(_host: HostSharedHandle) -> Result<Self::Shared<'_>, PluginError> {
+    fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         Ok(())
     }
 

@@ -33,8 +33,16 @@ fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> {
 pub(crate) mod descriptor;
 mod logging;
 
+/// A wrapper around a `clack` host implementation of a given type.
+///
+/// This wrapper allows access to a host's [`Shared`](HostHandlers::Shared),
+/// [`MainThread`](HostHandlers::MainThread), and [`AudioProcessor`](HostHandlers::AudioProcessor) handler structs, while
+/// also handling common FFI issues, such as error management and unwind safety.
+///
+/// The only way to access an instance of `HostWrapper` is through the
+/// [`handle`](HostWrapper::handle) function.
 // Safety note: once this type is constructed, a pointer to it will be given to the plugin instance,
-// which means we can never
+// which means we can never move this again. This must always exist in a Pin.
 pub struct HostWrapper<H: HostHandlers> {
     audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
     main_thread: UnsafeOptionCell<<H as HostHandlers>::MainThread<'static>>,
@@ -55,7 +63,32 @@ unsafe impl<H: HostHandlers> Send for HostWrapper<H> {}
 unsafe impl<H: HostHandlers> Sync for HostWrapper<H> {}
 
 impl<H: HostHandlers> HostWrapper<H> {
-    /// TODO: docs
+    /// Provides a shared reference to a host wrapper of a given type, to the given handler
+    /// closure.
+    ///
+    /// Besides providing a reference, this function does a few extra safety checks:
+    ///
+    /// * The given `clap_host` pointer is null-checked, as well as some other host-provided
+    ///   pointers;
+    /// * The handler is wrapped in [`std::panic::catch_unwind`];
+    /// * Any [`HostWrapperError`] returned by the handler is caught.
+    ///
+    /// If any of the above safety check fails, an error message is logged (using the standard CLAP
+    /// logging extension). If logging is unavailable or fails for any reason, the error message is
+    /// written to `stderr` as a fallback.
+    ///
+    /// Note that some safety checks (e.g. the `clap_host` pointer null-checks) may result in the
+    /// closure never being called, and an error being returned only. Users of this function must
+    /// not rely on the completion of this closure for safety, and must handle this function
+    /// returning `None` gracefully.
+    ///
+    /// If all goes well, the return value of the handler closure is forwarded and returned by this
+    /// function.
+    ///
+    /// # Errors
+    ///
+    /// If any safety check failed, or any error or panic occurred inside the handler closure, this
+    /// function returns `None`, and the error message is logged.
     ///
     /// # Safety
     ///
@@ -102,7 +135,13 @@ impl<H: HostHandlers> HostWrapper<H> {
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
     /// struct.
     ///
+    /// # Errors
+    ///
+    /// This will return [`HostWrapperError::DeactivatedPlugin`] if the plugin was not actually
+    /// activated.
+    ///
     /// # Safety
+    ///
     /// The caller must ensure this method is only called on the audio thread.
     ///
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
@@ -183,7 +222,6 @@ impl<H: HostHandlers> HostWrapper<H> {
             ));
     }
 
-    // TODO: bikeshed
     pub(crate) fn start_instance_destroy(&self) {
         self.destroy_lock.start_destroying();
     }
@@ -287,6 +325,7 @@ impl<H: HostHandlers> HostWrapper<H> {
     }
 }
 
+/// Errors raised by a [`HostWrapper`].
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum HostWrapperError {
@@ -294,9 +333,13 @@ pub enum HostWrapperError {
     ///
     /// The given string may contain more information about which parameter was found to be invalid.
     InvalidParameter(&'static str),
+    /// The raw `clap_host` pointer was NULL.
     NullHostInstance,
+    /// The raw `clap_host.host_data` field was NULL.
     NullHostData,
+    /// A wrapped implementation panicked.
     Panic,
+    /// Tried to call a method that requires the plugin to be activated, but it wasn't.
     DeactivatedPlugin,
     /// Encountered an error while trying to format another [`HostWrapperError`]
     ErrorFormatError(std::io::Error),
@@ -319,6 +362,10 @@ impl HostWrapperError {
         }
     }
 
+    /// Formats this error into either a [`CStr`] or [`CString`].
+    ///
+    /// This will handle formatting failures and return an appropriate message in that case, so
+    /// unlike the [`Display`] implementation, this will always return a displayable error message.
     pub fn format_cstr(&self) -> Cow<'static, CStr> {
         let mut buf = Vec::new();
         match buf.write_fmt(format_args!("{}", self)) {

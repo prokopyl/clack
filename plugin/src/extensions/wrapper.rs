@@ -179,6 +179,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     /// function.
     ///
     /// # Errors
+    ///
     /// If any safety check failed, or any error or panic occurred inside the handler closure, this
     /// function returns `None`, and the error message is logged.
     ///

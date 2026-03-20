@@ -8,6 +8,10 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
+/// A main-thread handle to the plugin instance.
+///
+/// This can be used to make requests to the plugin that can only be made in the main thread, which
+/// is required for e.g. some extensions.
 #[derive(Eq, PartialEq)]
 #[repr(transparent)]
 pub struct PluginMainThreadHandle<'a> {
@@ -47,12 +51,14 @@ impl<'a> PluginMainThreadHandle<'a> {
         self.raw.as_ptr()
     }
 
+    /// Produces a [`PluginSharedHandle`] from this main-thread handle.
     #[inline]
     pub const fn shared(&self) -> PluginSharedHandle<'a> {
         // SAFETY: This type ensures the provided pointer is valid for 'a
         unsafe { PluginSharedHandle::new(self.raw) }
     }
 
+    /// Turns this handle reference to a [`PluginSharedHandle`] reference.
     #[inline]
     pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
@@ -119,12 +125,14 @@ impl<'a> InactivePluginMainThreadHandle<'a> {
         self.raw.as_ptr()
     }
 
+    /// Produces a [`PluginSharedHandle`] from this main-thread handle.
     #[inline]
     pub const fn shared(&self) -> PluginSharedHandle<'a> {
         // SAFETY: This type ensures the provided pointer is valid for 'a
         unsafe { PluginSharedHandle::new(self.raw) }
     }
 
+    /// Turns this handle reference to a [`PluginSharedHandle`] reference.
     #[inline]
     pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
@@ -138,6 +146,13 @@ impl<'a> InactivePluginMainThreadHandle<'a> {
         unsafe { &*(self as *const Self as *const PluginMainThreadHandle<'a>) }
     }
 
+    /// Turns this handle reference to an exclusive [`PluginMainThreadHandle`] reference.
+    ///
+    /// This may be useful if you receive a [`InactivePluginMainThreadHandle`] but need to use
+    /// some methods or extensions that do not care whether the plugin instance is currently active or not.
+    ///
+    /// Only one of the [`InactivePluginMainThreadHandle`] and [`PluginMainThreadHandle`] may be
+    /// used at the same time.
     #[inline]
     pub const fn as_main_thread(&mut self) -> &mut PluginMainThreadHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
@@ -168,6 +183,9 @@ impl DerefMut for InactivePluginMainThreadHandle<'_> {
     }
 }
 
+/// A thread-safe handle to the plugin instance.
+///
+/// This can be used to make requests to the plugin that support being made from any threads.
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct PluginSharedHandle<'a> {
@@ -226,6 +244,26 @@ impl<'a> PluginSharedHandle<'a> {
         self.raw.as_ptr()
     }
 
+    /// Retrieves the plugin's pointer to the given [extension type](Extension) `E`.
+    ///
+    /// This returns `None` if the plugin does not support the given extension.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use clack_extensions::params::{PluginParams};
+    /// use clack_host::plugin::PluginSharedHandle;
+    ///
+    /// # fn foo(info: PluginSharedHandle) {
+    /// let info: PluginSharedHandle = /* ... */
+    /// # info;
+    /// if let Some(params) = info.get_extension::<PluginParams>() {
+    ///     // The params extension is supported by this plugin
+    /// } else {
+    ///     // The params extension is not supported by this plugin
+    /// }
+    /// # }
+    /// ```
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         let identifier = const { E::IDENTIFIERS.first().unwrap() };
         // SAFETY: This type ensures the function pointers are valid
@@ -270,6 +308,9 @@ impl Debug for PluginSharedHandle<'_> {
     }
 }
 
+/// An audio-thread handle to an activated plugin instance.
+///
+/// This can be used to make requests to the plugin that can only be made from the audio thread.
 #[derive(Eq, PartialEq)]
 #[repr(transparent)]
 pub struct PluginAudioProcessorHandle<'a> {
@@ -309,6 +350,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
         self.raw.as_ptr()
     }
 
+    /// Turns this handle reference to a [`PluginSharedHandle`] reference.
     #[inline]
     pub const fn shared(&self) -> PluginSharedHandle<'a> {
         PluginSharedHandle {
@@ -317,6 +359,7 @@ impl<'a> PluginAudioProcessorHandle<'a> {
         }
     }
 
+    /// Turns this handle reference to a [`PluginSharedHandle`] reference.
     #[inline]
     pub const fn as_shared(&self) -> &PluginSharedHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
@@ -381,6 +424,9 @@ impl<'a> InitializingPluginHandle<'a> {
         self.inner.instance.as_ptr()
     }
 
+    /// Retrieves the plugin's pointer to the given [extension type](Extension) `E`.
+    ///
+    /// This returns `None` if the plugin does not support the given extension.
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.inner.get_extension()
     }
@@ -463,6 +509,9 @@ impl<'a> InitializedPluginHandle<'a> {
         self.inner.access(f)
     }
 
+    /// Retrieves the plugin's pointer to the given [extension type](Extension) `E`.
+    ///
+    /// This returns `None` if the plugin does not support the given extension.
     pub fn get_extension<E: Extension<ExtensionSide = PluginExtensionSide>>(&self) -> Option<E> {
         self.inner.get_extension()
     }

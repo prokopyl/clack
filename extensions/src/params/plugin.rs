@@ -7,6 +7,7 @@ use clap_sys::ext::log::CLAP_LOG_ERROR;
 use clap_sys::id::clap_id;
 use std::mem::MaybeUninit;
 
+/// Helper for writing parameter information into a host-provided buffer.
 pub struct ParamInfoWriter<'a> {
     buf: &'a mut MaybeUninit<clap_param_info>,
     is_set: bool,
@@ -66,12 +67,14 @@ impl<'a> ParamDisplayWriter<'a> {
         }
     }
 
+    /// The total number of bytes in the display buffer given by the host.
     #[inline]
     #[allow(clippy::len_without_is_empty)] // Len should never be 0, unless host is misbehaving
     pub fn len(&self) -> usize {
         self.buffer.len().saturating_sub(1)
     }
 
+    /// The remaining number of bytes in the buffer that haven't been written to yet.
     #[inline]
     pub fn remaining_len(&self) -> usize {
         self.buffer.len().saturating_sub(self.cursor_position + 1)
@@ -103,7 +106,7 @@ impl core::fmt::Write for ParamDisplayWriter<'_> {
     }
 }
 
-/// Parameter handling logic that runs on the *main thread*.
+/// Implementation of plugin parameter handling logic that runs on the *main thread*.
 ///
 /// The CLAP host calls these methods to query parameter metadata,
 /// convert values to/from text, and request updates.
@@ -198,11 +201,12 @@ pub trait PluginMainThreadParams {
     );
 }
 
+/// Implementation of plugin parameter handling logic that runs on the *audio thread*.
 pub trait PluginAudioProcessorParams {
     /// Flushes a set of parameter changes.
     ///
     /// Note: if the plugin is processing, then the process() call will already
-    /// achieve the parameter update (bi-directional), so a call to flush isn't
+    /// achieve the parameter update (bidirectional), so a call to flush isn't
     /// required, also be aware that the plugin may use the sample offset in
     /// process(), while this information would be lost within flush().
     fn flush(
@@ -366,6 +370,7 @@ where
 }
 
 impl HostParams {
+    /// Rescan the full list of parameters, according to the given `flags`.
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
@@ -374,6 +379,7 @@ impl HostParams {
         }
     }
 
+    /// Clears reference to a parameter (identified by `param_id`), according to the given `flags`.
     #[inline]
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: ClapId, flags: ParamClearFlags) {
         if let Some(clear) = host.use_extension(&self.0).clear {
@@ -382,6 +388,12 @@ impl HostParams {
         }
     }
 
+    /// Requests a parameter flush.
+    ///
+    /// The host will the schedule a call to either `process()` or `flush()`.
+    ///
+    /// This function is always safe to use, but should not be called from the plugin's audio thread,
+    /// as it would already be within `process()` or `flush()`.
     #[inline]
     pub fn request_flush(&self, host: &HostSharedHandle) {
         if let Some(request_flush) = host.use_extension(&self.0).request_flush {

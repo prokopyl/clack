@@ -134,10 +134,6 @@
 //! }
 //! ```
 //!
-//! # Creating custom extensions
-//!
-//! TODO: document custom extensions.
-//!
 //! ## Example
 //!
 //! ```

@@ -25,8 +25,8 @@ clack-finder = { path = "./finder", version = "0.1.0" }
 
 clap-sys = "0.5.0"
 
-bitflags = "2.10.0"
-libloading = "0.8.1"
+bitflags = "2.11.0"
+libloading = "=0.8" # 0.9.0 is out but has MSRV of 1.88.0
 raw-window-handle_05 = { package = "raw-window-handle", version = "0.5.2" }
 raw-window-handle_06 = { package = "raw-window-handle", version = "0.6.0" }
 

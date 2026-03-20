@@ -1,7 +1,10 @@
+//! Allows plugins to check which threads their functions are being called on.
+
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::thread_check::{CLAP_EXT_THREAD_CHECK, clap_host_thread_check};
 use std::ffi::CStr;
 
+/// Host-side of the Thread Check extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostThreadCheck(RawExtension<HostExtensionSide, clap_host_thread_check>);
@@ -24,12 +27,21 @@ mod plugin {
     use clack_plugin::host::HostSharedHandle;
 
     impl HostThreadCheck {
+        /// Returns `true` if the current thread is the main thread, and `false` if it is not.
+        ///
+        /// This may return `None` in case the host hasn't properly implemented this call.
         #[inline]
         pub fn is_main_thread(&self, host: &HostSharedHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
             Some(unsafe { host.use_extension(&self.0).is_main_thread?(host.as_raw()) })
         }
 
+        /// Returns `true` if the current thread is the audio thread, and `false` if it is not.
+        ///
+        /// Note that the current thread can both be the main thread and audio thread, in e.g.
+        /// non-realtime contexts.
+        ///
+        /// This may return `None` in case the host hasn't properly implemented this call.
         #[inline]
         pub fn is_audio_thread(&self, host: &HostSharedHandle) -> Option<bool> {
             // SAFETY: This type ensures the function pointer is valid.
@@ -44,8 +56,19 @@ mod host {
     use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
 
+    /// Implementation of the host-side of the Thread Check extension.
     pub trait HostThreadCheckImpl {
+        /// Returns `true` if the current thread is the main thread, and `false` if it is not.
+        ///
+        /// This may return `None` in case the host hasn't properly implemented this call.
         fn is_main_thread(&self) -> bool;
+
+        /// Returns `true` if the current thread is the audio thread, and `false` if it is not.
+        ///
+        /// Note that the current thread can both be the main thread and audio thread, in e.g.
+        /// non-realtime contexts.
+        ///
+        /// This may return `None` in case the host hasn't properly implemented this call.
         fn is_audio_thread(&self) -> bool;
     }
 

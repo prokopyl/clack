@@ -50,6 +50,7 @@ bitflags! {
 }
 
 bitflags! {
+    /// Flags representing additional information about a specific parameter.
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ParamInfoFlags: u32 {
@@ -111,8 +112,11 @@ bitflags! {
 }
 
 impl ParamInfoFlags {
+    /// A set of flags which, if changed, require a partial information rescan from the host.
     pub const FLAGS_REQUIRING_INFO_RESCAN: Self =
         Self::from_bits_truncate(Self::IS_PERIODIC.bits() | Self::IS_HIDDEN.bits());
+
+    /// A set of flags which, if changed, require a full parameter rescan from the host.
     pub const FLAGS_REQUIRING_FULL_RESCAN: Self = Self::from_bits_truncate(
         Self::IS_AUTOMATABLE.bits()
             | Self::IS_AUTOMATABLE_PER_NOTE_ID.bits()
@@ -130,6 +134,7 @@ impl ParamInfoFlags {
     );
 }
 
+/// The plugin side of the Params extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginParams(RawExtension<PluginExtensionSide, clap_plugin_params>);
@@ -146,6 +151,7 @@ unsafe impl Extension for PluginParams {
     }
 }
 
+/// The host side of the Params extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostParams(RawExtension<HostExtensionSide, clap_host_params>);
@@ -189,6 +195,7 @@ pub struct ParamInfo<'a> {
 }
 
 impl<'a> ParamInfo<'a> {
+    /// Gets a [`ParamInfo`] from a reference to a raw, C-FFI compatible parameter info buffer.
     pub fn from_raw(raw: &'a clap_param_info) -> Option<Self> {
         Some(Self {
             id: ClapId::from_raw(raw.id)?,
@@ -202,6 +209,8 @@ impl<'a> ParamInfo<'a> {
         })
     }
 
+    /// Computes the difference between this and another [`ParamInfo`], and returns a set of
+    /// [`ParamRescanFlags`] describing which parameter information need to be rescanned.
     pub fn diff_for_rescan(&self, other: &ParamInfo) -> ParamRescanFlags {
         #[inline]
         fn flags_differ(

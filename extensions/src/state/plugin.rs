@@ -4,6 +4,9 @@ use clack_plugin::extensions::prelude::*;
 use clap_sys::stream::{clap_istream, clap_ostream};
 
 impl HostState {
+    /// Tells the host that the plugin state has changed, and may need to be saved again.
+    ///
+    /// Note that if a parameter value changes, it is implicit that the state is dirty.
     #[inline]
     pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
         if let Some(mark_dirty) = host.use_extension(&self.0).mark_dirty {
@@ -13,8 +16,19 @@ impl HostState {
     }
 }
 
+/// Implementation of the Plugin side of the State extension.
 pub trait PluginStateImpl {
+    /// Saves the plugin state into a given `output` byte stream.
+    ///
+    /// # Errors
+    ///
+    /// If this operation fails, any [`PluginError`] can be returned.
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
+    /// Loads the plugin state from a given `input` byte stream.
+    ///
+    /// # Errors
+    ///
+    /// If this operation fails, any [`PluginError`] can be returned.
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
