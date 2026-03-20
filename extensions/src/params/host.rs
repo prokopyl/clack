@@ -122,6 +122,10 @@ impl PluginParams {
         };
         let len = u32::try_from(buffer.len()).unwrap_or(u32::MAX);
 
+        buffer.fill(MaybeUninit::new(0));
+        // SAFETY: We have filled the entire buffer with 0s above
+        let buffer = unsafe { assume_init_slice(buffer) };
+
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
             value_to_text(
@@ -137,8 +141,6 @@ impl PluginParams {
             return Err(core::fmt::Error);
         }
 
-        // SAFETY: technically the whole buffer may not be fully initialized, but uninit u8 is fine
-        let buffer = unsafe { assume_init_slice(buffer) };
         // If no nul byte found, we take the entire buffer
         let buffer_total_len = buffer.iter().position(|b| *b == 0).unwrap_or(len as usize);
         Ok(&mut buffer[..buffer_total_len])
