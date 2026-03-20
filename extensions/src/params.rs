@@ -50,7 +50,7 @@ bitflags! {
 }
 
 bitflags! {
-    /// Flags representing additional information about a specific parameter.
+    /// Flags providing additional information about a specific parameter.
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ParamInfoFlags: u32 {
@@ -112,11 +112,11 @@ bitflags! {
 }
 
 impl ParamInfoFlags {
-    /// A set of flags which, if changed, require a partial information rescan from the host.
+    /// Flags that, when changed, require the plugin to call the host rescan function with [`ParamRescanFlags::INFO`].
     pub const FLAGS_REQUIRING_INFO_RESCAN: Self =
         Self::from_bits_truncate(Self::IS_PERIODIC.bits() | Self::IS_HIDDEN.bits());
 
-    /// A set of flags which, if changed, require a full parameter rescan from the host.
+    /// Flags that, when changed, require the plugin to call the host rescan function with [`ParamRescanFlags::ALL`].
     pub const FLAGS_REQUIRING_FULL_RESCAN: Self = Self::from_bits_truncate(
         Self::IS_AUTOMATABLE.bits()
             | Self::IS_AUTOMATABLE_PER_NOTE_ID.bits()
@@ -134,7 +134,7 @@ impl ParamInfoFlags {
     );
 }
 
-/// The plugin side of the Params extension.
+/// The Plugin-side of the Params extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginParams(RawExtension<PluginExtensionSide, clap_plugin_params>);
@@ -151,7 +151,7 @@ unsafe impl Extension for PluginParams {
     }
 }
 
-/// The host side of the Params extension.
+/// The Host-side of the Params extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostParams(RawExtension<HostExtensionSide, clap_host_params>);

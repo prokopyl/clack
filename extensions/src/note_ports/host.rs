@@ -2,6 +2,7 @@ use super::*;
 use clack_host::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
+/// A scratch buffer for the plugin to write note port metadata to.
 #[derive(Clone)]
 pub struct NotePortInfoBuffer {
     inner: MaybeUninit<clap_note_port_info>,
@@ -15,6 +16,7 @@ impl Default for NotePortInfoBuffer {
 }
 
 impl NotePortInfoBuffer {
+    /// Get an empty buffer for the plugin to write note port metadata into.
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -24,6 +26,7 @@ impl NotePortInfoBuffer {
 }
 
 impl PluginNotePorts {
+    /// Returns number of audio ports, for either input or output.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
@@ -32,6 +35,7 @@ impl PluginNotePorts {
         }
     }
 
+    /// Get information about a note port by its index, for either input or output.
     pub fn get<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -52,8 +56,13 @@ impl PluginNotePorts {
     }
 }
 
+/// Implementation of the Host-side of the Note Ports extension.
 pub trait HostNotePortsImpl {
+    /// Query which note dialects are supported by the host.
     fn supported_dialects(&self) -> NoteDialects;
+
+    /// Rescan the full list of note ports according to the flags.
+    /// See [`NotePortRescanFlags`] for more details.
     fn rescan(&mut self, flags: NotePortRescanFlags);
 }
 

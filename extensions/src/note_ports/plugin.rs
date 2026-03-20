@@ -3,6 +3,7 @@ use crate::utils::write_to_array_buf;
 use clack_plugin::extensions::prelude::*;
 use std::mem::MaybeUninit;
 
+/// A host-provided buffer where the plugin can write note port metadata.
 pub struct NotePortInfoWriter<'a> {
     buf: &'a mut MaybeUninit<clap_note_port_info>,
     is_set: bool,
@@ -21,6 +22,7 @@ impl NotePortInfoWriter<'_> {
         }
     }
 
+    /// Writes all fields from the given [`NotePortInfo`] into the host buffer.
     #[inline]
     pub fn set(&mut self, info: &NotePortInfo) {
         use core::ptr::write;
@@ -46,8 +48,11 @@ impl NotePortInfoWriter<'_> {
     }
 }
 
+/// Implementation of the Plugin-side of the Note Ports extension.
 pub trait PluginNotePortsImpl {
+    /// Returns number of audio ports, for either input or output.
     fn count(&mut self, is_input: bool) -> u32;
+    /// Get information about a note port by its index, for either input or output.
     fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter);
 }
 
@@ -95,6 +100,7 @@ where
 }
 
 impl HostNotePorts {
+    /// Query which note dialects are supported by the host.
     #[inline]
     pub fn supported_dialects(&self, host: &HostMainThreadHandle) -> NoteDialects {
         match host.use_extension(&self.0).supported_dialects {
@@ -106,6 +112,8 @@ impl HostNotePorts {
         }
     }
 
+    /// Rescan the full list of note ports according to the flags.
+    /// See [`NotePortRescanFlags`] for more details.
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: NotePortRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {

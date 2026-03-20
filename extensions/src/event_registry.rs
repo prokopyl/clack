@@ -2,6 +2,7 @@ use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::event_registry::{CLAP_EXT_EVENT_REGISTRY, clap_host_event_registry};
 use std::ffi::CStr;
 
+/// The Host-side of the Event Registry extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostEventRegistry(RawExtension<HostExtensionSide, clap_host_event_registry>);
@@ -19,11 +20,14 @@ unsafe impl Extension for HostEventRegistry {
 }
 
 #[cfg(feature = "clack-plugin")]
-const _: () = {
+mod plugin {
+    use super::*;
     use clack_common::events::spaces::{EventSpace, EventSpaceId};
     use clack_plugin::host::HostMainThreadHandle;
 
     impl HostEventRegistry {
+        /// Checks if the host supports an event space with the given name, and returns its ID if it does.
+        /// The space ID 0 is reserved for CLAP's core events.
         pub fn query<'a, S: EventSpace<'a>>(
             &self,
             host: &HostMainThreadHandle,
@@ -41,7 +45,7 @@ const _: () = {
             unsafe { Some(EventSpaceId::new(out)?.into_unchecked()) }
         }
     }
-};
+}
 
 #[cfg(feature = "clack-host")]
 mod host {
@@ -57,8 +61,12 @@ mod host {
     /// The implementation of the [`query`](HostEventRegistryImpl) method must return stable, unique
     /// event space ids.
     pub unsafe trait HostEventRegistryImpl {
+        /// Checks if the host supports an event space with the given name, and returns its ID if it does.
+        ///
+        /// The space ID 0 is reserved for CLAP's core events.
         fn query(&self, space_name: &CStr) -> Option<EventSpaceId>;
 
+        /// Same as [`query`], but uses the [`EventSpace`] type instead of a name string to specify the event space.
         #[inline]
         fn query_type<'a, S: EventSpace<'a>>(&self) -> Option<EventSpaceId<S>> {
             // SAFETY: the EventSpaceId has been fetched from S's name.

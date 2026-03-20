@@ -4,6 +4,7 @@ use clack_plugin::extensions::prelude::*;
 use clap_sys::ext::audio_ports::{clap_audio_port_info, clap_plugin_audio_ports};
 use std::mem::MaybeUninit;
 
+/// A host-provided buffer where the plugin can write audio port metadata.
 pub struct AudioPortInfoWriter<'a> {
     buf: &'a mut MaybeUninit<clap_audio_port_info>,
     is_set: bool,
@@ -27,6 +28,7 @@ impl AudioPortInfoWriter<'_> {
         self.is_set
     }
 
+    /// Writes all fields from the given [`AudioPortInfo`] into the host buffer.
     #[inline]
     pub fn set(&mut self, data: &AudioPortInfo) {
         use core::ptr::write;
@@ -159,6 +161,7 @@ where
 }
 
 impl HostAudioPorts {
+    /// Checks if the host allows a plugin to change a given aspect of the audio ports definition.
     #[inline]
     pub fn is_rescan_flag_supported(
         &self,
@@ -172,6 +175,9 @@ impl HostAudioPorts {
         }
     }
 
+    /// Rescan the full list of audio ports according to the flags.
+    /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
+    /// Certain flags require the plugin to be de-activated.
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: AudioPortRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {

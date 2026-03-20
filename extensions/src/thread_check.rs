@@ -56,7 +56,7 @@ mod host {
     use clack_host::extensions::prelude::*;
     use clap_sys::ext::thread_check::clap_host_thread_check;
 
-    /// Implementation of the host-side of the Thread Check extension.
+    /// Implementation of the Host-side of the Thread Check extension.
     pub trait HostThreadCheckImpl {
         /// Returns `true` if the current thread is the main thread, and `false` if it is not.
         ///

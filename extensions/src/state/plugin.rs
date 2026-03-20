@@ -16,7 +16,7 @@ impl HostState {
     }
 }
 
-/// Implementation of the Plugin side of the State extension.
+/// Implementation of the Plugin-side of the State extension.
 pub trait PluginStateImpl {
     /// Saves the plugin state into a given `output` byte stream.
     ///

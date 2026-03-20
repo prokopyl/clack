@@ -1,11 +1,17 @@
 //! Allows plugins to save and restore state using host-managed raw binary storage streams, but with
 //! potentially different semantics depending on the context.
+//!
+//! Briefly, when loading a preset or duplicating a device, the plugin may want to partially load
+//! the state and initialize certain things differently, like handling limited resources or fixed
+//! connections to external hardware resources.
+//!
+//! If the plugin implements this extension then it is mandatory to also implement the State extension.
 
 use clack_common::extensions::*;
 use clap_sys::ext::state_context::*;
 use std::ffi::CStr;
 
-/// The Plugin side of the State Context extension.
+/// The Plugin-side of the State Context extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginStateContext(RawExtension<PluginExtensionSide, clap_plugin_state_context>);
@@ -30,9 +36,13 @@ mod plugin {
     use clap_sys::ext::log::CLAP_LOG_HOST_MISBEHAVING;
     use clap_sys::stream::{clap_istream, clap_ostream};
 
-    /// Implementation of the Plugin side of the State Context extension.
+    /// Implementation of the Plugin-side of the State Context extension.
     pub trait PluginStateContextImpl {
         /// Saves the plugin state into a given `output` byte stream, as part of an operation in the given `context_type`.
+        ///
+        /// It is unspecified which context type is equivalent to [`PluginStateImpl::save`](crate::state::PluginStateImpl::save).
+        ///
+        /// Note that the result may be loaded by both [`PluginStateContextImpl::load`] and [`PluginStateImpl::load`](crate::state::PluginStateImpl::load).
         ///
         /// # Errors
         ///
@@ -45,6 +55,9 @@ mod plugin {
 
         /// Loads the plugin state from a given `input` byte stream, as part of an operation in the given `context_type`.
         ///
+        /// It is unspecified which context type is equivalent to [`PluginStateImpl::save`](crate::state::PluginStateImpl::save).
+        ///
+        /// Note that the result may be loaded by both [`PluginStateContextImpl::load`] and [`PluginStateImpl::load`](crate::state::PluginStateImpl::load).
         /// # Errors
         ///
         /// If this operation fails, any [`PluginError`] can be returned.
@@ -123,11 +136,11 @@ pub use plugin::*;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum StateContextType {
-    /// Suitable when loading and saving state from/to a preset.
+    /// The plugin state is being loaded or saved as a preset.
     ForPreset = CLAP_STATE_CONTEXT_FOR_PRESET,
-    /// Suitable when duplicating a plugin instance.
+    /// The plugin state is being loaded or saved for the purpose of duplicating a plugin instance.
     ForDuplicate = CLAP_STATE_CONTEXT_FOR_DUPLICATE,
-    /// Suitable when storing and loading a state within a project.
+    /// The plugin state is being loaded or saved as part of loading or saving a project/song.
     ForProject = CLAP_STATE_CONTEXT_FOR_PROJECT,
 }
 
@@ -164,6 +177,9 @@ mod host {
         /// Loads the plugin state from a given byte stream, as part of an operation in the given `context_type`.
         ///
         /// The byte stream can come from any object implementing [`Read`].
+        /// It is unspecified which context type is equivalent to [`PluginStateImpl::load`](crate::state::PluginStateImpl::load).
+        ///
+        /// Note that the given stream may have been saved by [`PluginStateContextImpl::save`] with a different context type or [`PluginStateImpl::save`](crate::state::PluginStateImpl::save).
         ///
         /// # Errors
         ///
@@ -195,6 +211,10 @@ mod host {
         /// Saves the plugin state into a given byte stream, as part of an operation in the given `context_type`.
         ///
         /// The byte stream can be any object implementing [`Write`].
+        ///
+        /// It is unspecified which context type is equivalent to [`PluginStateImpl::save`](crate::state::PluginStateImpl::save).
+        ///
+        /// Note that the result may be loaded by both [`PluginStateContextImpl::load`] and [`PluginStateImpl::load`](crate::state::PluginStateImpl::load).
         ///
         /// # Errors
         ///

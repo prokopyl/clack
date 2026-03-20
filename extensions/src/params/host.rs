@@ -17,7 +17,7 @@ impl Default for ParamInfoBuffer {
 }
 
 impl ParamInfoBuffer {
-    /// Creates a new, empty [`ParamInfoBuffer`].
+    /// Creates a new, empty [`ParamInfoBuffer`]  for the plugin to write parameter information into.
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -44,14 +44,13 @@ impl PluginParams {
     ///
     /// # Arguments
     ///
-    /// * `param_index`: The index of the parameter to query. Must be less than
+    /// * `index`: The index of the parameter to query. Must be less than
     ///   the value returned by `count()`.
     /// * `info`: A writer to populate with the parameter’s metadata.
     ///
     /// # Return
     ///
-    /// The implementation should return `true` on success, or `false` if
-    /// `param_index` is out of bounds.
+    /// Returns `true` on success, or `false` if `index` is out of bounds.
     pub fn get_info<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -106,7 +105,7 @@ impl PluginParams {
     ///
     /// * `param_id`: The ID of the parameter.
     /// * `value`: The plain value to format.
-    /// * `writer`: A writer to populate with the formatted text.
+    /// * `buffer`: A buffer to write the formatted string into.
     ///
     /// # Return
     ///
@@ -161,7 +160,7 @@ impl PluginParams {
         &self,
         plugin: &mut PluginMainThreadHandle,
         param_id: ClapId,
-        display: &CStr,
+        text: &CStr,
     ) -> Option<f64> {
         let mut value = 0.0;
 
@@ -170,7 +169,7 @@ impl PluginParams {
             plugin.use_extension(&self.0).text_to_value?(
                 plugin.as_raw(),
                 param_id.get(),
-                display.as_ptr(),
+                text.as_ptr(),
                 &mut value,
             )
         };
@@ -187,10 +186,17 @@ impl PluginParams {
     /// This is typically called when the plugin is not actively processing audio,
     /// but can also be used for parameter automation without audio playback.
     ///
+    /// Note that if the plugin is processing, then the `process()` call will already achieve the
+    /// parameter update (bidirectional), so a call to flush isn't required.
+    /// Also be aware that the plugin may use the sample offset in `process()`, while this information would be
+    /// lost within `flush()`.
+    ///
     /// # Arguments
     ///
     /// * `input_parameter_changes`: A reader for incoming parameter change events.
     /// * `output_parameter_changes`: A writer for outgoing parameter change events.
+    ///
+    ///
     pub fn flush(
         &self,
         plugin: &mut InactivePluginMainThreadHandle,
@@ -209,7 +215,8 @@ impl PluginParams {
         }
     }
 
-    /// Flushes a set of parameter changes.
+    /// Flushes a set of parameter changes when the plugin is active.
+    /// This method cannot be called concurrently with `process`, which is statically guaranteed by the [`PluginAudioProcessorHandle`] type..
     ///
     /// Note: if the plugin is processing, then the process() call will already
     /// achieve the parameter update (bidirectional), so a call to flush isn't
@@ -242,9 +249,11 @@ unsafe fn assume_init_slice<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
 
 /// Implementation of the thread-safe Host Params extension operations.
 pub trait HostParamsImplShared {
-    /// Requests a parameter flush.
+    /// Plugin requested a parameter flush.
     ///
-    /// The host will the schedule a call to either `process()` or `flush()`.
+    /// The host must then schedule a call to either:
+    /// - [`PluginParams::flush`] or [`PluginParams::flush_active`]
+    /// - the process callback
     ///
     /// This function is always safe to use, but should not be called from the plugin's audio thread,
     /// as it would already be within `process()` or `flush()`.
@@ -254,8 +263,10 @@ pub trait HostParamsImplShared {
 /// Implementation of the main-thread Host Params extension operations.
 pub trait HostParamsImplMainThread {
     /// Rescan the full list of parameters, according to the given `flags`.
+    /// See [`ParamRescanFlags`] for more details.
     fn rescan(&mut self, flags: ParamRescanFlags);
-    /// Clears reference to a parameter (identified by `param_id`), according to the given `flags`.
+    /// Clears references (such as automation or modulation) to a parameter (identified by `param_id`), according to the given `flags`.
+    /// See [`ParamClearFlags`] for more details.
     fn clear(&mut self, param_id: ClapId, flags: ParamClearFlags);
 }
 

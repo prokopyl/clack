@@ -67,7 +67,7 @@ impl Display for ParamIndicationAutomation {
     }
 }
 
-/// The plugin side of the Param Indication extension.
+/// The Plugin-side of the Param Indication extension.
 #[derive(Clone, Copy)]
 #[allow(dead_code)]
 pub struct PluginParamIndication(RawExtension<PluginExtensionSide, clap_plugin_param_indication>);
@@ -172,7 +172,7 @@ mod plugin {
     use clack_plugin::extensions::prelude::*;
     use clap_sys::color::clap_color;
 
-    /// Implementation of the plugin side of the Param Indication extension.
+    /// Implementation of the Plugin-side of the Param Indication extension.
     pub trait PluginParamIndicationImpl {
         /// Sets (or clears) a parameter mapping indication for the given `param_id`.
         ///
@@ -197,6 +197,8 @@ mod plugin {
         ///
         /// The host can also optionally pass a specific [`Color`] to for the plugin GUI to use for
         /// its automation indication, to keep it consistent with the host's own color scheme.
+        ///
+        /// Note that parameter indications should not be saved in the plugin context, and are off by default.
         fn set_automation(
             &mut self,
             param_id: ClapId,

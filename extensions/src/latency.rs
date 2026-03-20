@@ -2,6 +2,7 @@ use clack_common::extensions::*;
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
 use std::ffi::CStr;
 
+/// The Plugin-side of the Latency extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginLatency(RawExtension<PluginExtensionSide, clap_plugin_latency>);
@@ -18,6 +19,7 @@ unsafe impl Extension for PluginLatency {
     }
 }
 
+/// The Host-side of the Latency extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostLatency(RawExtension<HostExtensionSide, clap_host_latency>);
@@ -40,6 +42,7 @@ mod host {
     use clack_host::extensions::prelude::*;
 
     impl PluginLatency {
+        /// Returns the plugin latency in samples.
         #[inline]
         pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
             match plugin.use_extension(&self.0).get {
@@ -50,7 +53,9 @@ mod host {
         }
     }
 
+    /// Implementation of the Host-side of the Latency extension.
     pub trait HostLatencyImpl {
+        /// The plugin latency has changed and should be re-queried.
         fn changed(&mut self);
     }
 
@@ -85,6 +90,10 @@ mod plugin {
     use clack_plugin::extensions::prelude::*;
 
     impl HostLatency {
+        /// Tell the host that the latency has changed and should be re-queried by the host.
+        ///
+        /// The latency is allowed to change only during the [`PluginAudioProcessor::activate`](clack_plugin::plugin::PluginAudioProcessor::activate) callback.
+        /// If the plugin is active, you should request a restart first.
         #[inline]
         pub fn changed(&self, host: &mut HostMainThreadHandle) {
             if let Some(changed) = host.use_extension(&self.0).changed {
@@ -94,7 +103,9 @@ mod plugin {
         }
     }
 
+    /// Implementation of the Plugin-side of the Latency extension.
     pub trait PluginLatencyImpl {
+        /// Returns the plugin latency in samples.
         fn get(&mut self) -> u32;
     }
 
