@@ -115,16 +115,14 @@ impl PluginParams {
         plugin: &mut PluginMainThreadHandle,
         param_id: ClapId,
         value: f64,
-        buffer: &'b mut [MaybeUninit<u8>],
+        buffer: &'b mut [u8],
     ) -> Result<&'b mut [u8], core::fmt::Error> {
         let Some(value_to_text) = plugin.use_extension(&self.0).value_to_text else {
             return Err(core::fmt::Error);
         };
         let len = u32::try_from(buffer.len()).unwrap_or(u32::MAX);
 
-        buffer.fill(MaybeUninit::new(0));
-        // SAFETY: We have filled the entire buffer with 0s above
-        let buffer = unsafe { assume_init_slice(buffer) };
+        buffer.fill(0);
 
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
@@ -241,12 +239,6 @@ impl PluginParams {
             }
         }
     }
-}
-
-#[allow(clippy::missing_safety_doc)]
-#[inline]
-unsafe fn assume_init_slice<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
-    &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
 }
 
 /// Implementation of the thread-safe Host Params extension operations.
