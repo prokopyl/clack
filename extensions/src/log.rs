@@ -1,3 +1,7 @@
+//! This extension provides a way for plugins to log messages through the host,
+//! which can be useful for debugging and error reporting. The host can choose how to handle these log messages,
+//! such as writing them to a dedicated log file.
+
 use clack_common::extensions::{Extension, HostExtensionSide, RawExtension};
 use clap_sys::ext::log::{CLAP_EXT_LOG, clap_host_log, clap_log_severity};
 use std::ffi::CStr;
@@ -12,20 +16,29 @@ mod host;
 #[cfg(feature = "clack-host")]
 pub use host::*;
 
+/// A severity level for a log message.
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum LogSeverity {
+    /// Debug level
     Debug = 0,
+    /// Info level
     Info = 1,
+    /// Warning level
     Warning = 2,
+    /// Error level
     Error = 3,
+    /// Fatal level
     Fatal = 4,
 
+    /// This severity could be used for reporting host misbehavior
     HostMisbehaving = 5,
+    /// This severity could be used for reporting plugin misbehavior, usually by a layer between the host and the plugin.
     PluginMisbehaving = 6,
 }
 
 impl LogSeverity {
+    /// Creates a [`LogSeverity`] from the raw CLAP integer.
     pub fn from_raw(raw: clap_log_severity) -> Option<Self> {
         use LogSeverity::*;
         use clap_sys::ext::log::*;
@@ -42,6 +55,7 @@ impl LogSeverity {
         }
     }
 
+    /// Converts this [`LogSeverity`] into the raw CLAP integer.
     #[inline]
     pub fn to_raw(self) -> clap_log_severity {
         self as _
@@ -64,6 +78,7 @@ impl Display for LogSeverity {
     }
 }
 
+/// The Host-side of the Log extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostLog(RawExtension<HostExtensionSide, clap_host_log>);
@@ -86,6 +101,7 @@ mod plugin {
     use clack_plugin::host::HostSharedHandle;
 
     impl HostLog {
+        /// Logs a message through the host with the given severity.
         #[inline]
         pub fn log(&self, host: &HostSharedHandle, log_severity: LogSeverity, message: &CStr) {
             if let Some(log) = host.use_extension(&self.0).log {

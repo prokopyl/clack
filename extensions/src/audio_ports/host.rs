@@ -2,6 +2,7 @@ use super::*;
 use clack_host::extensions::prelude::*;
 use core::mem::MaybeUninit;
 
+/// A scratch buffer for the plugin to write audio port metadata to.
 #[derive(Clone)]
 pub struct AudioPortInfoBuffer {
     inner: MaybeUninit<clap_audio_port_info>,
@@ -15,6 +16,7 @@ impl Default for AudioPortInfoBuffer {
 }
 
 impl AudioPortInfoBuffer {
+    /// Get an empty buffer for the plugin to write audio port metadata into.
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -35,6 +37,7 @@ impl AudioPortInfoBuffer {
 }
 
 impl PluginAudioPorts {
+    /// Returns number of audio ports, for either input or output
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
@@ -43,6 +46,7 @@ impl PluginAudioPorts {
         }
     }
 
+    /// Gets information about an audio port by its index, for either input or output.
     pub fn get<'b>(
         &self,
         plugin: &mut PluginMainThreadHandle,
@@ -64,8 +68,14 @@ impl PluginAudioPorts {
     }
 }
 
+/// Implementation of the Host-side of the Audio Ports extension.
 pub trait HostAudioPortsImpl {
+    /// Checks if the host allows a plugin to change a given aspect of the audio ports definition.
     fn is_rescan_flag_supported(&self, flag: AudioPortRescanFlags) -> bool;
+
+    /// Rescan the full list of audio ports according to the flags.
+    /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
+    /// Certain flags require the plugin to be de-activated.
     fn rescan(&mut self, flag: AudioPortRescanFlags);
 }
 

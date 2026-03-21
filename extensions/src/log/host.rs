@@ -5,7 +5,9 @@ use std::borrow::Cow::Owned;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
+/// Implementation of the Host-side of the Log extension.
 pub trait HostLogImpl {
+    /// Plugin has logged a message with the given severity.
     fn log(&self, severity: LogSeverity, message: &str);
 }
 

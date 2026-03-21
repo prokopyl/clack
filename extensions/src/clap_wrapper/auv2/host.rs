@@ -1,6 +1,7 @@
 use super::*;
 
 impl PluginAsAuv2Factory<'_> {
+    /// Returns the extra AUv2 information for the plugin with the given index, if available.
     #[inline]
     pub fn auv2_info(&self, index: u32) -> Option<PluginInfoAsAUv2> {
         let get_info = self.0.get().get_auv2_info?;

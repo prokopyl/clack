@@ -1,3 +1,8 @@
+//! This extension provides a way for the plugin to describe its current audio ports.
+//! If the plugin does not implement this extension, it won't have audio ports.
+//! 32 bits support is required for both host and plugins. 64 bits audio is optional.
+//! The plugin is only allowed to change its ports configuration while it is deactivated.
+
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clack_common::utils::ClapId;
@@ -5,21 +10,27 @@ use clap_sys::ext::audio_ports::*;
 use std::ffi::{CStr, c_char};
 use std::fmt::{Debug, Formatter};
 
+/// The Plugin-side of the Audio Ports extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginAudioPorts(RawExtension<PluginExtensionSide, clap_plugin_audio_ports>);
 
+/// The Host-side of the Audio Ports extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostAudioPorts(RawExtension<HostExtensionSide, clap_host_audio_ports>);
 
+/// An optional classification of an audio port, describing how the audio channels are organized.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AudioPortType<'a>(pub &'a CStr);
 
 impl AudioPortType<'_> {
+    /// Common port type for mono (1 channel) audio ports.
     pub const MONO: AudioPortType<'static> = AudioPortType(CLAP_PORT_MONO);
+    /// Common port type for stereo (2 channels) audio ports.
     pub const STEREO: AudioPortType<'static> = AudioPortType(CLAP_PORT_STEREO);
 
+    /// Gets a common [`AudioPortType`] from a given channel count, if it exists.
     #[inline]
     pub const fn from_channel_count(channel_count: u32) -> Option<Self> {
         match channel_count {
@@ -63,6 +74,7 @@ impl AudioPortType<'_> {
 }
 
 bitflags! {
+    /// Flags to indicate what audio port information has changed and needs to be rescanned by the host.
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct AudioPortRescanFlags: u32 {
@@ -100,6 +112,7 @@ impl AudioPortRescanFlags {
 }
 
 bitflags! {
+    /// Flags providing more information about the audio port.
     #[repr(C)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct AudioPortFlags: u32 {

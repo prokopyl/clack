@@ -92,7 +92,7 @@ use std::error::Error;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 
-/// The Plugin side of the State extension.
+/// The Plugin-side of the State extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct PluginState(RawExtension<PluginExtensionSide, clap_plugin_state>);
@@ -109,7 +109,7 @@ unsafe impl Extension for PluginState {
     }
 }
 
-/// The Host side of the State extension.
+/// The Host-side of the State extension.
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub struct HostState(RawExtension<HostExtensionSide, clap_host_state>);

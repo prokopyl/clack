@@ -3,9 +3,12 @@ use std::error::Error;
 use std::ffi::NulError;
 use std::fmt::Formatter;
 
+/// An error that can occur when trying to log a message.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum LogError {
+    /// Failed to encode the message into a C String because the message contains a nul byte.
     NulError(NulError),
+    /// A formatting error has occurred, [`Display::fmt`] returned an error.
     FmtError(core::fmt::Error),
 }
 

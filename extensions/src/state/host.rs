@@ -63,9 +63,9 @@ impl PluginState {
     }
 }
 
-/// Implementation of the Host side of the State extension.
+/// Implementation of the Host-side of the State extension.
 pub trait HostStateImpl {
-    /// Tells the host that the plugin state has changed, and may need to be saved again.
+    /// The plugin state has changed, and may need to be saved again.
     ///
     /// Note that if a parameter value changes, it is implicit that the state is dirty.
     fn mark_dirty(&mut self);

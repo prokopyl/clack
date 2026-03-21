@@ -202,6 +202,9 @@ pub trait PluginMainThreadParams {
 }
 
 /// Implementation of plugin parameter handling logic that runs on the *audio thread*.
+///
+/// The CLAP host might call the [`flush`](Self::flush) method to synchronize parameter changes
+/// while the plugin is active.
 pub trait PluginAudioProcessorParams {
     /// Flushes a set of parameter changes.
     ///
@@ -371,6 +374,8 @@ where
 
 impl HostParams {
     /// Rescan the full list of parameters, according to the given `flags`.
+    ///
+    /// See [`ParamRescanFlags`] for more details.
     #[inline]
     pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: ParamRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
@@ -380,6 +385,8 @@ impl HostParams {
     }
 
     /// Clears reference to a parameter (identified by `param_id`), according to the given `flags`.
+    ///
+    /// See [`ParamClearFlags`] for more details.
     #[inline]
     pub fn clear(&self, host: &mut HostMainThreadHandle, param_id: ClapId, flags: ParamClearFlags) {
         if let Some(clear) = host.use_extension(&self.0).clear {
@@ -390,7 +397,9 @@ impl HostParams {
 
     /// Requests a parameter flush.
     ///
-    /// The host will the schedule a call to either `process()` or `flush()`.
+    /// The host will then schedule a call to either:
+    /// - [`PluginMainThreadParams::flush`] or [`PluginAudioProcessorParams::flush`]
+    /// - [`PluginAudioProcessor::process`](clack_plugin::plugin::PluginAudioProcessor::process)
     ///
     /// This function is always safe to use, but should not be called from the plugin's audio thread,
     /// as it would already be within `process()` or `flush()`.
