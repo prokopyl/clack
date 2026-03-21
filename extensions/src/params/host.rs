@@ -101,6 +101,10 @@ impl PluginParams {
     /// The host uses this to display parameter values in a user-friendly format,
     /// such as "440.0 Hz" instead of just "440.0".
     ///
+    /// Note that this method will always reset the buffer to all-zeros before each use, for safety
+    /// reasons in case the plugin implementation misbehaves.
+    /// Clearing the buffer before passing it to this method is therefore redundant.
+    ///
     /// # Arguments
     ///
     /// * `param_id`: The ID of the parameter.
