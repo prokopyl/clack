@@ -248,6 +248,39 @@ impl<'a> HostSharedHandle<'a> {
         // instance is still alive.
         unsafe { extension.as_ptr().as_ref() }
     }
+
+    /// Creates a [`HostSharedHandle`] from a raw `clap_host` pointer.
+    ///
+    /// # Safety
+    ///
+    ///
+    #[inline]
+    pub unsafe fn from_raw(raw: NonNull<clap_host>) -> Self {
+        Self {
+            raw,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Returns a [`HostSharedHandle`] that points to the same host, but with an arbitrary lifetime
+    /// instead of the host's.
+    ///
+    /// This can be useful in situations where you need to use host callbacks in a container that
+    /// does not let you use proper lifetimes, but you can still guarantee that host callbacks won't
+    /// be called after the host's `'a` lifetime.
+    ///
+    /// # Safety
+    ///
+    /// The returned handle's lifetime is completely meaningless here.
+    /// Proper care muse be taken in order to ensure *no* methods on this type are used beyond the
+    /// original host `'a` lifetime.
+    #[inline]
+    pub unsafe fn with_arbitrary_lifetime<'b>(&self) -> HostSharedHandle<'b> {
+        HostSharedHandle {
+            raw: self.raw,
+            _lifetime: PhantomData,
+        }
+    }
 }
 
 impl<'a> From<HostSharedHandle<'a>> for HostInfo<'a> {
@@ -297,6 +330,39 @@ impl<'a> HostMainThreadHandle<'a> {
     pub const fn as_raw(&self) -> &'a clap_host {
         // SAFETY: this type enforces the pointer is valid for 'a
         unsafe { self.raw.as_ref() }
+    }
+
+    /// Creates a [`HostMainThreadHandle`] from a raw `clap_host` pointer.
+    ///
+    /// # Safety
+    ///
+    ///
+    #[inline]
+    pub unsafe fn from_raw(raw: NonNull<clap_host>) -> Self {
+        Self {
+            raw,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Returns a [`HostMainThreadHandle`] that points to the same host, but with an arbitrary lifetime
+    /// instead of the host's.
+    ///
+    /// This can be useful in situations where you need to use host callbacks in a container that
+    /// does not let you use proper lifetimes, but you can still guarantee that host callbacks won't
+    /// be called after the host's `'a` lifetime.
+    ///
+    /// # Safety
+    ///
+    /// The returned handle's lifetime is completely meaningless here.
+    /// Proper care muse be taken in order to ensure *no* methods on this type are used beyond the
+    /// original host `'a` lifetime.
+    #[inline]
+    pub unsafe fn with_arbitrary_lifetime<'b>(&self) -> HostMainThreadHandle<'b> {
+        HostMainThreadHandle {
+            raw: self.raw,
+            _lifetime: PhantomData,
+        }
     }
 }
 
@@ -351,6 +417,39 @@ impl<'a> HostAudioProcessorHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &*(self as *const Self as *const HostSharedHandle<'a>) }
     }
+
+    /// Creates a [`HostAudioProcessorHandle`] from a raw `clap_host` pointer.
+    ///
+    /// # Safety
+    ///
+    ///
+    #[inline]
+    pub unsafe fn from_raw(raw: NonNull<clap_host>) -> Self {
+        Self {
+            raw,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Returns a [`HostAudioProcessorHandle`] that points to the same host, but with an arbitrary lifetime
+    /// instead of the host's.
+    ///
+    /// This can be useful in situations where you need to use host callbacks in a container that
+    /// does not let you use proper lifetimes, but you can still guarantee that host callbacks won't
+    /// be called after the host's `'a` lifetime.
+    ///
+    /// # Safety
+    ///
+    /// The returned handle's lifetime is completely meaningless here.
+    /// Proper care muse be taken in order to ensure *no* methods on this type are used beyond the
+    /// original host `'a` lifetime.
+    #[inline]
+    pub unsafe fn with_arbitrary_lifetime<'b>(&self) -> HostAudioProcessorHandle<'b> {
+        HostAudioProcessorHandle {
+            raw: self.raw,
+            _lifetime: PhantomData,
+        }
+    }
 }
 
 impl<'a> From<HostAudioProcessorHandle<'a>> for HostSharedHandle<'a> {
@@ -369,6 +468,8 @@ impl<'a> Deref for HostAudioProcessorHandle<'a> {
     }
 }
 
+#[inline(never)]
+#[cold]
 const fn mismatched_instance() -> ! {
     panic!("Given host handle doesn't match the extension pointer it was used on.")
 }
