@@ -19,7 +19,7 @@ use std::iter::FusedIterator;
 #[allow(dead_code)]
 pub struct PluginFactory<'a>(RawFactoryPointer<'a, clap_plugin_factory>);
 
-// SAFETY: TODO
+// SAFETY: clap_plugin_factory is the type matching the CLAP_PLUGIN_FACTORY_ID factory ID.
 unsafe impl<'a> Factory<'a> for PluginFactory<'a> {
     const IDENTIFIERS: &'static [&'static CStr] = &[CLAP_PLUGIN_FACTORY_ID];
     type Raw = clap_plugin_factory;

@@ -17,7 +17,7 @@ impl PluginFactoryAsVST3<'_> {
             return None;
         }
 
-        // SAFETY: TODO
+        // SAFETY: We just checked the pointer is non-null. The rest should be valid as per the CLAP spec
         unsafe { Some(PluginInfoAsVST3::from_raw(ptr)) }
     }
 }
@@ -34,7 +34,7 @@ impl PluginAsVST3 {
             return 0;
         };
 
-        // SAFETY: TODO
+        // SAFETY: Plugin pointer is valid, as it comes from as_raw
         unsafe { ext(plugin.as_raw(), note_port) }
     }
 
@@ -48,7 +48,7 @@ impl PluginAsVST3 {
             return SupportedNoteExpressions::empty();
         };
 
-        // SAFETY: TODO
+        // SAFETY: Plugin pointer is valid, as it comes from as_raw
         let supported = unsafe { ext(plugin.as_raw()) };
         SupportedNoteExpressions::from_bits_truncate(supported)
     }

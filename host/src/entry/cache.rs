@@ -58,13 +58,13 @@ impl CachedEntry {
 
     #[inline]
     pub fn as_ref(&self) -> &EntryDescriptor {
-        // SAFETY: TODO
+        // SAFETY: This type guarantees the entry pointer is always valid as long as this is alive
         unsafe { self.raw_entry().as_ref() }
     }
 
     #[inline]
     pub fn get(&self) -> EntryDescriptor {
-        // SAFETY: TODO
+        // SAFETY: This type guarantees the entry pointer is always valid as long as this is alive
         unsafe { self.raw_entry().read() }
     }
 }

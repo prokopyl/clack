@@ -104,7 +104,7 @@ impl<'a> PluginInfoAsVST3<'a> {
     ///   instance that is valid for reads for the `'a` lifetime
     /// - Each field in `clap_plugin_info_as_vst3` is either null, or:
     ///   - for its `vendor` and `features` fields: must point to a null-terminated C string that is valid for reads
-    ///   - for its `component_if` field: must point to a byte array of the correct size that is valid for reads
+    ///   - for its `component_id` field: must point to a byte array of the correct size that is valid for reads
     pub const unsafe fn from_raw(raw: *const clap_plugin_info_as_vst3) -> &'a Self {
         // SAFETY:
         // - The caller upholds all conditions that `raw` is valid and points to a clap_plugin_info_as_vst3 struct with valid contents

@@ -200,22 +200,22 @@ pub use info::HostInfo;
 
 use crate::plugin::{InitializedPluginHandle, InitializingPluginHandle};
 
-// TODO update docs to explain that these types actually live slightly longer than the plugin instance.
 /// Host data and callbacks that are tied to `[main-thread]` operations.
 ///
 /// This trait requires neither [`Send`] nor [`Sync`], as types implementing it are intended to
 /// contain host data staying on the main thread.
 ///
-/// This trait is bound to the plugin instance's lifetime (`'a`).
+/// This trait is bound to a lifetime (`'a`) that lives at least as long as the plugin instance
+/// does. Since the plugin can call host callbacks during its destructor, this is actually kept alive
+/// slightly longer.
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
 pub trait MainThreadHandler<'a>: 'a {
-    // TODO: update those docs.
     /// Called when the plugin has been successfully instantiated.
     ///
     /// This is given a handle to the plugin's own main thread data ([`InitializedPluginHandle`]),
-    /// which can be used to call plugin callbacks, and can be kept for the remainder of the
-    /// plugin instance's lifetime.
+    /// which can be used to call plugin callbacks, and can be kept for the remainder of this
+    /// handler's lifetime.
     #[inline]
     #[allow(unused)]
     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {}
@@ -240,7 +240,9 @@ pub trait AudioProcessorHandler<'a>: Send + 'a {}
 /// This trait requires both [`Send`] *and* [`Sync`], as those callbacks and data can be used from
 /// multiple different threads at the same time.
 ///
-/// This trait is bound to the plugin instance's lifetime (`'a`).
+/// This trait is bound to a lifetime (`'a`) that lives at least as long as the plugin instance
+/// does. Since the plugin can call host callbacks during its destructor, this is actually kept alive
+/// slightly longer.
 ///
 /// See the [module docs](self) for more information, and for an example implementation.
 pub trait SharedHandler<'a>: Send + Sync {
