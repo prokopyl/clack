@@ -5,6 +5,52 @@ use clack_common::process::AudioPortProcessingInfo;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use core::array::IntoIter;
 
+pub trait AudioPortChannels<'a> {
+    fn into_port_iter(
+        self,
+    ) -> AudioPortBufferType<impl Iterator<Item = &'a mut [f32]>, impl Iterator<Item = &'a mut [f64]>>;
+}
+
+impl<'a, A: AsMut<[f32]>, const N: usize> AudioPortChannels<'a> for [&'a mut A; N] {
+    fn into_port_iter(
+        self,
+    ) -> AudioPortBufferType<impl Iterator<Item = &'a mut [f32]>, impl Iterator<Item = &'a mut [f64]>>
+    {
+        AudioPortBufferType::f32_output_only(self.into_iter().map(|a| a.as_mut()))
+    }
+}
+
+impl<'a, F32, F64, I32, I64> AudioPortChannels<'a> for AudioPortBufferType<I32, I64>
+where
+    I32: Iterator<Item = &'a mut F32>,
+    I64: Iterator<Item = &'a mut F64>,
+    F32: 'a + AsMut<[f32]> + ?Sized,
+    F64: 'a + AsMut<[f64]> + ?Sized,
+{
+    fn into_port_iter(
+        self,
+    ) -> AudioPortBufferType<impl Iterator<Item = &'a mut [f32]>, impl Iterator<Item = &'a mut [f64]>>
+    {
+        match self {
+            AudioPortBufferType::F32(buffer) => {
+                AudioPortBufferType::<_, _>::F32(buffer.map(|a| a.as_mut()))
+            }
+            AudioPortBufferType::F64(buffer) => {
+                AudioPortBufferType::<_, _>::F64(buffer.map(|a| a.as_mut()))
+            }
+        }
+    }
+}
+
+fn foo<'a>(a: impl AudioPortChannels<'a>) {}
+
+fn foo2() {
+    let mut bufs = [[0f32; 4]; 2];
+
+    let ports = AudioPortBufferType::f32_output_only(bufs.iter_mut().map(|b| b.as_mut_slice()));
+    foo(ports);
+}
+
 pub struct InputChannel<'a, T> {
     pub buffer: &'a mut [T],
     pub is_constant: bool,
@@ -257,15 +303,11 @@ impl AudioPorts {
         }
     }
 
-    pub fn with_output_buffers<'a, I, Iter, ChannelIter32, ChannelIter64>(
-        &'a mut self,
-        iter: I,
-    ) -> OutputAudioBuffers<'a>
+    pub fn with_output_buffers<'a, I, Iter, A>(&'a mut self, iter: I) -> OutputAudioBuffers<'a>
     where
-        I: IntoIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>, IntoIter = Iter>,
-        Iter: ExactSizeIterator<Item = AudioPortBuffer<ChannelIter32, ChannelIter64>>,
-        ChannelIter32: IntoIterator<Item = &'a mut [f32]>,
-        ChannelIter64: IntoIterator<Item = &'a mut [f64]>,
+        I: IntoIterator<Item = A, IntoIter = Iter>,
+        Iter: ExactSizeIterator<Item = A>,
+        A: AudioPortChannels<'a>,
     {
         let iter = iter.into_iter();
         self.resize_buffer_configs(iter.len());
@@ -280,7 +322,7 @@ impl AudioPorts {
 
             let last = self.buffer_lists.len();
 
-            let is_f64 = match port.channels {
+            let is_f64 = match port.into_port_iter() {
                 AudioPortBufferType::F32(channels) => {
                     for channel in channels {
                         min_channel_buffer_length = min_channel_buffer_length
@@ -322,7 +364,8 @@ impl AudioPorts {
             {
                 descriptor.channel_count = buffers.len() as u32;
             }
-            descriptor.latency = port.latency;
+
+            descriptor.latency = 0;
             descriptor.constant_mask = 0;
 
             if is_f64 {
@@ -514,6 +557,12 @@ impl<'a> OutputAudioBuffers<'a> {
         }
     }
 
+    pub fn set_latencies(&mut self, latencies: &[u32]) {
+        for (buf, latency) in self.buffers.iter_mut().zip(latencies) {
+            buf.latency = *latency;
+        }
+    }
+
     /// Shortens the [`frames_count`] of these output buffers.
     ///
     /// This does not actually change the underlying buffers themselves, it only reduces the
@@ -699,12 +748,7 @@ mod test {
         let mut ports = AudioPorts::with_capacity(2, 1);
         let mut bufs = [[0f32; 4]; 2];
 
-        let buffers = ports.with_output_buffers([AudioPortBuffer {
-            latency: 0,
-            channels: AudioPortBufferType::f32_output_only(
-                bufs.iter_mut().map(|b| b.as_mut_slice()),
-            ),
-        }]);
+        let buffers = ports.with_output_buffers([&mut bufs]);
 
         assert_eq!(buffers.buffers.len(), 1);
         assert_eq!(buffers.frames_count, Some(4));
@@ -739,12 +783,9 @@ mod test {
         let bufs = [RefCell::new([0f32; 4]), RefCell::new([0f32; 4])];
         let mut borrowed: Vec<_> = bufs.iter().map(|c| c.borrow_mut()).collect();
 
-        let buffers = ports.with_output_buffers([AudioPortBuffer {
-            latency: 0,
-            channels: AudioPortBufferType::f32_output_only(
-                borrowed.iter_mut().map(|b| b.as_mut_slice()),
-            ),
-        }]);
+        let buffers = ports.with_output_buffers([AudioPortBufferType::f32_output_only(
+            borrowed.iter_mut().map(|b| b.as_mut()),
+        )]);
 
         assert_eq!(buffers.buffers.len(), 1);
         assert_eq!(buffers.frames_count, Some(4));
@@ -772,11 +813,8 @@ mod test {
             }));
 
         let mut output_buffers =
-            output_ports.with_output_buffers(output_bufs.iter_mut().map(|bufs| AudioPortBuffer {
-                latency: 0,
-                channels: AudioPortBufferType::f32_output_only(
-                    bufs.iter_mut().map(|b| b.as_mut_slice()),
-                ),
+            output_ports.with_output_buffers(output_bufs.iter_mut().map(|bufs| {
+                AudioPortBufferType::f32_output_only(bufs.iter_mut().map(|b| b.as_mut_slice()))
             }));
 
         assert_eq!(input_buffers.buffers.len(), 2);

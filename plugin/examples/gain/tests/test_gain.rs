@@ -104,12 +104,10 @@ pub fn it_works() {
         latency: 0,
     }]);
 
-    let mut output_channels = outputs_descriptors.with_output_buffers([AudioPortBuffer {
-        channels: AudioPortBufferType::f32_output_only(
+    let mut output_channels =
+        outputs_descriptors.with_output_buffers([AudioPortBufferType::f32_output_only(
             output_buffers.iter_mut().map(|b| b.as_mut_slice()),
-        ),
-        latency: 0,
-    }]);
+        )]);
 
     processor
         .process(

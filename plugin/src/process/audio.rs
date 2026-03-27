@@ -33,12 +33,10 @@ pub mod tests {
             ),
         }]);
 
-        let output_buffers = output_ports.with_output_buffers([AudioPortBuffer {
-            latency: 0,
-            channels: AudioPortBufferType::f32_output_only(
+        let output_buffers =
+            output_ports.with_output_buffers([AudioPortBufferType::f32_output_only(
                 outs.iter_mut().map(|b| b.as_mut_slice()),
-            ),
-        }]);
+            )]);
 
         let frames_count = input_buffers.min_available_frames_with(&output_buffers);
 

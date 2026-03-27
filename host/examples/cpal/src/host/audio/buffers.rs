@@ -151,14 +151,11 @@ impl HostAudioBuffers {
                 })),
             self.output_ports
                 .with_output_buffers(self.output_port_channels.iter_mut().map(|port_buf| {
-                    AudioPortBuffer {
-                        latency: 0,
-                        channels: AudioPortBufferType::f32_output_only(
-                            port_buf
-                                .chunks_exact_mut(self.actual_frame_count)
-                                .map(|buf| &mut buf[..sample_count]),
-                        ),
-                    }
+                    AudioPortBufferType::f32_output_only(
+                        port_buf
+                            .chunks_exact_mut(self.actual_frame_count)
+                            .map(|buf| &mut buf[..sample_count]),
+                    )
                 })),
         )
     }
