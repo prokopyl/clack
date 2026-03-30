@@ -436,7 +436,7 @@ unsafe fn shrink_shared_ref<'a, 'instance, H: HostHandlers>(
     shared: &'a H::Shared<'instance>,
 ) -> &'a H::Shared<'a> {
     let original_ptr = shared as *const H::Shared<'instance>;
-    let transmuted_ptr: *const H::Shared<'a> = core::mem::transmute(original_ptr);
+    let transmuted_ptr: *const H::Shared<'a> = original_ptr.cast();
 
     &*transmuted_ptr
 }

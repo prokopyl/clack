@@ -15,6 +15,9 @@ impl FixedPoint {
     /// decimal representation as this type.
     pub const FACTOR: i64 = clap_sys::fixedpoint::CLAP_BEATTIME_FACTOR;
 
+    #[allow(clippy::cast_precision_loss)] // CLAP_BEATTIME_FACTOR only needs 31 bits of precision, so this does not actually lose anything
+    const FACTOR_F64: f64 = Self::FACTOR as f64;
+
     /// Creates a [`FixedPoint`] decimal from its internal, raw-byte representation.
     #[inline]
     pub const fn from_bits(bits: i64) -> Self {
@@ -40,16 +43,20 @@ impl FixedPoint {
     }
 
     /// Converts this fixed-point decimal to a floating-point value.
+    ///
+    /// Note that this conversion loses some precision: the [`FixedPoint`] decimal has the full
+    /// 64 bits of precision, whereas `f64`'s mantissa is only 52 bits wide.
     #[inline]
+    #[allow(clippy::cast_precision_loss)]
     pub const fn to_float(&self) -> f64 {
-        self.0 as f64 / Self::FACTOR as f64
+        self.0 as f64 / Self::FACTOR_F64
     }
 
     /// Converts the given floating-point value to a [`FixedPoint`] decimal.
     #[inline]
     pub fn from_float(val: f64) -> Self {
         #[allow(clippy::cast_possible_truncation)] // This is willingly lossy
-        Self((Self::FACTOR as f64 * val).round() as i64)
+        Self((Self::FACTOR_F64 * val).round() as i64)
     }
 }
 

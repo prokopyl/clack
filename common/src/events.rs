@@ -291,7 +291,7 @@ impl UnknownEvent {
     /// Returns a raw, C-FFI compatible event header pointer to this event.
     #[inline]
     pub const fn as_raw(&self) -> *const clap_event_header {
-        self.data.as_ptr() as *const clap_event_header
+        self.data.as_ptr().cast()
     }
 
     /// Returns the event as a raw byte buffer. This includes the event's (header)[EventHeader].

@@ -49,11 +49,7 @@ impl<'a> Process<'a> {
         let steady_time = (*raw).steady_time;
 
         Self {
-            steady_time: if steady_time < 0 {
-                None
-            } else {
-                Some(steady_time as u64)
-            },
+            steady_time: steady_time.try_into().ok(),
             transport: if transport.is_null() {
                 None
             } else {
