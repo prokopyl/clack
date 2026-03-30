@@ -1,3 +1,5 @@
+//! Tests that host callbacks can be called re-entrantly during init via get_extension
+
 use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, PluginTimerImpl, TimerId};
 use clack_host::prelude::*;
 use clack_plugin::prelude::*;

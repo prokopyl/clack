@@ -1,3 +1,7 @@
+//! Tests that an entry still works even when forgetting to call init().
+//!
+//! This is a workaround for Fender Studio 8, which does not call init during plugin scanning.
+
 use clack_common::entry::EntryDescriptor;
 use clack_plugin::clack_entry;
 use clack_plugin::prelude::*;

@@ -1,3 +1,5 @@
+//! Tests for calling the plugin's callback during the handler's destructor.
+
 use clack_common::stream::{InputStream, OutputStream};
 use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;

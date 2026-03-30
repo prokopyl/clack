@@ -1,4 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
+#![doc = include_str!("../README.md")]
 
 #[cfg(feature = "ambisonic")]
 pub mod ambisonic;

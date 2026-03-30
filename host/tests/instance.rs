@@ -1,3 +1,5 @@
+//! Tests plugin instantiation
+
 use clack_extensions::log::{HostLog, HostLogImpl, LogSeverity};
 use clack_host::factory::plugin::PluginFactory;
 use clack_plugin::prelude::*;
@@ -5,9 +7,9 @@ use clack_plugin::prelude::*;
 use clack_host::prelude::*;
 use clack_plugin::clack_entry;
 
-pub struct DivaPluginStubAudioProcessor;
-pub struct DivaPluginStub;
-pub struct DivaPluginStubMainThread;
+struct DivaPluginStubAudioProcessor;
+struct DivaPluginStub;
+struct DivaPluginStubMainThread;
 
 impl PluginMainThread<'_, ()> for DivaPluginStubMainThread {}
 
@@ -58,7 +60,7 @@ impl<'a> clack_plugin::plugin::PluginAudioProcessor<'a, (), DivaPluginStubMainTh
     }
 }
 
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
+static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
 
 struct MyHostShared;
 impl SharedHandler<'_> for MyHostShared {
@@ -95,7 +97,7 @@ impl HostHandlers for MyHost {
 }
 
 #[test]
-pub fn handles_instantiation_errors() {
+fn handles_instantiation_errors() {
     let entry = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
         c"/home/user/.clap/u-he/libdiva.so",
     )
@@ -117,7 +119,7 @@ pub fn handles_instantiation_errors() {
 }
 
 #[test]
-pub fn it_works_concurrently_with_static_entrypoint() {
+fn it_works_concurrently_with_static_entrypoint() {
     let entrypoint = &DIVA_STUB_ENTRY;
 
     std::thread::scope(|s| {

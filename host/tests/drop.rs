@@ -1,17 +1,18 @@
+//! Tests the various ways one can drop a plugin instance.
+
 use clack_plugin::prelude::*;
 use std::thread;
 use std::thread::{ThreadId, current};
 use std::time::Duration;
 
 use clack_host::prelude::*;
-use clack_plugin::clack_entry;
 
-pub struct DivaPluginStubAudioProcessor {
+struct DivaPluginStubAudioProcessor {
     processing: bool,
 }
 
-pub struct DivaPluginStub;
-pub struct DivaPluginStubMainThread {
+struct DivaPluginStub;
+struct DivaPluginStubMainThread {
     thread_id: ThreadId,
     active: bool,
 }
@@ -103,8 +104,6 @@ impl Drop for DivaPluginStubMainThread {
     }
 }
 
-pub static DIVA_STUB_ENTRY: EntryDescriptor = clack_entry!(SinglePluginEntry<DivaPluginStub>);
-
 struct MyHostShared;
 impl SharedHandler<'_> for MyHostShared {
     fn request_restart(&self) {
@@ -146,7 +145,7 @@ fn instantiate() -> PluginInstance<MyHost> {
 }
 
 #[test]
-pub fn handles_normal_deactivate() {
+fn handles_normal_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
@@ -159,7 +158,7 @@ pub fn handles_normal_deactivate() {
 }
 
 #[test]
-pub fn handles_try_deactivate() {
+fn handles_try_deactivate() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
@@ -176,7 +175,7 @@ pub fn handles_try_deactivate() {
 }
 
 #[test]
-pub fn stops_when_dropping() {
+fn stops_when_dropping() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
@@ -192,7 +191,7 @@ pub fn stops_when_dropping() {
 }
 
 #[test]
-pub fn works_with_reverse_drop() {
+fn works_with_reverse_drop() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
@@ -208,7 +207,7 @@ pub fn works_with_reverse_drop() {
 }
 
 #[test]
-pub fn works_with_forgotten_audio_processor() {
+fn works_with_forgotten_audio_processor() {
     let mut instance = instantiate();
     let config = PluginAudioConfiguration {
         sample_rate: 44_100.0,
