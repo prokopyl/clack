@@ -142,7 +142,7 @@ bitflags! {
         /// The host will not record those changes as automation points.
         const VALUES = CLAP_PARAM_RESCAN_VALUES;
 
-        /// The parameter's info has changed (e.g. name, module, ranges).
+        /// The parameter's info has changed (name, module, `ParamInfoFlags::IS_PERIODIC`, `ParamInfoFlags::IS_HIDDEN`).
         const INFO = CLAP_PARAM_RESCAN_INFO;
 
         /// The parameter's value to text conversion has changed.
