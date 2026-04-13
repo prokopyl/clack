@@ -26,7 +26,7 @@ impl NotePortInfoBuffer {
 }
 
 impl PluginNotePorts {
-    /// Returns number of audio ports, for either input or output.
+    /// Returns number of note ports, for either input or output.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
