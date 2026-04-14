@@ -76,7 +76,7 @@ pub trait HostAudioPortsImpl {
     /// Rescan the full list of audio ports according to the flags.
     /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
     /// Certain flags require the plugin to be de-activated.
-    fn rescan(&mut self, flag: AudioPortRescanFlags);
+    fn rescan(&mut self, flags: AudioPortRescanFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -106,14 +106,14 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
             .as_mut()
-            .rescan(AudioPortRescanFlags::from_bits_truncate(flag));
+            .rescan(AudioPortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

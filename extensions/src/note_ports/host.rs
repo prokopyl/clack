@@ -90,14 +90,14 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
             .as_mut()
-            .rescan(NotePortRescanFlags::from_bits_truncate(flag));
+            .rescan(NotePortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

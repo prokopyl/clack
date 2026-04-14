@@ -179,10 +179,10 @@ impl HostAudioPorts {
     /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
     /// Certain flags require the plugin to be de-activated.
     #[inline]
-    pub fn rescan(&self, host: &mut HostMainThreadHandle, flag: AudioPortRescanFlags) {
+    pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: AudioPortRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
-            unsafe { rescan(host.as_raw(), flag.bits()) }
+            unsafe { rescan(host.as_raw(), flags.bits()) }
         }
     }
 }
