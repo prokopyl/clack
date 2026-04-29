@@ -169,35 +169,18 @@ impl AtomicF32 {
     /// Creates a new atomic `f32`.
     #[inline]
     fn new(value: f32) -> Self {
-        Self(AtomicU32::new(f32_to_u32_bytes(value)))
+        Self(AtomicU32::new(value.to_bits()))
     }
 
     /// Stores the given `value` using the given `order`ing.
     #[inline]
     fn store(&self, value: f32) {
-        self.0.store(f32_to_u32_bytes(value), Ordering::Relaxed)
+        self.0.store(value.to_bits(), Ordering::Relaxed)
     }
 
     /// Loads the contained `value` using the given `order`ing.
     #[inline]
     fn load(&self) -> f32 {
-        f32_from_u32_bytes(self.0.load(Ordering::Relaxed))
+        f32::from_bits(self.0.load(Ordering::Relaxed))
     }
-}
-
-/// Packs a `f32` into the bytes of an `u32`.
-///
-/// The resulting value is meaningless and should not be used directly,
-/// except for unpacking with [`f32_from_u32_bytes`].
-///
-/// This is an internal helper used by [`AtomicF32`].
-#[inline]
-fn f32_to_u32_bytes(value: f32) -> u32 {
-    u32::from_ne_bytes(value.to_ne_bytes())
-}
-
-/// The counterpart to [`f32_to_u32_bytes`].
-#[inline]
-fn f32_from_u32_bytes(bytes: u32) -> f32 {
-    f32::from_ne_bytes(bytes.to_ne_bytes())
 }
