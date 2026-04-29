@@ -59,7 +59,7 @@ pub(crate) fn byte_index_to_value_index<T>(size: usize) -> usize {
     if type_size == 0 {
         0
     } else {
-        size / type_size + if size % type_size > 0 { 1 } else { 0 }
+        size.div_ceil(type_size)
     }
 }
 

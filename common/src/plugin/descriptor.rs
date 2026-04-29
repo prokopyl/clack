@@ -419,6 +419,11 @@ impl OwnedCString {
     }
 
     #[inline]
+    pub const fn null() -> Self {
+        Self(std::ptr::null())
+    }
+
+    #[inline]
     pub const fn empty() -> Self {
         Self(EMPTY.as_ptr())
     }
@@ -511,8 +516,8 @@ unsafe impl Sync for OwnedCStringArray {}
 
 // Technically this doesn't need to be OwnedCString, it just needs to be (ABI-compatible with)
 // any NULL pointer that's Send + Sync.
-// I could have made a dedicated wrapper but OwnedCString::empty() fits the bill just as well :)
-static EMPTY_FEATURES: &[OwnedCString; 1] = &[OwnedCString::empty()];
+// I could have made a dedicated wrapper but OwnedCString::null() fits the bill just as well :)
+static EMPTY_FEATURES: &[OwnedCString; 1] = &[OwnedCString::null()];
 
 impl OwnedCStringArray {
     #[inline]
