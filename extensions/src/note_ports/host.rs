@@ -26,7 +26,7 @@ impl NotePortInfoBuffer {
 }
 
 impl PluginNotePorts {
-    /// Returns number of audio ports, for either input or output.
+    /// Returns number of note ports, for either input or output.
     pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
@@ -90,14 +90,14 @@ where
 }
 
 #[allow(clippy::missing_safety_doc)]
-unsafe extern "C" fn rescan<H>(host: *const clap_host, flag: u32)
+unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
             .as_mut()
-            .rescan(NotePortRescanFlags::from_bits_truncate(flag));
+            .rescan(NotePortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

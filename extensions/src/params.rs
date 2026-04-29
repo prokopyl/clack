@@ -142,7 +142,7 @@ bitflags! {
         /// The host will not record those changes as automation points.
         const VALUES = CLAP_PARAM_RESCAN_VALUES;
 
-        /// The parameter's info has changed (e.g. name, module, ranges).
+        /// The parameter's info has changed (name, module, `ParamInfoFlags::IS_PERIODIC`, `ParamInfoFlags::IS_HIDDEN`).
         const INFO = CLAP_PARAM_RESCAN_INFO;
 
         /// The parameter's value to text conversion has changed.
@@ -198,7 +198,7 @@ bitflags! {
         const IS_AUTOMATABLE_PER_PORT = CLAP_PARAM_IS_AUTOMATABLE_PER_PORT;
 
         /// This parameter is used to merge the plugin and host bypass button.
-        /// It implies that the parameter is stepped, with `0.0` being bypass off, and `1.0` being bypass on.
+        /// It requires `ParamInfoFlags::IS_STEPPED` to be set, with `0.0` being bypass off, and `1.0` being bypass on.
         const IS_BYPASS = CLAP_PARAM_IS_BYPASS;
 
         /// This parameter should not be shown to the user, because it is currently not used.
@@ -235,6 +235,7 @@ bitflags! {
         const REQUIRES_PROCESS = CLAP_PARAM_REQUIRES_PROCESS;
 
         /// This parameter represents an enumeration of discrete values.
+        /// It requires `ParamInfoFlags::IS_STEPPED` to be set.
         const IS_ENUM = CLAP_PARAM_IS_ENUM;
     }
 }

@@ -220,7 +220,7 @@ impl PluginParams {
     }
 
     /// Flushes a set of parameter changes when the plugin is active.
-    /// This method cannot be called concurrently with `process`, which is statically guaranteed by the [`PluginAudioProcessorHandle`] type..
+    /// This method cannot be called concurrently with `process`, which is statically guaranteed by the [`PluginAudioProcessorHandle`] type.
     ///
     /// Note: if the plugin is processing, then the process() call will already
     /// achieve the parameter update (bidirectional), so a call to flush isn't

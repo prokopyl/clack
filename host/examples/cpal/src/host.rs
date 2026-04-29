@@ -358,7 +358,7 @@ impl HostAudioPortsImpl for CpalHostMainThread<'_> {
         false
     }
 
-    fn rescan(&mut self, _flag: AudioPortRescanFlags) {
+    fn rescan(&mut self, _flags: AudioPortRescanFlags) {
         // We don't support audio ports changing on the fly
     }
 }
