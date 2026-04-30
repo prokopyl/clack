@@ -100,7 +100,7 @@
 //! sound may inevitably change. For example, if the plugin increase the range, there
 //! is an automation playing at the max value and on top of that an LFO is applied.
 //! See the following curve:
-//! ```ignore
+//! ```text
 //!                                   .
 //!                                  . .
 //!          .....                  .   .

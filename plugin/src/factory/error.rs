@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use clap_sys::ext::log::{
     CLAP_LOG_ERROR, CLAP_LOG_HOST_MISBEHAVING, CLAP_LOG_PLUGIN_MISBEHAVING, clap_log_severity,
 };

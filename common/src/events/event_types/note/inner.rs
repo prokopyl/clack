@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use crate::events::{Event, EventFlags, EventHeader, Pckn};
 use clap_sys::events::clap_event_note;
 use std::fmt::Formatter;

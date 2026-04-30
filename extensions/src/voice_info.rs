@@ -7,8 +7,6 @@
 //! * make the host's voice pool coherent with what the plugin has;
 //! * turn the host's voice management to mono when the plugin is mono.
 
-#![deny(missing_docs)]
-
 use bitflags::bitflags;
 use clack_common::extensions::*;
 use clap_sys::ext::voice_info::*;

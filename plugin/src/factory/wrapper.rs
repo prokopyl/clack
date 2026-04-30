@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use crate::extensions::wrapper::handle_panic;
 use crate::factory::error::FactoryWrapperError;
 use clack_common::factory::RawFactoryPointer;

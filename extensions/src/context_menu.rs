@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! Allows plugins and hosts to exchange menu items, and lets the plugin show the host context menu.
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};

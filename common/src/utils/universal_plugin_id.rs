@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 use clap_sys::universal_plugin_id::clap_universal_plugin_id;
 use core::ffi::CStr;
 

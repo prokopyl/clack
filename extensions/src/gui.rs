@@ -56,8 +56,6 @@
 //!   new `working_size`.
 //! * Once negotiated, call `set_size(working_size)` to let the plugin redraw and resize its UI.
 
-#![deny(missing_docs)]
-
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::gui::*;
 use std::cmp::Ordering;

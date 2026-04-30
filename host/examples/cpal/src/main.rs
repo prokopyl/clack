@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
+#![deny(clippy::missing_docs_in_private_items, unsafe_code)]
 
 /// Procedures for discovering and loading CLAP plugin file.
 mod discovery;

@@ -1,9 +1,11 @@
+//! Tests loading from a CLAP dylib file
+
 use clack_host::entry::PluginEntry;
 use clack_host::factory::plugin::PluginFactory;
 
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
-pub fn it_works() {
+fn it_works() {
     let library_path = format!(
         "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),
@@ -23,7 +25,7 @@ pub fn it_works() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // Miri does not support calling foreign function (dlopen)
-pub fn it_works_concurrently() {
+fn it_works_concurrently() {
     let entry_path = format!(
         "{}/../target/debug/{}clack_plugin_gain{}",
         env!("CARGO_MANIFEST_DIR"),

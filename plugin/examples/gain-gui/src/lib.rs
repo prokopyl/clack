@@ -1,5 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(missing_docs, clippy::missing_docs_in_private_items)]
+#![deny(clippy::missing_docs_in_private_items)]
 #![doc = include_str!("../README.md")]
 
 use crate::audio::GainPluginAudioProcessor;

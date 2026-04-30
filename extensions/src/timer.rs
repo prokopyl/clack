@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! Host-driven Timer support.
 //!
 //! This extension allows plugins to register timers to the host, which will then proceed to call

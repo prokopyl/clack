@@ -1,4 +1,3 @@
-#![warn(missing_docs)]
 //! Various data types that can are used to locate or categorize presets.
 
 use bitflags::bitflags;

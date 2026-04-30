@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! Preset discovery and loading.
 //!
 //! This module contains two parts:

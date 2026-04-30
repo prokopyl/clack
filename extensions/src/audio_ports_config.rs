@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! A way for plugins to describe possible ports configurations, and for the host to select one.
 //!
 //! A configuration ([`AudioPortsConfiguration`]) is a very simple description of the audio ports:

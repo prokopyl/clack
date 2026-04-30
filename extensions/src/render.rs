@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! Allows plugins to know if their audio processing is running under realtime constraints or not.
 //!
 //! Plugins that do not implement this extension are considered by host to not care if they are

@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 use crate::extensions::{ExtensionSide, HostExtensionSide, PluginExtensionSide};
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;

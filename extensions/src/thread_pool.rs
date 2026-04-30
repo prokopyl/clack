@@ -1,5 +1,4 @@
 //! Allows plugins to use a host's thread pool for multithreaded audio processing.
-#![deny(missing_docs)]
 
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::thread_pool::*;

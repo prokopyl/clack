@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 #![allow(clippy::cast_possible_wrap)]
 
 use Match::*;

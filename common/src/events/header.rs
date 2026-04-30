@@ -1,5 +1,3 @@
-//#![deny(missing_docs)]
-
 use crate::events::Event;
 use crate::events::spaces::{CoreEventSpace, EventSpaceId};
 use crate::utils::usize_to_clap_size;

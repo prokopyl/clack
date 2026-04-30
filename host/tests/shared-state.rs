@@ -1,10 +1,12 @@
+//! Test
+
 use clack_host::prelude::*;
 use clack_plugin::prelude::*;
 use std::sync::OnceLock;
 
-pub struct DivaPluginStubAudioProcessor;
-pub struct DivaPluginStub;
-pub struct DivaPluginStubMainThread;
+struct DivaPluginStubAudioProcessor;
+struct DivaPluginStub;
+struct DivaPluginStubMainThread;
 
 impl PluginMainThread<'_, ()> for DivaPluginStubMainThread {}
 
@@ -87,7 +89,7 @@ impl HostHandlers for MyHost {
 }
 
 #[test]
-pub fn handles_drop_order() {
+fn handles_drop_order() {
     let entry = PluginEntry::load_from_clack::<SinglePluginEntry<DivaPluginStub>>(
         c"/home/user/.clap/u-he/libdiva.so",
     )

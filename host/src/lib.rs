@@ -1,5 +1,4 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-#![deny(missing_docs)]
 
 //! A low-level library to create [CLAP](https://github.com/free-audio/clap) audio hosts in safe Rust.
 //!

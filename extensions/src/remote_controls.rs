@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! Allows a plugin to provide a structured way of mapping parameters to shortcut pages or a hardware
 //! controller.
 //!

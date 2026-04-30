@@ -1,7 +1,5 @@
 //! Allows plugins to communicate their tail length to the host.
 
-#![deny(missing_docs)]
-
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::tail::*;
 use std::ffi::CStr;

@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! A way for plugins to list custom note names for hosts to display in e.g. a piano roll.
 
 use clack_common::events::Match;

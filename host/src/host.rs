@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! Core types and traits to implement CLAP host callback handlers.
 //!
 //! The [`HostHandlers`] trait is the main one required to be implemented for a Clack host. It provides
