@@ -1,5 +1,5 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
-//#![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
+#![deny(clippy::missing_docs_in_private_items, unsafe_code)]
 #![doc = include_str!("../README.md")]
 
 use crate::params::GainParams;
@@ -171,7 +171,9 @@ pub struct GainPluginMainThread<'a> {
 impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {}
 
 pub struct GainPluginEntry {
+    /// Our plugin factory implementation
     plugin_factory: PluginFactoryWrapper<GainPluginFactory>,
+    /// Our preset discovery factory implementation
     preset_discovery_factory: PresetDiscoveryFactoryWrapper<GainPresetDiscoveryFactory>,
 }
 
@@ -200,6 +202,7 @@ impl Entry for GainPluginEntry {
 }
 
 pub struct GainPluginFactory {
+    /// The plugin's descriptor
     descriptor: PluginDescriptor,
 }
 

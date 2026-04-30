@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! This extension can be used to specify the ambisonic channel mapping ([`AmbisonicConfig`]) used by the plugin.
 
 use crate::audio_ports::AudioPortType;

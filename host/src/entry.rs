@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! Loading and handling of CLAP plugin entry files.
 //!
 //! On Windows and Linux (and other non-macOS UNIXes), CLAP plugins are distributed as prebuilt

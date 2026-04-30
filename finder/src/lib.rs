@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![deny(missing_docs, unsafe_code)]
+#![deny(unsafe_code)]
 
 mod finder;
 mod paths;

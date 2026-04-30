@@ -1,7 +1,5 @@
 //! This extension can be used to specify the surround channel mapping used by the plugin.
 
-#![deny(missing_docs)]
-
 use crate::audio_ports::AudioPortType;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::surround::*;

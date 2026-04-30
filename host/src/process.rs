@@ -11,8 +11,6 @@
 //! Alternatively, users can also use the [`PluginAudioProcessor`] convenience type that internalizes
 //! the state instead, and allows it to change and be checked at runtime.
 
-#![deny(missing_docs)]
-
 use self::audio_buffers::InputAudioBuffers;
 use crate::host::HostHandlers;
 use crate::plugin::{PluginAudioProcessorHandle, PluginInstanceError, PluginSharedHandle};

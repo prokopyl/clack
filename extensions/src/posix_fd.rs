@@ -2,8 +2,6 @@
 //!
 //! This is useful to handle asynchronous I/O on the main thread.
 
-#![deny(missing_docs)]
-
 use bitflags::bitflags;
 use clack_common::extensions::{Extension, HostExtensionSide, PluginExtensionSide, RawExtension};
 use clap_sys::ext::posix_fd_support::*;

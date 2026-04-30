@@ -1,6 +1,6 @@
 #![doc(html_logo_url = "https://raw.githubusercontent.com/prokopyl/clack/main/logo.svg")]
 #![doc = include_str!("../README.md")]
-#![deny(missing_docs, clippy::missing_docs_in_private_items, unsafe_code)]
+#![deny(clippy::missing_docs_in_private_items, unsafe_code)]
 
 use crate::params::{PolySynthParamModulations, PolySynthParams};
 use crate::poly_oscillator::PolyOscillator;

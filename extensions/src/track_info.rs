@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! Allows a plugin to query the host for information about the track it's in.
 //!
 //! See the [`TrackInfo`] type's documentation for a list of all the info a plugin can get about

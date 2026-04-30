@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! This extension lets the host configure the plugin's input and output audio ports.
 //! This is a "push" approach to audio ports configuration.
 

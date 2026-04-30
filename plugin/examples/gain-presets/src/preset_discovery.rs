@@ -1,16 +1,24 @@
+//! Contains all types and implementations related to preset management.
+
 use crate::GainPluginMainThread;
 use clack_extensions::preset_discovery::prelude::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::UniversalPluginId;
 use std::ffi::{CStr, CString};
-use std::path::Path;
 use std::str::FromStr;
 
+/// Holds information about a preset for this plugin.
 struct Preset {
+    /// The name of this preset, displayed to the user
     name: &'static CStr,
+    /// The value of the volume parameter this preset sets
     volume: f32,
 }
 
+/// A list of all of our built-in presets.
+///
+/// This could be a more involved data type or stored in an external file, this is done here with
+/// an array only for simplicity.
 const PRESETS: &[Preset] = &[
     Preset {
         name: c"Unity",
@@ -22,11 +30,14 @@ const PRESETS: &[Preset] = &[
     },
 ];
 
+/// Our preset discovery factory implementation
 pub struct GainPresetDiscoveryFactory {
+    /// The descriptor of our discovery provider
     desc: ProviderDescriptor,
 }
 
 impl GainPresetDiscoveryFactory {
+    /// Initializes this factory.
     pub fn new() -> Self {
         GainPresetDiscoveryFactory {
             desc: ProviderDescriptor::new(
@@ -71,6 +82,9 @@ impl PresetDiscoveryFactoryImpl for GainPresetDiscoveryFactory {
     }
 }
 
+/// Our preset provider implementation.
+///
+/// This is pretty much stateless (as it only relies on the PRESETS array), so this has no fields.
 pub struct GainPresetProvider;
 
 impl<'a> ProviderImpl<'a> for GainPresetProvider {
@@ -79,26 +93,22 @@ impl<'a> ProviderImpl<'a> for GainPresetProvider {
         location: Location,
         receiver: &mut MetadataReceiver,
     ) -> Result<(), PluginError> {
-        if let Location::File { path } = location {
-            let path = Path::new(path.to_str()?);
-            let file_name = path.file_name().unwrap().to_str().unwrap();
-            let load_key = CString::new(file_name.to_string())?;
-
-            receiver.begin_preset(Some(&load_key), Some(&load_key))?;
-            receiver.add_plugin_id(UniversalPluginId::clap(
-                c"org.rust-audio.clack.gain-presets",
+        if let Location::File { .. } = location {
+            // Our presets are only stored in the plugin binary itself (the PRESETS array). The host
+            // should not call this with a file location.
+            return Err(PluginError::Message(
+                "This plugin does not provide presets from files",
             ));
-            receiver.add_creator(c"Me!");
-        } else {
-            for (i, preset) in PRESETS.iter().enumerate() {
-                let load_key = CString::new(i.to_string())?;
-                receiver
-                    .begin_preset(Some(preset.name), Some(&load_key))?
-                    .add_plugin_id(UniversalPluginId::clap(
-                        c"org.rust-audio.clack.gain-presets",
-                    ))
-                    .add_creator(c"Me!");
-            }
+        }
+
+        for (i, preset) in PRESETS.iter().enumerate() {
+            let load_key = CString::new(i.to_string())?;
+            receiver
+                .begin_preset(Some(preset.name), Some(&load_key))?
+                .add_plugin_id(UniversalPluginId::clap(
+                    c"org.rust-audio.clack.gain-presets",
+                ))
+                .add_creator(c"Me!");
         }
 
         Ok(())
