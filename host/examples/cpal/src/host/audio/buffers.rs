@@ -1,7 +1,6 @@
 use crate::host::audio::config::FullAudioConfig;
 use clack_host::prelude::{
-    AudioPortBuffer, AudioPortBufferType, AudioPorts, InputAudioBuffers, InputChannel,
-    OutputAudioBuffers,
+    AudioBuffers, AudioPortBuffer, AudioPortBufferType, AudioPorts, InputChannel,
 };
 use cpal::{FromSample, Sample};
 
@@ -122,7 +121,7 @@ impl HostAudioBuffers {
     pub fn prepare_plugin_buffers(
         &mut self,
         cpal_buf_len: usize,
-    ) -> (InputAudioBuffers<'_>, OutputAudioBuffers<'_>) {
+    ) -> (AudioBuffers<'_>, AudioBuffers<'_>) {
         let sample_count = self.cpal_buf_len_to_frame_count(cpal_buf_len);
         assert!(sample_count <= self.actual_frame_count);
 
