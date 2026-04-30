@@ -67,8 +67,13 @@ pub mod prelude {
 /// The following example shows how to create a custom entry and plugin factory that exposes
 /// two different plugins.
 ///
+/// In this example, the second plugin also needs some custom initialization logic to create a
+/// (non-realtime-safe) channel between the `Shared` struct and the `MainThread` struct. This is
+/// also not possible to do with [`SinglePluginEntry`], since only allows for pure functions.
+///
 /// ```
 /// use std::ffi::CStr;
+/// use std::sync::mpsc::{channel, Receiver, Sender};
 /// use clack_plugin::entry::prelude::*;
 /// use clack_plugin::prelude::*;
 ///
@@ -83,9 +88,18 @@ pub mod prelude {
 ///
 /// impl Plugin for MySecondPlugin {
 ///     type AudioProcessor<'a> = ();
-///     type Shared<'a> = ();
-///     type MainThread<'a> = ();
+///     type Shared<'a> = MySecondPluginShared;
+///     type MainThread<'a> = MySecondPluginMainThread;
 /// }
+///
+/// // For the sake of this example, this plugin just needs to share Strings around.
+/// pub struct MySecondPluginShared(Sender<String>);
+/// pub struct MySecondPluginMainThread(Receiver<String>);
+///
+/// impl PluginShared<'_> for MySecondPluginShared {}
+/// impl PluginMainThread<'_, MySecondPluginShared> for MySecondPluginMainThread {}
+///
+/// // Our entry implementation
 ///
 /// pub struct MyEntry {
 ///     plugin_factory: PluginFactoryWrapper<MyPluginFactory>
@@ -151,11 +165,13 @@ pub mod prelude {
 ///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
 ///             ))
 ///         } else if plugin_id == self.second_plugin.id().unwrap_or_default() {
+///             let (tx, rx) = channel();
+///
 ///             Some(PluginInstance::new::<MySecondPlugin>(
 ///                 host_info,
 ///                 &self.second_plugin,
-///                 |_host| Ok(()) /* Create the shared struct */,
-///                 |_host, _shared| Ok(()) /* Create the main thread struct */,
+///                 |_host| Ok(MySecondPluginShared(tx)) /* Create the shared struct */,
+///                 |_host, _shared| Ok(MySecondPluginMainThread(rx)) /* Create the main thread struct */,
 ///             ))
 ///         } else {
 ///             None
