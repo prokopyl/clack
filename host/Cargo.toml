@@ -6,6 +6,8 @@ rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/prokopyl/clack"
 description = "Low-level, safe Rust wrappers to create audio plugin hosts using the CLAP audio plugin API."
+categories = ["api-bindings", "multimedia::audio"]
+keywords = ["clap", "audio", "plugin", "host", "bindings"]
 
 [dependencies]
 clap-sys = { workspace = true }

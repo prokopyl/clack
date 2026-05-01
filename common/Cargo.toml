@@ -6,6 +6,8 @@ rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/prokopyl/clack"
 description = "Various utilities for working with the CLAP audio plugin API, for both plugins and hosts."
+categories = ["api-bindings", "multimedia::audio"]
+keywords = ["clap", "audio", "plugin", "host", "bindings"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
