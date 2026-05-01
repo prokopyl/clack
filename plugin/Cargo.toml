@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.85.0"
+repository = "https://github.com/prokopyl/clack"
+description = "Low-level, safe Rust wrappers to create audio plugins using the CLAP audio plugin API."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,8 +14,8 @@ clap-sys = { workspace = true }
 clack-common = { workspace = true }
 
 [dev-dependencies]
-clack-host = { workspace = true, default-features = false }
-clack-extensions = { workspace = true, features = ["log"] }
+clack-host = { path = "../host", default-features = false }
+clack-extensions = { path = "../extensions", features = ["log"] }
 
 [lints]
 workspace = true

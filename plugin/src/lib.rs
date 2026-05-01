@@ -40,6 +40,7 @@ pub mod prelude {
     };
 }
 
+#[cfg(doctest)]
 #[doc = include_str!("../../README.md")]
 const _MAIN_README_TEST: () = {};
 

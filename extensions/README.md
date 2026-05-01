@@ -1,4 +1,5 @@
-A collection of all the standard [CLAP](https://github.com/free-audio/clap) extensions, for use
+A collection of wrappers and utilities for all the standard [CLAP](https://github.com/free-audio/clap) extensions, for
+use
 with the [clack-plugin](https://crates.io/crates/clack-plugin) or [clack-host](https://crates.io/crates/clack-host)
 crates.
 

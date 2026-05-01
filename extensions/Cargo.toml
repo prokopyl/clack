@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/prokopyl/clack"
+description = "A collection of wrappers and utilities for all the standard CLAP extensions, for use with the clack-plugin or clack-host crates."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

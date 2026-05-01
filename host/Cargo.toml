@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/prokopyl/clack"
+description = "Low-level, safe Rust wrappers to create audio plugin hosts using the CLAP audio plugin API."
 
 [dependencies]
 clap-sys = { workspace = true }
@@ -22,9 +24,7 @@ clack-plugin = ["dep:clack-plugin"]
 
 [dev-dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { workspace = true, features = ["clack-host", "clack-plugin", "latency", "log", "state", "timer"] }
-
-# nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["assert_process_allocs"] }
+clack-extensions = { path = "../extensions", features = ["clack-host", "clack-plugin", "latency", "log", "state", "timer"] }
 static_assertions = "1.1.0"
 
 [lints]
