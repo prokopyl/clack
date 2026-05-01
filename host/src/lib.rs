@@ -2,8 +2,6 @@
 
 //! A low-level library to create [CLAP](https://github.com/free-audio/clap) audio hosts in safe Rust.
 //!
-//! TODO: make crate general description.
-//!
 //! # Plugin Lifecycle
 //!
 //! CLAP hosts and plugins go through a specific set of steps before they are able to process audio.
@@ -298,3 +296,6 @@ pub mod prelude {
         utils::ClapId,
     };
 }
+
+#[doc = include_str!("../README.md")]
+const _README_TEST: () = {};

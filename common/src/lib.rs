@@ -14,3 +14,6 @@ pub mod plugin;
 pub mod process;
 pub mod stream;
 pub mod utils;
+
+#[doc = include_str!("../README.md")]
+const _README_TEST: () = {};

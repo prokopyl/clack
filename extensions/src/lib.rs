@@ -63,3 +63,6 @@ pub(crate) mod utils;
 #[cfg(test)]
 #[doc(hidden)]
 pub mod __doc_utils;
+
+#[doc = include_str!("../README.md")]
+const _README_TEST: () = {};

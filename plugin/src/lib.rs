@@ -42,3 +42,6 @@ pub mod prelude {
 
 #[doc = include_str!("../../README.md")]
 const _MAIN_README_TEST: () = {};
+
+#[doc = include_str!("../README.md")]
+const _README_TEST: () = {};
