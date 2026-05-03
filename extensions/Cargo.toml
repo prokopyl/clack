@@ -8,6 +8,7 @@ repository = "https://github.com/prokopyl/clack"
 description = "A collection of wrappers and utilities for all the standard CLAP extensions, for use with the clack-plugin or clack-host crates."
 categories = ["api-bindings", "multimedia::audio"]
 keywords = ["clap", "audio", "plugin", "host", "bindings"]
+authors = ["Adrien Prokopowicz <prokopylmc@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
