@@ -132,8 +132,18 @@ impl MidiSysExEvent {
     /// # Panics
     ///
     /// This will panic if `data.len()` is larger than `u32::MAX`.
+    ///
+    /// # Safety
+    ///
+    /// Users *must* ensure that the buffer lives long enough.
+    ///
+    /// As a plugin, the buffer must live at least until this event is `try_push`ed into the host's
+    /// output event buffer for the last time.
+    ///
+    /// As a host, the buffer must live at least until this event is used for the last time through
+    /// input buffers passed to a plugin method call (e.g. `process` or `flush`).
     #[inline]
-    pub const fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
+    pub const unsafe fn new(time: u32, port_index: u16, data: &[u8]) -> Self {
         Self {
             inner: clap_event_midi_sysex {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -178,11 +188,14 @@ impl MidiSysExEvent {
     /// # Safety
     ///
     /// Users *must* ensure that the buffer lives long enough.
+    ///
     /// As a plugin, host-provided buffers are guaranteed to live at least as long as the current
     /// method call (e.g. `process` or `flush`).
     ///
-    /// As a host, plugin-provided buffers usually live at least until the next plugin call from the
-    /// same thread.
+    /// As a host, plugin-provided buffers are guaranteed to live at least as long as the call to
+    /// `OutputEventBuffer::try_push` that added this event to the host's output buffer. Note that
+    /// this means that accessing the data buffer after the current plugin method call has returned
+    /// is always disallowed.
     #[inline]
     pub const unsafe fn data<'a>(&self) -> &'a [u8] {
         // SAFETY: this struct ensures the buffer is valid, and the user enforces the lifetime
