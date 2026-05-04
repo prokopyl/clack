@@ -192,10 +192,9 @@ impl MidiSysExEvent {
     /// As a plugin, host-provided buffers are guaranteed to live at least as long as the current
     /// method call (e.g. `process` or `flush`).
     ///
-    /// As a host, plugin-provided buffers are guaranteed to live at least as long as the call to
-    /// `OutputEventBuffer::try_push` that added this event to the host's output buffer. Note that
-    /// this means that accessing the data buffer after the current plugin method call has returned
-    /// is always disallowed.
+    /// As a host, plugin-provided buffers are guaranteed to live at least as long as this event's
+    /// call to `OutputEventBuffer::try_push`. Note that this means that accessing the data buffer
+    /// after the current plugin method call has returned is always disallowed.
     #[inline]
     pub const unsafe fn data<'a>(&self) -> &'a [u8] {
         // SAFETY: this struct ensures the buffer is valid, and the user enforces the lifetime
