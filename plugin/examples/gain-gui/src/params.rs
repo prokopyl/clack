@@ -7,7 +7,6 @@ use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
-use clack_plugin::utils::Cookie;
 use std::cell::Cell;
 use std::ffi::CStr;
 use std::fmt::Write as _;
@@ -174,7 +173,6 @@ impl GainParamsLocal {
             GainParamsShared::PARAM_VOLUME_ID,
             Pckn::match_all(),
             self.volume.get() as f64,
-            Cookie::empty(),
         );
 
         let _ = output_events.try_push(event);

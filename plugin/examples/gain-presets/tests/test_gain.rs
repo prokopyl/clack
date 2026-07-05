@@ -88,7 +88,6 @@ pub fn it_works() {
         ClapId::new(1),
         Pckn::match_all(),
         0.5,
-        Cookie::empty(),
     ));
 
     let mut input_buffers = [vec![69f32; 32], vec![69f32; 32]];
