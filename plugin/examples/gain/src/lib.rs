@@ -66,7 +66,7 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
 {
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut GainPluginMainThread,
+        _main_thread: &GainPluginMainThread,
         shared: &'a GainPluginShared,
         _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
@@ -132,11 +132,11 @@ impl<'a> PluginAudioProcessor<'a, GainPluginShared, GainPluginMainThread<'a>>
 }
 
 impl PluginAudioPortsImpl for GainPluginMainThread<'_> {
-    fn count(&mut self, _is_input: bool) -> u32 {
+    fn count(&self, _is_input: bool) -> u32 {
         1
     }
 
-    fn get(&mut self, index: u32, _is_input: bool, writer: &mut AudioPortInfoWriter) {
+    fn get(&self, index: u32, _is_input: bool, writer: &mut AudioPortInfoWriter) {
         if index == 0 {
             writer.set(&AudioPortInfo {
                 id: ClapId::new(0),

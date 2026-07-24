@@ -53,7 +53,7 @@ where
         PluginWrapper::<P>::handle(plugin, |plugin| {
             let config = AmbisonicConfig::from_raw(*config);
 
-            Ok(plugin.main_thread().as_ref().is_config_supported(config))
+            Ok(plugin.main_thread()?.is_config_supported(config))
         })
         .unwrap_or(false)
     }
@@ -71,11 +71,7 @@ where
 {
     unsafe {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            match plugin
-                .main_thread()
-                .as_ref()
-                .get_config(is_input, port_index)
-            {
+            match plugin.main_thread()?.get_config(is_input, port_index) {
                 Some(output) => {
                     config.write(*output.as_raw());
                     Ok(true)

@@ -73,9 +73,9 @@ impl<F: PluginFactoryAsVST3Impl> PluginFactoryAsVST3Wrapper<F> {
 /// Implementation for the Plugin-side for the CLAP-as-VST3 wrapper extension.
 pub trait PluginAsVST3Impl {
     /// Returns the number of MIDI channels supported by the plugin for a given note port.
-    fn num_midi_channels(&mut self, note_port: u32) -> u32;
+    fn num_midi_channels(&self, note_port: u32) -> u32;
     /// Returns the supported note expression types for a given note port.
-    fn supported_note_expressions(&mut self) -> SupportedNoteExpressions;
+    fn supported_note_expressions(&self) -> SupportedNoteExpressions;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -96,7 +96,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginAsVST3Impl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().num_midi_channels(note_port))
+        Ok(plugin.main_thread()?.num_midi_channels(note_port))
     })
     .unwrap_or(0)
 }
@@ -107,11 +107,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginAsVST3Impl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin
-            .main_thread()
-            .as_mut()
-            .supported_note_expressions()
-            .bits())
+        Ok(plugin.main_thread()?.supported_note_expressions().bits())
     })
     .unwrap_or(0)
 }

@@ -37,7 +37,7 @@
 //! use clack_plugin::plugin::{Plugin, PluginError};
 //!
 //! pub trait PluginStateImplementation {
-//!     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
+//!     fn load(&self, input: &mut InputStream) -> Result<(), PluginError>;
 //! }
 //!
 //! // Then, implement the ExtensionImplementation trait for the given implementors
@@ -74,7 +74,7 @@
 //!     PluginWrapper::<P>::handle(plugin, |p| {
 //!         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
 //!         // Retrieve the plugin's main thread struct, and call load() on it
-//!         p.main_thread().as_mut().load(input)?;
+//!         p.main_thread()?.load(input)?;
 //!         Ok(())
 //!     })
 //!     .is_some()

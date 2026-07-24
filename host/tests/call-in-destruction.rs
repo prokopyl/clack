@@ -29,12 +29,12 @@ struct MyPluginMainThread {
 impl PluginMainThread<'_, ()> for MyPluginMainThread {}
 
 impl PluginStateImpl for MyPluginMainThread {
-    fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
+    fn save(&self, output: &mut OutputStream) -> Result<(), PluginError> {
         output.write_all(self.data.as_bytes())?;
         Ok(())
     }
 
-    fn load(&mut self, _input: &mut InputStream) -> Result<(), PluginError> {
+    fn load(&self, _input: &mut InputStream) -> Result<(), PluginError> {
         unimplemented!()
     }
 }

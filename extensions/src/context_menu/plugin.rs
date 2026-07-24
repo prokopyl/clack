@@ -102,7 +102,7 @@ pub trait PluginContextMenuImpl {
     /// Asks the plugin to populate the given `builder`, with the contents of a context menu
     /// that targets the given `target`.
     fn populate(
-        &mut self,
+        &self,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), PluginError>;
@@ -111,7 +111,7 @@ pub trait PluginContextMenuImpl {
     ///
     /// The given `action_id` belongs to the menu created by [`populate`](Self::populate) with the
     /// given `target`.
-    fn perform(&mut self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), PluginError>;
+    fn perform(&self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), PluginError>;
 }
 
 // SAFETY: clap_plugin_context_menu is #[repr(C)] and is the plugin-side of the Context Menu extension
@@ -143,10 +143,7 @@ where
         // for the duration of this function call, which is the (inferred) lifetime we give it here.
         let mut builder = unsafe { ContextMenuBuilder::from_raw(builder) };
 
-        plugin
-            .main_thread()
-            .as_mut()
-            .populate(target, &mut builder)?;
+        plugin.main_thread()?.populate(target, &mut builder)?;
 
         Ok(())
     })
@@ -169,7 +166,7 @@ where
         let action_id = ClapId::from_raw(action_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid Action ID"))?;
 
-        plugin.main_thread().as_mut().perform(target, action_id)?;
+        plugin.main_thread()?.perform(target, action_id)?;
         Ok(())
     })
     .is_some()

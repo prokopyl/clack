@@ -16,7 +16,7 @@ pub trait PluginConfigurableAudioPortsImpl {
     /// Returns true if the given configurations can be applied using [`apply_configuration`](PluginConfigurableAudioPortsImpl::apply_configuration).
     ///
     /// Must be called when the plugin is deactivated.
-    fn can_apply_configuration(&mut self, list: &[AudioPortRequest<'_>]) -> bool;
+    fn can_apply_configuration(&self, list: &[AudioPortRequest<'_>]) -> bool;
 
     /// Submit a bunch of configuration requests which will atomically be applied together,
     /// or discarded together.
@@ -28,7 +28,7 @@ pub trait PluginConfigurableAudioPortsImpl {
     /// Returns true if applied, false otherwise.
     ///
     /// Must be called when the plugin is deactivated.
-    fn apply_configuration(&mut self, list: &[AudioPortRequest<'_>]) -> bool;
+    fn apply_configuration(&self, list: &[AudioPortRequest<'_>]) -> bool;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -61,8 +61,7 @@ where
                 ));
             }
 
-            Ok(p.main_thread()
-                .as_mut()
+            Ok(p.main_thread()?
                 .can_apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))
@@ -88,8 +87,7 @@ where
                 ));
             }
 
-            Ok(p.main_thread()
-                .as_mut()
+            Ok(p.main_thread()?
                 .apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))

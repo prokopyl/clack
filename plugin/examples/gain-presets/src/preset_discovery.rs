@@ -117,7 +117,7 @@ impl<'a> ProviderImpl<'a> for GainPresetProvider {
 
 impl PluginPresetLoadImpl for GainPluginMainThread<'_> {
     fn load_from_location(
-        &mut self,
+        &self,
         location: Location,
         load_key: Option<&CStr>,
     ) -> Result<(), PluginError> {

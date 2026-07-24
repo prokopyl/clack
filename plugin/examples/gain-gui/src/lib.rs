@@ -7,6 +7,7 @@ use crate::params::GainParamsLocal;
 use crate::{gui::GainPluginGui, params::GainParamsShared};
 use clack_extensions::{audio_ports::*, gui::PluginGui, params::*, state::PluginState};
 use clack_plugin::prelude::*;
+use std::cell::RefCell;
 use std::sync::Arc;
 
 mod audio;
@@ -56,7 +57,7 @@ impl DefaultPluginFactory for GainPlugin {
         Ok(Self::MainThread {
             shared,
             params: GainParamsLocal::new(&shared.params),
-            gui: None,
+            gui: None.into(),
         })
     }
 }
@@ -76,12 +77,12 @@ pub struct GainPluginMainThread<'a> {
     /// A reference to the plugin's shared data.
     shared: &'a GainPluginShared,
     /// The plugin's GUI state and context
-    gui: Option<GainPluginGui>,
+    gui: RefCell<Option<GainPluginGui>>,
 }
 
 impl<'a> PluginMainThread<'a, GainPluginShared> for GainPluginMainThread<'a> {
-    fn on_main_thread(&mut self) {
-        if let Some(gui) = &self.gui {
+    fn on_main_thread(&self) {
+        if let Some(gui) = &self.gui.borrow().as_ref() {
             gui.request_repaint()
         }
     }

@@ -23,7 +23,7 @@ struct MyPluginMainThread;
 impl PluginMainThread<'_, ()> for MyPluginMainThread {}
 
 impl PluginTimerImpl for MyPluginMainThread {
-    fn on_timer(&mut self, timer_id: TimerId) {
+    fn on_timer(&self, timer_id: TimerId) {
         assert_eq!(timer_id, TimerId(5));
     }
 }

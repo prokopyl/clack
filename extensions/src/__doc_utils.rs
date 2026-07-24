@@ -27,12 +27,12 @@ mod diva_stub {
     impl<'a> PluginMainThread<'a, DivaPluginStubShared<'a>> for DivaPluginStubMainThread {}
 
     impl PluginStateImpl for DivaPluginStubMainThread {
-        fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
+        fn save(&self, output: &mut OutputStream) -> Result<(), PluginError> {
             output.write_all(b"Hello, world!")?;
             Ok(())
         }
 
-        fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError> {
+        fn load(&self, input: &mut InputStream) -> Result<(), PluginError> {
             let mut buf = String::new();
             input.read_to_string(&mut buf)?;
 
@@ -79,7 +79,7 @@ mod diva_stub {
     {
         fn activate(
             _host: HostAudioProcessorHandle<'a>,
-            _main_thread: &mut DivaPluginStubMainThread,
+            _main_thread: &DivaPluginStubMainThread,
             shared: &'a DivaPluginStubShared<'a>,
             _audio_config: PluginAudioConfiguration,
         ) -> Result<Self, PluginError> {

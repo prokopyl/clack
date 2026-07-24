@@ -561,7 +561,7 @@ mod plugin {
         for<'a> P: Plugin<MainThread<'a>: PluginTrackInfoImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            let plugin = plugin.main_thread().as_mut();
+            let plugin = plugin.main_thread()?;
 
             plugin.changed();
 

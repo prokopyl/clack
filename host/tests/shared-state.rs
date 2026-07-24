@@ -40,7 +40,7 @@ impl<'a> clack_plugin::plugin::PluginAudioProcessor<'a, (), DivaPluginStubMainTh
 {
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut DivaPluginStubMainThread,
+        _main_thread: &DivaPluginStubMainThread,
         _shared: &'a (),
         _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {

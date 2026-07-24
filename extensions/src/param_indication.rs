@@ -185,7 +185,7 @@ mod plugin {
         ///
         /// Note that parameter indications should not be saved in the plugin context, and are off by default.
         fn set_mapping(
-            &mut self,
+            &self,
             param_id: ClapId,
             has_mapping: bool,
             color: Option<Color>,
@@ -200,7 +200,7 @@ mod plugin {
         ///
         /// Note that parameter indications should not be saved in the plugin context, and are off by default.
         fn set_automation(
-            &mut self,
+            &self,
             param_id: ClapId,
             automation_state: ParamIndicationAutomation,
             color: Option<Color>,
@@ -242,7 +242,7 @@ mod plugin {
                     Some(color.read())
                 };
 
-                plugin.main_thread().as_mut().set_mapping(
+                plugin.main_thread()?.set_mapping(
                     param_id,
                     has_mapping,
                     color,
@@ -279,8 +279,7 @@ mod plugin {
                 };
 
                 plugin
-                    .main_thread()
-                    .as_mut()
+                    .main_thread()?
                     .set_automation(param_id, automation_state, color);
                 Ok(())
             });

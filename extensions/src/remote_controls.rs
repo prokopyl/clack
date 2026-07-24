@@ -306,12 +306,12 @@ mod plugin {
     /// Implementation of the Plugin-side of the Remote Controls extension.
     pub trait PluginRemoteControlsImpl {
         /// Returns the number of Remote Control pages the plugin provides.
-        fn count(&mut self) -> u32;
+        fn count(&self) -> u32;
         /// Writes the information of the Remote Control page at the given `index` into the given `writer`.
         ///
         /// If unsuccessful (e.g. if `index` is out of bounds), the `writer` can be ignored, which
         /// will report the lack of a Remote Control page back to the host.
-        fn get(&mut self, index: u32, writer: &mut RemoteControlsPageWriter);
+        fn get(&self, index: u32, writer: &mut RemoteControlsPageWriter);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -331,8 +331,7 @@ mod plugin {
     where
         P: for<'a> Plugin<MainThread<'a>: PluginRemoteControlsImpl>,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().count()))
-            .unwrap_or(0)
+        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.count())).unwrap_or(0)
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -346,7 +345,7 @@ mod plugin {
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             let mut writer = RemoteControlsPageWriter::from_raw(buf);
-            plugin.main_thread().as_mut().get(index, &mut writer);
+            plugin.main_thread()?.get(index, &mut writer);
             Ok(writer.is_set)
         })
         .unwrap_or(false)

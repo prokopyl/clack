@@ -77,11 +77,11 @@ impl AudioPortInfoWriter<'_> {
 /// struct MyPluginMainThread;
 ///
 /// impl PluginAudioPortsImpl for MyPluginMainThread {
-///     fn count(&mut self, is_input: bool) -> u32 {
+///     fn count(&self, is_input: bool) -> u32 {
 ///         if is_input { 1 } else { 1 }
 ///     }
 ///
-///     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
+///     fn get(&self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
 ///         if index == 0 {
 ///             writer.set(&AudioPortInfo {
 ///                 id: ClapId::new(0),
@@ -103,7 +103,7 @@ pub trait PluginAudioPortsImpl {
     ///
     /// The `is_input` flag tells you whether to report an input or output port,
     /// so implementations typically branch on it.
-    fn count(&mut self, is_input: bool) -> u32;
+    fn count(&self, is_input: bool) -> u32;
 
     /// Populates metadata about the audio port at `index`.
     ///
@@ -114,7 +114,7 @@ pub trait PluginAudioPortsImpl {
     /// so implementations typically branch on it.
     ///
     /// The host will call this after [`Self::count`] to enumerate all ports.
-    fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
+    fn get(&self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -134,8 +134,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count(is_input)))
-        .unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread()?.count(is_input))).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -154,7 +153,7 @@ where
         };
 
         let mut writer = AudioPortInfoWriter::from_raw(info);
-        p.main_thread().as_mut().get(index, is_input, &mut writer);
+        p.main_thread()?.get(index, is_input, &mut writer);
         Ok(writer.is_set())
     })
     .unwrap_or(false)

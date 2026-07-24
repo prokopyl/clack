@@ -94,7 +94,7 @@ mod plugin {
         ///
         /// This may return an error if the plugin either declined or failed to switch
         /// to the given render mode.
-        fn set(&mut self, mode: RenderMode) -> Result<(), PluginError>;
+        fn set(&self, mode: RenderMode) -> Result<(), PluginError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -123,7 +123,7 @@ mod plugin {
                 "clap_plugin_render_mode",
             ))?;
 
-            Ok(plugin.main_thread().as_mut().set(mode).is_ok())
+            Ok(plugin.main_thread()?.set(mode).is_ok())
         })
         .unwrap_or(false)
     }
@@ -136,10 +136,7 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            Ok(plugin
-                .main_thread()
-                .as_ref()
-                .has_hard_realtime_requirement())
+            Ok(plugin.main_thread()?.has_hard_realtime_requirement())
         })
         .unwrap_or(false)
     }

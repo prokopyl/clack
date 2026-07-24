@@ -1,6 +1,7 @@
 //! Tests the various ways one can drop a plugin instance.
 
 use clack_plugin::prelude::*;
+use std::cell::Cell;
 use std::thread;
 use std::thread::{ThreadId, current};
 use std::time::Duration;
@@ -14,7 +15,7 @@ struct DivaPluginStubAudioProcessor {
 struct DivaPluginStub;
 struct DivaPluginStubMainThread {
     thread_id: ThreadId,
-    active: bool,
+    active: Cell<bool>,
 }
 
 impl PluginMainThread<'_, ()> for DivaPluginStubMainThread {}
@@ -41,7 +42,7 @@ impl DefaultPluginFactory for DivaPluginStub {
         _shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         Ok(DivaPluginStubMainThread {
-            active: false,
+            active: false.into(),
             thread_id: current().id(),
         })
     }
@@ -52,12 +53,12 @@ impl<'a> clack_plugin::plugin::PluginAudioProcessor<'a, (), DivaPluginStubMainTh
 {
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
-        main_thread: &mut DivaPluginStubMainThread,
+        main_thread: &DivaPluginStubMainThread,
         _shared: &'a (),
         _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
-        assert!(!main_thread.active);
-        main_thread.active = true;
+        assert!(!main_thread.active.get());
+        main_thread.active.set(true);
 
         Ok(Self { processing: false })
     }
@@ -73,10 +74,10 @@ impl<'a> clack_plugin::plugin::PluginAudioProcessor<'a, (), DivaPluginStubMainTh
         Ok(ProcessStatus::Sleep)
     }
 
-    fn deactivate(self, main_thread: &mut DivaPluginStubMainThread) {
+    fn deactivate(self, main_thread: &DivaPluginStubMainThread) {
         assert!(!self.processing);
-        assert!(main_thread.active);
-        main_thread.active = false;
+        assert!(main_thread.active.get());
+        main_thread.active.set(false);
     }
 
     fn start_processing(&mut self) -> Result<(), PluginError> {
@@ -99,7 +100,7 @@ impl Drop for DivaPluginStubAudioProcessor {
 
 impl Drop for DivaPluginStubMainThread {
     fn drop(&mut self) {
-        assert!(!self.active);
+        assert!(!self.active.get());
         assert_eq!(self.thread_id, current().id())
     }
 }
