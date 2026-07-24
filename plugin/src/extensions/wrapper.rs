@@ -10,7 +10,6 @@ use crate::process::PluginAudioConfiguration;
 use clap_sys::ext::log::*;
 use clap_sys::plugin::clap_plugin;
 use std::borrow::Cow;
-use std::cell::{Ref, RefCell};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
@@ -40,7 +39,7 @@ pub(crate) fn handle_panic<F: FnOnce() -> R, R>(f: F) -> std::thread::Result<R> 
 /// [`handle`](PluginWrapper::handle) function.
 pub struct PluginWrapper<'a, P: Plugin> {
     audio_processor: UnsafeOptionCell<P::AudioProcessor<'a>>,
-    main_thread: RefCell<P::MainThread<'a>>,
+    main_thread: P::MainThread<'a>,
     shared: Pin<Box<P::Shared<'a>>>,
     host: HostSharedHandle<'a>,
 }
@@ -57,7 +56,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         Self {
             host,
             shared,
-            main_thread: RefCell::new(main_thread),
+            main_thread,
             audio_processor: UnsafeOptionCell::new(),
         }
     }
@@ -77,7 +76,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
 
         let processor = P::AudioProcessor::activate(
             host.as_audio_processor_unchecked(),
-            &*self.main_thread()?,
+            self.main_thread(),
             shared,
             audio_config,
         )?;
@@ -94,7 +93,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
         match self.audio_processor.take() {
             None => Err(PluginWrapperError::DeactivatedPlugin),
             Some(audio_processor) => {
-                audio_processor.deactivate(&*self.main_thread()?);
+                audio_processor.deactivate(self.main_thread());
 
                 Ok(())
             }
@@ -125,10 +124,8 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
     /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn main_thread(&self) -> Result<Ref<'_, P::MainThread<'a>>, PluginWrapperError> {
-        self.main_thread
-            .try_borrow()
-            .map_err(|_| PluginWrapperError::MainThreadExclusivelyBorrowed)
+    pub unsafe fn main_thread(&self) -> &'_ P::MainThread<'a> {
+        &self.main_thread
     }
 
     /// Returns a raw, non-null pointer to the plugin's audio processor
@@ -208,7 +205,7 @@ impl<'a, P: Plugin> PluginWrapper<'a, P> {
     ///
     /// unsafe extern "C" fn on_main_thread<P: Plugin>(plugin: *const clap_plugin) {
     ///   PluginWrapper::<P>::handle(plugin, |p| {
-    ///     p.main_thread()?.on_main_thread();
+    ///     p.main_thread().on_main_thread();
     ///     Ok(())
     ///   });
     /// }
@@ -318,8 +315,6 @@ pub enum PluginWrapperError {
     AlreadyInitialized,
     /// An attempt was made to call `activate` on an already activated plugin.
     ActivatedPlugin,
-    /// An attempt was made to re-entrantly call a main-thread method inside a protected method (e.g. deinit)
-    MainThreadExclusivelyBorrowed,
     /// An attempt was made to call an audio-thread function while the plugin was deactivated
     /// (e.g. without previously calling `activate`).
     DeactivatedPlugin,
@@ -471,9 +466,6 @@ impl Display for PluginWrapperError {
                 f,
                 "Host attempted to call '{function}' while plugin was still active"
             ),
-            MainThreadExclusivelyBorrowed => {
-                f.write_str("Plugin main thread is being exclusively borrowed")
-            }
             StringEncoding(e) => {
                 write!(
                     f,

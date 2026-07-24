@@ -123,7 +123,7 @@ mod plugin {
                 "clap_plugin_render_mode",
             ))?;
 
-            Ok(plugin.main_thread()?.set(mode).is_ok())
+            Ok(plugin.main_thread().set(mode).is_ok())
         })
         .unwrap_or(false)
     }
@@ -136,7 +136,7 @@ mod plugin {
         for<'a> P::MainThread<'a>: PluginRenderImpl,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            Ok(plugin.main_thread()?.has_hard_realtime_requirement())
+            Ok(plugin.main_thread().has_hard_realtime_requirement())
         })
         .unwrap_or(false)
     }

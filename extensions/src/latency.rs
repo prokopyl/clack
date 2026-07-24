@@ -129,7 +129,7 @@ mod plugin {
     where
         for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.get())).unwrap_or(0)
+        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().get())).unwrap_or(0)
     }
 }
 #[cfg(feature = "clack-plugin")]

@@ -73,7 +73,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginNotePortsImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread()?.count(is_input))).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count(is_input))).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -92,7 +92,7 @@ where
         };
 
         let mut writer = NotePortInfoWriter::from_raw(info);
-        p.main_thread()?.get(index, is_input, &mut writer);
+        p.main_thread().get(index, is_input, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

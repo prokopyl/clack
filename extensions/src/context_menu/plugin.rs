@@ -143,7 +143,7 @@ where
         // for the duration of this function call, which is the (inferred) lifetime we give it here.
         let mut builder = unsafe { ContextMenuBuilder::from_raw(builder) };
 
-        plugin.main_thread()?.populate(target, &mut builder)?;
+        plugin.main_thread().populate(target, &mut builder)?;
 
         Ok(())
     })
@@ -166,7 +166,7 @@ where
         let action_id = ClapId::from_raw(action_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid Action ID"))?;
 
-        plugin.main_thread()?.perform(target, action_id)?;
+        plugin.main_thread().perform(target, action_id)?;
         Ok(())
     })
     .is_some()

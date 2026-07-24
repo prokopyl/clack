@@ -98,7 +98,7 @@ mod plugin {
                 ));
             };
 
-            p.main_thread()?.load(input, context)?;
+            p.main_thread().load(input, context)?;
             Ok(())
         })
         .is_some()
@@ -122,7 +122,7 @@ mod plugin {
             };
 
             let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));
-            p.main_thread()?.save(output, context)?;
+            p.main_thread().save(output, context)?;
             Ok(())
         })
         .is_some()

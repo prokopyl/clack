@@ -74,7 +74,7 @@
 //!     PluginWrapper::<P>::handle(plugin, |p| {
 //!         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
 //!         // Retrieve the plugin's main thread struct, and call load() on it
-//!         p.main_thread()?.load(input)?;
+//!         p.main_thread().load(input)?;
 //!         Ok(())
 //!     })
 //!     .is_some()

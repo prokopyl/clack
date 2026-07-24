@@ -242,7 +242,7 @@ mod plugin {
                     Some(color.read())
                 };
 
-                plugin.main_thread()?.set_mapping(
+                plugin.main_thread().set_mapping(
                     param_id,
                     has_mapping,
                     color,
@@ -279,7 +279,7 @@ mod plugin {
                 };
 
                 plugin
-                    .main_thread()?
+                    .main_thread()
                     .set_automation(param_id, automation_state, color);
                 Ok(())
             });

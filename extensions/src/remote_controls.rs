@@ -331,7 +331,7 @@ mod plugin {
     where
         P: for<'a> Plugin<MainThread<'a>: PluginRemoteControlsImpl>,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.count())).unwrap_or(0)
+        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().count())).unwrap_or(0)
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -345,7 +345,7 @@ mod plugin {
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             let mut writer = RemoteControlsPageWriter::from_raw(buf);
-            plugin.main_thread()?.get(index, &mut writer);
+            plugin.main_thread().get(index, &mut writer);
             Ok(writer.is_set)
         })
         .unwrap_or(false)

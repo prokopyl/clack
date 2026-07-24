@@ -166,7 +166,7 @@ mod plugin {
         for<'a> P: Plugin<MainThread<'a>: PluginTimerImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            plugin.main_thread()?.on_timer(TimerId(timer_id));
+            plugin.main_thread().on_timer(TimerId(timer_id));
             Ok(())
         });
     }

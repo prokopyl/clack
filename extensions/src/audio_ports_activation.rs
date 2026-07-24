@@ -214,7 +214,7 @@ mod plugin {
         // SAFETY: panics are caught by PluginWrapper so they don't cross FFI boundary
         unsafe {
             PluginWrapper::<P>::handle(plugin, |plugin| {
-                Ok(plugin.main_thread()?.can_activate_while_processing())
+                Ok(plugin.main_thread().can_activate_while_processing())
             })
             .unwrap_or(false)
         }
@@ -248,7 +248,7 @@ mod plugin {
                     }
                     Err(PluginWrapperError::DeactivatedPlugin) => {
                         // audio thread is *not* active, so this is to be done on the main thread
-                        Ok(plugin.main_thread()?.set_active(
+                        Ok(plugin.main_thread().set_active(
                             is_input,
                             port_index,
                             is_active,

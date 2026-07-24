@@ -188,7 +188,7 @@ mod plugin {
     where
         for<'a> P: Plugin<MainThread<'a>: PluginVoiceInfoImpl>,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| match plugin.main_thread()?.get() {
+        PluginWrapper::<P>::handle(plugin, |plugin| match plugin.main_thread().get() {
             None => Ok(false),
             Some(voice_info) => {
                 *info = voice_info.to_raw();

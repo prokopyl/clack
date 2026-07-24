@@ -61,7 +61,7 @@ where
                 ));
             }
 
-            Ok(p.main_thread()?
+            Ok(p.main_thread()
                 .can_apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))
@@ -87,7 +87,7 @@ where
                 ));
             }
 
-            Ok(p.main_thread()?
+            Ok(p.main_thread()
                 .apply_configuration(AudioPortRequest::slice_from_raw(
                     std::slice::from_raw_parts(requests, count as usize),
                 )))

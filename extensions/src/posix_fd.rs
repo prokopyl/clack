@@ -285,7 +285,7 @@ mod plugin {
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin
-                .main_thread()?
+                .main_thread()
                 .on_fd(fd, FdFlags::from_bits_truncate(flags));
 
             Ok(())

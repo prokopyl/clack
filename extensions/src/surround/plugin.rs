@@ -72,7 +72,7 @@ where
     unsafe {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin
-                .main_thread()?
+                .main_thread()
                 .is_channel_mask_supported(SurroundChannels::from_bits_retain(mask)))
         })
         .unwrap_or(false)
@@ -101,7 +101,7 @@ where
             };
 
             plugin
-                .main_thread()?
+                .main_thread()
                 .get_channel_map(is_input, port_index, &mut writer);
 
             // this will never truncate because `len` is always less than or equal to `out_capacity`, which is `u32`;

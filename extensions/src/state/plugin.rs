@@ -51,7 +51,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
-        p.main_thread()?.load(input)?;
+        p.main_thread().load(input)?;
         Ok(())
     })
     .is_some()
@@ -64,7 +64,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));
-        p.main_thread()?.save(output)?;
+        p.main_thread().save(output)?;
         Ok(())
     })
     .is_some()

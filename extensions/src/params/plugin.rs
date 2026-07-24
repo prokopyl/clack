@@ -224,7 +224,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread()?.count())).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -238,7 +238,7 @@ where
 {
     let mut info = ParamInfoWriter::new(value);
     PluginWrapper::<P>::handle(plugin, |p| {
-        p.main_thread()?.get_info(param_index, &mut info);
+        p.main_thread().get_info(param_index, &mut info);
         Ok(())
     })
     .is_some()
@@ -258,7 +258,7 @@ where
         let param_id = ClapId::from_raw(param_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
-        Ok(p.main_thread()?.get_value(param_id))
+        Ok(p.main_thread().get_value(param_id))
     })
     .flatten();
 
@@ -288,7 +288,7 @@ where
         let param_id = ClapId::from_raw(param_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
-        p.main_thread()?
+        p.main_thread()
             .value_to_text(param_id, value, &mut writer)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
@@ -311,7 +311,7 @@ where
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
         let display = CStr::from_ptr(display);
-        Ok(p.main_thread()?.text_to_value(param_id, display))
+        Ok(p.main_thread().text_to_value(param_id, display))
     });
 
     match result {
@@ -344,7 +344,7 @@ unsafe extern "C" fn flush<P>(
                 .as_mut()
                 .flush(input_parameter_changes, output_parameter_changes);
         } else {
-            p.main_thread()?
+            p.main_thread()
                 .flush(input_parameter_changes, output_parameter_changes);
         }
         Ok(())

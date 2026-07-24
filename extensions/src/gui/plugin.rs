@@ -219,7 +219,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread()?.is_api_supported(GuiConfiguration {
+        Ok(plugin.main_thread().is_api_supported(GuiConfiguration {
             api_type: GuiApiType(CStr::from_ptr(api)),
             is_floating,
         }))
@@ -241,7 +241,7 @@ where
             return Err(PluginWrapperError::NulPtr("get_preferred_api output"));
         }
 
-        match plugin.main_thread()?.get_preferred_api() {
+        match plugin.main_thread().get_preferred_api() {
             None => Ok(false),
             Some(GuiConfiguration {
                 api_type,
@@ -268,7 +268,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
-            .main_thread()?
+            .main_thread()
             .create(GuiConfiguration {
                 api_type: GuiApiType(CStr::from_ptr(api)),
                 is_floating,
@@ -284,7 +284,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        plugin.main_thread()?.destroy();
+        plugin.main_thread().destroy();
         Ok(())
     });
 }
@@ -295,7 +295,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread()?.set_scale(scale).is_ok())
+        Ok(plugin.main_thread().set_scale(scale).is_ok())
     })
     .unwrap_or(false)
 }
@@ -310,7 +310,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if let Some(size) = plugin.main_thread()?.get_size() {
+        if let Some(size) = plugin.main_thread().get_size() {
             *width = size.width;
             *height = size.height;
             Ok(true)
@@ -328,7 +328,7 @@ unsafe extern "C" fn can_resize<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.can_resize()))
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().can_resize()))
         .unwrap_or(false)
 }
 
@@ -341,7 +341,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if let Some(plugin_hints) = plugin.main_thread()?.get_resize_hints() {
+        if let Some(plugin_hints) = plugin.main_thread().get_resize_hints() {
             *hints = plugin_hints.to_raw();
             Ok(true)
         } else {
@@ -382,7 +382,7 @@ where
             height: *height_adj,
         };
 
-        if let Some(best_fit) = plugin.main_thread()?.adjust_size(size) {
+        if let Some(best_fit) = plugin.main_thread().adjust_size(size) {
             *width_adj = best_fit.width;
             *height_adj = best_fit.height;
             Ok(true)
@@ -400,7 +400,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = GuiSize { width, height };
-        Ok(plugin.main_thread()?.set_size(size))
+        Ok(plugin.main_thread().set_size(size))
     })
     .is_some()
 }
@@ -416,7 +416,7 @@ where
             .ok_or(PluginWrapperError::NulPtr("clap_window"))?;
 
         Ok(plugin
-            .main_thread()?
+            .main_thread()
             .set_parent(Window::from_raw(*window))
             .is_ok())
     })
@@ -437,7 +437,7 @@ where
             .ok_or(PluginWrapperError::NulPtr("clap_window"))?;
 
         Ok(plugin
-            .main_thread()?
+            .main_thread()
             .set_transient(Window::from_raw(*window))
             .is_ok())
     })
@@ -454,7 +454,7 @@ where
             .to_str()
             .map_err(PluginWrapperError::StringEncoding)?;
 
-        plugin.main_thread()?.suggest_title(title);
+        plugin.main_thread().suggest_title(title);
 
         Ok(())
     });
@@ -465,7 +465,7 @@ unsafe extern "C" fn show<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.show().is_ok()))
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().show().is_ok()))
         .unwrap_or(false)
 }
 
@@ -474,6 +474,6 @@ unsafe extern "C" fn hide<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread()?.hide().is_ok()))
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().hide().is_ok()))
         .unwrap_or(false)
 }

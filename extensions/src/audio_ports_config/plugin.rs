@@ -69,7 +69,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread()?.count())).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -87,7 +87,7 @@ where
         };
 
         let mut writer = AudioPortConfigWriter::from_raw(config);
-        p.main_thread()?.get(index, &mut writer);
+        p.main_thread().get(index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)
@@ -108,7 +108,7 @@ where
         let config_id = ClapId::from_raw(config_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid config_id"))?;
 
-        Ok(p.main_thread()?.select(config_id).is_ok())
+        Ok(p.main_thread().select(config_id).is_ok())
     })
     .unwrap_or(false)
 }
@@ -120,7 +120,7 @@ where
 {
     unsafe {
         PluginWrapper::<P>::handle(plugin, |p| {
-            Ok(match p.main_thread()?.current_config() {
+            Ok(match p.main_thread().current_config() {
                 Some(id) => id.get(),
                 None => CLAP_INVALID_ID,
             })
@@ -148,7 +148,7 @@ where
 
             let mut writer = AudioPortInfoWriter::from_raw(info);
 
-            p.main_thread()?.get(
+            p.main_thread().get(
                 ClapId::from_raw(config_id)
                     .ok_or(PluginWrapperError::InvalidParameter("config_id"))?,
                 index,

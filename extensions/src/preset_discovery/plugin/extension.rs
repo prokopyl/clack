@@ -100,7 +100,7 @@ where
         let load_key = cstr_from_nullable_ptr(load_key);
 
         plugin
-            .main_thread()?
+            .main_thread()
             .load_from_location(location, load_key)?;
 
         Ok(())

@@ -96,7 +96,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginAsVST3Impl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread()?.num_midi_channels(note_port))
+        Ok(plugin.main_thread().num_midi_channels(note_port))
     })
     .unwrap_or(0)
 }
@@ -107,7 +107,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginAsVST3Impl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread()?.supported_note_expressions().bits())
+        Ok(plugin.main_thread().supported_note_expressions().bits())
     })
     .unwrap_or(0)
 }
