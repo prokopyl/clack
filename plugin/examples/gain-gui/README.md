@@ -24,7 +24,7 @@ To build this example from source, move (`cd`) to the directory containing
 the Clack source code, and you can build the example using `cargo` like so:
 
 ```shell
-cargo build -p clack-plugin-gain --release
+cargo build -p clack-plugin-gain-gui --release
 ```
 
 This will create a `clack_plugin_gain` library file (suffix may vary depending on
