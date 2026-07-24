@@ -1,7 +1,6 @@
 use crate::gui::GuiApiType;
 use clap_sys::ext::gui::*;
 use core::ffi::{CStr, c_ulong, c_void};
-use raw_window_handle_06::WindowHandle;
 use std::marker::PhantomData;
 
 /// A handle to a host-provided parent window.
@@ -218,7 +217,7 @@ const _: () = {
 const _: () = {
     use raw_window_handle_06::{
         AppKitWindowHandle, HandleError, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
-        XlibWindowHandle,
+        WindowHandle, XlibWindowHandle,
     };
     use std::num::NonZeroIsize;
     use std::ptr::NonNull;
