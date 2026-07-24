@@ -20,8 +20,9 @@ clack-extensions = { workspace = true, features = [
     "state",
 ] }
 
-baseview = { git = "https://github.com/RustAudio/baseview.git", rev = "237d323c729f3aa99476ba3efa50129c5e86cad3", version = "0.1.0" }
-egui-baseview = { git = "https://codeberg.org/BillyDM/egui-baseview.git", branch = "egui_33", version = "0.7.0" }
+baseview = { version = "0.2.2" }
+egui-baseview = { version = "0.6.0" }
+egui = "0.35.0"
 
 [dev-dependencies]
 clack-host = { workspace = true, features = ["clack-plugin"] }

@@ -71,7 +71,7 @@ fn run_from_path(path: &Path) -> Result<(), Box<dyn Error>> {
     );
 
     for p in &entries {
-        println!("\t > {}", &p.plugin)
+        println!("\t > {}", p.plugin)
     }
 
     if entries.len() == 1 {
@@ -95,7 +95,7 @@ fn run_from_id(id: &str) -> Result<(), Box<dyn Error>> {
     println!("Found {} CLAP plugins with id {}:", entries.len(), id);
 
     for p in &entries {
-        println!("\t > {} in {}", &p.plugin, p.path.display())
+        println!("\t > {} in {}", p.plugin, p.path.display())
     }
 
     if entries.len() == 1 {
