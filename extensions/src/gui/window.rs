@@ -1,6 +1,7 @@
 use crate::gui::GuiApiType;
 use clap_sys::ext::gui::*;
 use core::ffi::{CStr, c_ulong, c_void};
+use raw_window_handle_06::WindowHandle;
 use std::marker::PhantomData;
 
 /// A handle to a host-provided parent window.
@@ -272,6 +273,27 @@ const _: () = {
                 RawWindowHandle::Xlib(handle) => Some(Self::from_x11_handle(handle.window)),
                 _ => None,
             }
+        }
+    }
+
+    impl Window<'_> {
+        /// Borrows a [`WindowHandle`] from this window, but returns a handle with an arbitrary lifetime.
+        ///
+        /// # Errors
+        ///
+        /// This may return an error if the [`Window`]'s GUI API type is not supported.
+        ///
+        /// # Safety
+        ///
+        /// The resulting window handle has an arbitrary lifetime, and may contain dangling pointers
+        /// at any time.
+        ///
+        /// Special care must be taken in order to ensure that this handle isn't going to be used
+        /// after the underlying window object has been destroyed.
+        /// (Which is usually only after `gui.destroy` was called).
+        #[inline]
+        pub unsafe fn borrow_handle_unchecked<'a>(&self) -> Result<WindowHandle<'a>, HandleError> {
+            Ok(WindowHandle::borrow_raw(self.raw_window_handle()?))
         }
     }
 };

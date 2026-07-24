@@ -242,7 +242,7 @@ fn find_main_note_port_index(instance: &mut PluginInstance<CpalHost>) -> Option<
         let port_name = String::from_utf8_lossy(port_info.name);
         println!(
             "Found Note port '{}' (ID {}, Supports CLAP events: {})",
-            &port_name, port_info.id, !prefers_midi
+            port_name, port_info.id, !prefers_midi
         );
 
         return Some((i as u16, prefers_midi));

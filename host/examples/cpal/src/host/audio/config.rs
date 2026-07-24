@@ -83,7 +83,7 @@ impl Display for FullAudioConfig {
             self.sample_rate as f64 / 1_000.0,
             self.min_buffer_size,
             self.max_likely_buffer_size,
-            &self.plugin_output_port_config.main_port().name,
+            self.plugin_output_port_config.main_port().name,
             self.plugin_output_port_config.main_port().port_layout
         )
     }

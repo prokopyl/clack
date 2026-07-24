@@ -94,11 +94,11 @@ impl PluginDescriptor {
 impl Display for PluginDescriptor {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match (&self.name, &self.version) {
-            (None, None) => write!(f, "{}", &self.id),
-            (Some(name), None) => write!(f, "{} ({})", name, &self.id),
-            (None, Some(version)) => write!(f, "{} <version {}>", &self.id, version),
+            (None, None) => write!(f, "{}", self.id),
+            (Some(name), None) => write!(f, "{} ({})", name, self.id),
+            (None, Some(version)) => write!(f, "{} <version {}>", self.id, version),
             (Some(name), Some(version)) => {
-                write!(f, "{} ({}) <version {}>", name, &self.id, version)
+                write!(f, "{} ({}) <version {}>", name, self.id, version)
             }
         }
     }

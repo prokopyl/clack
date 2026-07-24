@@ -2,13 +2,12 @@
 
 use crate::params::GainParamsLocal;
 use crate::{GainPluginMainThread, GainPluginShared, params::GainParamsShared};
-use baseview::{Size, WindowHandle, WindowOpenOptions, WindowScalePolicy};
+use baseview::WindowHandle;
+use baseview::dpi::LogicalSize;
 use clack_extensions::gui::*;
 use clack_plugin::prelude::*;
-use egui_baseview::{
-    EguiWindow, GraphicsConfig, Queue,
-    egui::{self, Context, Slider},
-};
+use egui::{CentralPanel, Context, Slider};
+use egui_baseview::{EguiWindow, EguiWindowSettings};
 use std::sync::Arc;
 
 /// The EGUI application state
@@ -40,27 +39,24 @@ pub struct GainPluginGui {
 impl GainPluginGui {
     /// Creates a new GUI window, and embeds it into the given `parent`.
     pub fn new(parent: Window<'_>, state: &GainPluginShared) -> Self {
-        let settings = WindowOpenOptions {
-            title: "Gain Plugin".to_string(),
-            size: Size::new(400.0, 200.0),
-            scale: WindowScalePolicy::SystemScaleFactor,
-            gl_config: Some(Default::default()),
-        };
+        let settings = EguiWindowSettings::new()
+            .with_tile("Gain Plugin")
+            .with_size(LogicalSize::new(300, 110));
+
+        let parent = unsafe { parent.borrow_handle_unchecked() }.unwrap();
 
         let (tx, rx) = std::sync::mpsc::channel();
 
         let handle = EguiWindow::open_parented(
             &parent,
             settings,
-            GraphicsConfig::default(),
             AppState::new(&state.params),
-            move |egui_ctx: &Context, _queue: &mut Queue, _state: &mut AppState| {
-                tx.send(egui_ctx.clone()).unwrap()
-            },
-            |egui_ctx: &Context, _queue: &mut Queue, state: &mut AppState| {
+            move |egui_ctx, _queue, _state| tx.send(egui_ctx.clone()).unwrap(),
+            |_, _, _| {},
+            |egui_ctx, _queue, state: &mut AppState| {
                 state.local_params.fetch_updates(&state.shared_params);
 
-                egui::CentralPanel::default().show(egui_ctx, |ui| {
+                CentralPanel::default().show(egui_ctx, |ui| {
                     ui.heading("Gain Plugin");
                     let mut value = state.local_params.get_volume();
 
