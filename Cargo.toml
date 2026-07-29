@@ -17,10 +17,10 @@ members = [
 ]
 
 [workspace.dependencies]
-clack-common = { path = "./common", version = "0.1.0" }
-clack-plugin = { path = "./plugin", version = "0.1.0" }
-clack-host = { path = "./host", version = "0.1.0", default-features = false }
-clack-extensions = { path = "./extensions", version = "0.1.0" }
+clack-common = { path = "./common", version = "0.1.1" }
+clack-plugin = { path = "./plugin", version = "0.1.1" }
+clack-host = { path = "./host", version = "0.1.1", default-features = false }
+clack-extensions = { path = "./extensions", version = "0.1.1" }
 clack-finder = { path = "./finder", version = "0.1.0" }
 
 clap-sys = "0.5.0"
