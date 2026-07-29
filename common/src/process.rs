@@ -78,6 +78,48 @@ pub struct PluginAudioConfiguration {
     pub max_frames_count: u32,
 }
 
+impl PluginAudioConfiguration {
+    /// Validates this [`PluginAudioConfiguration`].
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if either `min_frames_count` or `max_frames_count` is 0, or if
+    /// `min_frames_count` is greater than `max_frames_count`.
+    pub fn validate(&self) {
+        static MIN: &str = "min_frames_count";
+        static MAX: &str = "max_frames_count";
+        static INVALID: &str = "Invalid PluginAudioConfiguration: ";
+        static ZERO: &str = " cannot be 0";
+
+        if self.min_frames_count == 0 {
+            invalid();
+            #[cold]
+            fn invalid() -> ! {
+                panic!("{INVALID}{MIN}{ZERO}");
+            }
+        }
+
+        if self.max_frames_count == 0 {
+            invalid();
+            #[cold]
+            fn invalid() -> ! {
+                panic!("{INVALID}{MAX}{ZERO}");
+            }
+        }
+
+        if self.min_frames_count > self.max_frames_count {
+            invalid(self);
+            #[cold]
+            fn invalid(cfg: &PluginAudioConfiguration) -> ! {
+                panic!(
+                    "{INVALID}{MIN} ({}) is greater than {MAX} ({})",
+                    cfg.min_frames_count, cfg.max_frames_count
+                );
+            }
+        }
+    }
+}
+
 use clap_sys::audio_buffer::clap_audio_buffer;
 
 /// Processing-related information about an audio port.

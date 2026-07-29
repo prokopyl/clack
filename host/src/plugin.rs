@@ -146,6 +146,11 @@ impl<H: HostHandlers> PluginInstance<H> {
     ///
     /// Otherwise, if the plugin instance's `activate` function implementation failed for any reason,
     /// this will return [`PluginInstanceError::ActivationFailed`].
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if either `min_frames_count` or `max_frames_count` is 0, or if
+    /// `min_frames_count` is greater than `max_frames_count`.
     pub fn activate<FA>(
         &mut self,
         audio_processor: FA,
@@ -157,6 +162,7 @@ impl<H: HostHandlers> PluginInstance<H> {
             &mut <H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
+        configuration.validate();
         let wrapper =
             Arc::get_mut(&mut self.inner).ok_or(PluginInstanceError::AlreadyActivatedPlugin)?;
         wrapper.activate(audio_processor, configuration)?;
