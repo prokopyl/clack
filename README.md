@@ -17,7 +17,7 @@ only Clack if you so choose, or if you do need low-level control and access to t
 
 Because Clack is designed as a very low-level library, it will expose every single one of the CLAP API's details to you,
 and let you deal with them. If you want to make a "normal" plugin, you may be better served with high-level, opinionated
-libraries such as [NIH-Plug](https://github.com/robbert-vdh/nih-plug), which takes care of much of the "plumbing"
+libraries such as [Nice-Plug](https://codeberg.org/RustAudio/nice-plug), which takes care of much of the "plumbing"
 for you, has many built-in features, and will also give you VST3 and Standalone support for free.
 
 As for making CLAP hosts in Rust however, there is (to the author's knowledge) no higher-level alternative
