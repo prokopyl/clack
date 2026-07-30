@@ -29,10 +29,10 @@ impl AsRef<UnknownEvent> for ParamValueEvent {
 }
 
 impl ParamValueEvent {
-    /// Creates a new [`ParamValueEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target,
-    /// a parameter `value` and an optional [`Cookie`].
+    /// Creates a new [`ParamValueEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target and
+    /// a parameter `value`.
     #[inline]
-    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, value: f64, cookie: Cookie) -> Self {
+    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, value: f64) -> Self {
         Self {
             inner: clap_event_param_value {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -42,7 +42,7 @@ impl ParamValueEvent {
                 key: pckn.raw_key(),
                 channel: pckn.raw_channel(),
                 value,
-                cookie: cookie.as_raw(),
+                cookie: Cookie::empty().as_raw(),
             },
         }
     }
@@ -101,16 +101,26 @@ impl ParamValueEvent {
     }
 
     /// Sets the given [`Cookie`] to be sent alongside this event.
+    ///
+    /// # Safety
+    ///
+    /// Users *must* ensure that this cookie is either `Cookie::empty()`, or matches this event's
+    /// target parameter's current cookie when this event is delivered to the plugin.
     #[inline]
-    pub const fn set_cookie(&mut self, cookie: Cookie) {
+    pub const unsafe fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
     /// Builds a [`ParamValueEvent`] with the given [`Cookie`], and returns it.
     ///
     /// This is useful to use in a builder-style pattern.
+    ///
+    /// # Safety
+    ///
+    /// Users *must* ensure that this cookie is either `Cookie::empty()`, or matches this event's
+    /// target parameter's current cookie when this event is delivered to the plugin.
     #[inline]
-    pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
+    pub const unsafe fn with_cookie(mut self, cookie: Cookie) -> Self {
         self.inner.cookie = cookie.as_raw();
         self
     }
@@ -164,10 +174,10 @@ impl AsRef<UnknownEvent> for ParamModEvent {
 }
 
 impl ParamModEvent {
-    /// Creates a new [`ParamModEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target,
-    /// a parameter modulation `amount` and an optional [`Cookie`].
+    /// Creates a new [`ParamModEvent`] from a `time` stamp, a parameter ID, a [`Pckn`] target and
+    /// a parameter modulation `amount`.
     #[inline]
-    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, amount: f64, cookie: Cookie) -> Self {
+    pub const fn new(time: u32, param_id: ClapId, pckn: Pckn, amount: f64) -> Self {
         Self {
             inner: clap_event_param_mod {
                 header: EventHeader::<Self>::new_core(time, EventFlags::empty()).into_raw(),
@@ -177,7 +187,7 @@ impl ParamModEvent {
                 key: pckn.raw_key(),
                 channel: pckn.raw_channel(),
                 amount,
-                cookie: cookie.as_raw(),
+                cookie: Cookie::empty().as_raw(),
             },
         }
     }
@@ -192,7 +202,7 @@ impl ParamModEvent {
 
     /// Sets the parameter ID this event targets.
     #[inline]
-    pub fn set_param_id(&mut self, param_id: ClapId) {
+    pub const fn set_param_id(&mut self, param_id: ClapId) {
         self.inner.param_id = param_id.get()
     }
 
@@ -213,7 +223,7 @@ impl ParamModEvent {
 
     /// Sets the parameter modulation amount of this event.
     #[inline]
-    pub fn set_amount(&mut self, amount: f64) {
+    pub const fn set_amount(&mut self, amount: f64) {
         self.inner.amount = amount
     }
 
@@ -236,16 +246,26 @@ impl ParamModEvent {
     }
 
     /// Sets the given [`Cookie`] to be sent alongside this event.
+    ///
+    /// # Safety
+    ///
+    /// Users *must* ensure that this cookie is either `Cookie::empty()`, or matches this event's
+    /// target parameter's current cookie when this event is delivered to the plugin.
     #[inline]
-    pub fn set_cookie(&mut self, cookie: Cookie) {
+    pub const unsafe fn set_cookie(&mut self, cookie: Cookie) {
         self.inner.cookie = cookie.as_raw()
     }
 
     /// Builds a [`ParamValueEvent`] with the given [`Cookie`], and returns it.
     ///
     /// This is useful to use in a builder-style pattern.
+    ///
+    /// # Safety
+    ///
+    /// Users *must* ensure that this cookie is either `Cookie::empty()`, or matches this event's
+    /// target parameter's current cookie when this event is delivered to the plugin.
     #[inline]
-    pub const fn with_cookie(mut self, cookie: Cookie) -> Self {
+    pub const unsafe fn with_cookie(mut self, cookie: Cookie) -> Self {
         self.inner.cookie = cookie.as_raw();
         self
     }
