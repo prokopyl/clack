@@ -8,6 +8,7 @@ use clack_plugin::events::spaces::CoreEventSpace;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
 use clack_plugin::utils::Cookie;
+use std::cell::Cell;
 use std::ffi::CStr;
 use std::fmt::Write as _;
 use std::io::{Read, Write as _};
@@ -63,43 +64,43 @@ pub enum GestureChange {
 /// to.
 pub struct GainParamsLocal {
     /// The local value of the volume parameter.
-    volume: f32,
+    volume: Cell<f32>,
     /// Whether the user is currently changing the parameter, that we know of
-    pub has_gesture: bool,
+    pub has_gesture: Cell<bool>,
 }
 
 impl GainParamsLocal {
     /// Initializes a new local state from the current shared state.
     pub fn new(shared: &GainParamsShared) -> Self {
         Self {
-            volume: shared.volume.load(),
-            has_gesture: shared.has_gesture.load(Ordering::Relaxed),
+            volume: shared.volume.load().into(),
+            has_gesture: shared.has_gesture.load(Ordering::Relaxed).into(),
         }
     }
 
     /// Returns the current local volume value.
     #[inline]
     pub fn get_volume(&self) -> f32 {
-        self.volume
+        self.volume.get()
     }
 
     /// Sets the current local volume value to `new_volume`.
     ///
     /// It is clamped to the range `0..=1.0`.
     #[inline]
-    pub fn set_volume(&mut self, new_volume: f32) {
-        self.volume = new_volume.clamp(0.0, 1.0);
+    pub fn set_volume(&self, new_volume: f32) {
+        self.volume.set(new_volume.clamp(0.0, 1.0));
     }
 
     /// Fetch updates from the `shared` state.
     ///
     /// If the volume parameter has been updated, this returns `true`.
     #[inline]
-    pub fn fetch_updates(&mut self, shared: &GainParamsShared) -> bool {
+    pub fn fetch_updates(&self, shared: &GainParamsShared) -> bool {
         let latest_volume = shared.volume.load();
 
-        if latest_volume != self.volume {
-            self.volume = latest_volume;
+        if latest_volume != self.volume.get() {
+            self.volume.set(latest_volume);
             true
         } else {
             false
@@ -111,9 +112,9 @@ impl GainParamsLocal {
     /// If the values were different and an actual update occurred, this returns `true`.
     #[inline]
     pub fn push_updates(&self, shared: &GainParamsShared) -> bool {
-        let previous_value = shared.volume.swap(self.volume);
+        let previous_value = shared.volume.swap(self.volume.get());
 
-        previous_value != self.volume
+        previous_value != self.volume.get()
     }
 
     /// Pushes the local gesture state to the `shared` state.
@@ -121,7 +122,7 @@ impl GainParamsLocal {
     pub fn push_gesture(&self, shared: &GainParamsShared) {
         shared
             .has_gesture
-            .store(self.has_gesture, Ordering::Relaxed);
+            .store(self.has_gesture.get(), Ordering::Relaxed);
     }
 
     /// Fetches updates to the gesture state.
@@ -134,12 +135,13 @@ impl GainParamsLocal {
         shared: &GainParamsShared,
         has_ui_param_updates: bool,
     ) -> Option<GestureChange> {
-        let previous_gesture = self.has_gesture;
+        let previous_gesture = self.has_gesture.get();
 
-        self.has_gesture = shared.has_gesture.load(Ordering::Relaxed);
+        self.has_gesture
+            .set(shared.has_gesture.load(Ordering::Relaxed));
 
-        if previous_gesture == self.has_gesture {
-            return if has_ui_param_updates && !self.has_gesture {
+        if previous_gesture == self.has_gesture.get() {
+            return if has_ui_param_updates && !self.has_gesture.get() {
                 Some(GestureChange::Both)
             } else {
                 None
@@ -157,7 +159,7 @@ impl GainParamsLocal {
     ///
     /// If the given event is a matching parameter change event, the volume parameter will be
     /// updated accordingly.
-    pub fn handle_event(&mut self, event: &UnknownEvent) {
+    pub fn handle_event(&self, event: &UnknownEvent) {
         if let Some(CoreEventSpace::ParamValue(event)) = event.as_core_event() {
             if event.param_id() == GainParamsShared::PARAM_VOLUME_ID {
                 self.set_volume(event.value() as f32);
@@ -171,7 +173,7 @@ impl GainParamsLocal {
             0,
             GainParamsShared::PARAM_VOLUME_ID,
             Pckn::match_all(),
-            self.volume as f64,
+            self.volume.get() as f64,
             Cookie::empty(),
         );
 
@@ -184,7 +186,7 @@ impl GainParamsLocal {
 /// Our state "serialization" is extremely simple and basic: we only have the value of the
 /// volume parameter to store, so we just store its bytes (in little-endian) and call it a day.
 impl PluginStateImpl for GainPluginMainThread<'_> {
-    fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
+    fn save(&self, output: &mut OutputStream) -> Result<(), PluginError> {
         self.params.fetch_updates(&self.shared.params);
         let volume_param = self.params.get_volume();
 
@@ -192,7 +194,7 @@ impl PluginStateImpl for GainPluginMainThread<'_> {
         Ok(())
     }
 
-    fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError> {
+    fn load(&self, input: &mut InputStream) -> Result<(), PluginError> {
         let mut buf = [0; 4];
         input.read_exact(&mut buf)?;
         let volume_value = f32::from_le_bytes(buf);
@@ -203,11 +205,11 @@ impl PluginStateImpl for GainPluginMainThread<'_> {
 }
 
 impl PluginMainThreadParams for GainPluginMainThread<'_> {
-    fn count(&mut self) -> u32 {
+    fn count(&self) -> u32 {
         1
     }
 
-    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
+    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter) {
         if param_index != 0 {
             return;
         }
@@ -223,7 +225,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         })
     }
 
-    fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
+    fn get_value(&self, param_id: ClapId) -> Option<f64> {
         if param_id == 1 {
             Some(self.params.get_volume() as f64)
         } else {
@@ -232,7 +234,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
     }
 
     fn value_to_text(
-        &mut self,
+        &self,
         param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
@@ -244,7 +246,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         }
     }
 
-    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64> {
+    fn text_to_value(&self, param_id: ClapId, text: &CStr) -> Option<f64> {
         let text = text.to_str().ok()?;
         if param_id == 1 {
             let text = text.strip_suffix('%').unwrap_or(text).trim();
@@ -257,7 +259,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
     }
 
     fn flush(
-        &mut self,
+        &self,
         input_parameter_changes: &InputEvents,
         _output_parameter_changes: &mut OutputEvents,
     ) {

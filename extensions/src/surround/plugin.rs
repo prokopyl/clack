@@ -43,13 +43,13 @@ impl HostSurround {
 /// The plugin-side implementation of the Surround extension.
 pub trait PluginSurroundImpl {
     /// Returns true if the given surround channel mask is supported.
-    fn is_channel_mask_supported(&mut self, mask: SurroundChannels) -> bool;
+    fn is_channel_mask_supported(&self, mask: SurroundChannels) -> bool;
 
     /// Fills the given writer with the surround channel map for the given port, if applicable.
     ///
     /// You should write exactly `channel_count` channels to the writer. This function should only be
     /// called if the port it is called for has a [`SURROUND`](crate::audio_ports::AudioPortType::SURROUND) type.
-    fn get_channel_map(&mut self, is_input: bool, port_index: u32, writer: &mut SurroundMapWriter);
+    fn get_channel_map(&self, is_input: bool, port_index: u32, writer: &mut SurroundMapWriter);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -73,7 +73,6 @@ where
         PluginWrapper::<P>::handle(plugin, |plugin| {
             Ok(plugin
                 .main_thread()
-                .as_mut()
                 .is_channel_mask_supported(SurroundChannels::from_bits_retain(mask)))
         })
         .unwrap_or(false)
@@ -103,7 +102,6 @@ where
 
             plugin
                 .main_thread()
-                .as_mut()
                 .get_channel_map(is_input, port_index, &mut writer);
 
             // this will never truncate because `len` is always less than or equal to `out_capacity`, which is `u32`;

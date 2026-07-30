@@ -8,7 +8,7 @@ impl HostState {
     ///
     /// Note that if a parameter value changes, it is implicit that the state is dirty.
     #[inline]
-    pub fn mark_dirty(&mut self, host: &HostMainThreadHandle) {
+    pub fn mark_dirty(&self, host: &HostMainThreadHandle) {
         if let Some(mark_dirty) = host.use_extension(&self.0).mark_dirty {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { mark_dirty(host.as_raw()) }
@@ -23,13 +23,13 @@ pub trait PluginStateImpl {
     /// # Errors
     ///
     /// If this operation fails, any [`PluginError`] can be returned.
-    fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError>;
+    fn save(&self, output: &mut OutputStream) -> Result<(), PluginError>;
     /// Loads the plugin state from a given `input` byte stream.
     ///
     /// # Errors
     ///
     /// If this operation fails, any [`PluginError`] can be returned.
-    fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError>;
+    fn load(&self, input: &mut InputStream) -> Result<(), PluginError>;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -51,7 +51,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let input = InputStream::from_raw_mut(&mut *(stream as *mut _));
-        p.main_thread().as_mut().load(input)?;
+        p.main_thread().load(input)?;
         Ok(())
     })
     .is_some()
@@ -64,7 +64,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |p| {
         let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));
-        p.main_thread().as_mut().save(output)?;
+        p.main_thread().save(output)?;
         Ok(())
     })
     .is_some()

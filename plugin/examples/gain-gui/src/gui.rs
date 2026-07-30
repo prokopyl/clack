@@ -67,7 +67,10 @@ impl GainPluginGui {
                         state.local_params.push_updates(&state.shared_params);
                     };
 
-                    state.local_params.has_gesture = slider.is_pointer_button_down_on();
+                    state
+                        .local_params
+                        .has_gesture
+                        .set(slider.is_pointer_button_down_on());
                     state.local_params.push_gesture(&state.shared_params);
                 });
             },
@@ -94,20 +97,20 @@ impl Drop for GainPluginGui {
 }
 
 impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
-    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool {
+    fn is_api_supported(&self, configuration: GuiConfiguration) -> bool {
         configuration.api_type
             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
             && !configuration.is_floating
     }
 
-    fn get_preferred_api(&mut self) -> Option<GuiConfiguration<'_>> {
+    fn get_preferred_api(&self) -> Option<GuiConfiguration<'_>> {
         Some(GuiConfiguration {
             api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
             is_floating: false,
         })
     }
 
-    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError> {
+    fn create(&self, configuration: GuiConfiguration) -> Result<(), PluginError> {
         if configuration.is_floating {
             return Err(PluginError::Message(
                 "Invalid GUI configuration: this plugin does not support floating mode",
@@ -126,43 +129,44 @@ impl<'a> PluginGuiImpl for GainPluginMainThread<'a> {
         Ok(())
     }
 
-    fn destroy(&mut self) {
+    fn destroy(&self) {
         let _ = self.gui.take();
     }
 
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
+    fn set_scale(&self, _scale: f64) -> Result<(), PluginError> {
         Ok(())
     }
 
-    fn get_size(&mut self) -> Option<GuiSize> {
+    fn get_size(&self) -> Option<GuiSize> {
         Some(GuiSize {
             width: 400,
             height: 200,
         })
     }
 
-    fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
+    fn set_size(&self, _size: GuiSize) -> Result<(), PluginError> {
         Ok(())
     }
 
-    fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
-        self.gui = Some(GainPluginGui::new(window, self.shared));
+    fn set_parent(&self, window: Window) -> Result<(), PluginError> {
+        self.gui
+            .replace(Some(GainPluginGui::new(window, self.shared)));
         Ok(())
     }
 
-    fn set_transient(&mut self, _window: Window) -> Result<(), PluginError> {
+    fn set_transient(&self, _window: Window) -> Result<(), PluginError> {
         Ok(())
     }
 
-    fn show(&mut self) -> Result<(), PluginError> {
-        if let Some(gui) = &self.gui {
+    fn show(&self) -> Result<(), PluginError> {
+        if let Some(gui) = &self.gui.borrow().as_ref() {
             gui.request_repaint()
         }
         Ok(())
     }
 
-    fn hide(&mut self) -> Result<(), PluginError> {
-        if let Some(gui) = &self.gui {
+    fn hide(&self) -> Result<(), PluginError> {
+        if let Some(gui) = &self.gui.borrow().as_ref() {
             gui.request_repaint()
         }
 

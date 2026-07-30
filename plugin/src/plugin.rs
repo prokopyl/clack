@@ -87,7 +87,7 @@ pub trait PluginMainThread<'a, S: PluginShared<'a>>: Sized + 'a {
     ///
     /// The default implementation of this method does nothing.
     #[inline]
-    fn on_main_thread(&mut self) {}
+    fn on_main_thread(&self) {}
 }
 
 impl<'a, S: PluginShared<'a>> PluginMainThread<'a, S> for () {}
@@ -197,7 +197,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     /// other initialization the plugin may deem necessary.
     fn activate(
         host: HostAudioProcessorHandle<'a>,
-        main_thread: &mut M,
+        main_thread: &M,
         shared: &'a S,
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError>;
@@ -246,7 +246,7 @@ pub trait PluginAudioProcessor<'a, S: PluginShared<'a>, M: PluginMainThread<'a, 
     /// any other un-initialization the plugin may deem necessary.
     #[allow(unused)]
     #[inline]
-    fn deactivate(self, main_thread: &mut M) {}
+    fn deactivate(self, main_thread: &M) {}
 
     /// Resets the plugin's audio processing state.
     ///
@@ -283,7 +283,7 @@ impl<'a, M: PluginMainThread<'a, S>, S: PluginShared<'a>> PluginAudioProcessor<'
     #[inline]
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut M,
+        _main_thread: &M,
         _shared: &'a S,
         _audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {

@@ -263,7 +263,7 @@ mod plugin {
         ///
         /// Don't forget to use the `modify_fd` method to remove the write notification once you're
         /// done writing.
-        fn on_fd(&mut self, fd: RawFd, flags: FdFlags);
+        fn on_fd(&self, fd: RawFd, flags: FdFlags);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -286,7 +286,6 @@ mod plugin {
         PluginWrapper::<P>::handle(plugin, |plugin| {
             plugin
                 .main_thread()
-                .as_mut()
                 .on_fd(fd, FdFlags::from_bits_truncate(flags));
 
             Ok(())

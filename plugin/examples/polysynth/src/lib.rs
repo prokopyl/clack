@@ -74,7 +74,7 @@ impl<'a> PluginAudioProcessor<'a, PolySynthPluginShared, PolySynthPluginMainThre
 {
     fn activate(
         _host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut PolySynthPluginMainThread,
+        _main_thread: &PolySynthPluginMainThread,
         shared: &'a PolySynthPluginShared,
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
@@ -182,11 +182,11 @@ impl PolySynthAudioProcessor<'_> {
 }
 
 impl PluginAudioPortsImpl for PolySynthPluginMainThread<'_> {
-    fn count(&mut self, is_input: bool) -> u32 {
+    fn count(&self, is_input: bool) -> u32 {
         if is_input { 0 } else { 1 }
     }
 
-    fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
+    fn get(&self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
         if !is_input && index == 0 {
             writer.set(&AudioPortInfo {
                 id: ClapId::new(1),
@@ -201,11 +201,11 @@ impl PluginAudioPortsImpl for PolySynthPluginMainThread<'_> {
 }
 
 impl PluginNotePortsImpl for PolySynthPluginMainThread<'_> {
-    fn count(&mut self, is_input: bool) -> u32 {
+    fn count(&self, is_input: bool) -> u32 {
         if is_input { 1 } else { 0 }
     }
 
-    fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter) {
+    fn get(&self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter) {
         if is_input && index == 0 {
             writer.set(&NotePortInfo {
                 id: ClapId::new(1),

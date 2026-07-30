@@ -65,7 +65,7 @@ pub trait PluginPresetLoadImpl {
     ///
     /// If the preset failed to load for any reason, a [`PluginError`] can be returned.
     fn load_from_location(
-        &mut self,
+        &self,
         location: Location,
         load_key: Option<&CStr>,
     ) -> Result<(), PluginError>;
@@ -101,7 +101,6 @@ where
 
         plugin
             .main_thread()
-            .as_mut()
             .load_from_location(location, load_key)?;
 
         Ok(())

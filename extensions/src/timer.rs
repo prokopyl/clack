@@ -145,7 +145,7 @@ mod plugin {
         ///
         /// The callback is also given the unique [`TimerId`] of the timer that ticked and triggered
         /// it.
-        fn on_timer(&mut self, timer_id: TimerId);
+        fn on_timer(&self, timer_id: TimerId);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -166,7 +166,7 @@ mod plugin {
         for<'a> P: Plugin<MainThread<'a>: PluginTimerImpl>,
     {
         PluginWrapper::<P>::handle(plugin, |plugin| {
-            plugin.main_thread().as_mut().on_timer(TimerId(timer_id));
+            plugin.main_thread().on_timer(TimerId(timer_id));
             Ok(())
         });
     }

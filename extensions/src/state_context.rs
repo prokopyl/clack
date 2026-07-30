@@ -48,7 +48,7 @@ mod plugin {
         ///
         /// If this operation fails, any [`PluginError`] can be returned.
         fn save(
-            &mut self,
+            &self,
             output: &mut OutputStream,
             context_type: StateContextType,
         ) -> Result<(), PluginError>;
@@ -62,7 +62,7 @@ mod plugin {
         ///
         /// If this operation fails, any [`PluginError`] can be returned.
         fn load(
-            &mut self,
+            &self,
             input: &mut InputStream,
             context_type: StateContextType,
         ) -> Result<(), PluginError>;
@@ -98,7 +98,7 @@ mod plugin {
                 ));
             };
 
-            p.main_thread().as_mut().load(input, context)?;
+            p.main_thread().load(input, context)?;
             Ok(())
         })
         .is_some()
@@ -122,7 +122,7 @@ mod plugin {
             };
 
             let output = OutputStream::from_raw_mut(&mut *(stream as *mut _));
-            p.main_thread().as_mut().save(output, context)?;
+            p.main_thread().save(output, context)?;
             Ok(())
         })
         .is_some()

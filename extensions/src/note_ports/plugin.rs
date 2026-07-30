@@ -51,9 +51,9 @@ impl NotePortInfoWriter<'_> {
 /// Implementation of the Plugin-side of the Note Ports extension.
 pub trait PluginNotePortsImpl {
     /// Returns number of audio ports, for either input or output.
-    fn count(&mut self, is_input: bool) -> u32;
+    fn count(&self, is_input: bool) -> u32;
     /// Get information about a note port by its index, for either input or output.
-    fn get(&mut self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter);
+    fn get(&self, index: u32, is_input: bool, writer: &mut NotePortInfoWriter);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -73,8 +73,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin, is_input: bool) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginNotePortsImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count(is_input)))
-        .unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count(is_input))).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -93,7 +92,7 @@ where
         };
 
         let mut writer = NotePortInfoWriter::from_raw(info);
-        p.main_thread().as_mut().get(index, is_input, &mut writer);
+        p.main_thread().get(index, is_input, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)

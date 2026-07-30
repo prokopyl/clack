@@ -110,7 +110,7 @@ mod plugin {
     /// Implementation of the Plugin-side of the Latency extension.
     pub trait PluginLatencyImpl {
         /// Returns the plugin latency in samples.
-        fn get(&mut self) -> u32;
+        fn get(&self) -> u32;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -129,8 +129,7 @@ mod plugin {
     where
         for<'a> P: Plugin<MainThread<'a>: PluginLatencyImpl>,
     {
-        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().as_mut().get()))
-            .unwrap_or(0)
+        PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().get())).unwrap_or(0)
     }
 }
 #[cfg(feature = "clack-plugin")]

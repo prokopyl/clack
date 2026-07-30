@@ -112,7 +112,7 @@ impl core::fmt::Write for ParamDisplayWriter<'_> {
 /// convert values to/from text, and request updates.
 pub trait PluginMainThreadParams {
     /// Returns the total number of parameters the plugin exposes.
-    fn count(&mut self) -> u32;
+    fn count(&self) -> u32;
 
     /// Gets the metadata for a parameter by its index.
     ///
@@ -130,7 +130,7 @@ pub trait PluginMainThreadParams {
     ///
     /// The implementation should return `true` on success, or `false` if
     /// `param_index` is out of bounds.
-    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter);
+    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter);
 
     /// Gets the current value of a parameter by its ID.
     ///
@@ -144,7 +144,7 @@ pub trait PluginMainThreadParams {
     /// # Return
     ///
     /// Returns the current value of the parameter, or `None` if the ID is invalid.
-    fn get_value(&mut self, param_id: ClapId) -> Option<f64>;
+    fn get_value(&self, param_id: ClapId) -> Option<f64>;
 
     /// Converts a parameter’s plain value to a human-readable string.
     ///
@@ -161,7 +161,7 @@ pub trait PluginMainThreadParams {
     ///
     /// Returns `Ok(())` on success, or `Err` if formatting fails.
     fn value_to_text(
-        &mut self,
+        &self,
         param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
@@ -179,7 +179,7 @@ pub trait PluginMainThreadParams {
     /// # Return
     ///
     /// Returns the parsed value, or `None` if parsing fails or the ID is invalid.
-    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64>;
+    fn text_to_value(&self, param_id: ClapId, text: &CStr) -> Option<f64>;
 
     /// Flushes pending parameter changes between the host and plugin.
     ///
@@ -195,7 +195,7 @@ pub trait PluginMainThreadParams {
     /// * `input_parameter_changes`: A reader for incoming parameter change events.
     /// * `output_parameter_changes`: A writer for outgoing parameter change events.
     fn flush(
-        &mut self,
+        &self,
         input_parameter_changes: &InputEvents,
         output_parameter_changes: &mut OutputEvents,
     );
@@ -224,7 +224,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginMainThreadParams>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -238,7 +238,7 @@ where
 {
     let mut info = ParamInfoWriter::new(value);
     PluginWrapper::<P>::handle(plugin, |p| {
-        p.main_thread().as_mut().get_info(param_index, &mut info);
+        p.main_thread().get_info(param_index, &mut info);
         Ok(())
     })
     .is_some()
@@ -258,7 +258,7 @@ where
         let param_id = ClapId::from_raw(param_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
-        Ok(p.main_thread().as_mut().get_value(param_id))
+        Ok(p.main_thread().get_value(param_id))
     })
     .flatten();
 
@@ -289,7 +289,6 @@ where
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
         p.main_thread()
-            .as_mut()
             .value_to_text(param_id, value, &mut writer)
             .map_err(PluginWrapperError::with_severity(CLAP_LOG_ERROR))
     })
@@ -312,7 +311,7 @@ where
             .ok_or(PluginWrapperError::InvalidParameter("Invalid param_id"))?;
 
         let display = CStr::from_ptr(display);
-        Ok(p.main_thread().as_mut().text_to_value(param_id, display))
+        Ok(p.main_thread().text_to_value(param_id, display))
     });
 
     match result {
@@ -346,7 +345,6 @@ unsafe extern "C" fn flush<P>(
                 .flush(input_parameter_changes, output_parameter_changes);
         } else {
             p.main_thread()
-                .as_mut()
                 .flush(input_parameter_changes, output_parameter_changes);
         }
         Ok(())

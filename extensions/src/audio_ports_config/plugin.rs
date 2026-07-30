@@ -7,13 +7,13 @@ use std::mem::MaybeUninit;
 /// Implementation of the Plugin-side of the Audio Ports Configuration extension.
 pub trait PluginAudioPortsConfigImpl {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
-    fn count(&mut self) -> u32;
+    fn count(&self) -> u32;
 
     /// Retrieves a specific [`AudioPortsConfiguration`] from its index.
     ///
     /// The plugin gets passed a host-provided mutable buffer to write the configuration into, to
     /// avoid any unnecessary allocations.
-    fn get(&mut self, index: u32, writer: &mut AudioPortConfigWriter);
+    fn get(&self, index: u32, writer: &mut AudioPortConfigWriter);
 
     /// Requests the plugin to change its Audio Ports Configuration to the one with the given ID.
     ///
@@ -23,24 +23,18 @@ pub trait PluginAudioPortsConfigImpl {
     ///
     /// This method may return an error if the given ID is out of bounds,
     /// or if the plugin declined or failed to change its Audio Ports Configuration.
-    fn select(&mut self, config_id: ClapId) -> Result<(), PluginError>;
+    fn select(&self, config_id: ClapId) -> Result<(), PluginError>;
 }
 
 /// Implementation of the Plugin-side of the Audio Ports Configuration Info extension.
 pub trait PluginAudioPortsConfigInfoImpl {
     /// Gets the id of the currently selected config, or [`None`] if the current port
     /// layout isn't part of the config list.
-    fn current_config(&mut self) -> Option<ClapId>;
+    fn current_config(&self) -> Option<ClapId>;
 
     /// Get info about an audio port, for a given `config_id`.
     /// This is analogous to [`PluginAudioPortsImpl::get`](crate::audio_ports::PluginAudioPortsImpl::get).
-    fn get(
-        &mut self,
-        config_id: ClapId,
-        index: u32,
-        is_input: bool,
-        writer: &mut AudioPortInfoWriter,
-    );
+    fn get(&self, config_id: ClapId, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -75,7 +69,7 @@ unsafe extern "C" fn count<P>(plugin: *const clap_plugin) -> u32
 where
     for<'a> P: Plugin<MainThread<'a>: PluginAudioPortsConfigImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().as_mut().count())).unwrap_or(0)
+    PluginWrapper::<P>::handle(plugin, |p| Ok(p.main_thread().count())).unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -93,7 +87,7 @@ where
         };
 
         let mut writer = AudioPortConfigWriter::from_raw(config);
-        p.main_thread().as_mut().get(index, &mut writer);
+        p.main_thread().get(index, &mut writer);
         Ok(writer.is_set)
     })
     .unwrap_or(false)
@@ -114,7 +108,7 @@ where
         let config_id = ClapId::from_raw(config_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid config_id"))?;
 
-        Ok(p.main_thread().as_mut().select(config_id).is_ok())
+        Ok(p.main_thread().select(config_id).is_ok())
     })
     .unwrap_or(false)
 }
@@ -126,7 +120,7 @@ where
 {
     unsafe {
         PluginWrapper::<P>::handle(plugin, |p| {
-            Ok(match p.main_thread().as_mut().current_config() {
+            Ok(match p.main_thread().current_config() {
                 Some(id) => id.get(),
                 None => CLAP_INVALID_ID,
             })
@@ -154,7 +148,7 @@ where
 
             let mut writer = AudioPortInfoWriter::from_raw(info);
 
-            p.main_thread().as_mut().get(
+            p.main_thread().get(
                 ClapId::from_raw(config_id)
                     .ok_or(PluginWrapperError::InvalidParameter("config_id"))?,
                 index,

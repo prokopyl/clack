@@ -111,13 +111,13 @@ impl HostGui {
 pub trait PluginGuiImpl {
     /// Indicate whether a particular API is supported.
     #[allow(clippy::wrong_self_convention)] // To match the CLAP naming
-    fn is_api_supported(&mut self, configuration: GuiConfiguration) -> bool;
+    fn is_api_supported(&self, configuration: GuiConfiguration) -> bool;
 
     /// Provide a hint to the host if the plugin prefers to use an API (and/or float state).
     ///
     /// This is __only a hint__ however, and the host can still use the API of its choice and/or
     /// situate the plugin in floating or embedded state despite having called this.
-    fn get_preferred_api(&mut self) -> Option<GuiConfiguration<'_>>;
+    fn get_preferred_api(&self) -> Option<GuiConfiguration<'_>>;
 
     /// Create and allocate all resources needed for the GUI
     ///
@@ -125,29 +125,29 @@ pub trait PluginGuiImpl {
     /// its window to stay above the parent window via [`Self::set_transient`].
     ///
     /// If `is_floating` is false, the plugin must embed its window in the parent (host).
-    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError>;
+    fn create(&self, configuration: GuiConfiguration) -> Result<(), PluginError>;
 
     /// Free all resources associated with the GUI
-    fn destroy(&mut self);
+    fn destroy(&self);
 
     /// Set absolute scaling factor for GUI
     ///
     /// Overrides OS settings, and should not be used if the windowing API uses logical pixels. Can
     /// be ignored if the plugin will query the OS directly and perform its own calculations.
-    fn set_scale(&mut self, scale: f64) -> Result<(), PluginError>;
+    fn set_scale(&self, scale: f64) -> Result<(), PluginError>;
 
     /// Get current size of GUI
-    fn get_size(&mut self) -> Option<GuiSize>;
+    fn get_size(&self) -> Option<GuiSize>;
 
     /// Tell host if GUI can be resized
     ///
     /// Only applies to embedded windows.
-    fn can_resize(&mut self) -> bool {
+    fn can_resize(&self) -> bool {
         false
     }
 
     /// Provide hints on the resize-ability of the GUI
-    fn get_resize_hints(&mut self) -> Option<GuiResizeHints> {
+    fn get_resize_hints(&self) -> Option<GuiResizeHints> {
         None
     }
 
@@ -155,33 +155,33 @@ pub trait PluginGuiImpl {
     ///
     /// Only applies if the GUI is resizable and embedded in a parent window. Must return
     /// dimensions smaller than or equal to the requested dimensions.
-    fn adjust_size(&mut self, size: GuiSize) -> Option<GuiSize> {
+    fn adjust_size(&self, size: GuiSize) -> Option<GuiSize> {
         None
     }
 
     /// Set the size of an embedded window
-    fn set_size(&mut self, size: GuiSize) -> Result<(), PluginError>;
+    fn set_size(&self, size: GuiSize) -> Result<(), PluginError>;
 
     /// Embed UI into the given parent window
-    fn set_parent(&mut self, window: Window) -> Result<(), PluginError>;
+    fn set_parent(&self, window: Window) -> Result<(), PluginError>;
 
     /// Receive instruction to stay above the given window
     ///
     /// Only applies to floating windows.
-    fn set_transient(&mut self, window: Window) -> Result<(), PluginError>;
+    fn set_transient(&self, window: Window) -> Result<(), PluginError>;
 
     /// Receive a suggested window title from the host
     ///
     /// Only applies to floating windows.
-    fn suggest_title(&mut self, title: &str) {}
+    fn suggest_title(&self, title: &str) {}
 
     /// Show the window
-    fn show(&mut self) -> Result<(), PluginError>;
+    fn show(&self) -> Result<(), PluginError>;
 
     /// Hide the window
     ///
     /// This should not free the resources associated with the GUI, just hide it.
-    fn hide(&mut self) -> Result<(), PluginError>;
+    fn hide(&self) -> Result<(), PluginError>;
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -219,13 +219,10 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin
-            .main_thread()
-            .as_mut()
-            .is_api_supported(GuiConfiguration {
-                api_type: GuiApiType(CStr::from_ptr(api)),
-                is_floating,
-            }))
+        Ok(plugin.main_thread().is_api_supported(GuiConfiguration {
+            api_type: GuiApiType(CStr::from_ptr(api)),
+            is_floating,
+        }))
     })
     .unwrap_or(false)
 }
@@ -244,7 +241,7 @@ where
             return Err(PluginWrapperError::NulPtr("get_preferred_api output"));
         }
 
-        match plugin.main_thread().as_mut().get_preferred_api() {
+        match plugin.main_thread().get_preferred_api() {
             None => Ok(false),
             Some(GuiConfiguration {
                 api_type,
@@ -272,7 +269,6 @@ where
     PluginWrapper::<P>::handle(plugin, |plugin| {
         Ok(plugin
             .main_thread()
-            .as_mut()
             .create(GuiConfiguration {
                 api_type: GuiApiType(CStr::from_ptr(api)),
                 is_floating,
@@ -288,7 +284,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        plugin.main_thread().as_mut().destroy();
+        plugin.main_thread().destroy();
         Ok(())
     });
 }
@@ -299,7 +295,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().set_scale(scale).is_ok())
+        Ok(plugin.main_thread().set_scale(scale).is_ok())
     })
     .unwrap_or(false)
 }
@@ -314,7 +310,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if let Some(size) = plugin.main_thread().as_mut().get_size() {
+        if let Some(size) = plugin.main_thread().get_size() {
             *width = size.width;
             *height = size.height;
             Ok(true)
@@ -332,10 +328,8 @@ unsafe extern "C" fn can_resize<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().can_resize())
-    })
-    .unwrap_or(false)
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().can_resize()))
+        .unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -347,7 +341,7 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        if let Some(plugin_hints) = plugin.main_thread().as_mut().get_resize_hints() {
+        if let Some(plugin_hints) = plugin.main_thread().get_resize_hints() {
             *hints = plugin_hints.to_raw();
             Ok(true)
         } else {
@@ -388,7 +382,7 @@ where
             height: *height_adj,
         };
 
-        if let Some(best_fit) = plugin.main_thread().as_mut().adjust_size(size) {
+        if let Some(best_fit) = plugin.main_thread().adjust_size(size) {
             *width_adj = best_fit.width;
             *height_adj = best_fit.height;
             Ok(true)
@@ -406,7 +400,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = GuiSize { width, height };
-        Ok(plugin.main_thread().as_mut().set_size(size))
+        Ok(plugin.main_thread().set_size(size))
     })
     .is_some()
 }
@@ -423,7 +417,6 @@ where
 
         Ok(plugin
             .main_thread()
-            .as_mut()
             .set_parent(Window::from_raw(*window))
             .is_ok())
     })
@@ -445,7 +438,6 @@ where
 
         Ok(plugin
             .main_thread()
-            .as_mut()
             .set_transient(Window::from_raw(*window))
             .is_ok())
     })
@@ -462,7 +454,7 @@ where
             .to_str()
             .map_err(PluginWrapperError::StringEncoding)?;
 
-        plugin.main_thread().as_mut().suggest_title(title);
+        plugin.main_thread().suggest_title(title);
 
         Ok(())
     });
@@ -473,10 +465,8 @@ unsafe extern "C" fn show<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().show().is_ok())
-    })
-    .unwrap_or(false)
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().show().is_ok()))
+        .unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -484,8 +474,6 @@ unsafe extern "C" fn hide<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().as_mut().hide().is_ok())
-    })
-    .unwrap_or(false)
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().hide().is_ok()))
+        .unwrap_or(false)
 }

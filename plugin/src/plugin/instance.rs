@@ -339,7 +339,7 @@ impl<'a, P: Plugin> PluginBoxInner<'a, P> {
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn on_main_thread(plugin: *const clap_plugin) {
         PluginWrapper::<P>::handle(plugin, |p| {
-            p.main_thread().as_mut().on_main_thread();
+            p.main_thread().on_main_thread();
             Ok(())
         });
     }

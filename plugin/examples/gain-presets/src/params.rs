@@ -69,14 +69,14 @@ impl GainParams {
 /// Our state "serialization" is extremely simple and basic: we only have the value of the
 /// volume parameter to store, so we just store its bytes (in little-endian) and call it a day.
 impl PluginStateImpl for GainPluginMainThread<'_> {
-    fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
+    fn save(&self, output: &mut OutputStream) -> Result<(), PluginError> {
         let volume_param = self.shared.params.get_volume();
 
         output.write_all(&volume_param.to_le_bytes())?;
         Ok(())
     }
 
-    fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError> {
+    fn load(&self, input: &mut InputStream) -> Result<(), PluginError> {
         let mut buf = [0; 4];
         input.read_exact(&mut buf)?;
         let volume_value = f32::from_le_bytes(buf);
@@ -86,11 +86,11 @@ impl PluginStateImpl for GainPluginMainThread<'_> {
 }
 
 impl PluginMainThreadParams for GainPluginMainThread<'_> {
-    fn count(&mut self) -> u32 {
+    fn count(&self) -> u32 {
         1
     }
 
-    fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
+    fn get_info(&self, param_index: u32, info: &mut ParamInfoWriter) {
         if param_index != 0 {
             return;
         }
@@ -106,7 +106,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         })
     }
 
-    fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
+    fn get_value(&self, param_id: ClapId) -> Option<f64> {
         if param_id == 1 {
             Some(self.shared.params.get_volume() as f64)
         } else {
@@ -115,7 +115,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
     }
 
     fn value_to_text(
-        &mut self,
+        &self,
         param_id: ClapId,
         value: f64,
         writer: &mut ParamDisplayWriter,
@@ -127,7 +127,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
         }
     }
 
-    fn text_to_value(&mut self, param_id: ClapId, text: &CStr) -> Option<f64> {
+    fn text_to_value(&self, param_id: ClapId, text: &CStr) -> Option<f64> {
         let text = text.to_str().ok()?;
         if param_id == 1 {
             let text = text.strip_suffix('%').unwrap_or(text).trim();
@@ -140,7 +140,7 @@ impl PluginMainThreadParams for GainPluginMainThread<'_> {
     }
 
     fn flush(
-        &mut self,
+        &self,
         input_parameter_changes: &InputEvents,
         _output_parameter_changes: &mut OutputEvents,
     ) {
