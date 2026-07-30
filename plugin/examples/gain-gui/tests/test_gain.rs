@@ -1,7 +1,6 @@
 use clack_extensions::audio_ports::{AudioPortInfoBuffer, PluginAudioPorts};
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::prelude::*;
-use clack_host::utils::Cookie;
 use clack_plugin::entry::SinglePluginEntry;
 use clack_plugin_gain_gui::GainPlugin;
 
@@ -88,7 +87,6 @@ pub fn it_works() {
         ClapId::new(1),
         Pckn::match_all(),
         0.5,
-        Cookie::empty(),
     ));
 
     let mut input_buffers = [vec![69f32; 32], vec![69f32; 32]];

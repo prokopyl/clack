@@ -3,7 +3,7 @@ use clack_extensions::preset_discovery::prelude::*;
 use clack_host::events::event_types::ParamValueEvent;
 use clack_host::factory::plugin::PluginFactory;
 use clack_host::prelude::*;
-use clack_host::utils::{Cookie, Timestamp, UniversalPluginId};
+use clack_host::utils::{Timestamp, UniversalPluginId};
 use clack_plugin_gain_presets::GainPluginEntry;
 use std::ffi::{CStr, CString};
 
