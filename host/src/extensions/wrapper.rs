@@ -9,6 +9,7 @@ use clap_sys::ext::log::{
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::borrow::Cow;
+use std::cell::UnsafeCell;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
@@ -45,7 +46,7 @@ mod logging;
 // which means we can never move this again. This must always exist in a Pin.
 pub struct HostWrapper<H: HostHandlers> {
     audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
-    main_thread: <H as HostHandlers>::MainThread<'static>,
+    main_thread: UnsafeCell<<H as HostHandlers>::MainThread<'static>>,
     shared: Pin<Box<<H as HostHandlers>::Shared<'static>>>,
 
     // Init stuff
@@ -127,7 +128,12 @@ impl<H: HostHandlers> HostWrapper<H> {
     #[inline]
     pub unsafe fn main_thread(&self) -> &<H as HostHandlers>::MainThread<'_> {
         // SAFETY: This ref is never written to
-        unsafe { shrink_main_thread_ref::<H>(&self.main_thread) }
+        unsafe {
+            &*self
+                .main_thread
+                .get()
+                .cast::<<H as HostHandlers>::MainThread<'_>>()
+        }
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
@@ -177,7 +183,7 @@ impl<H: HostHandlers> HostWrapper<H> {
         let wrapper = Arc::new(Self {
             audio_processor: UnsafeOptionCell::new(),
             // SAFETY: this type guarantees shared lives long enough
-            main_thread: main_thread(unsafe { extend_shared_ref(&shared) }),
+            main_thread: main_thread(unsafe { extend_shared_ref(&shared) }).into(),
             shared,
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
@@ -238,7 +244,7 @@ impl<H: HostHandlers> HostWrapper<H> {
             unsafe { extend_shared_ref(&self.shared) },
             // SAFETY: The user enforces that this is only called on the main thread, and
             // non-concurrently to any other main-thread method.
-            &self.main_thread,
+            &*self.main_thread.get(),
         ));
         Ok(())
     }
@@ -261,7 +267,7 @@ impl<H: HostHandlers> HostWrapper<H> {
                 audio_processor,
                 // SAFETY: The user enforces that this is only called on the main thread, and
                 // non-concurrently to any other main-thread method.
-                &self.main_thread,
+                &*self.main_thread.get(),
             )),
         }
     }
@@ -426,17 +432,6 @@ unsafe fn shrink_shared_ref<'a, 'instance, H: HostHandlers>(
 ) -> &'a H::Shared<'a> {
     let original_ptr = shared as *const H::Shared<'instance>;
     let transmuted_ptr: *const H::Shared<'a> = original_ptr.cast();
-
-    &*transmuted_ptr
-}
-
-/// # Safety
-/// The user MUST prevent this reference to be written anywhere
-unsafe fn shrink_main_thread_ref<'a, 'instance, H: HostHandlers>(
-    shared: &'a H::MainThread<'instance>,
-) -> &'a H::MainThread<'a> {
-    let original_ptr = shared as *const H::MainThread<'instance>;
-    let transmuted_ptr: *const H::MainThread<'a> = original_ptr.cast();
 
     &*transmuted_ptr
 }
