@@ -60,7 +60,7 @@ mod host {
     /// Implementation of the Host-side of the Latency extension.
     pub trait HostLatencyImpl {
         /// The plugin latency has changed and should be re-queried.
-        fn changed(&mut self);
+        fn changed(&self);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -80,7 +80,7 @@ mod host {
         for<'a> H: HostHandlers<MainThread<'a>: HostLatencyImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+            host.main_thread().changed();
             Ok(())
         });
     }

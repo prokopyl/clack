@@ -119,7 +119,7 @@ mod host {
     pub trait HostVoiceInfoImpl {
         /// Indicates the plugin has changed its voice configuration, and the host needs to update
         /// it by calling [`get`](PluginVoiceInfo::get) again.
-        fn changed(&mut self);
+        fn changed(&self);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -139,7 +139,7 @@ mod host {
         H: for<'a> HostHandlers<MainThread<'a>: HostVoiceInfoImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+            host.main_thread().changed();
             Ok(())
         });
     }

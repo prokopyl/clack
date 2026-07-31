@@ -162,10 +162,10 @@ mod host {
     /// Implementation of the Host-side of the Remote Controls extension.
     pub trait HostRemoteControlsImpl {
         /// Informs the host that the Remote Control pages provided by the plugin have changed and need to be re-scanned.
-        fn changed(&mut self);
+        fn changed(&self);
         /// Suggests the host to display/activate a given page, e.g. because it corresponds to what the user
         /// is currently editing in the plugin's GUI.
-        fn suggest_page(&mut self, page_id: ClapId);
+        fn suggest_page(&self, page_id: ClapId);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -186,7 +186,7 @@ mod host {
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+            host.main_thread().changed();
             Ok(())
         });
     }
@@ -200,7 +200,7 @@ mod host {
             let id = ClapId::from_raw(page_id)
                 .ok_or(HostWrapperError::InvalidParameter("Invalid page ID"))?;
 
-            host.main_thread().as_mut().suggest_page(id);
+            host.main_thread().suggest_page(id);
             Ok(())
         });
     }

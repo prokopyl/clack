@@ -45,7 +45,7 @@ mod logging;
 // which means we can never move this again. This must always exist in a Pin.
 pub struct HostWrapper<H: HostHandlers> {
     audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
-    main_thread: UnsafeOptionCell<<H as HostHandlers>::MainThread<'static>>,
+    main_thread: <H as HostHandlers>::MainThread<'static>,
     shared: Pin<Box<<H as HostHandlers>::Shared<'static>>>,
 
     // Init stuff
@@ -124,12 +124,10 @@ impl<H: HostHandlers> HostWrapper<H> {
     ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
-    ///
-    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
-    /// aliased, as per usual safety rules.
     #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as HostHandlers>::MainThread<'_>> {
-        self.main_thread.as_ptr_unchecked().cast()
+    pub unsafe fn main_thread(&self) -> &<H as HostHandlers>::MainThread<'_> {
+        // SAFETY: This ref is never written to
+        unsafe { shrink_main_thread_ref::<H>(&self.main_thread) }
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
@@ -172,27 +170,20 @@ impl<H: HostHandlers> HostWrapper<H> {
             &'s <H as HostHandlers>::Shared<'s>,
         ) -> <H as HostHandlers>::MainThread<'s>,
     {
+        let shared = Box::pin(shared(&()));
+
         // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
         // will effectively hold a shared pointer to this.
-        let mut wrapper = Arc::new(Self {
+        let wrapper = Arc::new(Self {
             audio_processor: UnsafeOptionCell::new(),
-            main_thread: UnsafeOptionCell::new(),
-            shared: Box::pin(shared(&())),
+            // SAFETY: this type guarantees shared lives long enough
+            main_thread: main_thread(unsafe { extend_shared_ref(&shared) }),
+            shared,
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
             plugin_ptr: OnceLock::new(),
             destroy_lock: Arc::new(DestroyLock::new()),
         });
-
-        // PANIC: we have the only Arc copy of this wrapper data.
-        let wrapper_mut = Arc::get_mut(&mut wrapper).unwrap();
-
-        // SAFETY: This type guarantees main thread data cannot outlive shared
-        unsafe {
-            wrapper_mut
-                .main_thread
-                .put(main_thread(extend_shared_ref(&wrapper_mut.shared)));
-        }
 
         // SAFETY: wrapper is the only reference to the data, we can guarantee it will remain pinned
         // until drop happens.
@@ -214,12 +205,10 @@ impl<H: HostHandlers> HostWrapper<H> {
         let instance = *self.plugin_ptr.get().unwrap();
 
         // SAFETY: At this point there is no way main_thread could not have been set.
-        self.main_thread()
-            .as_mut()
-            .initialized(InitializedPluginHandle::new(
-                self.destroy_lock.clone(),
-                instance,
-            ));
+        self.main_thread().initialized(InitializedPluginHandle::new(
+            self.destroy_lock.clone(),
+            instance,
+        ));
     }
 
     pub(crate) fn start_instance_destroy(&self) {
@@ -235,9 +224,9 @@ impl<H: HostHandlers> HostWrapper<H> {
         audio_processor: FA,
     ) -> Result<(), PluginInstanceError>
     where
-        FA: for<'a> FnOnce(
+        FA: for<'a, 'b> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
-            &mut <H as HostHandlers>::MainThread<'a>,
+            &<H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         if self.audio_processor.is_some() {
@@ -249,7 +238,7 @@ impl<H: HostHandlers> HostWrapper<H> {
             unsafe { extend_shared_ref(&self.shared) },
             // SAFETY: The user enforces that this is only called on the main thread, and
             // non-concurrently to any other main-thread method.
-            unsafe { self.main_thread().cast().as_mut() },
+            &self.main_thread,
         ));
         Ok(())
     }
@@ -262,7 +251,7 @@ impl<H: HostHandlers> HostWrapper<H> {
         &self,
         drop: impl for<'s> FnOnce(
             <H as HostHandlers>::AudioProcessor<'s>,
-            &mut <H as HostHandlers>::MainThread<'s>,
+            &<H as HostHandlers>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, PluginInstanceError> {
         // SAFETY: The user enforces that this is called and non-concurrently to any other audio-thread method.
@@ -272,7 +261,7 @@ impl<H: HostHandlers> HostWrapper<H> {
                 audio_processor,
                 // SAFETY: The user enforces that this is only called on the main thread, and
                 // non-concurrently to any other main-thread method.
-                unsafe { self.main_thread().cast().as_mut() },
+                &self.main_thread,
             )),
         }
     }
@@ -437,6 +426,17 @@ unsafe fn shrink_shared_ref<'a, 'instance, H: HostHandlers>(
 ) -> &'a H::Shared<'a> {
     let original_ptr = shared as *const H::Shared<'instance>;
     let transmuted_ptr: *const H::Shared<'a> = original_ptr.cast();
+
+    &*transmuted_ptr
+}
+
+/// # Safety
+/// The user MUST prevent this reference to be written anywhere
+unsafe fn shrink_main_thread_ref<'a, 'instance, H: HostHandlers>(
+    shared: &'a H::MainThread<'instance>,
+) -> &'a H::MainThread<'a> {
+    let original_ptr = shared as *const H::MainThread<'instance>;
+    let transmuted_ptr: *const H::MainThread<'a> = original_ptr.cast();
 
     &*transmuted_ptr
 }

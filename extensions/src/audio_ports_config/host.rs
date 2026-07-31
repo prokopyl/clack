@@ -140,7 +140,7 @@ impl PluginAudioPortsConfigInfo {
 pub trait HostAudioPortsConfigImpl {
     /// Informs the host that the available Audio Ports Configuration list has changed and needs to
     /// be rescanned.
-    fn rescan(&mut self);
+    fn rescan(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -161,7 +161,7 @@ where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().rescan();
+        host.main_thread().rescan();
 
         Ok(())
     });

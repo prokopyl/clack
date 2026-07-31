@@ -3,6 +3,7 @@
 use clack_extensions::timer::{HostTimer, HostTimerImpl, PluginTimer, PluginTimerImpl, TimerId};
 use clack_host::prelude::*;
 use clack_plugin::prelude::*;
+use std::cell::Cell;
 use std::sync::OnceLock;
 
 struct MyPlugin;
@@ -82,15 +83,15 @@ impl<'a> SharedHandler<'a> for MyHostShared<'a> {
 
 struct MyHostMainThread<'a> {
     shared: &'a MyHostShared<'a>,
-    timer_registered: bool,
+    timer_registered: Cell<bool>,
 }
 
 impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
-    fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
+    fn initialized(&self, _instance: InitializedPluginHandle<'a>) {}
 }
 
 impl HostTimerImpl for MyHostMainThread<'_> {
-    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
+    fn register_timer(&self, period_ms: u32) -> Result<TimerId, HostError> {
         assert_eq!(period_ms, 1000);
 
         let handle = self
@@ -103,11 +104,11 @@ impl HostTimerImpl for MyHostMainThread<'_> {
             .get_extension::<PluginTimer>()
             .expect("Plugin should implement Timer extension!");
 
-        self.timer_registered = true;
+        self.timer_registered.set(true);
         Ok(TimerId(5))
     }
 
-    fn unregister_timer(&mut self, _timer_id: TimerId) -> Result<(), HostError> {
+    fn unregister_timer(&self, _timer_id: TimerId) -> Result<(), HostError> {
         unimplemented!()
     }
 }
@@ -123,7 +124,7 @@ fn can_call_host_methods_during_init() {
         },
         |shared| MyHostMainThread {
             shared,
-            timer_registered: false,
+            timer_registered: false.into(),
         },
         &entry,
         c"my.plugin",
@@ -132,5 +133,5 @@ fn can_call_host_methods_during_init() {
     .unwrap();
 
     // Timer should have already been registered by the plugin during init().
-    assert!(instance.access_handler(|h| h.timer_registered));
+    assert!(instance.access_handler(|h| h.timer_registered.get()));
 }

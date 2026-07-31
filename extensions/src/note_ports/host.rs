@@ -63,7 +63,7 @@ pub trait HostNotePortsImpl {
 
     /// Rescan the full list of note ports according to the flags.
     /// See [`NotePortRescanFlags`] for more details.
-    fn rescan(&mut self, flags: NotePortRescanFlags);
+    fn rescan(&self, flags: NotePortRescanFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -84,7 +84,7 @@ where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        Ok(host.main_thread().as_ref().supported_dialects().bits())
+        Ok(host.main_thread().supported_dialects().bits())
     })
     .unwrap_or(0)
 }
@@ -96,7 +96,6 @@ where
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
-            .as_mut()
             .rescan(NotePortRescanFlags::from_bits_truncate(flags));
 
         Ok(())

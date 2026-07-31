@@ -53,7 +53,7 @@ pub trait HostAmbisonicImpl {
     /// Notify the host that the ambisonic configuration for one or more ports has changed.
     ///
     /// The info can only change when the plugin is de-activated.
-    fn changed(&mut self);
+    fn changed(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -74,7 +74,7 @@ where
 {
     unsafe {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+            host.main_thread().changed();
             Ok(())
         });
     }

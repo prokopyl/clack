@@ -78,7 +78,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     /// }
     ///
     /// impl<'a> MainThreadHandler<'a> for MyHostMainThread {
-    ///     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
+    ///     fn initialized(&self, instance: InitializedPluginHandle<'a>) {
     ///         // Called whn the plugin has been fully initialized.
     ///     }
     /// }
@@ -159,7 +159,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     where
         FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
-            &mut <H as HostHandlers>::MainThread<'a>,
+            &<H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         configuration.validate();
@@ -237,7 +237,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     where
         D: for<'s> FnOnce(
             <H as HostHandlers>::AudioProcessor<'s>,
-            &mut <H as HostHandlers>::MainThread<'s>,
+            &<H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
         if !Arc::ptr_eq(&self.inner, &processor.inner) {
@@ -276,7 +276,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     where
         D: for<'s> FnOnce(
             <H as HostHandlers>::AudioProcessor<'s>,
-            &mut <H as HostHandlers>::MainThread<'s>,
+            &<H as HostHandlers>::MainThread<'s>,
         ) -> T,
     {
         let wrapper =
@@ -344,24 +344,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.wrapper().main_thread().as_ref()) }
-    }
-
-    /// Access an exclusive `&mut` reference to [`MainThreadHandler`] instance associated to this plugin instance using the given callback.
-    ///
-    /// The callback's return value `R` is returned directly by this method.
-    ///
-    /// Accessing the [`HostHandlers`] types can only be done with accessor callbacks because this
-    /// type is self-referential: both the [`HostHandlers`] and the plugin's instance data hold
-    /// references to each other, and both are owned by this type.
-    #[inline]
-    pub fn access_handler_mut<'s, R>(
-        &'s mut self,
-        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::MainThread<'a>) -> R,
-    ) -> R {
-        // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
-        // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.wrapper().main_thread().as_mut()) }
+        unsafe { access(self.inner.wrapper().main_thread()) }
     }
 
     /// Returns a thread-safe handle to the plugin.

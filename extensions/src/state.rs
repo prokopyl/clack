@@ -17,6 +17,7 @@
 //! ```
 //! use std::error::Error;
 //! use std::io::Cursor;
+//! use std::cell::Cell;
 //! use std::sync::OnceLock;
 //! use clack_extensions::state::{HostState, HostStateImpl, PluginState};
 //! use clack_host::prelude::*;
@@ -48,27 +49,27 @@
 //!
 //! struct MyHostMainThread<'a> {
 //!     shared: &'a MyHostShared,
-//!     is_state_dirty: bool
+//!     is_state_dirty: Cell<bool>
 //! }
 //!
 //! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 //!     /* ... */
-//! #    fn initialized(&mut self, _instance: InitializedPluginHandle<'a>) {}
+//! #    fn initialized(&self, _instance: InitializedPluginHandle<'a>) {}
 //! }
 //!
 //! // Implement the Host State extension for the plugin to notify us of its dirty save state
 //! impl<'a> HostStateImpl for MyHostMainThread<'a> {
-//!     fn mark_dirty(&mut self) {
+//!     fn mark_dirty(&self) {
 //!         // Notify the user that the plugin should now be saved.
 //!         // For this example, we'll just use a boolean.
-//!         self.is_state_dirty = true;
+//!         self.is_state_dirty.set(true);
 //!     }
 //! }
 //!
 //! # pub fn main() -> Result<(), Box<dyn Error>> {
 //! # mod utils { include!("./__doc_utils.rs"); }
 //! let mut plugin_instance: PluginInstance<MyHost> = /* ... */
-//! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false, shared })?;
+//! # utils::get_working_instance(|_| MyHostShared { state_ext: OnceLock::new() }, |shared| MyHostMainThread { is_state_dirty: false.into(), shared })?;
 //!
 //! let state_ext = plugin_instance.access_shared_handler(|h| h.state_ext.get())
 //!     .expect("Plugin is not yet instantiated")

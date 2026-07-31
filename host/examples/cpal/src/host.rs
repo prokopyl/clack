@@ -1,4 +1,5 @@
 use crate::discovery::FoundPlugin;
+use std::cell::{Cell, OnceCell};
 
 use clack_extensions::audio_ports::{AudioPortRescanFlags, HostAudioPortsImpl, PluginAudioPorts};
 use clack_extensions::gui::{GuiSize, HostGui, PluginGui};
@@ -116,15 +117,15 @@ pub struct CpalHostMainThread<'a> {
     /// (this is unused in this example, but this is kept here for demonstration purposes).
     _shared: &'a CpalHostShared,
     /// A handle to the plugin instance.
-    plugin: Option<InitializedPluginHandle<'a>>,
+    plugin: OnceCell<InitializedPluginHandle<'a>>,
 
     /// A handle to the plugin's Timer extension, if it supports it.
     /// This is placed here, since only the main thread will ever use that extension.
-    timer_support: Option<PluginTimer>,
+    timer_support: Cell<Option<PluginTimer>>,
     /// The timer implementation.
     timers: Rc<Timers>,
     /// A handle to the plugin's GUI extension, if it supports it.
-    gui: Option<PluginGui>,
+    gui: Cell<Option<PluginGui>>,
 }
 
 impl<'a> CpalHostMainThread<'a> {
@@ -132,20 +133,20 @@ impl<'a> CpalHostMainThread<'a> {
     fn new(shared: &'a CpalHostShared) -> Self {
         Self {
             _shared: shared,
-            plugin: None,
-            timer_support: None,
-            gui: None,
+            plugin: OnceCell::new(),
+            timer_support: None.into(),
+            gui: None.into(),
             timers: Rc::new(Timers::new()),
         }
     }
 }
 
 impl<'a> MainThreadHandler<'a> for CpalHostMainThread<'a> {
-    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
-        self.gui = instance.get_extension();
-        self.timer_support = instance.get_extension();
+    fn initialized(&self, instance: InitializedPluginHandle<'a>) {
+        self.gui.set(instance.get_extension());
+        self.timer_support.set(instance.get_extension());
 
-        self.plugin = Some(instance);
+        self.plugin.set(instance).unwrap();
     }
 }
 
@@ -174,7 +175,7 @@ pub fn run(plugin: FoundPlugin) -> Result<(), Box<dyn Error>> {
     let _stream = activate_to_stream(&mut instance)?;
 
     let gui = instance
-        .access_handler(|h| h.gui)
+        .access_handler(|h| h.gui.get())
         .map(|gui| Gui::new(gui, &mut instance.plugin_handle()));
 
     let gui = gui.and_then(|gui| Some((gui.needs_floating()?, gui)));
@@ -234,7 +235,8 @@ fn run_gui_embedded(
 
     let uses_logical_pixels = gui.configuration.unwrap().api_type.uses_logical_size();
 
-    let timers = instance.access_handler(|h| h.timer_support.map(|ext| (h.timers.clone(), ext)));
+    let timers =
+        instance.access_handler(|h| h.timer_support.get().map(|ext| (h.timers.clone(), ext)));
 
     #[allow(deprecated)]
     event_loop.run(move |event, target| {
@@ -358,7 +360,7 @@ impl HostAudioPortsImpl for CpalHostMainThread<'_> {
         false
     }
 
-    fn rescan(&mut self, _flags: AudioPortRescanFlags) {
+    fn rescan(&self, _flags: AudioPortRescanFlags) {
         // We don't support audio ports changing on the fly
     }
 }
@@ -368,17 +370,17 @@ impl HostNotePortsImpl for CpalHostMainThread<'_> {
         NoteDialects::CLAP
     }
 
-    fn rescan(&mut self, _flags: NotePortRescanFlags) {
+    fn rescan(&self, _flags: NotePortRescanFlags) {
         // We don't support note ports changing on the fly
     }
 }
 
 impl HostParamsImplMainThread for CpalHostMainThread<'_> {
-    fn rescan(&mut self, _flags: ParamRescanFlags) {
+    fn rescan(&self, _flags: ParamRescanFlags) {
         // We don't track param values at all
     }
 
-    fn clear(&mut self, _param_id: ClapId, _flags: ParamClearFlags) {}
+    fn clear(&self, _param_id: ClapId, _flags: ParamClearFlags) {}
 }
 
 impl HostParamsImplShared for CpalHostShared {

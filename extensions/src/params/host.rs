@@ -262,10 +262,10 @@ pub trait HostParamsImplShared {
 pub trait HostParamsImplMainThread {
     /// Rescan the full list of parameters, according to the given `flags`.
     /// See [`ParamRescanFlags`] for more details.
-    fn rescan(&mut self, flags: ParamRescanFlags);
+    fn rescan(&self, flags: ParamRescanFlags);
     /// Clears references (such as automation or modulation) to a parameter (identified by `param_id`), according to the given `flags`.
     /// See [`ParamClearFlags`] for more details.
-    fn clear(&mut self, param_id: ClapId, flags: ParamClearFlags);
+    fn clear(&self, param_id: ClapId, flags: ParamClearFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -289,7 +289,6 @@ where
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
-            .as_mut()
             .rescan(ParamRescanFlags::from_bits_truncate(flags));
 
         Ok(())
@@ -305,7 +304,6 @@ where
         let param_id = ClapId::from_raw(param_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid param_id"))?;
         host.main_thread()
-            .as_mut()
             .clear(param_id, ParamClearFlags::from_bits_truncate(flags));
 
         Ok(())

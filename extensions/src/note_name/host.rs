@@ -62,7 +62,7 @@ impl PluginNoteName {
 pub trait HostNoteNameImpl {
     /// Informs the host that the available Note Names list has changed and needs to
     /// be rescanned.
-    fn changed(&mut self);
+    fn changed(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -83,7 +83,7 @@ where
     for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().changed();
+        host.main_thread().changed();
 
         Ok(())
     });

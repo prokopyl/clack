@@ -4,6 +4,7 @@ use clack_common::stream::{InputStream, OutputStream};
 use clack_extensions::state::{PluginState, PluginStateImpl};
 use clack_host::prelude::*;
 use clack_plugin::prelude::*;
+use std::cell::OnceCell;
 use std::io::Write;
 use std::sync::OnceLock;
 
@@ -87,19 +88,19 @@ impl<'a> SharedHandler<'a> for MyHostShared<'a> {
 }
 
 struct MyHostMainThread<'a> {
-    instance: Option<InitializedPluginHandle<'a>>,
+    instance: OnceCell<InitializedPluginHandle<'a>>,
 }
 
 impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
-    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
+    fn initialized(&self, instance: InitializedPluginHandle<'a>) {
         assert!(instance.get_extension::<PluginState>().is_some());
-        self.instance = Some(instance)
+        self.instance.set(instance).unwrap();
     }
 }
 
 impl Drop for MyHostMainThread<'_> {
     fn drop(&mut self) {
-        let instance = self.instance.as_ref().unwrap();
+        let instance = self.instance.get().unwrap();
         assert!(instance.get_extension::<PluginState>().is_none());
     }
 }
@@ -114,7 +115,9 @@ fn can_call_host_methods_during_init() {
         |_| MyHostShared {
             init: OnceLock::new(),
         },
-        |_| MyHostMainThread { instance: None },
+        |_| MyHostMainThread {
+            instance: OnceCell::new(),
+        },
         &entry,
         c"my.plugin",
         &host,

@@ -192,7 +192,7 @@ mod host {
         /// # Errors
         ///
         /// Returns an error if the host failed or refused to register this timer.
-        fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError>;
+        fn register_timer(&self, period_ms: u32) -> Result<TimerId, HostError>;
 
         /// Unregisters a given Timer, identified by its unique [`TimerId`].
         ///
@@ -202,7 +202,7 @@ mod host {
         /// # Errors
         ///
         /// Returns an error if the host failed to unregister this timer.
-        fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError>;
+        fn unregister_timer(&self, timer_id: TimerId) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -228,7 +228,7 @@ mod host {
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            match host.main_thread().as_mut().register_timer(period_ms) {
+            match host.main_thread().register_timer(period_ms) {
                 Ok(id) => {
                     *timer_id = id.0;
                     Ok(true)
@@ -250,7 +250,6 @@ mod host {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
                 .main_thread()
-                .as_mut()
                 .unregister_timer(TimerId(timer_id))
                 .is_ok())
         })

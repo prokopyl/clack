@@ -112,11 +112,11 @@ mod host {
         ///
         /// The host will call the plugin's `on_fd` method every time the File Descriptor fires one
         /// of these events.
-        fn register_fd(&mut self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
+        fn register_fd(&self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
         /// Updates the set of events a given File Descriptor will fire.
-        fn modify_fd(&mut self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
+        fn modify_fd(&self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
         /// Removes a given File Descriptor from the host's event reactor.
-        fn unregister_fd(&mut self, fd: RawFd) -> Result<(), HostError>;
+        fn unregister_fd(&self, fd: RawFd) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -145,7 +145,6 @@ mod host {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
                 .main_thread()
-                .as_mut()
                 .register_fd(fd, FdFlags::from_bits_truncate(flags))
                 .is_ok())
         })
@@ -164,7 +163,6 @@ mod host {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
                 .main_thread()
-                .as_mut()
                 .modify_fd(fd, FdFlags::from_bits_truncate(flags))
                 .is_ok())
         })
@@ -176,7 +174,7 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
-            Ok(host.main_thread().as_mut().unregister_fd(fd).is_ok())
+            Ok(host.main_thread().unregister_fd(fd).is_ok())
         })
         .unwrap_or(false)
     }

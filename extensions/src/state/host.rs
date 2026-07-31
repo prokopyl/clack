@@ -68,7 +68,7 @@ pub trait HostStateImpl {
     /// The plugin state has changed, and may need to be saved again.
     ///
     /// Note that if a parameter value changes, it is implicit that the state is dirty.
-    fn mark_dirty(&mut self);
+    fn mark_dirty(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -89,7 +89,7 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().mark_dirty();
+        host.main_thread().mark_dirty();
 
         Ok(())
     });

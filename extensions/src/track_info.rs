@@ -448,7 +448,7 @@ mod host {
     /// Implementation of the Host-side of the Track Info extension.
     pub trait HostTrackInfoImpl {
         /// Gets info about the track the plugin belongs to.
-        fn get<'a>(&'a mut self, writer: &mut TrackInfoWriter<'_, 'a>);
+        fn get<'a>(&'a self, writer: &mut TrackInfoWriter<'_, 'a>);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -469,7 +469,7 @@ mod host {
     {
         HostWrapper::<H>::handle(host, |host| {
             let mut writer = TrackInfoWriter::from_raw(buf);
-            host.main_thread().as_mut().get(&mut writer);
+            host.main_thread().get(&mut writer);
             Ok(writer.is_set)
         })
         .unwrap_or(false)
