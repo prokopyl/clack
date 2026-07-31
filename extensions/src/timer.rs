@@ -228,7 +228,7 @@ mod host {
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            match host.main_thread().register_timer(period_ms) {
+            match host.main_thread().as_ref().register_timer(period_ms) {
                 Ok(id) => {
                     *timer_id = id.0;
                     Ok(true)
@@ -250,6 +250,7 @@ mod host {
         HostWrapper::<H>::handle(host, |host| {
             Ok(host
                 .main_thread()
+                .as_ref()
                 .unregister_timer(TimerId(timer_id))
                 .is_ok())
         })

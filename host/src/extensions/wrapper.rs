@@ -126,14 +126,8 @@ impl<H: HostHandlers> HostWrapper<H> {
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
     #[inline]
-    pub unsafe fn main_thread(&self) -> &<H as HostHandlers>::MainThread<'_> {
-        // SAFETY: This ref is never written to
-        unsafe {
-            &*self
-                .main_thread
-                .get()
-                .cast::<<H as HostHandlers>::MainThread<'_>>()
-        }
+    pub unsafe fn main_thread(&self) -> NonNull<<H as HostHandlers>::MainThread<'_>> {
+        NonNull::from(&self.main_thread).cast()
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
@@ -211,10 +205,12 @@ impl<H: HostHandlers> HostWrapper<H> {
         let instance = *self.plugin_ptr.get().unwrap();
 
         // SAFETY: At this point there is no way main_thread could not have been set.
-        self.main_thread().initialized(InitializedPluginHandle::new(
-            self.destroy_lock.clone(),
-            instance,
-        ));
+        self.main_thread()
+            .as_ref()
+            .initialized(InitializedPluginHandle::new(
+                self.destroy_lock.clone(),
+                instance,
+            ));
     }
 
     pub(crate) fn start_instance_destroy(&self) {

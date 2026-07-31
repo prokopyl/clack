@@ -99,6 +99,7 @@ where
     HostWrapper::<H>::handle(host, |host| {
         Ok(host
             .main_thread()
+            .as_ref()
             .is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
     })
     .unwrap_or(false)
@@ -111,6 +112,7 @@ where
 {
     HostWrapper::<H>::handle(host, |host| {
         host.main_thread()
+            .as_ref()
             .rescan(AudioPortRescanFlags::from_bits_truncate(flags));
 
         Ok(())

@@ -112,7 +112,7 @@ unsafe extern "C" fn loaded<H>(
         // SAFETY: load_key is guaranteed to be either NULL or valid by the CLAP spec.
         let load_key = unsafe { cstr_from_nullable_ptr(load_key) };
 
-        host.main_thread().loaded(location, load_key);
+        host.main_thread().as_ref().loaded(location, load_key);
 
         Ok(())
     });
@@ -140,6 +140,7 @@ unsafe extern "C" fn on_error<H>(
         let message = unsafe { cstr_from_nullable_ptr(message) };
 
         host.main_thread()
+            .as_ref()
             .on_error(location, load_key, os_error, message);
 
         Ok(())

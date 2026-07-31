@@ -83,7 +83,7 @@ where
     for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().changed();
+        host.main_thread().as_ref().changed();
 
         Ok(())
     });

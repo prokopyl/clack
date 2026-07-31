@@ -469,7 +469,7 @@ mod host {
     {
         HostWrapper::<H>::handle(host, |host| {
             let mut writer = TrackInfoWriter::from_raw(buf);
-            host.main_thread().get(&mut writer);
+            host.main_thread().as_ref().get(&mut writer);
             Ok(writer.is_set)
         })
         .unwrap_or(false)

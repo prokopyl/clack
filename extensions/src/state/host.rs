@@ -89,7 +89,7 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().mark_dirty();
+        host.main_thread().as_ref().mark_dirty();
 
         Ok(())
     });

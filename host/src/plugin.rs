@@ -344,7 +344,7 @@ impl<H: HostHandlers> PluginInstance<H> {
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
         // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.wrapper().main_thread()) }
+        unsafe { access(self.inner.wrapper().main_thread().as_ref()) }
     }
 
     /// Returns a thread-safe handle to the plugin.
