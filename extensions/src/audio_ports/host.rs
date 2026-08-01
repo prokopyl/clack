@@ -97,10 +97,9 @@ where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        Ok(host
-            .main_thread()
-            .as_ref()
-            .is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
+        host.on_main_thread(|host| {
+            Ok(host.is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
+        })
     })
     .unwrap_or(false)
 }
@@ -111,9 +110,7 @@ where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_ref()
-            .rescan(AudioPortRescanFlags::from_bits_truncate(flags));
+        host.on_main_thread(|host| host.rescan(AudioPortRescanFlags::from_bits_truncate(flags)));
 
         Ok(())
     });

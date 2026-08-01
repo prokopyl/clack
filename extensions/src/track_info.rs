@@ -468,9 +468,11 @@ mod host {
         H: for<'a> HostHandlers<MainThread<'a>: HostTrackInfoImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            let mut writer = TrackInfoWriter::from_raw(buf);
-            host.main_thread().as_ref().get(&mut writer);
-            Ok(writer.is_set)
+            host.on_main_thread(|host| {
+                let mut writer = TrackInfoWriter::from_raw(buf);
+                host.get(&mut writer);
+                Ok(writer.is_set)
+            })
         })
         .unwrap_or(false)
     }

@@ -100,7 +100,7 @@ mod host {
         let result = HostWrapper::<H>::handle(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 
-            let result = host.main_thread().as_ref().query(space_name);
+            let result = host.on_main_thread(|host| host.query(space_name));
             *space_id = EventSpaceId::optional_id(&result);
 
             Ok(result.is_some())

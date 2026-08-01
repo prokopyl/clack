@@ -288,9 +288,7 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_ref()
-            .rescan(ParamRescanFlags::from_bits_truncate(flags));
+        host.on_main_thread(|host| host.rescan(ParamRescanFlags::from_bits_truncate(flags)));
 
         Ok(())
     });
@@ -304,9 +302,10 @@ where
     HostWrapper::<H>::handle(host, |host| {
         let param_id = ClapId::from_raw(param_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid param_id"))?;
-        host.main_thread()
-            .as_ref()
-            .clear(param_id, ParamClearFlags::from_bits_truncate(flags));
+
+        host.on_main_thread(|host| {
+            host.clear(param_id, ParamClearFlags::from_bits_truncate(flags))
+        });
 
         Ok(())
     });

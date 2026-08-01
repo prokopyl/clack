@@ -9,7 +9,6 @@ use clap_sys::ext::log::{
 use clap_sys::host::clap_host;
 use clap_sys::plugin::clap_plugin;
 use std::borrow::Cow;
-use std::cell::UnsafeCell;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
@@ -46,7 +45,7 @@ mod logging;
 // which means we can never move this again. This must always exist in a Pin.
 pub struct HostWrapper<H: HostHandlers> {
     audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
-    main_thread: UnsafeCell<<H as HostHandlers>::MainThread<'static>>,
+    main_thread: Pin<Box<<H as HostHandlers>::MainThread<'static>>>,
     shared: Pin<Box<<H as HostHandlers>::Shared<'static>>>,
 
     // Init stuff
@@ -121,13 +120,15 @@ impl<H: HostHandlers> HostWrapper<H> {
         }
     }
 
-    /// Returns a raw, non-null pointer to the host's ([`MainThread`](HostHandlers::MainThread)) struct.
+    /// TODO
     ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
-    #[inline]
-    pub unsafe fn main_thread(&self) -> NonNull<<H as HostHandlers>::MainThread<'_>> {
-        NonNull::from(&self.main_thread).cast()
+    pub unsafe fn on_main_thread<T>(
+        &self,
+        handler: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> T,
+    ) -> T {
+        handler(&self.main_thread)
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
@@ -171,13 +172,14 @@ impl<H: HostHandlers> HostWrapper<H> {
         ) -> <H as HostHandlers>::MainThread<'s>,
     {
         let shared = Box::pin(shared(&()));
+        // SAFETY: this type guarantees shared lives long enough
+        let main_thread = Box::pin(main_thread(unsafe { extend_shared_ref(&shared) }));
 
         // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
         // will effectively hold a shared pointer to this.
         let wrapper = Arc::new(Self {
             audio_processor: UnsafeOptionCell::new(),
-            // SAFETY: this type guarantees shared lives long enough
-            main_thread: main_thread(unsafe { extend_shared_ref(&shared) }).into(),
+            main_thread,
             shared,
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
@@ -204,13 +206,10 @@ impl<H: HostHandlers> HostWrapper<H> {
         self.ensure_initializing_called();
         let instance = *self.plugin_ptr.get().unwrap();
 
-        // SAFETY: At this point there is no way main_thread could not have been set.
-        self.main_thread()
-            .as_ref()
-            .initialized(InitializedPluginHandle::new(
-                self.destroy_lock.clone(),
-                instance,
-            ));
+        self.main_thread.initialized(InitializedPluginHandle::new(
+            self.destroy_lock.clone(),
+            instance,
+        ));
     }
 
     pub(crate) fn start_instance_destroy(&self) {
@@ -240,7 +239,7 @@ impl<H: HostHandlers> HostWrapper<H> {
             unsafe { extend_shared_ref(&self.shared) },
             // SAFETY: The user enforces that this is only called on the main thread, and
             // non-concurrently to any other main-thread method.
-            &*self.main_thread.get(),
+            &self.main_thread,
         ));
         Ok(())
     }
@@ -263,7 +262,7 @@ impl<H: HostHandlers> HostWrapper<H> {
                 audio_processor,
                 // SAFETY: The user enforces that this is only called on the main thread, and
                 // non-concurrently to any other main-thread method.
-                &*self.main_thread.get(),
+                &self.main_thread,
             )),
         }
     }

@@ -84,7 +84,7 @@ where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        Ok(host.main_thread().as_ref().supported_dialects().bits())
+        Ok(host.on_main_thread(|host| host.supported_dialects().bits()))
     })
     .unwrap_or(0)
 }
@@ -95,9 +95,7 @@ where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_ref()
-            .rescan(NotePortRescanFlags::from_bits_truncate(flags));
+        host.on_main_thread(|host| host.rescan(NotePortRescanFlags::from_bits_truncate(flags)));
 
         Ok(())
     });

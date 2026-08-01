@@ -118,7 +118,7 @@ where
         // for the duration of this function call, which is the (inferred) lifetime we give it here.
         let mut builder = unsafe { ContextMenuBuilder::from_raw(builder) };
 
-        host.main_thread().as_ref().populate(target, &mut builder)?;
+        host.on_main_thread(|host| host.populate(target, &mut builder))?;
 
         Ok(())
     })
@@ -141,7 +141,7 @@ where
         let action_id = ClapId::from_raw(action_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid Action ID"))?;
 
-        host.main_thread().as_ref().perform(target, action_id)?;
+        host.on_main_thread(|host| host.perform(target, action_id))?;
         Ok(())
     })
     .is_some()
@@ -152,8 +152,10 @@ unsafe extern "C" fn can_popup<H>(host: *const clap_host) -> bool
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| Ok(host.main_thread().as_ref().can_popup()))
-        .unwrap_or(false)
+    HostWrapper::<H>::handle(host, |host| {
+        host.on_main_thread(|host| Ok(host.can_popup()))
+    })
+    .unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -170,9 +172,8 @@ where
     HostWrapper::<H>::handle(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
-        host.main_thread()
-            .as_ref()
-            .popup(target, screen_index, x, y)?;
+        host.on_main_thread(|host| host.popup(target, screen_index, x, y))?;
+
         Ok(())
     })
     .is_some()

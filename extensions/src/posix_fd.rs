@@ -143,11 +143,10 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
-            Ok(host
-                .main_thread()
-                .as_ref()
-                .register_fd(fd, FdFlags::from_bits_truncate(flags))
-                .is_ok())
+            Ok(host.on_main_thread(|host| {
+                host.register_fd(fd, FdFlags::from_bits_truncate(flags))
+                    .is_ok()
+            }))
         })
         .unwrap_or(false)
     }
@@ -162,11 +161,10 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
-            Ok(host
-                .main_thread()
-                .as_ref()
-                .modify_fd(fd, FdFlags::from_bits_truncate(flags))
-                .is_ok())
+            Ok(host.on_main_thread(|host| {
+                host.modify_fd(fd, FdFlags::from_bits_truncate(flags))
+                    .is_ok()
+            }))
         })
         .unwrap_or(false)
     }
@@ -176,7 +174,7 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle(host, |host| {
-            Ok(host.main_thread().as_ref().unregister_fd(fd).is_ok())
+            Ok(host.on_main_thread(|host| host.unregister_fd(fd).is_ok()))
         })
         .unwrap_or(false)
     }

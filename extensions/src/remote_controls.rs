@@ -186,7 +186,7 @@ mod host {
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_ref().changed();
+            host.on_main_thread(|host| host.changed());
             Ok(())
         });
     }
@@ -200,7 +200,7 @@ mod host {
             let id = ClapId::from_raw(page_id)
                 .ok_or(HostWrapperError::InvalidParameter("Invalid page ID"))?;
 
-            host.main_thread().as_ref().suggest_page(id);
+            host.on_main_thread(|host| host.suggest_page(id));
             Ok(())
         });
     }

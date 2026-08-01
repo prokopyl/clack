@@ -74,7 +74,7 @@ where
 {
     unsafe {
         HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_ref().changed();
+            host.on_main_thread(|host| host.changed());
             Ok(())
         });
     }

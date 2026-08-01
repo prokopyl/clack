@@ -338,13 +338,12 @@ impl<H: HostHandlers> PluginInstance<H> {
     /// type is self-referential: both the [`HostHandlers`] and the plugin's instance data hold
     /// references to each other, and both are owned by this type.
     #[inline]
-    pub fn access_handler<'s, R>(
-        &'s self,
-        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
+    pub fn access_handler<R>(
+        &self,
+        access: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {
-        // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
-        // we can guarantee there are no mutable reference anywhere
-        unsafe { access(self.inner.wrapper().main_thread().as_ref()) }
+        // SAFETY: This type guarantees it can only be called on the main thread
+        unsafe { self.inner.wrapper().on_main_thread(access) }
     }
 
     /// Returns a thread-safe handle to the plugin.

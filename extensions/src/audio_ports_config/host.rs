@@ -161,7 +161,7 @@ where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_ref().rescan();
+        host.on_main_thread(|host| host.rescan());
 
         Ok(())
     });
