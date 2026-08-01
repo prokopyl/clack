@@ -110,7 +110,7 @@ unsafe extern "C" fn populate<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_on_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
@@ -118,7 +118,7 @@ where
         // for the duration of this function call, which is the (inferred) lifetime we give it here.
         let mut builder = unsafe { ContextMenuBuilder::from_raw(builder) };
 
-        host.on_main_thread(|host| host.populate(target, &mut builder))?;
+        host.populate(target, &mut builder)?;
 
         Ok(())
     })
@@ -134,14 +134,14 @@ unsafe extern "C" fn perform<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_on_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
         let action_id = ClapId::from_raw(action_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid Action ID"))?;
 
-        host.on_main_thread(|host| host.perform(target, action_id))?;
+        host.perform(target, action_id)?;
         Ok(())
     })
     .is_some()
@@ -152,10 +152,7 @@ unsafe extern "C" fn can_popup<H>(host: *const clap_host) -> bool
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| Ok(host.can_popup()))
-    })
-    .unwrap_or(false)
+    HostWrapper::<H>::handle_on_main_thread(host, |host| Ok(host.can_popup())).unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -169,10 +166,10 @@ unsafe extern "C" fn popup<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_on_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
-        host.on_main_thread(|host| host.popup(target, screen_index, x, y))?;
+        host.popup(target, screen_index, x, y)?;
 
         Ok(())
     })

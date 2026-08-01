@@ -142,11 +142,10 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host.on_main_thread(|host| {
-                host.register_fd(fd, FdFlags::from_bits_truncate(flags))
-                    .is_ok()
-            }))
+        HostWrapper::<H>::handle_on_main_thread(host, |host| {
+            Ok(host
+                .register_fd(fd, FdFlags::from_bits_truncate(flags))
+                .is_ok())
         })
         .unwrap_or(false)
     }
@@ -160,11 +159,10 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host.on_main_thread(|host| {
-                host.modify_fd(fd, FdFlags::from_bits_truncate(flags))
-                    .is_ok()
-            }))
+        HostWrapper::<H>::handle_on_main_thread(host, |host| {
+            Ok(host
+                .modify_fd(fd, FdFlags::from_bits_truncate(flags))
+                .is_ok())
         })
         .unwrap_or(false)
     }
@@ -173,10 +171,8 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host.on_main_thread(|host| host.unregister_fd(fd).is_ok()))
-        })
-        .unwrap_or(false)
+        HostWrapper::<H>::handle_on_main_thread(host, |host| Ok(host.unregister_fd(fd).is_ok()))
+            .unwrap_or(false)
     }
 }
 

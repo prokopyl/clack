@@ -343,7 +343,12 @@ impl<H: HostHandlers> PluginInstance<H> {
         access: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {
         // SAFETY: This type guarantees it can only be called on the main thread
-        unsafe { self.inner.wrapper().on_main_thread(access) }
+        let Some(result) = (unsafe { self.inner.wrapper().on_main_thread(access) }) else {
+            // PANIC: main_thread can only be None if called from within init()
+            unreachable!()
+        };
+
+        result
     }
 
     /// Returns a thread-safe handle to the plugin.

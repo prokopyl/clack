@@ -83,10 +83,8 @@ unsafe extern "C" fn supported_dialects<H>(host: *const clap_host) -> u32
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        Ok(host.on_main_thread(|host| host.supported_dialects().bits()))
-    })
-    .unwrap_or(0)
+    HostWrapper::<H>::handle_on_main_thread(host, |host| Ok(host.supported_dialects().bits()))
+        .unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]

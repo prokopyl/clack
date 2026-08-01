@@ -203,8 +203,8 @@
 //!
 //! unsafe extern "C" fn changed<H: for<'a> HostHandlers<MainThread<'a>: HostLatencyImpl>>(host: *const clap_host)
 //! {
-//!     HostWrapper::<H>::handle(host, |host| {
-//!         host.main_thread().as_ref().changed();
+//!     HostWrapper::<H>::handle_on_main_thread(host, |host| {
+//!         host.changed();
 //!         Ok(())
 //!     });
 //! }

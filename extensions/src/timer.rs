@@ -227,16 +227,14 @@ mod host {
     where
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            match host.on_main_thread(|host| host.register_timer(period_ms)) {
-                Ok(id) => {
-                    *timer_id = id.0;
-                    Ok(true)
-                }
-                Err(_) => {
-                    *timer_id = u32::MAX;
-                    Ok(false)
-                }
+        HostWrapper::<H>::handle_on_main_thread(host, |host| match host.register_timer(period_ms) {
+            Ok(id) => {
+                *timer_id = id.0;
+                Ok(true)
+            }
+            Err(_) => {
+                *timer_id = u32::MAX;
+                Ok(false)
             }
         })
         .unwrap_or(false)
@@ -247,8 +245,8 @@ mod host {
     where
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host.on_main_thread(|host| host.unregister_timer(TimerId(timer_id)).is_ok()))
+        HostWrapper::<H>::handle_on_main_thread(host, |host| {
+            Ok(host.unregister_timer(TimerId(timer_id)).is_ok())
         })
         .unwrap_or(false)
     }

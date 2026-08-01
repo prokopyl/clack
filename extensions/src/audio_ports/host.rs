@@ -96,10 +96,8 @@ unsafe extern "C" fn is_rescan_flag_supported<H>(host: *const clap_host, flag: u
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| {
-            Ok(host.is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
-        })
+    HostWrapper::<H>::handle_on_main_thread(host, |host| {
+        Ok(host.is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
     })
     .unwrap_or(false)
 }
@@ -109,8 +107,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.rescan(AudioPortRescanFlags::from_bits_truncate(flags)));
+    HostWrapper::<H>::handle_on_main_thread(host, |host| {
+        host.rescan(AudioPortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

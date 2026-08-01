@@ -46,8 +46,8 @@ mod logging;
 // which means we can never move this again. This must always exist in a Pin.
 pub struct HostWrapper<H: HostHandlers> {
     audio_processor: UnsafeOptionCell<<H as HostHandlers>::AudioProcessor<'static>>,
-    main_thread: OnceCell<Pin<Box<<H as HostHandlers>::MainThread<'static>>>>,
-    shared: Pin<Box<<H as HostHandlers>::Shared<'static>>>,
+    main_thread: OnceCell<<H as HostHandlers>::MainThread<'static>>,
+    shared: <H as HostHandlers>::Shared<'static>,
 
     // Init stuff
     init_guard: Once,
@@ -121,6 +121,15 @@ impl<H: HostHandlers> HostWrapper<H> {
         }
     }
 
+    /// # Safety
+    /// TODO
+    pub unsafe fn handle_on_main_thread<T, F>(host: *const clap_host, handler: F) -> Option<T>
+    where
+        F: for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> Result<T, HostWrapperError>,
+    {
+        Self::handle(host, |host| host.on_main_thread(handler).transpose()).flatten()
+    }
+
     /// TODO
     ///
     /// # Safety
@@ -128,8 +137,8 @@ impl<H: HostHandlers> HostWrapper<H> {
     pub unsafe fn on_main_thread<T>(
         &self,
         handler: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> T,
-    ) -> T {
-        handler(&self.main_thread.get().unwrap())
+    ) -> Option<T> {
+        Some(handler(self.main_thread.get().as_ref()?))
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)
@@ -172,28 +181,24 @@ impl<H: HostHandlers> HostWrapper<H> {
             &'s <H as HostHandlers>::Shared<'s>,
         ) -> <H as HostHandlers>::MainThread<'s>,
     {
-        let shared = Box::pin(shared(&()));
-
         // We use Arc only because Box<T> implies Unique<T>, which is not the case since the plugin
         // will effectively hold a shared pointer to this.
-        let mut wrapper = Arc::new(Self {
+        let wrapper = Arc::new(Self {
             audio_processor: UnsafeOptionCell::new(),
             main_thread: OnceCell::new(),
-            shared,
+            shared: shared(&()),
             init_guard: Once::new(),
             init_started: AtomicBool::new(false),
             plugin_ptr: OnceLock::new(),
             destroy_lock: Arc::new(DestroyLock::new()),
         });
 
-        // PANIC: we have the only Arc copy of this wrapper data.
-        let wrapper_mut = Arc::get_mut(&mut wrapper).unwrap();
-
         // SAFETY: this type guarantees shared lives long enough
-        let main_thread = Box::pin(main_thread(unsafe {
-            extend_shared_ref(&wrapper_mut.shared)
-        }));
-        let _ = wrapper_mut.main_thread.set(main_thread);
+        let main_thread = main_thread(unsafe { extend_shared_ref(&wrapper.shared) });
+
+        let Ok(()) = wrapper.main_thread.set(main_thread) else {
+            unreachable!()
+        };
 
         // SAFETY: wrapper is the only reference to the data, we can guarantee it will remain pinned
         // until drop happens.
@@ -250,7 +255,7 @@ impl<H: HostHandlers> HostWrapper<H> {
             unsafe { extend_shared_ref(&self.shared) },
             // SAFETY: The user enforces that this is only called on the main thread, and
             // non-concurrently to any other main-thread method.
-            &self.main_thread.get().unwrap(),
+            self.main_thread.get().unwrap(),
         ));
         Ok(())
     }
@@ -273,7 +278,7 @@ impl<H: HostHandlers> HostWrapper<H> {
                 audio_processor,
                 // SAFETY: The user enforces that this is only called on the main thread, and
                 // non-concurrently to any other main-thread method.
-                &self.main_thread.get().unwrap(),
+                self.main_thread.get().unwrap(),
             )),
         }
     }
