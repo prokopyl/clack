@@ -98,7 +98,7 @@ mod host {
         /// Note this callback is "level-triggered". It means that for instance, a writable File
         /// Descriptor will continuously produce "on_fd()" events.
         #[inline]
-        pub fn on_fd(&self, plugin: &mut PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
+        pub fn on_fd(&self, plugin: &PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
             if let Some(on_fd) = plugin.use_extension(&self.0).on_fd {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_fd(plugin.as_raw(), fd, flags.bits()) }
@@ -191,7 +191,7 @@ mod plugin {
         /// of these events.
         pub fn register_fd(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
@@ -211,7 +211,7 @@ mod plugin {
         /// Updates the set of events a given File Descriptor will fire.
         pub fn modify_fd(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
@@ -229,11 +229,7 @@ mod plugin {
         }
 
         /// Removes a given File Descriptor from the host's event reactor.
-        pub fn unregister_fd(
-            &self,
-            host: &mut HostMainThreadHandle,
-            fd: RawFd,
-        ) -> Result<(), FdError> {
+        pub fn unregister_fd(&self, host: &HostMainThreadHandle, fd: RawFd) -> Result<(), FdError> {
             let unregister_fd = host
                 .use_extension(&self.0)
                 .unregister_fd

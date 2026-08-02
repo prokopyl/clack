@@ -48,7 +48,7 @@ mod host {
     impl PluginLatency {
         /// Returns the plugin latency in samples.
         #[inline]
-        pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+        pub fn get(&self, plugin: &PluginMainThreadHandle) -> u32 {
             match plugin.use_extension(&self.0).get {
                 None => 0,
                 // SAFETY: This type ensures the function pointer is valid.
@@ -99,7 +99,7 @@ mod plugin {
         /// The latency is allowed to change only during the [`PluginAudioProcessor::activate`](clack_plugin::plugin::PluginAudioProcessor::activate) callback.
         /// If the plugin is active, you should request a restart first.
         #[inline]
-        pub fn changed(&self, host: &mut HostMainThreadHandle) {
+        pub fn changed(&self, host: &HostMainThreadHandle) {
             if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }

@@ -8,7 +8,7 @@ impl PluginContextMenu {
     #[inline]
     pub fn populate(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), ContextMenuError> {
@@ -36,7 +36,7 @@ impl PluginContextMenu {
     #[inline]
     pub fn perform(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         target: ContextMenuTarget,
         action_id: ClapId,
     ) -> Result<(), ContextMenuError> {

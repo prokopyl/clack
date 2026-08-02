@@ -363,7 +363,7 @@ mod host {
 
     impl PluginTrackInfo {
         /// Notifies the plugin that its current track's info has changed.
-        pub fn changed(&self, plugin: &mut PluginMainThreadHandle) {
+        pub fn changed(&self, plugin: &PluginMainThreadHandle) {
             if let Some(changed) = plugin.use_extension(&self.0).changed {
                 // SAFETY: This type guarantees the function pointer is valid, and
                 // PluginMainThreadHandle guarantees the plugin pointer is valid

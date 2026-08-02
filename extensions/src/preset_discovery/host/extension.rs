@@ -24,7 +24,7 @@ impl PluginPresetLoad {
     #[inline]
     pub fn load_from_location(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         location: Location,
         load_key: Option<&CStr>,
     ) -> Result<(), PresetLoadError> {

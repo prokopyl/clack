@@ -100,7 +100,7 @@ impl HostNoteName {
     /// Informs the host that the available Note Name list has changed and needs to
     /// be rescanned.
     #[inline]
-    pub fn changed(&self, host: &mut HostMainThreadHandle) {
+    pub fn changed(&self, host: &HostMainThreadHandle) {
         if let Some(changed) = host.use_extension(&self.0).changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { changed(host.as_raw()) }

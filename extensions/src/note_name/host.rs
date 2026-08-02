@@ -27,7 +27,7 @@ impl NoteNameBuffer {
 
 impl PluginNoteName {
     /// Returns the number of available [`NoteName`]s.
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
+    pub fn count(&self, plugin: &PluginMainThreadHandle) -> usize {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -41,7 +41,7 @@ impl PluginNoteName {
     /// unnecessary allocations.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         buffer: &'b mut NoteNameBuffer,
     ) -> Option<NoteName<'b>> {

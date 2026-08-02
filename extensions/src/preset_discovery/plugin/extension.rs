@@ -12,7 +12,7 @@ impl HostPresetLoad {
     #[inline]
     pub fn on_error(
         &self,
-        host: &mut HostMainThreadHandle,
+        host: &HostMainThreadHandle,
         location: Location,
         load_key: Option<&CStr>,
         os_error: i32,
@@ -38,12 +38,7 @@ impl HostPresetLoad {
     ///
     /// This can be used to e.g. keep the host preset browser in sync with the plugin's.
     #[inline]
-    pub fn loaded(
-        &self,
-        host: &mut HostMainThreadHandle,
-        location: Location,
-        load_key: Option<&CStr>,
-    ) {
+    pub fn loaded(&self, host: &HostMainThreadHandle, location: Location, load_key: Option<&CStr>) {
         if let Some(loaded) = host.use_extension(&self.0).loaded {
             let (kind, path) = location.to_raw();
             // SAFETY: Host pointer comes from HostMainThreadHandle, string pointers come from &CStr, so they are all valid.

@@ -96,7 +96,7 @@ mod plugin {
         #[inline]
         pub fn register_timer(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             period_ms: u32,
         ) -> Result<TimerId, TimerError> {
             let mut id = 0u32;
@@ -123,7 +123,7 @@ mod plugin {
         #[inline]
         pub fn unregister_timer(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             timer_id: TimerId,
         ) -> Result<(), TimerError> {
             let unregister_timer = host
@@ -257,7 +257,7 @@ mod host {
         /// The callback is also given the unique [`TimerId`] of the timer that ticked and triggered
         /// it.
         #[inline]
-        pub fn on_timer(&self, plugin: &mut PluginMainThreadHandle, timer_id: TimerId) {
+        pub fn on_timer(&self, plugin: &PluginMainThreadHandle, timer_id: TimerId) {
             if let Some(on_timer) = plugin.use_extension(&self.0).on_timer {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_timer(plugin.as_raw(), timer_id.0) }

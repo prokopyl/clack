@@ -186,7 +186,7 @@ mod host {
         /// If this operation fails, a [`StateError`] is returned.
         pub fn load(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             reader: &mut impl Read,
             context_type: StateContextType,
         ) -> Result<(), StateError> {
@@ -221,7 +221,7 @@ mod host {
         /// If this operation fails, a [`StateError`] is returned.
         pub fn save(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             writer: &mut impl Write,
             context_type: StateContextType,
         ) -> Result<(), StateError> {

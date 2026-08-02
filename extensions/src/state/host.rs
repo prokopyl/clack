@@ -13,7 +13,7 @@ impl PluginState {
     /// If this operation fails, a [`StateError`] is returned.
     pub fn load<R: Read>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         reader: &mut R,
     ) -> Result<(), StateError> {
         let mut stream = InputStream::from_reader(reader);
@@ -42,7 +42,7 @@ impl PluginState {
     /// If this operation fails, a [`StateError`] is returned.
     pub fn save<W: Write>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         writer: &mut W,
     ) -> Result<(), StateError> {
         let mut stream = OutputStream::from_writer(writer);

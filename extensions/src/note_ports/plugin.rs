@@ -114,7 +114,7 @@ impl HostNotePorts {
     /// Rescan the full list of note ports according to the flags.
     /// See [`NotePortRescanFlags`] for more details.
     #[inline]
-    pub fn rescan(&self, host: &mut HostMainThreadHandle, flags: NotePortRescanFlags) {
+    pub fn rescan(&self, host: &HostMainThreadHandle, flags: NotePortRescanFlags) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw(), flags.bits()) }

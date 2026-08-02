@@ -8,7 +8,7 @@ impl HostContextMenu {
     #[inline]
     pub fn populate(
         &self,
-        host: &mut HostMainThreadHandle,
+        host: &HostMainThreadHandle,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), ContextMenuError> {
@@ -36,7 +36,7 @@ impl HostContextMenu {
     #[inline]
     pub fn perform(
         &self,
-        host: &mut HostMainThreadHandle,
+        host: &HostMainThreadHandle,
         target: ContextMenuTarget,
         action_id: ClapId,
     ) -> Result<(), ContextMenuError> {
@@ -59,7 +59,7 @@ impl HostContextMenu {
 
     /// Returns `true` if the host can pop up its context menu on behalf of the plugin, `false` otherwise.
     #[inline]
-    pub fn can_popup(&self, host: &mut HostMainThreadHandle) -> bool {
+    pub fn can_popup(&self, host: &HostMainThreadHandle) -> bool {
         let Some(can_popup) = host.use_extension(&self.0).can_popup else {
             return false;
         };
@@ -73,7 +73,7 @@ impl HostContextMenu {
     #[inline]
     pub fn popup(
         &self,
-        host: &mut HostMainThreadHandle,
+        host: &HostMainThreadHandle,
         target: ContextMenuTarget,
         screen_index: i32,
         x: i32,

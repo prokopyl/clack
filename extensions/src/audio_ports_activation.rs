@@ -90,7 +90,7 @@ mod host {
     impl PluginAudioPortsActivation {
         /// Returns true if the plugin supports calling [`set_active_audio_active`](Self::set_active_audio_active).
         #[inline]
-        pub fn can_activate_while_processing(&self, plugin: &mut PluginMainThreadHandle) -> bool {
+        pub fn can_activate_while_processing(&self, plugin: &PluginMainThreadHandle) -> bool {
             match plugin.use_extension(&self.0).can_activate_while_processing {
                 None => false,
                 Some(can_activate_while_processing) => {

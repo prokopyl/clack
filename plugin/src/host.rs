@@ -302,6 +302,7 @@ impl<'a> Deref for HostSharedHandle<'a> {
 /// A main-thread handle to the host.
 ///
 /// This can be used to perform requests to the host that can only be made from the main thread.
+#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct HostMainThreadHandle<'a> {
     raw: NonNull<clap_host>,

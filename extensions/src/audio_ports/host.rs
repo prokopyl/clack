@@ -38,7 +38,7 @@ impl AudioPortInfoBuffer {
 
 impl PluginAudioPorts {
     /// Returns number of audio ports, for either input or output
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -49,7 +49,7 @@ impl PluginAudioPorts {
     /// Gets information about an audio port by its index, for either input or output.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,

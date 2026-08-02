@@ -105,7 +105,7 @@ mod host {
         #[inline]
         pub fn set_mapping(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             param_id: ClapId,
             has_mapping: bool,
             color: Option<Color>,
@@ -140,7 +140,7 @@ mod host {
         #[inline]
         pub fn set_automation(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             param_id: ClapId,
             automation_state: ParamIndicationAutomation,
             color: Option<Color>,

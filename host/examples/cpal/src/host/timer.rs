@@ -58,7 +58,7 @@ impl Timers {
 
     /// Ticks all the registered timers, and run the plugin's callback for all timers that were
     /// triggered.
-    pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &mut PluginMainThreadHandle) {
+    pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &PluginMainThreadHandle) {
         for triggered in self.tick_all() {
             timer_ext.on_timer(plugin, triggered);
         }

@@ -49,7 +49,7 @@ pub struct Gui {
 
 impl Gui {
     /// Initializes the GUI state for a given instance
-    pub fn new(plugin_gui: PluginGui, instance: &mut PluginMainThreadHandle) -> Self {
+    pub fn new(plugin_gui: PluginGui, instance: &PluginMainThreadHandle) -> Self {
         Self {
             plugin_gui,
             configuration: Self::negotiate_configuration(&plugin_gui, instance),
@@ -64,7 +64,7 @@ impl Gui {
     /// only figures out if that is okay for the plugin, and whether is supports embedding.
     fn negotiate_configuration(
         gui: &PluginGui,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
     ) -> Option<GuiConfiguration<'static>> {
         // This implementation only supports the default: Win32 on Windows, Cocoa on macOS, X11 on Unix
         // We completely ignore the plugin's preference here: it's platform-default or nothing.
@@ -118,7 +118,7 @@ impl Gui {
     }
 
     /// Opens the plugin's GUI in floating mode.
-    pub fn open_floating(&mut self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+    pub fn open_floating(&mut self, plugin: &PluginMainThreadHandle) -> Result<(), GuiError> {
         let Some(configuration) = self.configuration else {
             panic!("Called open_floating on incompatible plugin")
         };
@@ -137,7 +137,7 @@ impl Gui {
     #[allow(unsafe_code)]
     pub fn open_embedded(
         &mut self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         event_loop: &EventLoop<()>,
     ) -> Result<Window, Box<dyn Error>> {
         let gui = self.plugin_gui;
@@ -182,7 +182,7 @@ impl Gui {
     /// The scale factor is also given in case the API uses logical pixel (Cocoa on macOS).
     pub fn resize(
         &mut self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         size: PhysicalSize<u32>,
         scale_factor: f64,
     ) -> Size {
@@ -214,7 +214,7 @@ impl Gui {
     }
 
     /// Destroys the plugin's GUI resources, if its GUI is still open.
-    pub fn destroy(&mut self, plugin: &mut PluginMainThreadHandle) {
+    pub fn destroy(&mut self, plugin: &PluginMainThreadHandle) {
         if self.is_open {
             self.plugin_gui.destroy(plugin);
             self.is_open = false;

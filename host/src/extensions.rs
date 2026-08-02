@@ -179,7 +179,7 @@
 //!     // The `clap_plugin_latency.get` function requires to be called on the `[main-thread]`.
 //!     // Therefore, we will require the `PluginMainThreadHandle` to be passed.
 //!     #[inline]
-//!     pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+//!     pub fn get(&self, plugin: &PluginMainThreadHandle) -> u32 {
 //!         match plugin.use_extension(&self.0).get {
 //!             None => 0,
 //!             Some(get) => unsafe { get(plugin.as_raw()) },
