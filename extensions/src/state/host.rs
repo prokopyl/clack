@@ -88,8 +88,8 @@ unsafe extern "C" fn mark_dirty<H>(host: *const clap_host)
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.mark_dirty());
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.mark_dirty();
 
         Ok(())
     });

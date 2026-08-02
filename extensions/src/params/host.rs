@@ -287,8 +287,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: clap_param_rescan_
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.rescan(ParamRescanFlags::from_bits_truncate(flags)));
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan(ParamRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });
@@ -299,13 +299,11 @@ unsafe extern "C" fn clear<H>(host: *const clap_host, param_id: u32, flags: clap
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         let param_id = ClapId::from_raw(param_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid param_id"))?;
 
-        host.on_main_thread(|host| {
-            host.clear(param_id, ParamClearFlags::from_bits_truncate(flags))
-        });
+        host.clear(param_id, ParamClearFlags::from_bits_truncate(flags));
 
         Ok(())
     });

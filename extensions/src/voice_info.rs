@@ -138,8 +138,8 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostVoiceInfoImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            host.on_main_thread(|host| host.changed());
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }

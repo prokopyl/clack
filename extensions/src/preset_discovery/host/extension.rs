@@ -104,15 +104,14 @@ unsafe extern "C" fn loaded<H>(
 ) where
     for<'a> H: HostHandlers<MainThread<'a>: HostPresetLoadImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: path is guaranteed to be either NULL or valid by the CLAP spec.
         let location = unsafe { Location::from_raw(kind, path) }
             .ok_or(HostWrapperError::InvalidParameter("Invalid location"))?;
 
         // SAFETY: load_key is guaranteed to be either NULL or valid by the CLAP spec.
         let load_key = unsafe { cstr_from_nullable_ptr(load_key) };
-
-        host.on_main_thread(|host| host.loaded(location, load_key));
+        host.loaded(location, load_key);
 
         Ok(())
     });
@@ -129,7 +128,7 @@ unsafe extern "C" fn on_error<H>(
 ) where
     for<'a> H: HostHandlers<MainThread<'a>: HostPresetLoadImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: path is guaranteed to be either NULL or valid by the CLAP spec.
         let location = unsafe { Location::from_raw(kind, path) }
             .ok_or(HostWrapperError::InvalidParameter("Invalid location"))?;
@@ -138,8 +137,7 @@ unsafe extern "C" fn on_error<H>(
         let load_key = unsafe { cstr_from_nullable_ptr(load_key) };
         // SAFETY: message is guaranteed to be either NULL or valid by the CLAP spec.
         let message = unsafe { cstr_from_nullable_ptr(message) };
-
-        host.on_main_thread(|host| host.on_error(location, load_key, os_error, message));
+        host.on_error(location, load_key, os_error, message);
 
         Ok(())
     });

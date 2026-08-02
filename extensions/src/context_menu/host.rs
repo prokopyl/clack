@@ -110,7 +110,7 @@ unsafe extern "C" fn populate<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle_on_main_thread(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
@@ -134,7 +134,7 @@ unsafe extern "C" fn perform<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle_on_main_thread(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
@@ -152,7 +152,7 @@ unsafe extern "C" fn can_popup<H>(host: *const clap_host) -> bool
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle_on_main_thread(host, |host| Ok(host.can_popup())).unwrap_or(false)
+    HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.can_popup())).unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -166,7 +166,7 @@ unsafe extern "C" fn popup<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle_on_main_thread(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
         host.popup(target, screen_index, x, y)?;

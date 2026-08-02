@@ -97,7 +97,7 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostEventRegistryImpl>,
     {
-        let result = HostWrapper::<H>::handle_on_main_thread(host, |host| {
+        let result = HostWrapper::<H>::handle_main_thread(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 
             let result = host.query(space_name);

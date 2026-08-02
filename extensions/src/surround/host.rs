@@ -82,8 +82,8 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostSurroundImpl>,
 {
     unsafe {
-        HostWrapper::<H>::handle(host, |host| {
-            host.on_main_thread(|host| host.changed());
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }

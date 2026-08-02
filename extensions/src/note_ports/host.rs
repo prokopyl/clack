@@ -83,7 +83,7 @@ unsafe extern "C" fn supported_dialects<H>(host: *const clap_host) -> u32
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
-    HostWrapper::<H>::handle_on_main_thread(host, |host| Ok(host.supported_dialects().bits()))
+    HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.supported_dialects().bits()))
         .unwrap_or(0)
 }
 
@@ -92,8 +92,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.rescan(NotePortRescanFlags::from_bits_truncate(flags)));
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan(NotePortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

@@ -160,8 +160,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host)
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.rescan());
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan();
 
         Ok(())
     });

@@ -82,8 +82,8 @@ unsafe extern "C" fn changed<H>(host: *const clap_host)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.on_main_thread(|host| host.changed());
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.changed();
 
         Ok(())
     });

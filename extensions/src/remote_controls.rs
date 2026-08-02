@@ -185,8 +185,8 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            host.on_main_thread(|host| host.changed());
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }
@@ -196,11 +196,11 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             let id = ClapId::from_raw(page_id)
                 .ok_or(HostWrapperError::InvalidParameter("Invalid page ID"))?;
 
-            host.on_main_thread(|host| host.suggest_page(id));
+            host.suggest_page(id);
             Ok(())
         });
     }

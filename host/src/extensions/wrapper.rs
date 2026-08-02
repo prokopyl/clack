@@ -123,18 +123,16 @@ impl<H: HostHandlers> HostWrapper<H> {
 
     /// # Safety
     /// TODO
-    pub unsafe fn handle_on_main_thread<T, F>(host: *const clap_host, handler: F) -> Option<T>
+    pub unsafe fn handle_main_thread<T, F>(host: *const clap_host, handler: F) -> Option<T>
     where
         F: for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> Result<T, HostWrapperError>,
     {
         Self::handle(host, |host| host.on_main_thread(handler).transpose()).flatten()
     }
 
-    /// TODO
-    ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
-    pub unsafe fn on_main_thread<T>(
+    pub(crate) unsafe fn on_main_thread<T>(
         &self,
         handler: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> T,
     ) -> Option<T> {

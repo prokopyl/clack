@@ -467,7 +467,7 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostTrackInfoImpl>,
     {
-        HostWrapper::<H>::handle_on_main_thread(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             let mut writer = TrackInfoWriter::from_raw(buf);
             host.get(&mut writer);
             Ok(writer.is_set)
