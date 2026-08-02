@@ -143,6 +143,18 @@ unsafe extern "C" fn void_push(
     true
 }
 
+impl InputEventBuffer for () {
+    #[inline]
+    fn len(&self) -> u32 {
+        0
+    }
+
+    #[inline]
+    fn get(&self, _index: u32) -> Option<&UnknownEvent> {
+        None
+    }
+}
+
 impl<T: Event> InputEventBuffer for T {
     #[inline]
     fn len(&self) -> u32 {
