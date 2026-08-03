@@ -10,7 +10,7 @@ impl HostAmbisonic {
     /// Notify the host that the ambisonic configuration for one or more ports has changed.
     ///
     /// The info can only change when the plugin is de-activated.
-    pub fn changed(&self, handle: &mut HostMainThreadHandle) {
+    pub fn changed(&self, handle: &HostMainThreadHandle) {
         if let Some(changed) = handle.use_extension(&self.0).changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { (changed)(handle.as_raw()) }

@@ -6,13 +6,13 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 impl HostTimerImpl for CpalHostMainThread<'_> {
-    fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError> {
+    fn register_timer(&self, period_ms: u32) -> Result<TimerId, HostError> {
         Ok(self
             .timers
             .register_new(Duration::from_millis(period_ms as u64)))
     }
 
-    fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError> {
+    fn unregister_timer(&self, timer_id: TimerId) -> Result<(), HostError> {
         if self.timers.unregister(timer_id) {
             Ok(())
         } else {
@@ -58,7 +58,7 @@ impl Timers {
 
     /// Ticks all the registered timers, and run the plugin's callback for all timers that were
     /// triggered.
-    pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &mut PluginMainThreadHandle) {
+    pub fn tick_timers(&self, timer_ext: &PluginTimer, plugin: &PluginMainThreadHandle) {
         for triggered in self.tick_all() {
             timer_ext.on_timer(plugin, triggered);
         }

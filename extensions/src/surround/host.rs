@@ -10,7 +10,7 @@ impl PluginSurround {
     /// Check if the plugin supports a given surround configuration mask.
     pub fn is_channel_mask_supported(
         &self,
-        handle: &mut PluginMainThreadHandle,
+        handle: &PluginMainThreadHandle,
         mask: SurroundChannels,
     ) -> bool {
         match handle.use_extension(&self.0).is_channel_mask_supported {
@@ -28,7 +28,7 @@ impl PluginSurround {
     /// This function should only be called if the port it is called for has `port_type` set to [`AudioPortType::SURROUND`](`crate::audio_ports::AudioPortType::SURROUND`).
     pub fn get_channel_map<'a>(
         &self,
-        handle: &mut PluginMainThreadHandle,
+        handle: &PluginMainThreadHandle,
         is_input: bool,
         port_index: u32,
         buffer: &'a mut [u8],
@@ -62,7 +62,7 @@ pub trait HostSurroundImpl {
     /// Notify the host that the surround configuration for one or more ports has changed.
     ///
     /// The channel map can only change when the plugin is de-activated.
-    fn changed(&mut self);
+    fn changed(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -82,8 +82,8 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostSurroundImpl>,
 {
     unsafe {
-        HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }

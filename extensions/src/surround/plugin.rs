@@ -32,7 +32,7 @@ impl SurroundMapWriter<'_> {
 
 impl HostSurround {
     /// Notify the host that the surround configuration for one or more ports has changed.
-    pub fn changed(&self, handle: &mut HostMainThreadHandle) {
+    pub fn changed(&self, handle: &HostMainThreadHandle) {
         if let Some(changed) = handle.use_extension(&self.0).changed {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { (changed)(handle.as_raw()) }

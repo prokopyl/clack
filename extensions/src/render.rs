@@ -155,7 +155,7 @@ mod host {
         /// This is especially useful for plugins that are acting as a proxy to hardware devices, or
         /// other real-time events.
         #[inline]
-        pub fn has_realtime_requirement(&self, plugin: &mut PluginMainThreadHandle) -> bool {
+        pub fn has_realtime_requirement(&self, plugin: &PluginMainThreadHandle) -> bool {
             if let Some(has_hard_realtime_requirement) =
                 plugin.use_extension(&self.0).has_hard_realtime_requirement
             {
@@ -174,7 +174,7 @@ mod host {
         /// to the given render mode.
         pub fn set(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             render_mode: RenderMode,
         ) -> Result<(), PluginRenderError> {
             // SAFETY: This type ensures the function pointer is valid.

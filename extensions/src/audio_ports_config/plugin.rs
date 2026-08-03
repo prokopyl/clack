@@ -238,7 +238,7 @@ impl HostAudioPortsConfig {
     /// Informs the host that the available Audio Ports Configuration list has changed and needs to
     /// be rescanned.
     #[inline]
-    pub fn rescan(&self, host: &mut HostMainThreadHandle) {
+    pub fn rescan(&self, host: &HostMainThreadHandle) {
         if let Some(rescan) = host.use_extension(&self.0).rescan {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { rescan(host.as_raw()) }

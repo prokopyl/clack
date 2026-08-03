@@ -27,7 +27,7 @@ impl NoteNameBuffer {
 
 impl PluginNoteName {
     /// Returns the number of available [`NoteName`]s.
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> usize {
+    pub fn count(&self, plugin: &PluginMainThreadHandle) -> usize {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -41,7 +41,7 @@ impl PluginNoteName {
     /// unnecessary allocations.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         buffer: &'b mut NoteNameBuffer,
     ) -> Option<NoteName<'b>> {
@@ -62,7 +62,7 @@ impl PluginNoteName {
 pub trait HostNoteNameImpl {
     /// Informs the host that the available Note Names list has changed and needs to
     /// be rescanned.
-    fn changed(&mut self);
+    fn changed(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -82,8 +82,8 @@ unsafe extern "C" fn changed<H>(host: *const clap_host)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNoteNameImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().changed();
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.changed();
 
         Ok(())
     });

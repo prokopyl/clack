@@ -5,7 +5,7 @@ impl PluginGui {
     /// Indicate whether a particular API is supported.
     pub fn is_api_supported(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         configuration: GuiConfiguration,
     ) -> bool {
         match plugin.use_extension(&self.0).is_api_supported {
@@ -26,7 +26,7 @@ impl PluginGui {
     /// situate the plugin in floating or embedded state despite having called this.
     pub fn get_preferred_api(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
     ) -> Option<GuiConfiguration<'_>> {
         let mut api_type = core::ptr::null();
         let mut is_floating = true;
@@ -60,7 +60,7 @@ impl PluginGui {
     /// If `is_floating` is false, the plugin must embed its window in the parent (host).
     pub fn create(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         configuration: GuiConfiguration,
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
@@ -82,7 +82,7 @@ impl PluginGui {
     }
 
     /// Free all resources associated with the GUI
-    pub fn destroy(&self, plugin: &mut PluginMainThreadHandle) {
+    pub fn destroy(&self, plugin: &PluginMainThreadHandle) {
         if let Some(destroy) = plugin.use_extension(&self.0).destroy {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { destroy(plugin.as_raw()) }
@@ -93,11 +93,7 @@ impl PluginGui {
     ///
     /// Overrides OS settings, and should not be used if the windowing API uses logical pixels. Can
     /// be ignored if the plugin will query the OS directly and perform its own calculations.
-    pub fn set_scale(
-        &self,
-        plugin: &mut PluginMainThreadHandle,
-        scale: f64,
-    ) -> Result<(), GuiError> {
+    pub fn set_scale(&self, plugin: &PluginMainThreadHandle, scale: f64) -> Result<(), GuiError> {
         let success =
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { plugin.use_extension(&self.0).set_scale.ok_or(GuiError::CreateError)?(plugin.as_raw(), scale) };
@@ -109,7 +105,7 @@ impl PluginGui {
     }
 
     /// Get current size of GUI
-    pub fn get_size(&self, plugin: &mut PluginMainThreadHandle) -> Option<GuiSize> {
+    pub fn get_size(&self, plugin: &PluginMainThreadHandle) -> Option<GuiSize> {
         let mut width = 0;
         let mut height = 0;
 
@@ -128,7 +124,7 @@ impl PluginGui {
     /// Tell host if GUI can be resized
     ///
     /// Only applies to embedded windows.
-    pub fn can_resize(&self, plugin: &mut PluginMainThreadHandle) -> bool {
+    pub fn can_resize(&self, plugin: &PluginMainThreadHandle) -> bool {
         if let Some(can_resize) = plugin.use_extension(&self.0).can_resize {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { can_resize(plugin.as_raw()) }
@@ -138,7 +134,7 @@ impl PluginGui {
     }
 
     /// Provide hints on the resize-ability of the GUI
-    pub fn get_resize_hints(&self, plugin: &mut PluginMainThreadHandle) -> Option<GuiResizeHints> {
+    pub fn get_resize_hints(&self, plugin: &PluginMainThreadHandle) -> Option<GuiResizeHints> {
         let mut hints = clap_gui_resize_hints {
             aspect_ratio_height: u32::MAX,
             aspect_ratio_width: u32::MAX,
@@ -165,11 +161,7 @@ impl PluginGui {
     ///
     /// Only applies if the GUI is resizable and embedded in a parent window. Must return
     /// dimensions smaller than or equal to the requested dimensions.
-    pub fn adjust_size(
-        &self,
-        plugin: &mut PluginMainThreadHandle,
-        size: GuiSize,
-    ) -> Option<GuiSize> {
+    pub fn adjust_size(&self, plugin: &PluginMainThreadHandle, size: GuiSize) -> Option<GuiSize> {
         let mut new_size = size;
 
         // SAFETY: This type ensures the function pointer is valid.
@@ -184,11 +176,7 @@ impl PluginGui {
     }
 
     /// Set the size of an embedded window
-    pub fn set_size(
-        &self,
-        plugin: &mut PluginMainThreadHandle,
-        size: GuiSize,
-    ) -> Result<(), GuiError> {
+    pub fn set_size(&self, plugin: &PluginMainThreadHandle, size: GuiSize) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         let success = unsafe {
             plugin
@@ -212,7 +200,7 @@ impl PluginGui {
     /// is called.
     pub unsafe fn set_parent(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         window: Window,
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
@@ -240,7 +228,7 @@ impl PluginGui {
     /// is called.
     pub unsafe fn set_transient(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         window: Window,
     ) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
@@ -257,7 +245,7 @@ impl PluginGui {
     /// Give a suggested window title to the plugin.
     ///
     /// Only applies to floating windows.
-    pub fn suggest_title(&self, plugin: &mut PluginMainThreadHandle, title: &CStr) {
+    pub fn suggest_title(&self, plugin: &PluginMainThreadHandle, title: &CStr) {
         if let Some(suggest_title) = plugin.use_extension(&self.0).suggest_title {
             // SAFETY: This type ensures the function pointer is valid.
             unsafe { suggest_title(plugin.as_raw(), title.as_ptr()) }
@@ -265,7 +253,7 @@ impl PluginGui {
     }
 
     /// Show the window
-    pub fn show(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+    pub fn show(&self, plugin: &PluginMainThreadHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
             plugin
@@ -280,7 +268,7 @@ impl PluginGui {
     /// Hide the window
     ///
     /// This should not free the resources associated with the GUI, just hide it.
-    pub fn hide(&self, plugin: &mut PluginMainThreadHandle) -> Result<(), GuiError> {
+    pub fn hide(&self, plugin: &PluginMainThreadHandle) -> Result<(), GuiError> {
         // SAFETY: This type ensures the function pointer is valid.
         unsafe {
             plugin

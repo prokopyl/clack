@@ -3,7 +3,7 @@ use clack_common::plugin::PluginDescriptor;
 use clap_sys::plugin::clap_plugin;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -12,7 +12,7 @@ use std::sync::{Arc, RwLock};
 ///
 /// This can be used to make requests to the plugin that can only be made in the main thread, which
 /// is required for e.g. some extensions.
-#[derive(Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct PluginMainThreadHandle<'a> {
     raw: NonNull<clap_plugin>,
@@ -86,7 +86,7 @@ impl<'a> Deref for PluginMainThreadHandle<'a> {
 ///
 /// This is used by some extensions that e.g. require a function to be called on the main thread only
 /// if the plugin is inactive, and on the audio thread if it is active.
-#[derive(Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct InactivePluginMainThreadHandle<'a> {
     raw: NonNull<clap_plugin>,
@@ -154,7 +154,7 @@ impl<'a> InactivePluginMainThreadHandle<'a> {
     /// Only one of the [`InactivePluginMainThreadHandle`] and [`PluginMainThreadHandle`] may be
     /// used at the same time.
     #[inline]
-    pub const fn as_main_thread(&mut self) -> &mut PluginMainThreadHandle<'a> {
+    pub const fn as_main_thread(&mut self) -> &PluginMainThreadHandle<'a> {
         // SAFETY: this cast is valid since both types are just a NonNull<clap_host> and repr(transparent)
         unsafe { &mut *(self as *mut Self as *mut PluginMainThreadHandle<'a>) }
     }
@@ -173,13 +173,6 @@ impl<'a> Deref for InactivePluginMainThreadHandle<'a> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_main_thread_ref()
-    }
-}
-
-impl DerefMut for InactivePluginMainThreadHandle<'_> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_main_thread()
     }
 }
 

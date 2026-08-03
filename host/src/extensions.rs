@@ -72,6 +72,7 @@
 //! This example implements a host supporting the `Latency` extension.
 //!
 //! ```
+//! use std::cell::{Cell, OnceCell};
 //! use std::sync::OnceLock;
 //! use clack_host::prelude::*;
 //! use clack_extensions::latency::*;
@@ -98,25 +99,25 @@
 //!
 //! struct MyHostMainThread<'a> {
 //!     shared: &'a MyHostShared,
-//!     instance: Option<InitializedPluginHandle<'a>>,
+//!     instance: OnceCell<InitializedPluginHandle<'a>>,
 //!
 //!     // The latency that is sent to us by the plugin's Latency extension.
-//!     latency_changed: bool
+//!     latency_changed: Cell<bool>
 //! }
 //!
 //! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
 //!     // The plugin's instance handle is required to call extension methods.
-//!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
-//!         self.instance = Some(instance);
+//!     fn initialized(&self, instance: InitializedPluginHandle<'a>) {
+//!         self.instance.set(instance).unwrap();
 //!     }
 //! }
 //!
 //! impl<'a> HostLatencyImpl for MyHostMainThread<'a> {
 //!     // This method is called by the plugin whenever its latency changed.
-//!     fn changed(&mut self) {
+//!     fn changed(&self) {
 //!         // Ensure that the plugin is instantiated and supports the Latency extension.
 //!         if let Some(Some(_latency)) = self.shared.latency_extension.get() {
-//!             self.latency_changed = true
+//!             self.latency_changed.set(true)
 //!         }   
 //!     }
 //! }
@@ -178,7 +179,7 @@
 //!     // The `clap_plugin_latency.get` function requires to be called on the `[main-thread]`.
 //!     // Therefore, we will require the `PluginMainThreadHandle` to be passed.
 //!     #[inline]
-//!     pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+//!     pub fn get(&self, plugin: &PluginMainThreadHandle) -> u32 {
 //!         match plugin.use_extension(&self.0).get {
 //!             None => 0,
 //!             Some(get) => unsafe { get(plugin.as_raw()) },
@@ -188,7 +189,7 @@
 //!
 //! /// Provides the implementation of the host-side to be called by the plugin.
 //! pub trait HostLatencyImpl {
-//!     fn changed(&mut self);
+//!     fn changed(&self);
 //! }
 //!
 //! // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -202,8 +203,8 @@
 //!
 //! unsafe extern "C" fn changed<H: for<'a> HostHandlers<MainThread<'a>: HostLatencyImpl>>(host: *const clap_host)
 //! {
-//!     HostWrapper::<H>::handle(host, |host| {
-//!         host.main_thread().as_mut().changed();
+//!     HostWrapper::<H>::handle_main_thread(host, |host| {
+//!         host.changed();
 //!         Ok(())
 //!     });
 //! }

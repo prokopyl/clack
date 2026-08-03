@@ -120,7 +120,7 @@ mod host {
     impl PluginRemoteControls {
         /// Returns the number of Remote Control pages the plugin provides.
         #[inline]
-        pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+        pub fn count(&self, plugin: &PluginMainThreadHandle) -> u32 {
             let Some(count) = plugin.use_extension(&self.0).count else {
                 return 0;
             };
@@ -138,7 +138,7 @@ mod host {
         #[inline]
         pub fn get<'a>(
             &self,
-            plugin: &mut PluginMainThreadHandle,
+            plugin: &PluginMainThreadHandle,
             index: u32,
             buffer: &'a mut RemoteControlsPageBuffer,
         ) -> Option<RemoteControlsPage<'a>> {
@@ -162,10 +162,10 @@ mod host {
     /// Implementation of the Host-side of the Remote Controls extension.
     pub trait HostRemoteControlsImpl {
         /// Informs the host that the Remote Control pages provided by the plugin have changed and need to be re-scanned.
-        fn changed(&mut self);
+        fn changed(&self);
         /// Suggests the host to display/activate a given page, e.g. because it corresponds to what the user
         /// is currently editing in the plugin's GUI.
-        fn suggest_page(&mut self, page_id: ClapId);
+        fn suggest_page(&self, page_id: ClapId);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -185,8 +185,8 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }
@@ -196,11 +196,11 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostRemoteControlsImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             let id = ClapId::from_raw(page_id)
                 .ok_or(HostWrapperError::InvalidParameter("Invalid page ID"))?;
 
-            host.main_thread().as_mut().suggest_page(id);
+            host.suggest_page(id);
             Ok(())
         });
     }
@@ -219,7 +219,7 @@ mod plugin {
     impl HostRemoteControls {
         /// Informs the host that the Remote Control pages provided by the plugin have changed and need to be re-scanned.
         #[inline]
-        pub fn changed(&self, plugin: &mut HostMainThreadHandle) {
+        pub fn changed(&self, plugin: &HostMainThreadHandle) {
             if let Some(changed) = plugin.use_extension(&self.0).changed {
                 // SAFETY: This type guarantees the function pointer is valid, and
                 // HostMainThreadHandle guarantees the host pointer is valid
@@ -229,7 +229,7 @@ mod plugin {
 
         /// Suggests the host to display/activate a given page, e.g. because it corresponds to what the user
         /// is currently editing in the plugin's GUI.
-        pub fn suggest_page(&self, plugin: &mut HostMainThreadHandle, page_id: ClapId) {
+        pub fn suggest_page(&self, plugin: &HostMainThreadHandle, page_id: ClapId) {
             if let Some(suggest_page) = plugin.use_extension(&self.0).suggest_page {
                 // SAFETY: This type guarantees the function pointer is valid, and
                 // HostMainThreadHandle guarantees the host pointer is valid

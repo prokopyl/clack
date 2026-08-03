@@ -363,7 +363,7 @@ mod host {
 
     impl PluginTrackInfo {
         /// Notifies the plugin that its current track's info has changed.
-        pub fn changed(&self, plugin: &mut PluginMainThreadHandle) {
+        pub fn changed(&self, plugin: &PluginMainThreadHandle) {
             if let Some(changed) = plugin.use_extension(&self.0).changed {
                 // SAFETY: This type guarantees the function pointer is valid, and
                 // PluginMainThreadHandle guarantees the plugin pointer is valid
@@ -448,7 +448,7 @@ mod host {
     /// Implementation of the Host-side of the Track Info extension.
     pub trait HostTrackInfoImpl {
         /// Gets info about the track the plugin belongs to.
-        fn get<'a>(&'a mut self, writer: &mut TrackInfoWriter<'_, 'a>);
+        fn get<'a>(&'a self, writer: &mut TrackInfoWriter<'_, 'a>);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -467,9 +467,9 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostTrackInfoImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             let mut writer = TrackInfoWriter::from_raw(buf);
-            host.main_thread().as_mut().get(&mut writer);
+            host.get(&mut writer);
             Ok(writer.is_set)
         })
         .unwrap_or(false)

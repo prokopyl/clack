@@ -13,7 +13,7 @@ impl PluginAmbisonic {
     /// Check if the plugin supports the given ambisonic configuration.
     pub fn is_config_supported(
         &self,
-        handle: &mut PluginMainThreadHandle,
+        handle: &PluginMainThreadHandle,
         config: AmbisonicConfig,
     ) -> bool {
         if let Some(is_config_supported) = handle.use_extension(&self.0).is_config_supported {
@@ -27,7 +27,7 @@ impl PluginAmbisonic {
     /// Get the ambisonic configuration for the given port, if applicable.
     pub fn get_config(
         &self,
-        handle: &mut PluginMainThreadHandle,
+        handle: &PluginMainThreadHandle,
         is_input: bool,
         port_index: u32,
     ) -> Option<AmbisonicConfig> {
@@ -53,7 +53,7 @@ pub trait HostAmbisonicImpl {
     /// Notify the host that the ambisonic configuration for one or more ports has changed.
     ///
     /// The info can only change when the plugin is de-activated.
-    fn changed(&mut self);
+    fn changed(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -73,8 +73,8 @@ where
     for<'a> H: HostHandlers<MainThread<'a>: HostAmbisonicImpl>,
 {
     unsafe {
-        HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }

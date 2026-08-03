@@ -98,7 +98,7 @@ mod host {
         /// Note this callback is "level-triggered". It means that for instance, a writable File
         /// Descriptor will continuously produce "on_fd()" events.
         #[inline]
-        pub fn on_fd(&self, plugin: &mut PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
+        pub fn on_fd(&self, plugin: &PluginMainThreadHandle, fd: RawFd, flags: FdFlags) {
             if let Some(on_fd) = plugin.use_extension(&self.0).on_fd {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_fd(plugin.as_raw(), fd, flags.bits()) }
@@ -112,11 +112,11 @@ mod host {
         ///
         /// The host will call the plugin's `on_fd` method every time the File Descriptor fires one
         /// of these events.
-        fn register_fd(&mut self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
+        fn register_fd(&self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
         /// Updates the set of events a given File Descriptor will fire.
-        fn modify_fd(&mut self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
+        fn modify_fd(&self, fd: RawFd, flags: FdFlags) -> Result<(), HostError>;
         /// Removes a given File Descriptor from the host's event reactor.
-        fn unregister_fd(&mut self, fd: RawFd) -> Result<(), HostError>;
+        fn unregister_fd(&self, fd: RawFd) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -142,10 +142,8 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             Ok(host
-                .main_thread()
-                .as_mut()
                 .register_fd(fd, FdFlags::from_bits_truncate(flags))
                 .is_ok())
         })
@@ -161,10 +159,8 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
+        HostWrapper::<H>::handle_main_thread(host, |host| {
             Ok(host
-                .main_thread()
-                .as_mut()
                 .modify_fd(fd, FdFlags::from_bits_truncate(flags))
                 .is_ok())
         })
@@ -175,10 +171,8 @@ mod host {
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host.main_thread().as_mut().unregister_fd(fd).is_ok())
-        })
-        .unwrap_or(false)
+        HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.unregister_fd(fd).is_ok()))
+            .unwrap_or(false)
     }
 }
 
@@ -197,7 +191,7 @@ mod plugin {
         /// of these events.
         pub fn register_fd(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
@@ -217,7 +211,7 @@ mod plugin {
         /// Updates the set of events a given File Descriptor will fire.
         pub fn modify_fd(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             fd: RawFd,
             flags: FdFlags,
         ) -> Result<(), FdError> {
@@ -235,11 +229,7 @@ mod plugin {
         }
 
         /// Removes a given File Descriptor from the host's event reactor.
-        pub fn unregister_fd(
-            &self,
-            host: &mut HostMainThreadHandle,
-            fd: RawFd,
-        ) -> Result<(), FdError> {
+        pub fn unregister_fd(&self, host: &HostMainThreadHandle, fd: RawFd) -> Result<(), FdError> {
             let unregister_fd = host
                 .use_extension(&self.0)
                 .unregister_fd

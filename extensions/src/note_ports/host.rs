@@ -27,7 +27,7 @@ impl NotePortInfoBuffer {
 
 impl PluginNotePorts {
     /// Returns number of note ports, for either input or output.
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -38,7 +38,7 @@ impl PluginNotePorts {
     /// Get information about a note port by its index, for either input or output.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         is_input: bool,
         buffer: &'b mut NotePortInfoBuffer,
@@ -63,7 +63,7 @@ pub trait HostNotePortsImpl {
 
     /// Rescan the full list of note ports according to the flags.
     /// See [`NotePortRescanFlags`] for more details.
-    fn rescan(&mut self, flags: NotePortRescanFlags);
+    fn rescan(&self, flags: NotePortRescanFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -83,10 +83,8 @@ unsafe extern "C" fn supported_dialects<H>(host: *const clap_host) -> u32
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        Ok(host.main_thread().as_ref().supported_dialects().bits())
-    })
-    .unwrap_or(0)
+    HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.supported_dialects().bits()))
+        .unwrap_or(0)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -94,10 +92,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     for<'h> H: HostHandlers<MainThread<'h>: HostNotePortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_mut()
-            .rescan(NotePortRescanFlags::from_bits_truncate(flags));
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan(NotePortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

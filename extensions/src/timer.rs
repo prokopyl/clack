@@ -96,7 +96,7 @@ mod plugin {
         #[inline]
         pub fn register_timer(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             period_ms: u32,
         ) -> Result<TimerId, TimerError> {
             let mut id = 0u32;
@@ -123,7 +123,7 @@ mod plugin {
         #[inline]
         pub fn unregister_timer(
             &self,
-            host: &mut HostMainThreadHandle,
+            host: &HostMainThreadHandle,
             timer_id: TimerId,
         ) -> Result<(), TimerError> {
             let unregister_timer = host
@@ -192,7 +192,7 @@ mod host {
         /// # Errors
         ///
         /// Returns an error if the host failed or refused to register this timer.
-        fn register_timer(&mut self, period_ms: u32) -> Result<TimerId, HostError>;
+        fn register_timer(&self, period_ms: u32) -> Result<TimerId, HostError>;
 
         /// Unregisters a given Timer, identified by its unique [`TimerId`].
         ///
@@ -202,7 +202,7 @@ mod host {
         /// # Errors
         ///
         /// Returns an error if the host failed to unregister this timer.
-        fn unregister_timer(&mut self, timer_id: TimerId) -> Result<(), HostError>;
+        fn unregister_timer(&self, timer_id: TimerId) -> Result<(), HostError>;
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -227,16 +227,14 @@ mod host {
     where
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            match host.main_thread().as_mut().register_timer(period_ms) {
-                Ok(id) => {
-                    *timer_id = id.0;
-                    Ok(true)
-                }
-                Err(_) => {
-                    *timer_id = u32::MAX;
-                    Ok(false)
-                }
+        HostWrapper::<H>::handle_main_thread(host, |host| match host.register_timer(period_ms) {
+            Ok(id) => {
+                *timer_id = id.0;
+                Ok(true)
+            }
+            Err(_) => {
+                *timer_id = u32::MAX;
+                Ok(false)
             }
         })
         .unwrap_or(false)
@@ -247,12 +245,8 @@ mod host {
     where
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            Ok(host
-                .main_thread()
-                .as_mut()
-                .unregister_timer(TimerId(timer_id))
-                .is_ok())
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            Ok(host.unregister_timer(TimerId(timer_id)).is_ok())
         })
         .unwrap_or(false)
     }
@@ -263,7 +257,7 @@ mod host {
         /// The callback is also given the unique [`TimerId`] of the timer that ticked and triggered
         /// it.
         #[inline]
-        pub fn on_timer(&self, plugin: &mut PluginMainThreadHandle, timer_id: TimerId) {
+        pub fn on_timer(&self, plugin: &PluginMainThreadHandle, timer_id: TimerId) {
             if let Some(on_timer) = plugin.use_extension(&self.0).on_timer {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { on_timer(plugin.as_raw(), timer_id.0) }

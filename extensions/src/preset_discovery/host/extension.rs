@@ -24,7 +24,7 @@ impl PluginPresetLoad {
     #[inline]
     pub fn load_from_location(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         location: Location,
         load_key: Option<&CStr>,
     ) -> Result<(), PresetLoadError> {
@@ -70,7 +70,7 @@ pub trait HostPresetLoadImpl {
     /// `error_code` is the operating system error, as returned by e.g. [`std::io::Error::raw_os_error`], if applicable.
     /// If not applicable, it should be set to a non-error value, e.g. 0 on Unix and Windows.
     fn on_error(
-        &mut self,
+        &self,
         location: Location,
         load_key: Option<&CStr>,
         os_error: i32,
@@ -80,7 +80,7 @@ pub trait HostPresetLoadImpl {
     /// Informs the host that a given preset has been loaded.
     ///
     /// This can be used to e.g. keep the host preset browser in sync with the plugin's.
-    fn loaded(&mut self, location: Location, load_key: Option<&CStr>);
+    fn loaded(&self, location: Location, load_key: Option<&CStr>);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -104,15 +104,14 @@ unsafe extern "C" fn loaded<H>(
 ) where
     for<'a> H: HostHandlers<MainThread<'a>: HostPresetLoadImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: path is guaranteed to be either NULL or valid by the CLAP spec.
         let location = unsafe { Location::from_raw(kind, path) }
             .ok_or(HostWrapperError::InvalidParameter("Invalid location"))?;
 
         // SAFETY: load_key is guaranteed to be either NULL or valid by the CLAP spec.
         let load_key = unsafe { cstr_from_nullable_ptr(load_key) };
-
-        host.main_thread().as_mut().loaded(location, load_key);
+        host.loaded(location, load_key);
 
         Ok(())
     });
@@ -129,7 +128,7 @@ unsafe extern "C" fn on_error<H>(
 ) where
     for<'a> H: HostHandlers<MainThread<'a>: HostPresetLoadImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: path is guaranteed to be either NULL or valid by the CLAP spec.
         let location = unsafe { Location::from_raw(kind, path) }
             .ok_or(HostWrapperError::InvalidParameter("Invalid location"))?;
@@ -138,10 +137,7 @@ unsafe extern "C" fn on_error<H>(
         let load_key = unsafe { cstr_from_nullable_ptr(load_key) };
         // SAFETY: message is guaranteed to be either NULL or valid by the CLAP spec.
         let message = unsafe { cstr_from_nullable_ptr(message) };
-
-        host.main_thread()
-            .as_mut()
-            .on_error(location, load_key, os_error, message);
+        host.on_error(location, load_key, os_error, message);
 
         Ok(())
     });

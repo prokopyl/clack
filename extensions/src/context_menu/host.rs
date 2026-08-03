@@ -8,7 +8,7 @@ impl PluginContextMenu {
     #[inline]
     pub fn populate(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), ContextMenuError> {
@@ -36,7 +36,7 @@ impl PluginContextMenu {
     #[inline]
     pub fn perform(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         target: ContextMenuTarget,
         action_id: ClapId,
     ) -> Result<(), ContextMenuError> {
@@ -63,7 +63,7 @@ pub trait HostContextMenuImpl {
     /// Asks the host to populate the given `builder`, with the contents of a context menu
     /// that targets the given `target`.
     fn populate(
-        &mut self,
+        &self,
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), HostError>;
@@ -72,14 +72,14 @@ pub trait HostContextMenuImpl {
     ///
     /// The given `action_id` belongs to the menu created by [`populate`](Self::populate) with the
     /// given `target`.
-    fn perform(&mut self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), HostError>;
+    fn perform(&self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), HostError>;
 
     /// Returns `true` if the host can pop up its context menu on behalf of the plugin, `false` otherwise.
-    fn can_popup(&mut self) -> bool;
+    fn can_popup(&self) -> bool;
 
     /// Asks the host to pop up its context menu at a given location.
     fn popup(
-        &mut self,
+        &self,
         target: ContextMenuTarget,
         screen_index: i32,
         x: i32,
@@ -110,7 +110,7 @@ unsafe extern "C" fn populate<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
@@ -118,7 +118,7 @@ where
         // for the duration of this function call, which is the (inferred) lifetime we give it here.
         let mut builder = unsafe { ContextMenuBuilder::from_raw(builder) };
 
-        host.main_thread().as_mut().populate(target, &mut builder)?;
+        host.populate(target, &mut builder)?;
 
         Ok(())
     })
@@ -134,14 +134,14 @@ unsafe extern "C" fn perform<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
 
         let action_id = ClapId::from_raw(action_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid Action ID"))?;
 
-        host.main_thread().as_mut().perform(target, action_id)?;
+        host.perform(target, action_id)?;
         Ok(())
     })
     .is_some()
@@ -152,8 +152,7 @@ unsafe extern "C" fn can_popup<H>(host: *const clap_host) -> bool
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| Ok(host.main_thread().as_mut().can_popup()))
-        .unwrap_or(false)
+    HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.can_popup())).unwrap_or(false)
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -167,12 +166,11 @@ unsafe extern "C" fn popup<H>(
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostContextMenuImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         // SAFETY: The CLAP spec requires this pointer to be either NULL or valid for reads.
         let target = unsafe { ContextMenuTarget::from_raw_ptr(target) };
-        host.main_thread()
-            .as_mut()
-            .popup(target, screen_index, x, y)?;
+        host.popup(target, screen_index, x, y)?;
+
         Ok(())
     })
     .is_some()

@@ -48,7 +48,7 @@ mod host {
     impl PluginLatency {
         /// Returns the plugin latency in samples.
         #[inline]
-        pub fn get(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+        pub fn get(&self, plugin: &PluginMainThreadHandle) -> u32 {
             match plugin.use_extension(&self.0).get {
                 None => 0,
                 // SAFETY: This type ensures the function pointer is valid.
@@ -60,7 +60,7 @@ mod host {
     /// Implementation of the Host-side of the Latency extension.
     pub trait HostLatencyImpl {
         /// The plugin latency has changed and should be re-queried.
-        fn changed(&mut self);
+        fn changed(&self);
     }
 
     // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -79,8 +79,8 @@ mod host {
     where
         for<'a> H: HostHandlers<MainThread<'a>: HostLatencyImpl>,
     {
-        HostWrapper::<H>::handle(host, |host| {
-            host.main_thread().as_mut().changed();
+        HostWrapper::<H>::handle_main_thread(host, |host| {
+            host.changed();
             Ok(())
         });
     }
@@ -99,7 +99,7 @@ mod plugin {
         /// The latency is allowed to change only during the [`PluginAudioProcessor::activate`](clack_plugin::plugin::PluginAudioProcessor::activate) callback.
         /// If the plugin is active, you should request a restart first.
         #[inline]
-        pub fn changed(&self, host: &mut HostMainThreadHandle) {
+        pub fn changed(&self, host: &HostMainThreadHandle) {
             if let Some(changed) = host.use_extension(&self.0).changed {
                 // SAFETY: This type ensures the function pointer is valid.
                 unsafe { changed(host.as_raw()) }

@@ -83,6 +83,7 @@
 //!
 //! use std::sync::atomic::{AtomicBool, Ordering};
 //! use std::sync::OnceLock;
+//! use std::cell::{Cell, OnceCell};
 //! use std::ffi::CStr;
 //!
 //! #[derive(Default)]
@@ -119,21 +120,21 @@
 //!
 //! struct MyHostMainThread<'a> {
 //!     shared: &'a MyHostShared,
-//!     instance: Option<InitializedPluginHandle<'a>>,
+//!     instance: OnceCell<InitializedPluginHandle<'a>>,
 //!
-//!     latency_changed: bool
+//!     latency_changed: Cell<bool>
 //! }
 //!
 //! impl<'a> MainThreadHandler<'a> for MyHostMainThread<'a> {
-//!     fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {
-//!         self.instance = Some(instance);
+//!     fn initialized(&self, instance: InitializedPluginHandle<'a>) {
+//!         self.instance.set(instance);
 //!     }
 //! }
 //!
 //! impl<'a> HostLatencyImpl for MyHostMainThread<'a> {
-//!     fn changed(&mut self) {
+//!     fn changed(&self) {
 //!         if let Some(Some(_latency)) = self.shared.latency_extension.get() {
-//!             self.latency_changed = true
+//!             self.latency_changed.set(true)
 //!         }   
 //!     }
 //! }
@@ -164,7 +165,7 @@
 //!
 //! let mut plugin_instance = PluginInstance::<MyHost>::new(
 //!     |_| MyHostShared::default(),
-//!     |shared| MyHostMainThread { shared, instance: None, latency_changed: false },
+//!     |shared| MyHostMainThread { shared, instance: OnceCell::new(), latency_changed: false.into() },
 //!     &entry,
 //!     // We're hard-coding a specific plugin to load for this example
 //!     c"com.u-he.diva",
@@ -216,7 +217,7 @@ pub trait MainThreadHandler<'a>: 'a {
     /// handler's lifetime.
     #[inline]
     #[allow(unused)]
-    fn initialized(&mut self, instance: InitializedPluginHandle<'a>) {}
+    fn initialized(&self, instance: InitializedPluginHandle<'a>) {}
 }
 
 /// Host data and callbacks that are tied to `[audio-thread]` operations.

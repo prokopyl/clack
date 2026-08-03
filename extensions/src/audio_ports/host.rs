@@ -38,7 +38,7 @@ impl AudioPortInfoBuffer {
 
 impl PluginAudioPorts {
     /// Returns number of audio ports, for either input or output
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle, is_input: bool) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle, is_input: bool) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -49,7 +49,7 @@ impl PluginAudioPorts {
     /// Gets information about an audio port by its index, for either input or output.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         is_input: bool,
         buffer: &'b mut AudioPortInfoBuffer,
@@ -76,7 +76,7 @@ pub trait HostAudioPortsImpl {
     /// Rescan the full list of audio ports according to the flags.
     /// It is illegal to ask the host to rescan with a flag that is not supported (see [`is_rescan_flag_supported`](Self::is_rescan_flag_supported)).
     /// Certain flags require the plugin to be de-activated.
-    fn rescan(&mut self, flags: AudioPortRescanFlags);
+    fn rescan(&self, flags: AudioPortRescanFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -96,11 +96,8 @@ unsafe extern "C" fn is_rescan_flag_supported<H>(host: *const clap_host, flag: u
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        Ok(host
-            .main_thread()
-            .as_ref()
-            .is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        Ok(host.is_rescan_flag_supported(AudioPortRescanFlags::from_bits_truncate(flag)))
     })
     .unwrap_or(false)
 }
@@ -110,10 +107,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: u32)
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_mut()
-            .rescan(AudioPortRescanFlags::from_bits_truncate(flags));
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan(AudioPortRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });

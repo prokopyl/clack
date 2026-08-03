@@ -27,7 +27,7 @@ impl PluginAsVST3 {
     #[inline]
     pub fn get_num_midi_channels(
         &self,
-        plugin: &mut PluginMainThreadHandle<'_>,
+        plugin: &PluginMainThreadHandle<'_>,
         note_port: u32,
     ) -> u32 {
         let Some(ext) = plugin.use_extension(&self.0).get_num_midi_channels else {
@@ -42,7 +42,7 @@ impl PluginAsVST3 {
     #[inline]
     pub fn supported_note_expressions(
         &self,
-        plugin: &mut PluginMainThreadHandle<'_>,
+        plugin: &PluginMainThreadHandle<'_>,
     ) -> SupportedNoteExpressions {
         let Some(ext) = plugin.use_extension(&self.0).supported_note_expressions else {
             return SupportedNoteExpressions::empty();

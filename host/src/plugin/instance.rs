@@ -118,7 +118,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
     where
         FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
-            &mut <H as HostHandlers>::MainThread<'a>,
+            &<H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
     {
         let activate = self
@@ -160,7 +160,7 @@ impl<H: HostHandlers> PluginInstanceInner<H> {
         &mut self,
         drop: impl for<'s> FnOnce(
             <H as HostHandlers>::AudioProcessor<'s>,
-            &mut <H as HostHandlers>::MainThread<'s>,
+            &<H as HostHandlers>::MainThread<'s>,
         ) -> T,
     ) -> Result<T, PluginInstanceError> {
         if !self.is_active() {

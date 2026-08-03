@@ -28,7 +28,7 @@ impl ParamInfoBuffer {
 
 impl PluginParams {
     /// Returns the total number of parameters the plugin exposes.
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -53,7 +53,7 @@ impl PluginParams {
     /// Returns `true` on success, or `false` if `index` is out of bounds.
     pub fn get_info<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         buffer: &'b mut ParamInfoBuffer,
     ) -> Option<ParamInfo<'b>> {
@@ -86,7 +86,7 @@ impl PluginParams {
     /// # Return
     ///
     /// Returns the current value of the parameter, or `None` if the ID is invalid.
-    pub fn get_value(&self, plugin: &mut PluginMainThreadHandle, param_id: ClapId) -> Option<f64> {
+    pub fn get_value(&self, plugin: &PluginMainThreadHandle, param_id: ClapId) -> Option<f64> {
         let mut value = 0.0;
         // SAFETY: This type ensures the function pointer is valid.
         let valid = unsafe {
@@ -116,7 +116,7 @@ impl PluginParams {
     /// Returns `Ok(())` on success, or `Err` if formatting fails.
     pub fn value_to_text<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         param_id: ClapId,
         value: f64,
         buffer: &'b mut [u8],
@@ -162,7 +162,7 @@ impl PluginParams {
     /// Returns the parsed value, or `None` if parsing fails or the ID is invalid.
     pub fn text_to_value(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         param_id: ClapId,
         text: &CStr,
     ) -> Option<f64> {
@@ -262,10 +262,10 @@ pub trait HostParamsImplShared {
 pub trait HostParamsImplMainThread {
     /// Rescan the full list of parameters, according to the given `flags`.
     /// See [`ParamRescanFlags`] for more details.
-    fn rescan(&mut self, flags: ParamRescanFlags);
+    fn rescan(&self, flags: ParamRescanFlags);
     /// Clears references (such as automation or modulation) to a parameter (identified by `param_id`), according to the given `flags`.
     /// See [`ParamClearFlags`] for more details.
-    fn clear(&mut self, param_id: ClapId, flags: ParamClearFlags);
+    fn clear(&self, param_id: ClapId, flags: ParamClearFlags);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -287,10 +287,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host, flags: clap_param_rescan_
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread()
-            .as_mut()
-            .rescan(ParamRescanFlags::from_bits_truncate(flags));
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan(ParamRescanFlags::from_bits_truncate(flags));
 
         Ok(())
     });
@@ -301,12 +299,11 @@ unsafe extern "C" fn clear<H>(host: *const clap_host, param_id: u32, flags: clap
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostParamsImplMainThread>,
 {
-    HostWrapper::<H>::handle(host, |host| {
+    HostWrapper::<H>::handle_main_thread(host, |host| {
         let param_id = ClapId::from_raw(param_id)
             .ok_or(HostWrapperError::InvalidParameter("Invalid param_id"))?;
-        host.main_thread()
-            .as_mut()
-            .clear(param_id, ParamClearFlags::from_bits_truncate(flags));
+
+        host.clear(param_id, ParamClearFlags::from_bits_truncate(flags));
 
         Ok(())
     });

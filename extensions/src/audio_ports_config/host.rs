@@ -29,7 +29,7 @@ impl AudioPortsConfigBuffer {
 
 impl PluginAudioPortsConfig {
     /// Returns the number of available [`AudioPortsConfiguration`]s.
-    pub fn count(&self, plugin: &mut PluginMainThreadHandle) -> u32 {
+    pub fn count(&self, plugin: &PluginMainThreadHandle) -> u32 {
         match plugin.use_extension(&self.0).count {
             None => 0,
             // SAFETY: This type ensures the function pointer is valid.
@@ -43,7 +43,7 @@ impl PluginAudioPortsConfig {
     /// unnecessary allocations.
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         index: u32,
         buffer: &'b mut AudioPortsConfigBuffer,
     ) -> Option<AudioPortsConfiguration<'b>> {
@@ -71,7 +71,7 @@ impl PluginAudioPortsConfig {
     #[inline]
     pub fn select(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         configuration_id: ClapId,
     ) -> Result<(), AudioPortConfigSelectError> {
         // SAFETY: This type ensures the function pointer is valid.
@@ -94,7 +94,7 @@ impl PluginAudioPortsConfig {
 impl PluginAudioPortsConfigInfo {
     /// Gets the id of the currently selected config, or [`None`] if the current port
     /// layout isn't part of the config list.
-    pub fn current_config(&self, plugin: &mut PluginMainThreadHandle) -> Option<ClapId> {
+    pub fn current_config(&self, plugin: &PluginMainThreadHandle) -> Option<ClapId> {
         // SAFETY: This type ensures the function pointer is valid.
         let id = unsafe { plugin.use_extension(&self.0).current_config?(plugin.as_raw()) };
         if id == CLAP_INVALID_ID {
@@ -108,7 +108,7 @@ impl PluginAudioPortsConfigInfo {
     /// This is analogous to [`PluginAudioPorts::get`](crate::audio_ports::PluginAudioPorts::get).
     pub fn get<'b>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         config_id: ClapId,
         index: u32,
         is_input: bool,
@@ -140,7 +140,7 @@ impl PluginAudioPortsConfigInfo {
 pub trait HostAudioPortsConfigImpl {
     /// Informs the host that the available Audio Ports Configuration list has changed and needs to
     /// be rescanned.
-    fn rescan(&mut self);
+    fn rescan(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -160,8 +160,8 @@ unsafe extern "C" fn rescan<H>(host: *const clap_host)
 where
     H: for<'a> HostHandlers<MainThread<'a>: HostAudioPortsConfigImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().rescan();
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.rescan();
 
         Ok(())
     });

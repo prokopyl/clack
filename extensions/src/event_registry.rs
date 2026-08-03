@@ -97,10 +97,10 @@ mod host {
     where
         H: for<'a> HostHandlers<MainThread<'a>: HostEventRegistryImpl>,
     {
-        let result = HostWrapper::<H>::handle(host, |host| {
+        let result = HostWrapper::<H>::handle_main_thread(host, |host| {
             let space_name = CStr::from_ptr(space_name);
 
-            let result = host.main_thread().as_ref().query(space_name);
+            let result = host.query(space_name);
             *space_id = EventSpaceId::optional_id(&result);
 
             Ok(result.is_some())

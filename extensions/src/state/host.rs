@@ -13,7 +13,7 @@ impl PluginState {
     /// If this operation fails, a [`StateError`] is returned.
     pub fn load<R: Read>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         reader: &mut R,
     ) -> Result<(), StateError> {
         let mut stream = InputStream::from_reader(reader);
@@ -42,7 +42,7 @@ impl PluginState {
     /// If this operation fails, a [`StateError`] is returned.
     pub fn save<W: Write>(
         &self,
-        plugin: &mut PluginMainThreadHandle,
+        plugin: &PluginMainThreadHandle,
         writer: &mut W,
     ) -> Result<(), StateError> {
         let mut stream = OutputStream::from_writer(writer);
@@ -68,7 +68,7 @@ pub trait HostStateImpl {
     /// The plugin state has changed, and may need to be saved again.
     ///
     /// Note that if a parameter value changes, it is implicit that the state is dirty.
-    fn mark_dirty(&mut self);
+    fn mark_dirty(&self);
 }
 
 // SAFETY: The given struct is the CLAP extension struct for the matching side of this extension.
@@ -88,8 +88,8 @@ unsafe extern "C" fn mark_dirty<H>(host: *const clap_host)
 where
     for<'a> H: HostHandlers<MainThread<'a>: HostStateImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| {
-        host.main_thread().as_mut().mark_dirty();
+    HostWrapper::<H>::handle_main_thread(host, |host| {
+        host.mark_dirty();
 
         Ok(())
     });
