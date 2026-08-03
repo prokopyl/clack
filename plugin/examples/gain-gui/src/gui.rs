@@ -38,12 +38,10 @@ pub struct GainPluginGui {
 
 impl GainPluginGui {
     /// Creates a new GUI window, and embeds it into the given `parent`.
-    pub fn new(parent: Window<'_>, state: &GainPluginShared) -> Self {
+    pub fn new(parent: Window<'_, '_>, state: &GainPluginShared) -> Self {
         let settings = EguiWindowSettings::new()
             .with_tile("Gain Plugin")
             .with_size(LogicalSize::new(300, 110));
-
-        let parent = unsafe { parent.borrow_handle_unchecked() }.unwrap();
 
         let (tx, rx) = std::sync::mpsc::channel();
 
