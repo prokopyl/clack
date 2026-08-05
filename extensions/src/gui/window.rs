@@ -16,12 +16,12 @@ use std::marker::PhantomData;
 /// It is up to the user to ensure that the underlying window object is still valid for the lifetime
 /// of the plugin instance's GUI (i.e. up until [`destroy`](crate::gui::PluginGui::destroy) is called.)
 #[derive(Copy, Clone)]
-pub struct Window<'a> {
+pub struct Window<'a, 'w> {
     raw: clap_window,
-    _api_lifetime: PhantomData<GuiApiType<'a>>,
+    _api_lifetime: PhantomData<(GuiApiType<'a>, &'w ())>,
 }
 
-impl<'a> Window<'a> {
+impl<'a, 'w> Window<'a, 'w> {
     /// # Safety
     ///
     /// Users must ensure the provided window is fully valid.
@@ -82,8 +82,12 @@ impl<'a> Window<'a> {
     }
 
     /// Creates a [`Window`] handle from a Win32 `HWND`.
+    ///
+    /// # Safety
+    ///
+    /// The HWND must be safe to use for the `'w` lifetime.
     #[inline]
-    pub fn from_win32_hwnd(hwnd: *mut c_void) -> Window<'static> {
+    pub unsafe fn from_win32_hwnd(hwnd: *mut c_void) -> Window<'static, 'w> {
         Window {
             raw: clap_window {
                 api: GuiApiType::WIN32.0.as_ptr(),
@@ -105,8 +109,12 @@ impl<'a> Window<'a> {
     }
 
     /// Creates a [`Window`] handle from a Cocoa `NSView`.
+    ///
+    /// # Safety
+    ///
+    /// The NSView must remain alive for the 'w lifetime.
     #[inline]
-    pub fn from_cocoa_nsview(nsview: *mut c_void) -> Window<'static> {
+    pub unsafe fn from_cocoa_nsview(nsview: *mut c_void) -> Window<'static, 'w> {
         Window {
             raw: clap_window {
                 api: GuiApiType::COCOA.0.as_ptr(),
@@ -129,7 +137,7 @@ impl<'a> Window<'a> {
 
     /// Creates a [`Window`] handle from an X11 window handle.
     #[inline]
-    pub fn from_x11_handle(handle: c_ulong) -> Window<'static> {
+    pub fn from_x11_handle(handle: c_ulong) -> Window<'static, 'static> {
         Window {
             raw: clap_window {
                 api: GuiApiType::X11.0.as_ptr(),
@@ -144,7 +152,7 @@ impl<'a> Window<'a> {
     /// If the value matches one of the [`WIN32`](GuiApiType::WIN32), [`COCOA`](GuiApiType::COCOA),
     /// [`X11`](GuiApiType::X11), or [`WAYLAND`](GuiApiType::WAYLAND) constants, then a window
     /// with that constant as its API type is returned. Otherwise, [`None`] is returned.
-    pub fn to_standard_api_type(&self) -> Option<Window<'static>> {
+    pub fn to_standard_api_type(&self) -> Option<Window<'static, 'w>> {
         Some(Window {
             raw: clap_window {
                 api: self.api_type().to_standard_api()?.0.as_ptr(),
@@ -163,7 +171,7 @@ const _: () = {
     };
 
     // SAFETY: this type ensures the handles are valid and are consistent across calls
-    unsafe impl HasRawWindowHandle for Window<'_> {
+    unsafe impl HasRawWindowHandle for Window<'_, '_> {
         fn raw_window_handle(&self) -> RawWindowHandle {
             let api_type = self.api_type();
 
@@ -188,20 +196,28 @@ const _: () = {
         }
     }
 
-    impl Window<'static> {
+    impl<'w> Window<'static, 'w> {
         /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+        ///
+        /// # Safety
+        ///
+        /// The window handle must be safe to use for the `'w` lifetime.
         #[inline]
-        pub fn from_raw_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
+        pub unsafe fn from_raw_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
             Self::from_raw_window_handle(window.raw_window_handle())
         }
 
         /// Creates a [`Window`] from a [`RawWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
+        ///
+        /// # Safety
+        ///
+        /// The window handle must be safe to use for the `'w` lifetime.
         #[inline]
-        pub fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
+        pub unsafe fn from_raw_window_handle(handle: RawWindowHandle) -> Option<Self> {
             match handle {
                 RawWindowHandle::Win32(handle) => Some(Self::from_win32_hwnd(handle.hwnd)),
                 RawWindowHandle::AppKit(handle) => Some(Self::from_cocoa_nsview(handle.ns_view)),
@@ -213,18 +229,14 @@ const _: () = {
 };
 
 #[cfg(feature = "raw-window-handle_06")]
-#[allow(deprecated)]
 const _: () = {
-    use raw_window_handle_06::{
-        AppKitWindowHandle, HandleError, HasRawWindowHandle, RawWindowHandle, Win32WindowHandle,
-        WindowHandle, XlibWindowHandle,
-    };
+    use raw_window_handle_06::*;
     use std::num::NonZeroIsize;
     use std::ptr::NonNull;
 
     // SAFETY: The host ensures the underlying window handles are still valid
-    unsafe impl HasRawWindowHandle for Window<'_> {
-        fn raw_window_handle(&self) -> Result<RawWindowHandle, HandleError> {
+    impl<'w> HasWindowHandle for Window<'_, 'w> {
+        fn window_handle(&self) -> Result<WindowHandle<'w>, HandleError> {
             let api_type = self.api_type();
 
             let raw = if api_type == GuiApiType::WIN32 {
@@ -244,38 +256,45 @@ const _: () = {
                 return Err(HandleError::NotSupported);
             };
 
-            Ok(raw)
+            // SAFETY: This type ensures the underlying handle is safe to use for 'w at least
+            unsafe { Ok(WindowHandle::borrow_raw(raw)) }
         }
     }
 
-    impl Window<'static> {
-        /// Creates a [`Window`] from any window object implementing [`HasRawWindowHandle`].
+    impl<'w> Window<'static, 'w> {
+        /// Creates a [`Window`] from any window object implementing [`HasWindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window<W: HasRawWindowHandle>(window: &W) -> Option<Self> {
-            Self::from_window_handle(window.raw_window_handle().ok()?)
+        pub fn from_window<W: HasWindowHandle>(window: &'w W) -> Option<Self> {
+            Self::from_window_handle(window.window_handle().ok()?)
         }
 
-        /// Creates a [`Window`] from a [`RawWindowHandle`].
+        /// Creates a [`Window`] from a [`WindowHandle`].
         ///
         /// This returns [`None`] if the given window handle isn't backed by the default supported APIs.
         #[inline]
-        pub fn from_window_handle(handle: RawWindowHandle) -> Option<Self> {
-            match handle {
-                RawWindowHandle::Win32(handle) => {
-                    Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
+        pub fn from_window_handle(handle: WindowHandle<'w>) -> Option<Self> {
+            // SAFETY: WindowHandle is valid for 'w
+            unsafe {
+                match handle.as_raw() {
+                    RawWindowHandle::Win32(handle) => {
+                        Some(Self::from_win32_hwnd(handle.hwnd.get() as *mut _))
+                    }
+                    RawWindowHandle::AppKit(handle) => {
+                        Some(Self::from_cocoa_nsview(handle.ns_view.as_ptr()))
+                    }
+                    RawWindowHandle::Xlib(handle) => Some(Self::from_x11_handle(handle.window)),
+                    RawWindowHandle::Xcb(handle) => {
+                        Some(Self::from_x11_handle(handle.window.get().into()))
+                    }
+                    _ => None,
                 }
-                RawWindowHandle::AppKit(handle) => {
-                    Some(Self::from_cocoa_nsview(handle.ns_view.as_ptr()))
-                }
-                RawWindowHandle::Xlib(handle) => Some(Self::from_x11_handle(handle.window)),
-                _ => None,
             }
         }
     }
 
-    impl Window<'_> {
+    impl Window<'_, '_> {
         /// Borrows a [`WindowHandle`] from this window, but returns a handle with an arbitrary lifetime.
         ///
         /// # Errors
@@ -292,7 +311,7 @@ const _: () = {
         /// (Which is usually only after `gui.destroy` was called).
         #[inline]
         pub unsafe fn borrow_handle_unchecked<'a>(&self) -> Result<WindowHandle<'a>, HandleError> {
-            Ok(WindowHandle::borrow_raw(self.raw_window_handle()?))
+            Ok(WindowHandle::borrow_raw(self.window_handle()?.as_raw()))
         }
     }
 };
