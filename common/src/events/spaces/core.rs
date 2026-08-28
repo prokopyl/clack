@@ -74,6 +74,8 @@ unsafe impl<'a> EventSpace<'a> for CoreEventSpace<'a> {
             NoteExpressionEvent::TYPE_ID => Some(NoteExpression(event.as_event_unchecked())),
             ParamValueEvent::TYPE_ID => Some(ParamValue(event.as_event_unchecked())),
             ParamModEvent::TYPE_ID => Some(ParamMod(event.as_event_unchecked())),
+            ParamGestureBeginEvent::TYPE_ID => Some(ParamGestureBegin(event.as_event_unchecked())),
+            ParamGestureEndEvent::TYPE_ID => Some(ParamGestureEnd(event.as_event_unchecked())),
             TransportEvent::TYPE_ID => Some(Transport(event.as_event_unchecked())),
             MidiEvent::TYPE_ID => Some(Midi(event.as_event_unchecked())),
             Midi2Event::TYPE_ID => Some(Midi2(event.as_event_unchecked())),
