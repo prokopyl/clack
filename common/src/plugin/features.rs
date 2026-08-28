@@ -11,6 +11,8 @@ pub const INSTRUMENT: &CStr = CLAP_PLUGIN_FEATURE_INSTRUMENT;
 pub const AUDIO_EFFECT: &CStr = CLAP_PLUGIN_FEATURE_AUDIO_EFFECT;
 /// `"note-effect"`: The plugin is a note effect or a note generator/sequencer
 pub const NOTE_EFFECT: &CStr = CLAP_PLUGIN_FEATURE_NOTE_EFFECT;
+/// `"note-detector"`: The plugin converts audio to notes
+pub const NOTE_DETECTOR: &CStr = CLAP_PLUGIN_FEATURE_NOTE_DETECTOR;
 /// `"analyzer"`: The plugin is an analyzer
 pub const ANALYZER: &CStr = CLAP_PLUGIN_FEATURE_ANALYZER;
 
@@ -46,6 +48,10 @@ pub const DISTORTION: &CStr = CLAP_PLUGIN_FEATURE_DISTORTION;
 pub const TRANSIENT_SHAPER: &CStr = CLAP_PLUGIN_FEATURE_TRANSIENT_SHAPER;
 /// `"compressor"`
 pub const COMPRESSOR: &CStr = CLAP_PLUGIN_FEATURE_COMPRESSOR;
+/// `"expander"`
+pub const EXPANDER: &CStr = CLAP_PLUGIN_FEATURE_EXPANDER;
+/// `"gate"`
+pub const GATE: &CStr = CLAP_PLUGIN_FEATURE_GATE;
 /// `"limiter"`
 pub const LIMITER: &CStr = CLAP_PLUGIN_FEATURE_LIMITER;
 
