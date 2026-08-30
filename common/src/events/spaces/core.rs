@@ -122,3 +122,46 @@ impl Debug for CoreEventSpace<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::events::io::{EventBuffer, OutputEvents};
+    use crate::utils::ClapId;
+
+    const PARAM: ClapId = ClapId::new(0);
+
+    /// Regression test for <https://github.com/prokopyl/clack/issues/97>.
+    ///
+    /// A parameter gesture could be written through clack, but never read back through it:
+    /// [`CoreEventSpace::from_unknown`] had no match arm for either gesture type, so
+    /// `as_core_event()` returned [`None`] for both.
+    #[test]
+    pub fn decodes_param_gestures_from_core_event_space() {
+        let mut buffer = EventBuffer::new();
+        let mut out = OutputEvents::from_buffer(&mut buffer);
+
+        out.try_push(ParamGestureBeginEvent::new(0, PARAM)).unwrap();
+        out.try_push(ParamGestureEndEvent::new(1, PARAM)).unwrap();
+
+        let mut events = buffer.iter();
+
+        let begin = events.next().unwrap();
+        // This always worked: it checks the type ID directly.
+        assert!(begin.as_event::<ParamGestureBeginEvent>().is_some());
+        // This goes through CoreEventSpace::from_unknown, and used to return None.
+        assert!(matches!(
+            begin.as_core_event(),
+            Some(CoreEventSpace::ParamGestureBegin(_))
+        ));
+
+        let end = events.next().unwrap();
+        assert!(end.as_event::<ParamGestureEndEvent>().is_some());
+        assert!(matches!(
+            end.as_core_event(),
+            Some(CoreEventSpace::ParamGestureEnd(_))
+        ));
+
+        assert!(events.next().is_none());
+    }
+}
