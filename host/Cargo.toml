@@ -27,7 +27,8 @@ clack-plugin = ["dep:clack-plugin"]
 
 [dev-dependencies]
 clack-plugin = { workspace = true }
-clack-extensions = { path = "../extensions", features = ["clack-host", "clack-plugin", "latency", "log", "state", "timer"] }
+clack-host = { path = ".", features = ["clack-plugin"] }
+clack-extensions = { path = "../extensions", features = ["clack-host", "clack-plugin", "gui", "latency", "log", "state", "timer"] }
 static_assertions = "1.1.0"
 
 [lints]
