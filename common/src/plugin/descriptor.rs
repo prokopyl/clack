@@ -432,7 +432,12 @@ impl OwnedCString {
     pub fn get(&self) -> Option<&CStr> {
         if Self::is_allocated(self.0) {
             // SAFETY: From our own invariants
-            Some(unsafe { CStr::from_ptr(self.0) })
+            let str = unsafe { CStr::from_ptr(self.0) };
+            if str.is_empty() {
+                return None;
+            }
+
+            Some(str)
         } else {
             None
         }
