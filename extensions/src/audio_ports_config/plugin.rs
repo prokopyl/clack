@@ -108,9 +108,9 @@ where
         let config_id = ClapId::from_raw(config_id)
             .ok_or(PluginWrapperError::InvalidParameter("Invalid config_id"))?;
 
-        Ok(p.main_thread().select(config_id).is_ok())
+        Ok(p.main_thread().select(config_id)?)
     })
-    .unwrap_or(false)
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc, clippy::undocumented_unsafe_blocks)]

@@ -143,11 +143,9 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle_main_thread(host, |host| {
-            Ok(host
-                .register_fd(fd, FdFlags::from_bits_truncate(flags))
-                .is_ok())
+            Ok(host.register_fd(fd, FdFlags::from_bits_truncate(flags))?)
         })
-        .unwrap_or(false)
+        .is_some()
     }
 
     #[allow(clippy::missing_safety_doc)]
@@ -160,19 +158,16 @@ mod host {
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
         HostWrapper::<H>::handle_main_thread(host, |host| {
-            Ok(host
-                .modify_fd(fd, FdFlags::from_bits_truncate(flags))
-                .is_ok())
+            Ok(host.modify_fd(fd, FdFlags::from_bits_truncate(flags))?)
         })
-        .unwrap_or(false)
+        .is_some()
     }
     #[allow(clippy::missing_safety_doc)]
     unsafe extern "C" fn unregister_fd<H: HostHandlers>(host: *const clap_host, fd: i32) -> bool
     where
         for<'a> <H as HostHandlers>::MainThread<'a>: HostPosixFdImpl,
     {
-        HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.unregister_fd(fd).is_ok()))
-            .unwrap_or(false)
+        HostWrapper::<H>::handle_main_thread(host, |host| Ok(host.unregister_fd(fd)?)).is_some()
     }
 }
 

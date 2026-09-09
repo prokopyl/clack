@@ -267,15 +267,12 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin
-            .main_thread()
-            .create(GuiConfiguration {
-                api_type: GuiApiType(CStr::from_ptr(api)),
-                is_floating,
-            })
-            .is_ok())
+        Ok(plugin.main_thread().create(GuiConfiguration {
+            api_type: GuiApiType(CStr::from_ptr(api)),
+            is_floating,
+        })?)
     })
-    .unwrap_or(false)
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -295,9 +292,9 @@ where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
-        Ok(plugin.main_thread().set_scale(scale).is_ok())
+        Ok(plugin.main_thread().set_scale(scale)?)
     })
-    .unwrap_or(false)
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -400,7 +397,7 @@ where
 {
     PluginWrapper::<P>::handle(plugin, |plugin| {
         let size = GuiSize { width, height };
-        Ok(plugin.main_thread().set_size(size))
+        Ok(plugin.main_thread().set_size(size)?)
     })
     .is_some()
 }
@@ -415,10 +412,7 @@ where
             .as_ref()
             .ok_or(PluginWrapperError::NulPtr("clap_window"))?;
 
-        Ok(plugin
-            .main_thread()
-            .set_parent(Window::from_raw(*window))
-            .is_ok())
+        Ok(plugin.main_thread().set_parent(Window::from_raw(*window))?)
     })
     .is_some()
 }
@@ -438,10 +432,9 @@ where
 
         Ok(plugin
             .main_thread()
-            .set_transient(Window::from_raw(*window))
-            .is_ok())
+            .set_transient(Window::from_raw(*window))?)
     })
-    .unwrap_or(false)
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -465,8 +458,7 @@ unsafe extern "C" fn show<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().show().is_ok()))
-        .unwrap_or(false)
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().show()?)).is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -474,6 +466,5 @@ unsafe extern "C" fn hide<P>(plugin: *const clap_plugin) -> bool
 where
     for<'a> P: Plugin<MainThread<'a>: PluginGuiImpl>,
 {
-    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().hide().is_ok()))
-        .unwrap_or(false)
+    PluginWrapper::<P>::handle(plugin, |plugin| Ok(plugin.main_thread().hide()?)).is_some()
 }

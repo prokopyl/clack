@@ -165,13 +165,9 @@ mod host {
         for<'a> H: HostHandlers<AudioProcessor<'a>: HostThreadPoolImpl>,
     {
         HostWrapper::<H>::handle(host, |host| {
-            Ok(host
-                .audio_processor()?
-                .as_mut()
-                .request_exec(num_tasks)
-                .is_ok())
+            Ok(host.audio_processor()?.as_mut().request_exec(num_tasks)?)
         })
-        .unwrap_or(false)
+        .is_some()
     }
 
     impl PluginThreadPool {

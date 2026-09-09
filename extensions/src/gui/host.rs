@@ -358,12 +358,9 @@ where
     for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
     HostWrapper::<H>::handle(host, |host| {
-        Ok(host
-            .shared()
-            .request_resize(GuiSize { width, height })
-            .is_ok())
+        Ok(host.shared().request_resize(GuiSize { width, height })?)
     })
-    .unwrap_or(false)
+    .is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -371,7 +368,7 @@ unsafe extern "C" fn request_show<H>(host: *const clap_host) -> bool
 where
     for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show().is_ok())).unwrap_or(false)
+    HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_show()?)).is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]
@@ -379,7 +376,7 @@ unsafe extern "C" fn request_hide<H>(host: *const clap_host) -> bool
 where
     for<'a> H: HostHandlers<Shared<'a>: HostGuiImpl>,
 {
-    HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide().is_ok())).unwrap_or(false)
+    HostWrapper::<H>::handle(host, |host| Ok(host.shared().request_hide()?)).is_some()
 }
 
 #[allow(clippy::missing_safety_doc)]

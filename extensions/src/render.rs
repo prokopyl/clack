@@ -123,9 +123,9 @@ mod plugin {
                 "clap_plugin_render_mode",
             ))?;
 
-            Ok(plugin.main_thread().set(mode).is_ok())
+            Ok(plugin.main_thread().set(mode)?)
         })
-        .unwrap_or(false)
+        .is_some()
     }
 
     #[allow(clippy::missing_safety_doc)]

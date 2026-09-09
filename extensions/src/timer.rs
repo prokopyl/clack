@@ -246,9 +246,9 @@ mod host {
         for<'a> H: HostHandlers<MainThread<'a>: HostTimerImpl>,
     {
         HostWrapper::<H>::handle_main_thread(host, |host| {
-            Ok(host.unregister_timer(TimerId(timer_id)).is_ok())
+            Ok(host.unregister_timer(TimerId(timer_id))?)
         })
-        .unwrap_or(false)
+        .is_some()
     }
 
     impl PluginTimer {
