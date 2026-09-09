@@ -239,7 +239,7 @@ impl<H: HostHandlers> HostWrapper<H> {
         audio_processor: FA,
     ) -> Result<(), PluginInstanceError>
     where
-        FA: for<'a, 'b> FnOnce(
+        FA: for<'a> FnOnce(
             &'a <H as HostHandlers>::Shared<'a>,
             &<H as HostHandlers>::MainThread<'a>,
         ) -> <H as HostHandlers>::AudioProcessor<'a>,
