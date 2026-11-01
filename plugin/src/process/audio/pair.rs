@@ -4,7 +4,10 @@ use crate::process::audio::pair::ChannelPair::*;
 use crate::process::audio::{BufferError, InputPort, OutputPort, SampleType};
 use clack_common::process::{AudioPortProcessingInfo, ConstantMask};
 use clap_sys::audio_buffer::clap_audio_buffer;
-use std::slice::{Iter, IterMut};
+use std::array;
+use std::mem::MaybeUninit;
+use std::ops::{Index, IndexMut};
+use std::slice::{Iter, IterMut, SliceIndex};
 
 /// A pair of Input and Output ports.
 ///
@@ -150,7 +153,7 @@ impl<'a> PortPair<'a> {
     ///
     /// Since there may be more channels in one port than in the other, this method also counts
     /// the partial [`ChannelPair`]s that can be returned, and therefore returns the maximum number
-    /// of channels between the two ports.  
+    /// of channels between the two ports.
     #[inline]
     pub fn channel_pair_count(&self) -> usize {
         let in_channels = self.input.map(|b| b.channel_count).unwrap_or(0);
@@ -238,7 +241,7 @@ impl<'a, S> PairedChannels<'a, S> {
     ///
     /// Since there may be more channels in one port than in the other, this method also counts
     /// the partial [`ChannelPair`]s that can be returned, and therefore returns the maximum number
-    /// of channels between the input and output ports.  
+    /// of channels between the input and output ports.
     #[inline]
     pub fn channel_pair_count(&self) -> usize {
         self.input_channel_count().max(self.output_channel_count())
@@ -265,6 +268,42 @@ impl<'a, S> PairedChannels<'a, S> {
             .map(|ptr| unsafe { slice_from_external_parts_mut(*ptr, self.frames_count as usize) });
 
         ChannelPair::from_optional_io(input, output)
+    }
+
+    /// Retrieves potentially disjoint pairs of sample buffers for the pair of channels at a given index.
+    ///
+    /// If there is no channel at the given index (i.e. `channel_index` is greater or equal than
+    /// [`channel_pair_count`](Self::channel_pair_count)), the corresponding element in the array is [`None`].
+    ///
+    /// This function doesn't check if output buffers alias. By consensus this is invalid according to the spec
+    ///
+    /// See [`ChannelPair`]'s documentation for examples on how to access sample buffers from it.
+    #[inline]
+    pub fn channel_pair_disjoint<const N: usize>(
+        &mut self,
+        indices: [usize; N],
+    ) -> Option<[ChannelPair<'a, S>; N]> {
+        let mut result = array::from_fn(|_| MaybeUninit::uninit());
+
+        for (index, res) in indices.into_iter().zip(&mut result) {
+            let input = self
+                .input_data
+                .get(index)
+                // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
+                .map(|ptr| unsafe { slice_from_external_parts(*ptr, self.frames_count as usize) });
+            let output = self
+                .output_data
+                .get(index)
+                // SAFETY: this type ensures the pointer is valid and the slice is frames_count-long
+                .map(|ptr| unsafe {
+                    slice_from_external_parts_mut(*ptr, self.frames_count as usize)
+                });
+
+            res.write(ChannelPair::from_optional_io(input, output)?);
+        }
+
+        // SAFETY: we've just fully initialized the array. we would've short circuited if any value returned none
+        Some(result.map(|res| unsafe { res.assume_init() }))
     }
 
     /// Gets an iterator over all the ports' [`ChannelPair`]s.
@@ -437,6 +476,20 @@ impl<'a, S> ChannelPair<'a, S> {
         match self {
             OutputOnly(o) | InputOutput(_, o) | InPlace(o) => Some(o),
             InputOnly(_) => None,
+        }
+    }
+
+    /// Convience method to slice the buffer
+    ///
+    /// # Panics
+    /// This function uses slice indexing, so will panic if the lower bound of the given range is larger than the size of the buffer
+    #[inline]
+    pub fn slice(&'a mut self, idx: impl SliceIndex<[S], Output = [S]> + Copy) -> Self {
+        match self {
+            InputOnly(items) => InputOnly(&items[idx]),
+            OutputOnly(items) => OutputOnly(&mut items[idx]),
+            InputOutput(items, items1) => InputOutput(&items[idx], &mut items1[idx]),
+            InPlace(items) => OutputOnly(&mut items[idx]),
         }
     }
 }
