@@ -127,16 +127,24 @@ impl<H: HostHandlers> HostWrapper<H> {
     where
         F: for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> Result<T, HostWrapperError>,
     {
-        Self::handle(host, |host| host.on_main_thread(handler).transpose()).flatten()
+        Self::handle(host, |host| {
+            host.main_thread()
+                .map(|mt| handler(mt.as_ref()))
+                .transpose()
+        })
+        .flatten()
     }
 
+    /// Returns a raw, non-null pointer to the host's ([`MainThread`](HostHandlers::MainThread)) struct.
+    ///
     /// # Safety
     /// The caller must ensure this method is only called on the main thread.
-    pub(crate) unsafe fn on_main_thread<T>(
-        &self,
-        handler: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> T,
-    ) -> Option<T> {
-        Some(handler(self.main_thread.get().as_ref()?))
+    ///
+    /// The pointer is safe to mutably dereference, as long as the caller ensures it is not being
+    /// aliased, as per usual safety rules.
+    #[inline]
+    pub unsafe fn main_thread(&self) -> Option<NonNull<<H as HostHandlers>::MainThread<'_>>> {
+        Some(NonNull::new(std::ptr::from_ref(self.main_thread.get()?).cast_mut())?.cast())
     }
 
     /// Returns a raw, non-null pointer to the host's [`AudioProcessor`](HostHandlers::AudioProcessor)

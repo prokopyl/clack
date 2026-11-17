@@ -121,9 +121,9 @@ impl<H: HostHandlers> PluginAudioProcessor<H> {
     ///
     /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn access_handler_mut<'s, R>(
-        &'s mut self,
-        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    pub fn access_handler_mut<R>(
+        &mut self,
+        access: impl for<'a> FnOnce(&mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         match self {
             Started(s) => s.access_handler_mut(access),
@@ -594,9 +594,9 @@ impl<H: HostHandlers> StartedPluginAudioProcessor<H> {
     ///
     /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn access_handler_mut<'s, R>(
-        &'s mut self,
-        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    pub fn access_handler_mut<R>(
+        &mut self,
+        access: impl for<'a> FnOnce(&mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere
@@ -755,9 +755,9 @@ impl<H: HostHandlers> StoppedPluginAudioProcessor<H> {
     ///
     /// [`AudioProcessorHandler`]: crate::prelude::AudioProcessorHandler
     #[inline]
-    pub fn access_handler_mut<'s, R>(
-        &'s mut self,
-        access: impl for<'a> FnOnce(&'s mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
+    pub fn access_handler_mut<R>(
+        &mut self,
+        access: impl for<'a> FnOnce(&mut <H as HostHandlers>::AudioProcessor<'a>) -> R,
     ) -> R {
         // SAFETY: we take &self, the only reference to the wrapper on the audio thread, therefore
         // we can guarantee there are no mutable references anywhere

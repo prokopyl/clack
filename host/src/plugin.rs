@@ -338,17 +338,30 @@ impl<H: HostHandlers> PluginInstance<H> {
     /// type is self-referential: both the [`HostHandlers`] and the plugin's instance data hold
     /// references to each other, and both are owned by this type.
     #[inline]
-    pub fn access_handler<R>(
-        &self,
-        access: impl for<'a> FnOnce(&<H as HostHandlers>::MainThread<'a>) -> R,
+    pub fn access_handler<'s, R>(
+        &'s self,
+        access: impl for<'a> FnOnce(&'s <H as HostHandlers>::MainThread<'a>) -> R,
     ) -> R {
-        // SAFETY: This type guarantees it can only be called on the main thread
-        let Some(result) = (unsafe { self.inner.wrapper().on_main_thread(access) }) else {
-            // PANIC: main_thread can only be None if called from within init()
-            unreachable!()
-        };
+        // SAFETY: we take &self, the only reference to the wrapper on the main thread, therefore
+        // we can guarantee there are no mutable reference anywhere
+        unsafe { access(self.inner.wrapper().main_thread().unwrap().as_ref()) }
+    }
 
-        result
+    /// Access an exclusive `&mut` reference to [`MainThreadHandler`] instance associated to this plugin instance using the given callback.
+    ///
+    /// The callback's return value `R` is returned directly by this method.
+    ///
+    /// Accessing the [`HostHandlers`] types can only be done with accessor callbacks because this
+    /// type is self-referential: both the [`HostHandlers`] and the plugin's instance data hold
+    /// references to each other, and both are owned by this type.
+    #[inline]
+    pub fn access_handler_mut<R>(
+        &mut self,
+        access: impl for<'a> FnOnce(&mut <H as HostHandlers>::MainThread<'a>) -> R,
+    ) -> R {
+        // SAFETY: we take &mut self, the only reference to the wrapper on the main thread, therefore
+        // we can guarantee there are no mutable reference anywhere
+        unsafe { access(self.inner.wrapper().main_thread().unwrap().as_mut()) }
     }
 
     /// Returns a thread-safe handle to the plugin.
